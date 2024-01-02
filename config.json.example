@@ -1,0 +1,67 @@
+{
+  "debug": true,
+  "log_path": "errors.log",
+  "server": {
+    "host": "0.0.0.0",
+    "port": 80,
+    "threaded": true,
+    "use_reloader": false,
+    "log_output": true,
+    "socketio_key": ""
+  },
+  "db": {
+    "host": "localhost",
+    "user": "",
+    "password": "",
+    "database": "",
+    "table_name": "cvcounters"
+  },
+  "detection_default": {
+    "video_path": "",
+    "video_show_scale": 50,
+    "video_show_quality": 50,
+    "weights_path": "yolo_cfg/models/yolov8n.pt",
+    "limits": [
+      0,
+      100,
+      100,
+      100
+    ],
+    "confidence": 0.5,
+    "iou": 0.7,
+    "device": 0,
+    "indicator_size": 10,
+    "counting_area_color": [
+      67,
+      211,
+      255
+    ],
+    "classes": {}
+  },
+  "detections": {
+    "ExampleCam": {
+      "label": "Label ExampleCam",
+      "start_total_count": 0,
+      "video_path": "",
+      "video_show_scale": 70,
+      "video_show_quality": 30,
+      "weights_path": "yolo_cfg/models/yolov8n.pt",
+      "limits": [
+        850,
+        80,
+        950,
+        1000
+      ],
+      "confidence": 0.7,
+      "iou": 0.7,
+      "device": 0,
+      "indicator_size": 10,
+      "counting_area_color": [
+        255,
+        64,
+        0
+      ],
+      "classes": {}
+    },
+  }
+}

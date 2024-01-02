@@ -1,0 +1,178 @@
+# -*- coding: utf-8 -*-
+# ! python3
+
+# Developed by: Alexander Kireev
+# Created: 01.11.2023
+# Updated: 19.12.2023
+# Website: https://bespredel.name
+
+from threading import Thread
+
+from flask import Flask, Response, abort, render_template, request
+from flask_socketio import SocketIO
+from markupsafe import escape
+
+from object_counter import ObjectCounter
+from system.config_manager import ConfigManager
+from system.db_client import DBClient
+
+config = ConfigManager("config.json")
+config.read_config()
+
+# Default settings
+debug = config.get("debug", False)
+locations = list(config.get("detections", {}).keys())
+locations_dict = dict([(k, v['label']) for k, v in config.get("detections", {}).items()])
+
+# Start Flask
+app = Flask(__name__)
+app.config['SECRET_KEY'] = config.get("socketio_key", False)
+socketio = SocketIO(app)
+
+db_client = DBClient(
+    config.get('db.host'),
+    config.get('db.user'),
+    config.get('db.password'),
+    config.get('db.database'),
+    config.get('db.table_name')
+)
+
+object_counters = dict()
+threading_detectors = dict()
+
+
+def object_detector_init(location):
+    global object_counters, threading_detectors, config
+    if location not in object_counters:
+        detector_config = config.get("detections." + location)
+        object_counters[location] = ObjectCounter(
+            location=location,
+            socketio=socketio,
+            config=config,
+            db_client=db_client,
+            video_stream=detector_config['video_path'],
+            weights=detector_config['weights_path'],
+            limits=detector_config['limits'],
+            counting_area_color=tuple(detector_config['counting_area_color'])
+        )
+    return object_counters
+
+
+@app.route('/')
+def index():
+    return render_template(
+        'index.html',
+        object_counters=locations_dict
+    )
+
+
+@app.route('/counter/<string:location>')
+def counter(location=None):
+    location = escape(location)
+    if location not in locations:
+        abort(400, 'Detection config not found')
+
+    object_detector_init(location)
+
+    if location not in threading_detectors and location in object_counters:
+        threading_detectors[location] = Thread(target=object_counters[location].gen_frames_run)
+        threading_detectors[location].start()
+
+    items = db_client.get_items()
+
+    return render_template(
+        'counter.html',
+        title=locations_dict.get(location, ),
+        location=location,
+        items=items
+    )
+
+
+@app.route('/get_frames/<string:location>')
+def get_frames(location=None):
+    location = escape(location)
+    if location not in object_counters:
+        abort(400, 'Detection config not found')
+
+    return Response(
+        object_counters[location].get_frames(),
+        mimetype='multipart/x-mixed-replace; boundary=frame'
+    )
+
+
+@app.route('/counter_t/<string:location>')
+def counter_t(location=None):
+    location = escape(location)
+    if location not in locations:
+        abort(400, 'Detection config not found')
+
+    object_detector_init(location)
+
+    if location not in threading_detectors and location in object_counters:
+        threading_detectors[location] = Thread(target=object_counters[location].count_run)
+        threading_detectors[location].start()
+
+    items = db_client.get_items()
+
+    return render_template(
+        'counter_text.html',
+        title=locations_dict.get(location, ),
+        location=location,
+        items=items
+    )
+
+
+@app.route('/save_count/<string:location>', methods=['POST'])
+def save_count(location=None):
+    location = escape(location)
+    if location not in object_counters:
+        abort(400, 'Detection config not found')
+
+    item_no = request.form['item_no']
+    correct_count = request.form['correct_count']
+    defect_count = request.form['defect_count']
+    object_counters[location].save_count(
+        location=location,
+        name=item_no,
+        correct_count=correct_count,
+        defect_count=defect_count,
+        active=1
+    )
+
+    # object_detectors[name].reset_count()
+    return {'total_count': 0, 'defect_count': 0, 'correct_count': 0}
+
+
+@app.route('/reset_count/<string:location>')
+def reset_count(location=None):
+    location = escape(location)
+    if location not in object_counters:
+        abort(400, 'Detection config not found')
+
+    object_counters[location].reset_count(location=location)
+
+    return {'total_count': 0, 'defect_count': 0, 'correct_count': 0}
+
+
+@app.route('/reset_count_current/<string:location>')
+def reset_count_current(location=None):
+    location = escape(location)
+    if location not in object_counters:
+        abort(400, 'Detection config not found')
+
+    object_counters[location].reset_count_current(location=location)
+
+    return {'current_count': 0}
+
+
+if __name__ == '__main__':
+    socketio.run(
+        app,
+        host=config.get('server.host'),
+        port=config.get('server.port'),
+        debug=config.get('server.debug'),
+        # threaded=config.get('server.threaded'),
+        log_output=config.get('server.log_output'),
+        use_reloader=config.get('server.use_reloader'),
+        allow_unsafe_werkzeug=True
+    )

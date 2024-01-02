@@ -1,0 +1,30 @@
+.img-container {
+    max-height: calc(100vh - 65px);
+    width: auto;
+}
+
+.img-container img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+}
+
+html[data-bs-theme="dark"] .bootstrap-select .no-results {
+    background: #dc3545 !important;
+    margin: 0 8px !important;
+    border-radius: 5px !important;
+}
+
+.theme-switcher {
+    position: static;
+}
+
+@media (min-width: 992px) {
+    .theme-switcher {
+        position: fixed;
+    }
+}
+
+.total_count_txt {
+    font-size: calc(19vw + 2px);
+}

@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <h1>{% block title %}CVCounter{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-12">
+            <div>Видео</div>
+            {% for k in object_counters %}
+                <a href="{{ url_for('counter', location=k) }}" class="btn btn-primary btn-lg m-2"
+                   target="_blank">{{ object_counters[k] }}</a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div>Текст</div>
+            {% for k in object_counters %}
+                <a href="{{ url_for('counter_t', location=k) }}" class="btn btn-primary btn-lg m-2"
+                   target="_blank">{{ object_counters[k] }}</a>
+            {% endfor %}
+        </div>
+    </div>
+{% endblock %}
