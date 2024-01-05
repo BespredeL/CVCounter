@@ -23,7 +23,7 @@ class ObjectCounter:
 
     def __init__(self, location, socketio, config, **kwargs):
         # Load config
-        #config = ConfigManager("config.json")
+        # config = ConfigManager("config.json")
         config.read_config()
         detector_config = config.get("detections." + location)
 
@@ -45,14 +45,15 @@ class ObjectCounter:
         self.frame_lost = 0
         self.running = True
         self.video_scale = detector_config.get('video_show_scale', config.get("detection_default.video_show_scale", 50))
-        self.video_quality = detector_config.get('video_show_quality', config.get("detection_default.video_show_quality", 50))
+        self.video_quality = detector_config.get('video_show_quality',
+                                                 config.get("detection_default.video_show_quality", 50))
         self.indicator_size = detector_config.get('indicator_size', config.get("detection_default.indicator_size", 10))
 
         # Init logger
-        if self.location == '':
-            self.logger = ErrorLogger(config.get("log_path", ''))
-        else:
-            self.logger = ErrorLogger(f'error_{self.location}.log')
+        log_path = config.get("log_path")
+        if self.location != '':
+            log_path = f'error_{self.location}.log'
+        self.logger = ErrorLogger(log_path)
 
         # Started counter value from config
         total_count = detector_config.get('start_total_count', 0)
@@ -87,11 +88,11 @@ class ObjectCounter:
     """
 
     def reconnect(self):
-        # self.logger.log_error('Reconnect ' + self.location + '...')
         self.frame = None
         self.frame_lost += 1
         if self.frame_lost > 10:
             self.frame_lost = 0
+            # self.logger.log_error('Reconnect ' + self.location + '...')
             print(f'Reconnect {self.location}...')
             if self.socketio is not None:
                 self.notification('Потеряно соединение с камерой!', 'danger')
@@ -253,7 +254,8 @@ class ObjectCounter:
     def draw_counting_area(self, image):
         alpha = 0.4
         overlay = image.copy()
-        cv2.rectangle(overlay, (self.limits[0], self.limits[1]), (self.limits[2], self.limits[3]), self.counting_area_color, -1)
+        cv2.rectangle(overlay, (self.limits[0], self.limits[1]), (self.limits[2], self.limits[3]),
+                      self.counting_area_color, -1)
 
         return cv2.addWeighted(overlay, alpha, image, 1 - alpha, 0)
 

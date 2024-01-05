@@ -5,11 +5,11 @@
 # pip3 install "C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT\v8.6.1.6\onnx_graphsurgeon\onnx_graphsurgeon-0.3.12-py2.py3-none-any.whl"
 # pip3 install "C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT\v8.6.1.6\python\tensorrt-8.6.1-cp311-none-win_amd64.whl"
 #
-numpy~=1.26.1
+numpy~=1.26.3
 matplotlib~=3.8.1
 scikit-image~=0.22.0
 filterpy~=1.4.5
-opencv-python~=4.8.1.78
+opencv-python~=4.9.0.80
 ultralytics>=8.0.211
 flask~=3.0.0
 flask-socketio~=5.3.6
