@@ -14,7 +14,7 @@ from object_counter import ObjectCounter
 from system.config_manager import ConfigManager
 from system.db_client import DBClient
 
-config = ConfigManager("config2.json")
+config = ConfigManager("config.json")
 config.read_config()
 
 # Default settings
