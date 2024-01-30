@@ -5,6 +5,7 @@
 # Created: 01.11.2023
 # Updated: 19.12.2023
 # Website: https://bespredel.name
+
 import os
 import torch
 from ultralytics import YOLO
