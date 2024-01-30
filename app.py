@@ -3,15 +3,13 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 19.12.2023
+# Updated: 16.01.2024
 # Website: https://bespredel.name
 
 from threading import Thread
-
 from flask import Flask, Response, abort, render_template, request
 from flask_socketio import SocketIO
 from markupsafe import escape
-
 from object_counter import ObjectCounter
 from system.config_manager import ConfigManager
 from system.db_client import DBClient
@@ -58,6 +56,8 @@ def object_detector_init(location):
     return object_counters
 
 
+# --------------------------------------------------------------------------------
+
 @app.route('/')
 def index():
     return render_template(
@@ -84,7 +84,8 @@ def counter(location=None):
         'counter.html',
         title=locations_dict.get(location, ),
         location=location,
-        items=items
+        items=[],
+        is_paused=object_counters[location].is_pause()
     )
 
 
@@ -118,9 +119,12 @@ def counter_t(location=None):
         'counter_text.html',
         title=locations_dict.get(location, ),
         location=location,
-        items=items
+        # items=items,
+        is_paused=object_counters[location].is_pause()
     )
 
+
+# --------------------------------------------------------------------------------
 
 @app.route('/save_count/<string:location>', methods=['POST'])
 def save_count(location=None):
@@ -128,10 +132,10 @@ def save_count(location=None):
     if location not in object_counters:
         abort(400, 'Detection config not found')
 
-    item_no = request.form['item_no']
+    item_no = ""  # request.form['item_no']
     correct_count = request.form['correct_count']
     defect_count = request.form['defect_count']
-    object_counters[location].save_count(
+    result = object_counters[location].save_count(
         location=location,
         name=item_no,
         correct_count=correct_count,
@@ -140,7 +144,7 @@ def save_count(location=None):
     )
 
     # object_detectors[name].reset_count()
-    return {'total_count': 0, 'defect_count': 0, 'correct_count': 0}
+    return {'total_count': result.total, 'defect_count': result.defect, 'correct_count': result.correct}
 
 
 @app.route('/reset_count/<string:location>')
@@ -154,16 +158,61 @@ def reset_count(location=None):
     return {'total_count': 0, 'defect_count': 0, 'correct_count': 0}
 
 
-@app.route('/reset_count_current/<string:location>')
+@app.route('/reset_count_current/<string:location>', methods=['POST'])
 def reset_count_current(location=None):
     location = escape(location)
     if location not in object_counters:
         abort(400, 'Detection config not found')
 
-    object_counters[location].reset_count_current(location=location)
+    item_no = ""  # request.form['item_no']
+    correct_count = request.form['correct_count']
+    defect_count = request.form['defect_count']
+    object_counters[location].reset_count_current(
+        location=location,
+        name=item_no,
+        correct_count=correct_count,
+        defect_count=defect_count
+    )
 
     return {'current_count': 0}
 
+
+# --------------------------------------------------------------------------------
+
+@app.route('/start_count/<string:location>')
+def start_count(location=None):
+    location = escape(location)
+    if location not in object_counters:
+        abort(400, 'Detection config not found')
+
+    object_counters[location].start()
+
+    return {'result': 0}
+
+
+@app.route('/stop_count/<string:location>')
+def stop_count(location=None):
+    location = escape(location)
+    if location not in object_counters:
+        abort(400, 'Detection config not found')
+
+    object_counters[location].stop()
+
+    return {'result': 0}
+
+
+@app.route('/pause_count/<string:location>')
+def pause_count(location=None):
+    location = escape(location)
+    if location not in object_counters:
+        abort(400, 'Detection config not found')
+
+    object_counters[location].pause()
+
+    return {'result': 0}
+
+
+# --------------------------------------------------------------------------------
 
 if __name__ == '__main__':
     socketio.run(

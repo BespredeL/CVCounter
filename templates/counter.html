@@ -5,9 +5,19 @@
 {% block content %}
     <div class="row mb-3">
         <!-- START: Left block -->
-        <div class="col-12 col-lg-9 d-flex justify-content-center mt-2">
+        <div class="col-12 col-lg-9 d-flex justify-content-center position-relative mt-2">
             <div class="img-container">
-                <img id="video_feed" class="text-center rounded" src="{{ url_for('get_frames', location=location) }}" alt=""/>
+                <img id="video_feed" class="text-center rounded" src="{{ url_for('get_frames', location=location) }}"
+                     alt=""/>
+            </div>
+
+            <div class="{{ 'd-flex' if is_paused else 'd-none' }} justify-content-center align-items-center rounded-end-3"
+                 id="pause_display"
+                 style="position: absolute;top: 0;left: 0;width: 100%;height: 100%;background-color: rgb(0 0 0 / 80%);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" fill="currentColor" class="bi bi-pause"
+                     viewBox="0 0 16 16">
+                    <path d="M6 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5m4 0a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5"/>
+                </svg>
             </div>
         </div>
         <!-- END: Left block -->
@@ -21,9 +31,10 @@
 
             {% if(items is not none) %}
                 <div class="border border-primary rounded mb-2 p-2">
-                    <select class="selectpicker form-control" id="item" name="item" data-width="auto" data-style="btn-dark"
+                    <select class="selectpicker form-control" id="item" name="item" data-width="auto"
+                            data-style="btn-dark"
                             data-live-search="true">
-                        <option selected>Выберите ПФ</option>
+                        <option selected>Выберите продукт</option>
                         {% for item in items %}
                             <option value="{{ item.No_ }}">[{{ item.No_ }}] {{ item.Description }}</option>
                         {% endfor %}
@@ -36,7 +47,8 @@
                     <label for="defect_count" class="form-label h4">Брак</label>
                     <div class="input-group" id="defect_count">
                         <button class="btn btn-sm btn-secondary input-plus">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-plus-lg"
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                                 class="bi bi-plus-lg"
                                  viewBox="0 0 16 16">
                                 <path fill-rule="evenodd"
                                       d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"></path>
@@ -45,9 +57,11 @@
                         <input type="number" class="form-control form-control-lg" aria-label="" name="defect_count"
                                value="0" min="0" max="999999" maxlength="9">
                         <button class="btn btn-sm btn-secondary input-minus">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-dash-lg"
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                                 class="bi bi-dash-lg"
                                  viewBox="0 0 16 16">
-                                <path fill-rule="evenodd" d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8"></path>
+                                <path fill-rule="evenodd"
+                                      d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8"></path>
                             </svg>
                         </button>
                     </div>
@@ -79,7 +93,8 @@
             <div class="border border-warning-subtle rounded mb-2 p-2">
                 <div class="col-12 mb-3">
                     <label for="correct_count" class="form-label h4">Корректировка</label>
-                    <button class="btn btn-outline-info float-end" data-bs-toggle="collapse" data-bs-target="#collapseСorrect"
+                    <button class="btn btn-outline-info float-end" data-bs-toggle="collapse"
+                            data-bs-target="#collapseСorrect"
                             aria-expanded="false" aria-controls="collapseСorrect"
                             style="--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
@@ -91,7 +106,8 @@
                     </button>
                     <button class="btn btn-outline-danger float-end me-2" id="correct_clear"
                             style="--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-trash"
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                             class="bi bi-trash"
                              viewBox="0 0 16 16">
                             <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
                             <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
@@ -99,7 +115,8 @@
                     </button>
                     <div class="input-group" id="correct_count">
                         <button class="btn btn-sm btn-secondary input-plus">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-plus-lg"
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                                 class="bi bi-plus-lg"
                                  viewBox="0 0 16 16">
                                 <path fill-rule="evenodd"
                                       d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"></path>
@@ -108,15 +125,18 @@
                         <input type="number" class="form-control form-control-lg" aria-label="" name="correct_count"
                                value="0" maxlength="9">
                         <button class="btn btn-sm btn-secondary input-minus">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-dash-lg"
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                                 class="bi bi-dash-lg"
                                  viewBox="0 0 16 16">
-                                <path fill-rule="evenodd" d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8"></path>
+                                <path fill-rule="evenodd"
+                                      d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8"></path>
                             </svg>
                         </button>
                     </div>
                 </div>
 
-                <div class="col-12 keyboard keyboard-correct px-2 collapse" data-input-id="correct_count" id="collapseСorrect">
+                <div class="col-12 keyboard keyboard-correct px-2 collapse" data-input-id="correct_count"
+                     id="collapseСorrect">
                     <div class="row">
                         <button class="btn btn-secondary col m-1 fs-5" data-value="1">1</button>
                         <button class="btn btn-secondary col m-1 fs-5" data-value="2">2</button>
@@ -141,9 +161,39 @@
             </div>
 
             <div class="col-12 mb-3 px-2">
-                <div class="row">
+                <div class="row mb-3">
                     <button class="btn btn-primary col mb-3 m-1" id="btn_reset_current">Новая партия</button>
                 </div>
+
+                <div class="row mb-3">
+                    <button class="btn {{ 'btn-warning' if is_paused else 'btn-outline-secondary' }} btn-sm col mb-3 m-1"
+                            id="btn_pause">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor"
+                             class="bi bi-pause-fill"
+                             viewBox="0 0 16 16">
+                            <path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"/>
+                        </svg>
+                        <span>Пауза</span>
+                    </button>
+
+                    <button class="btn {{ 'btn-info' if is_paused else 'btn-outline-secondary' }} btn-sm col mb-3 m-1"
+                            id="btn_start">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor"
+                             class="bi bi-play-fill"
+                             viewBox="0 0 16 16">
+                            <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/>
+                        </svg>
+                        <span>Старт</span>
+                    </button>
+
+                    {#<button class="btn btn-secondary btn-sm col mb-3 m-1" id="btn_stop">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" class="bi bi-stop-fill" viewBox="0 0 16 16">
+                            <path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5"/>
+                        </svg>
+                        <span>Стоп</span>
+                    </button>#}
+                </div>
+
                 <div class="row">
                     <button class="btn btn-success col mb-3 m-1" id="btn_save">Сохранить</button>
                     <button class="btn btn-danger col mb-3 m-1" id="btn_reset">Сбросить</button>
@@ -155,7 +205,8 @@
 {% endblock %}
 
 {% block footer %}
-    <link href="{{ url_for('static', filename='assets/bootstrap-select-1.14/css/bootstrap-select.min.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='assets/bootstrap-select-1.14/css/bootstrap-select.min.css') }}"
+          rel="stylesheet">
     <script src="{{ url_for('static', filename='assets/bootstrap-select-1.14/js/bootstrap-select.min.js') }}"></script>
     <script src="{{ url_for('static', filename='assets/bootstrap-select-1.14/js/i18n/defaults-ru_RU.min.js') }}"></script>
 
@@ -184,7 +235,7 @@
                 }
             });
 
-            // Обработчик получения уведомлений
+            // Обработчик получения счетчика
             socket.on('{{ location }}_notification', function (data) {
                 if (data.message.length > 0) {
                     showToast(data.message, data.type);
@@ -254,6 +305,7 @@
                 $input.val(parseInt(input_val));
             });
 
+
             //---------------------------------------------------------------------------
             // Form buttons
             //---------------------------------------------------------------------------
@@ -311,6 +363,46 @@
                     }
                 });
             });
+
+            //---------------------------------------------------------------------------
+            // Form buttons 2
+            //---------------------------------------------------------------------------
+            $('#btn_start').on('click', function () {
+                $.ajax({
+                    url: '{{ url_for('start_count', location=location) }}',
+                    method: 'get',
+                    data: {},
+                    success: function () {
+                        $('#btn_pause').removeClass('btn-warning').addClass('btn-outline-secondary');
+                        $('#btn_start').removeClass('btn-info').addClass('btn-outline-secondary');
+                        $('#pause_display').removeClass('d-flex').addClass('d-none');
+                    }
+                });
+            });
+
+            $('#btn_pause').on('click', function () {
+                $.ajax({
+                    url: '{{ url_for('pause_count', location=location) }}',
+                    method: 'get',
+                    data: {},
+                    success: function () {
+                        $('#btn_pause').removeClass('btn-outline-secondary').addClass('btn-warning');
+                        $('#btn_start').removeClass('btn-outline-secondary').addClass('btn-info');
+                        $('#pause_display').removeClass('d-none').addClass('d-flex');
+                    }
+                });
+            });
+
+            {#$('#btn_stop').on('click', function () {
+                $.ajax({
+                    url: '{{ url_for('stop_count', location=location) }}',
+                    method: 'get',
+                    data: {},
+                    success: function () {
+                        //$("#total_count").html(data.total_count);
+                    }
+                });
+            });#}
         });
     </script>
 {% endblock %}

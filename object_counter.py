@@ -3,27 +3,23 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 19.12.2023
+# Updated: 28.01.2024
 # Website: https://bespredel.name
 
 
 import time
-
 import cv2
 import numpy as np
 from imutils.video import VideoStream
 from ultralytics import YOLO
-
-from system.config_manager import ConfigManager
+from shapely.geometry import Point, Polygon
 from system.error_logger import ErrorLogger
 from system.sort import Sort
 
 
 class ObjectCounter:
-
     def __init__(self, location, socketio, config, **kwargs):
         # Load config
-        # config = ConfigManager("config.json")
         config.read_config()
         detector_config = config.get("detections." + location)
 
@@ -38,16 +34,17 @@ class ObjectCounter:
         self.iou = kwargs.get('iou', detector_config.get('iou'))
         self.limits = kwargs.get('limits', detector_config.get('limits'))
         self.counting_area_color = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
+        self.video_scale = detector_config.get('video_show_scale', config.get("detection_default.video_show_scale", 50))
+        self.video_quality = detector_config.get('video_show_quality',
+                                                 config.get("detection_default.video_show_quality", 50))
+        self.indicator_size = detector_config.get('indicator_size', config.get("detection_default.indicator_size", 10))
         self.total_objects = []
         self.total_count = 0
         self.current_count = 0
         self.frame = None
         self.frame_lost = 0
         self.running = True
-        self.video_scale = detector_config.get('video_show_scale', config.get("detection_default.video_show_scale", 50))
-        self.video_quality = detector_config.get('video_show_quality',
-                                                 config.get("detection_default.video_show_quality", 50))
-        self.indicator_size = detector_config.get('indicator_size', config.get("detection_default.indicator_size", 10))
+        self.paused = False
 
         # Init logger
         log_path = config.get("log_path")
@@ -76,6 +73,9 @@ class ObjectCounter:
 
         # DB
         self.DB = kwargs.get('db_client')
+
+        # Set polygon
+        self.polygon = Polygon(self.limits)
 
     """
     Reconnects to the video stream if the connection has been lost for more than N frames.
@@ -119,7 +119,6 @@ class ObjectCounter:
     def get_frames(self):
         self.frame_lost = 0
         while self.running:
-            self.running = True
             try:
                 if self.frame is not None:
                     frame = self.frame
@@ -138,14 +137,16 @@ class ObjectCounter:
 
                     end_time = time.time()
                     fps = 1 / np.round(end_time - start_time, 2)
-                    cv2.putText(frame, f'FPS: {int(fps)}', (20, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 2)
+                    cv2.putText(frame, f'FPS: {int(fps)}', (20, 70), cv2.FONT_HERSHEY_SIMPLEX,
+                                1.5, (0, 0, 255), 2)
 
                 scale_percent = int(self.video_scale)  # percent of original size
                 width = int(frame.shape[1] * scale_percent / 100)
                 height = int(frame.shape[0] * scale_percent / 100)
                 frame = cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
 
-                ret, frame = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, int(self.video_quality)])
+                ret, frame = cv2.imencode('.jpg', frame,
+                                          [cv2.IMWRITE_JPEG_QUALITY, int(self.video_quality)])
 
                 frame = frame.tobytes()
 
@@ -166,7 +167,6 @@ class ObjectCounter:
 
     def gen_frames_run(self):
         while self.running:
-            self.running = True
             try:
                 start_time = time.time()
 
@@ -182,7 +182,8 @@ class ObjectCounter:
 
                 end_time = time.time()
                 fps = 1 / np.round(end_time - start_time, 2)
-                cv2.putText(frame, f'FPS: {int(fps)}', (20, 70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 2)
+                cv2.putText(frame, f'FPS: {int(fps)}', (20, 70), cv2.FONT_HERSHEY_SIMPLEX,
+                            1.5, (0, 0, 255), 2)
 
                 self.frame = frame
             except Exception as e:
@@ -201,7 +202,6 @@ class ObjectCounter:
 
     def count_run(self):
         while self.running:
-            self.running = True
             try:
                 frame = self.cap.read()
                 if frame is None:
@@ -254,13 +254,16 @@ class ObjectCounter:
     def draw_counting_area(self, image):
         alpha = 0.4
         overlay = image.copy()
-        cv2.rectangle(overlay, (self.limits[0], self.limits[1]), (self.limits[2], self.limits[3]),
-                      self.counting_area_color, -1)
+
+        # Polygon corner points coordinates
+        pts = np.array(self.limits, np.int32)
+        pts = pts.reshape((-1, 1, 2))
+        cv2.fillPoly(overlay, [pts], self.counting_area_color)
 
         return cv2.addWeighted(overlay, alpha, image, 1 - alpha, 0)
 
     """
-    Draws boxes on an image and returns the modified image.
+    Detects objects on an image and returns the image.
 
     Parameters:
         image (numpy.ndarray): The image on which the boxes will be drawn.
@@ -273,6 +276,9 @@ class ObjectCounter:
     """
 
     def detect_count(self, image, boxes):
+        if self.paused:
+            return image
+
         for result in boxes:
             x1, y1, x2, y2, rid = result
             x1, y1, x2, y2 = map(int, result[:4])
@@ -282,10 +288,11 @@ class ObjectCounter:
             if self.total_objects.count(rid) != 0:
                 cv2.circle(image, (cx, cy), int(self.indicator_size), (0, 255, 0), cv2.FILLED)
 
-            if (self.limits[0] <= cx <= self.limits[2]) and (self.limits[1] <= cy <= self.limits[3]):
-                if self.total_objects.count(rid) == 0:
-                    self.total_objects.append(rid)
-                    self.current_count += 1
+            # Определяем точку
+            point = Point(cx, cy)
+            if point.within(self.polygon) and self.total_objects.count(rid) == 0:
+                self.total_objects.append(rid)
+                self.current_count += 1
             self.total_count = len(self.total_objects)
 
         if self.socketio is not None:
@@ -294,10 +301,10 @@ class ObjectCounter:
         return image
 
     """
-    Get the total count.
+    Save count.
 
     Returns:
-        int: The total count.
+        dict: The total, defect and correct count.
     """
 
     def save_count(self, location, name, correct_count, defect_count, active=1):
@@ -316,12 +323,14 @@ class ObjectCounter:
         )
 
         if result:
-            self.total_objects = []
-            self.total_count = 0
-            self.current_count = 0
+            # self.total_objects = []
+            # self.total_count = 0
+            # self.current_count = 0
             self.notification('Успешно сохранено!', 'success')
         else:
             self.notification('Ошибка сохранения!', 'danger')
+
+        return dict(total=total_count, defect=defect_count, correct=correct_count)
 
     """
     Resets the count of total objects and total count.
@@ -343,7 +352,7 @@ class ObjectCounter:
         self.notification('Подсчет успешно завершен!', 'primary')
 
     """
-    Reset the current count to zero.
+    Reset the current count.
 
     Parameters:
         None
@@ -352,20 +361,36 @@ class ObjectCounter:
         None
     """
 
-    def reset_count_current(self, location=None):
+    def reset_count_current(self, location, name, correct_count, defect_count):
+        current_count = int(self.current_count)
+        total_count = int(self.total_count)
+        defect_count = int(defect_count)
+        correct_count = int(correct_count)
+        try:
+            self.DB.save_part_result(
+                location=location,
+                name=name,
+                current_count=current_count,
+                total_count=total_count,
+                defects_count=defect_count,
+                correct_count=correct_count
+            )
+        except Exception as e:
+            print(e)
+
         self.current_count = 0
 
         if self.socketio is not None:
-            self.socketio.emit(f'{self.location}_count', {'total': self.total_count, 'current': 0})
+            self.socketio.emit(f'{location}_count', {'total': total_count, 'current': 0})
             self.notification('Счетчик сброшен!', 'primary')
 
     """
     Emit a notification to the client.
-    
+
     Parameters:
         message (str): The message to be displayed.
         type (str): The type of notification (success, danger, warning, info, primary, secondary).
-        
+
     Returns:
         None
     """
@@ -375,20 +400,23 @@ class ObjectCounter:
             self.socketio.emit(f'{self.location}_notification', {'type': type, 'message': message})
 
     """
-    Start the thread.
-    
+    Start counting.
+
     Parameters:
         None
-        
+
     Returns:
         None
     """
 
     def start(self):
-        self.running = True
+        # self.running = True
+        if self.socketio is not None and self.paused is True:
+            self.notification('Подсчет запущен!', 'primary')
+        self.paused = False
 
     """
-    Stop the thread.
+    Stop counting and the thread.
 
     Parameters:
         None
@@ -398,4 +426,34 @@ class ObjectCounter:
     """
 
     def stop(self):
+        if self.socketio is not None and self.running is True:
+            self.notification('Подсчет остановлен!', 'primary')
         self.running = False
+
+    """
+    Pause counting.
+
+    Parameters:
+        None
+
+    Returns:
+        None
+    """
+
+    def pause(self):
+        if self.socketio is not None and self.paused is False:
+            self.notification('Подсчет приостановлен!', 'primary')
+        self.paused = True
+
+    """
+    Is Paused.
+
+    Parameters:
+        None
+
+    Returns:
+        None
+    """
+
+    def is_pause(self):
+        return self.paused

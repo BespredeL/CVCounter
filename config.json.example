@@ -1,5 +1,5 @@
 {
-  "debug": true,
+  "debug": false,
   "log_path": "errors.log",
   "server": {
     "host": "0.0.0.0",
@@ -22,12 +22,24 @@
     "video_show_quality": 50,
     "weights_path": "yolo_cfg/models/yolov8n.pt",
     "limits": [
-      0,
-      100,
-      100,
-      100
+      [
+        0,
+        0
+      ],
+      [
+        100,
+        0
+      ],
+      [
+        100,
+        100
+      ],
+      [
+        0,
+        100
+      ]
     ],
-    "confidence": 0.5,
+    "confidence": 0.7,
     "iou": 0.7,
     "device": 0,
     "indicator_size": 10,
@@ -47,10 +59,22 @@
       "video_show_quality": 30,
       "weights_path": "yolo_cfg/models/yolov8n.pt",
       "limits": [
-        850,
-        80,
-        950,
-        1000
+        [
+          0,
+          0
+        ],
+        [
+          100,
+          0
+        ],
+        [
+          100,
+          100
+        ],
+        [
+          0,
+          100
+        ]
       ],
       "confidence": 0.7,
       "iou": 0.7,
