@@ -3,7 +3,7 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 16.01.2024
+# Updated: 30.01.2024
 # Website: https://bespredel.name
 
 from threading import Thread
