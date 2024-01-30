@@ -235,7 +235,7 @@
                 }
             });
 
-            // Обработчик получения счетчика
+            // Обработчик получения уведомлений
             socket.on('{{ location }}_notification', function (data) {
                 if (data.message.length > 0) {
                     showToast(data.message, data.type);
