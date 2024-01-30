@@ -14,7 +14,7 @@ from object_counter import ObjectCounter
 from system.config_manager import ConfigManager
 from system.db_client import DBClient
 
-config = ConfigManager("config.json")
+config = ConfigManager("config2.json")
 config.read_config()
 
 # Default settings
@@ -78,13 +78,13 @@ def counter(location=None):
         threading_detectors[location] = Thread(target=object_counters[location].gen_frames_run)
         threading_detectors[location].start()
 
-    items = db_client.get_items()
+    #items = db_client.get_items()
 
     return render_template(
         'counter.html',
         title=locations_dict.get(location, ),
         location=location,
-        items=[],
+        #items=items,
         is_paused=object_counters[location].is_pause()
     )
 
@@ -113,7 +113,7 @@ def counter_t(location=None):
         threading_detectors[location] = Thread(target=object_counters[location].count_run)
         threading_detectors[location].start()
 
-    items = db_client.get_items()
+    #items = db_client.get_items()
 
     return render_template(
         'counter_text.html',
