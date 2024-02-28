@@ -22,7 +22,7 @@ config = ConfigManager("config.json")
 config.read_config()
 
 # Default settings
-debug = config.get("debug", False)
+debug = config.get("general.debug", False)
 locations = list(config.get("detections", {}).keys())
 locations_dict = dict([(k, v['label']) for k, v in config.get("detections", {}).items()])
 
