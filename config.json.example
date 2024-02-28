@@ -1,6 +1,8 @@
 {
-  "debug": false,
-  "log_path": "errors.log",
+  "general": {
+    "debug": true,
+    "log_path": "errors.log"
+  },
   "server": {
     "host": "0.0.0.0",
     "port": 80,

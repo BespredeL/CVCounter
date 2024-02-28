@@ -3,21 +3,24 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 28.01.2024
+# Updated: 28.02.2024
 # Website: https://bespredel.name
 
 
 import time
+
 import cv2
 import numpy as np
 from imutils.video import VideoStream
-from ultralytics import YOLO
+from ultralytics import YOLO, settings
 from shapely.geometry import Point, Polygon
+
 from system.error_logger import ErrorLogger
 from system.sort import Sort
 
 
 class ObjectCounter:
+
     def __init__(self, location, socketio, config, **kwargs):
         # Load config
         config.read_config()
@@ -35,8 +38,7 @@ class ObjectCounter:
         self.limits = kwargs.get('limits', detector_config.get('limits'))
         self.counting_area_color = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
         self.video_scale = detector_config.get('video_show_scale', config.get("detection_default.video_show_scale", 50))
-        self.video_quality = detector_config.get('video_show_quality',
-                                                 config.get("detection_default.video_show_quality", 50))
+        self.video_quality = detector_config.get('video_show_quality', config.get("detection_default.video_show_quality", 50))
         self.indicator_size = detector_config.get('indicator_size', config.get("detection_default.indicator_size", 10))
         self.total_objects = []
         self.total_count = 0
@@ -47,7 +49,7 @@ class ObjectCounter:
         self.paused = False
 
         # Init logger
-        log_path = config.get("log_path")
+        log_path = config.get("general.log_path")
         if self.location != '':
             log_path = f'error_{self.location}.log'
         self.logger = ErrorLogger(log_path)
@@ -66,6 +68,9 @@ class ObjectCounter:
             self.cap = self.video_stream
         else:
             self.cap = VideoStream(self.video_stream).start()
+
+        # Disable analytics and crash reporting
+        settings.update({'sync': False})
 
         # Model
         self.model = YOLO(self.weights)
@@ -137,16 +142,15 @@ class ObjectCounter:
 
                     end_time = time.time()
                     fps = 1 / np.round(end_time - start_time, 2)
-                    cv2.putText(frame, f'FPS: {int(fps)}', (20, 70), cv2.FONT_HERSHEY_SIMPLEX,
-                                1.5, (0, 0, 255), 2)
+                    cv2.putText(frame, f'FPS: {int(fps)}', (20, 70),
+                                cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 2)
 
                 scale_percent = int(self.video_scale)  # percent of original size
                 width = int(frame.shape[1] * scale_percent / 100)
                 height = int(frame.shape[0] * scale_percent / 100)
                 frame = cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
 
-                ret, frame = cv2.imencode('.jpg', frame,
-                                          [cv2.IMWRITE_JPEG_QUALITY, int(self.video_quality)])
+                ret, frame = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, int(self.video_quality)])
 
                 frame = frame.tobytes()
 
@@ -182,8 +186,8 @@ class ObjectCounter:
 
                 end_time = time.time()
                 fps = 1 / np.round(end_time - start_time, 2)
-                cv2.putText(frame, f'FPS: {int(fps)}', (20, 70), cv2.FONT_HERSHEY_SIMPLEX,
-                            1.5, (0, 0, 255), 2)
+                cv2.putText(frame, f'FPS: {int(fps)}', (20, 70),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 2)
 
                 self.frame = frame
             except Exception as e:
@@ -254,6 +258,11 @@ class ObjectCounter:
     def draw_counting_area(self, image):
         alpha = 0.4
         overlay = image.copy()
+        # cv2.rectangle(overlay,
+        #               (self.limits[0], self.limits[1]),
+        #               (self.limits[2], self.limits[3]),
+        #               self.counting_area_color,
+        #               -1)
 
         # Polygon corner points coordinates
         pts = np.array(self.limits, np.int32)
@@ -263,7 +272,7 @@ class ObjectCounter:
         return cv2.addWeighted(overlay, alpha, image, 1 - alpha, 0)
 
     """
-    Detects objects on an image and returns the image.
+    Draws boxes on an image and returns the modified image.
 
     Parameters:
         image (numpy.ndarray): The image on which the boxes will be drawn.
@@ -288,11 +297,12 @@ class ObjectCounter:
             if self.total_objects.count(rid) != 0:
                 cv2.circle(image, (cx, cy), int(self.indicator_size), (0, 255, 0), cv2.FILLED)
 
-            # Определяем точку
+            # Check if the object is within the counting area
             point = Point(cx, cy)
             if point.within(self.polygon) and self.total_objects.count(rid) == 0:
                 self.total_objects.append(rid)
                 self.current_count += 1
+
             self.total_count = len(self.total_objects)
 
         if self.socketio is not None:
@@ -304,7 +314,7 @@ class ObjectCounter:
     Save count.
 
     Returns:
-        dict: The total, defect and correct count.
+        int: The total count.
     """
 
     def save_count(self, location, name, correct_count, defect_count, active=1):

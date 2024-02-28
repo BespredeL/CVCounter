@@ -26,5 +26,9 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
 }
 
 .total_count_txt {
+    font-size: calc(7vw + 2px);
+}
+
+.current_count_txt {
     font-size: calc(19vw + 2px);
 }

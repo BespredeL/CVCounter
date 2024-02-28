@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <a href="{{ url_for('index') }}" class="text-decoration-none text-body">
+        <h1>{% block title %}CVCounter{% endblock %}</h1>
+    </a>
+{% endblock %}
+
+{% import 'partials/forms.html' as forms %}
+
+{% block content %}
+    <div class="col-12 col-md-8 mx-auto">
+        <div class="row">
+            <div class="col-12 mb-3">
+                <form method="POST" action="{{ url_for('settings_save') }}">
+                    <div class="d-flex justify-content-between align-items-center sticky-top bg-body py-3">
+                        <h2 class="mb-0">Настройки</h2>
+                        <div>
+                            {{ forms.button('Сохранить') }}
+                        </div>
+                    </div>
+                    {% for key, value in config.items() %}
+                        {% if value is not mapping %}
+                            <div class="card border-secondary mb-3">
+                                <div class="card-body">{{ forms.generate_form_fields(key, value) }}</div>
+                            </div>
+                        {% else %}
+                            {{ forms.generate_form_fields(key, value) }}
+                        {% endif %}
+                    {% endfor %}
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}

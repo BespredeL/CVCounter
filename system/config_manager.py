@@ -3,10 +3,11 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 19.12.2023
+# Updated: 28.02.2024
 # Website: https://bespredel.name
 
 import json
+import ast
 
 
 class ConfigManager:
@@ -83,3 +84,55 @@ class ConfigManager:
     def save_config(self):
         with open(self.config_path, 'w', encoding='utf-8') as config_file:
             json.dump(self.config, config_file)
+
+    """
+    Saves the config from the request
+
+    Parameters:
+        form_data (dict): The form data
+
+    Returns:
+        None
+    """
+
+    def save_from_request(self, form_data):
+        config_data = {}
+
+        for key in form_data:
+            keys = key.split('-')
+            current_level = config_data
+
+            for part in keys[:-1]:
+                if part not in current_level:
+                    current_level[part] = {}
+                current_level = current_level[part]
+
+            value = form_data[key]
+            try:
+                value = ast.literal_eval(value)
+                if not isinstance(value, (list, tuple)):
+                    raise ValueError
+
+                def verify_list_integrity(lst):
+                    for item in lst:
+                        if isinstance(item, list):
+                            verify_list_integrity(item)
+                        elif not isinstance(item, int):
+                            raise ValueError
+
+                verify_list_integrity(value)
+            except (ValueError, SyntaxError):
+                if not isinstance(value, str):
+                    value = str(value)
+
+                if value.isdigit():
+                    value = int(value)
+                elif value.replace('.', '', 1).isdigit():
+                    value = float(value)
+                elif value.lower() in ['on', 'off']:
+                    value = value.lower() == 'on'
+
+            current_level[keys[-1]] = value
+
+        self.config = config_data
+        self.save_config()

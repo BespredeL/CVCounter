@@ -3,16 +3,20 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 30.01.2024
+# Updated: 28.02.2024
 # Website: https://bespredel.name
 
 from threading import Thread
-from flask import Flask, Response, abort, render_template, request
+from flask import Flask, Response, abort, redirect, render_template, request, url_for
 from flask_socketio import SocketIO
 from markupsafe import escape
 from object_counter import ObjectCounter
 from system.config_manager import ConfigManager
 from system.db_client import DBClient
+
+# ---------------------------------------
+# Init
+# ---------------------------------------
 
 config = ConfigManager("config.json")
 config.read_config()
@@ -57,6 +61,8 @@ def object_detector_init(location):
 
 
 # --------------------------------------------------------------------------------
+# Routes
+# --------------------------------------------------------------------------------
 
 @app.route('/')
 def index():
@@ -64,6 +70,20 @@ def index():
         'index.html',
         object_counters=locations_dict
     )
+
+
+@app.route('/settings')
+def settings():
+    _config = ConfigManager("config.json")
+    return render_template('settings.html', config=_config.read_config())
+
+
+@app.route('/settings_save', methods=['POST'])
+def settings_save():
+    _config = ConfigManager("config.json")
+    _config.save_from_request(request.form)
+
+    return redirect(url_for('settings'))
 
 
 @app.route('/counter/<string:location>')
@@ -78,13 +98,13 @@ def counter(location=None):
         threading_detectors[location] = Thread(target=object_counters[location].gen_frames_run)
         threading_detectors[location].start()
 
-    #items = db_client.get_items()
+    # items = db_client.get_items()
 
     return render_template(
         'counter.html',
         title=locations_dict.get(location, ),
         location=location,
-        #items=items,
+        # items=items,
         is_paused=object_counters[location].is_pause()
     )
 
@@ -113,7 +133,7 @@ def counter_t(location=None):
         threading_detectors[location] = Thread(target=object_counters[location].count_run)
         threading_detectors[location].start()
 
-    #items = db_client.get_items()
+    # items = db_client.get_items()
 
     return render_template(
         'counter_text.html',
@@ -213,13 +233,15 @@ def pause_count(location=None):
 
 
 # --------------------------------------------------------------------------------
+# Server run
+# --------------------------------------------------------------------------------
 
 if __name__ == '__main__':
     socketio.run(
         app,
         host=config.get('server.host'),
         port=config.get('server.port'),
-        debug=config.get('server.debug'),
+        debug=config.get('general.debug'),
         # threaded=config.get('server.threaded'),
         log_output=config.get('server.log_output'),
         use_reloader=config.get('server.use_reloader'),

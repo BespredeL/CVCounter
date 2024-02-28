@@ -5,17 +5,20 @@
 # pip3 install "C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT\v8.6.1.6\onnx_graphsurgeon\onnx_graphsurgeon-0.3.12-py2.py3-none-any.whl"
 # pip3 install "C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT\v8.6.1.6\python\tensorrt-8.6.1-cp311-none-win_amd64.whl"
 #
-numpy~=1.26
+numpy~=1.26.3
 matplotlib~=3.8.1
 scikit-image~=0.22.0
 filterpy~=1.4.5
-opencv-python~=4.8.1.78
+opencv-python~=4.9.0.80
 ultralytics>=8.0.211
 flask~=3.0.0
 flask-socketio~=5.3.6
 imutils~=0.5.4
-pyodbc~=5.0.1
-mysql-connector-python~=8.2.0
+pyodbc~=5.1
+mysql-connector-python~=8.2
+shapely~=2.0.2
+MarkupSafe~=2.1.3
+torch~=2.1.1+cu118
 
 # Export --------------------------------------
 # coremltools>=7.0  # CoreML export
@@ -28,6 +31,3 @@ onnxsim>=0.4.1  # ONNX simplifier
 # tflite-support
 # tensorflowjs>=3.9.0  # TF.js export
 # openvino-dev>=2023.0  # OpenVINO export
-MarkupSafe~=2.1.3
-torch~=2.1.1+cu118
-shapely~=2.0.2
