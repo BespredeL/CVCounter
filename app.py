@@ -178,7 +178,7 @@ def reset_count(location=None):
     return {'total_count': 0, 'defect_count': 0, 'correct_count': 0}
 
 
-@app.route('/reset_count_current/<string:location>', methods=['POST'])
+@app.route('/reset_count_current/<string:location>')
 def reset_count_current(location=None):
     location = escape(location)
     if location not in object_counters:
