@@ -185,8 +185,8 @@ def reset_count_current(location=None):
         abort(400, 'Detection config not found')
 
     item_no = ""  # request.form['item_no']
-    correct_count = request.form['correct_count']
-    defect_count = request.form['defect_count']
+    correct_count = 0  # request.form['correct_count']
+    defect_count = 0  # request.form['defect_count']
     object_counters[location].reset_count_current(
         location=location,
         name=item_no,
