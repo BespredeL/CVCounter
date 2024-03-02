@@ -23,7 +23,7 @@ P.S.:
 - Friends, if you don't mind, please don't remove my copyright at the bottom of the page. It's not a requirement, but if you leave it, I'll be very grateful to you!
 - All of this was implemented without any specifications and nobody believed in success, so there is currently some chaos, but I will try to redo everything more correctly =)
 - If this solution helped you, you can sponsor me by sending the word "Thanks". Contact details are below =))
-- If you need help with the implementation, we can discuss it =)
+- If you need help with the implementation, we can discuss it =).
 
 ## Screenshots
 <img src="https://github.com/BespredeL/BespredeL/blob/c27b6d786e6569cbaa17d49eac8c7433812a1024/Desktop-2023.12.31-13.16.42.01.gif" alt="" width="360">
