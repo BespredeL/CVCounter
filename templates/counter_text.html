@@ -352,10 +352,18 @@
             });
 
             $('#btn_reset_current').on('click', function () {
+                let item_no = $('#item').val();
+                let correct_count = $('#correct_count input').val();
+                let defect_count = $('#defect_count input').val();
+
                 $.ajax({
                     url: '{{ url_for('reset_count_current', location=location) }}',
-                    method: 'get',
-                    data: {},
+                    method: 'post',
+                    data: {
+                        'item_no': item_no || '',
+                        'correct_count': parseInt(correct_count) || 0,
+                        'defect_count': parseInt(defect_count) || 0
+                    },
                     success: function (data) {
                         if (!data) {
                             data = 0;

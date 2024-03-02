@@ -178,15 +178,15 @@ def reset_count(location=None):
     return {'total_count': 0, 'defect_count': 0, 'correct_count': 0}
 
 
-@app.route('/reset_count_current/<string:location>')
+@app.route('/reset_count_current/<string:location>', methods=['POST'])
 def reset_count_current(location=None):
     location = escape(location)
     if location not in object_counters:
         abort(400, 'Detection config not found')
 
-    item_no = ""  # request.form['item_no']
-    correct_count = 0  # request.form['correct_count']
-    defect_count = 0  # request.form['defect_count']
+    item_no = request.form['item_no']
+    correct_count = request.form['correct_count']
+    defect_count = request.form['defect_count']
     object_counters[location].reset_count_current(
         location=location,
         name=item_no,
