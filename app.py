@@ -18,6 +18,7 @@ from system.db_client import DBClient
 # Init
 # ---------------------------------------
 
+# Load config
 config = ConfigManager("config.json")
 config.read_config()
 
@@ -31,6 +32,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = config.get("socketio_key", False)
 socketio = SocketIO(app)
 
+# Start DB
 db_client = DBClient(
     config.get('db.host'),
     config.get('db.user'),
