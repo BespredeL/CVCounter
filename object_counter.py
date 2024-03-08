@@ -422,7 +422,7 @@ class ObjectCounter:
     def start(self):
         # self.running = True
         if self.socketio is not None and self.paused is True:
-            self.notification('Подсчет запущен!', 'primary')
+            self.notification('Подсчет запущен!', 'success')
         self.paused = False
 
     """
@@ -452,7 +452,7 @@ class ObjectCounter:
 
     def pause(self):
         if self.socketio is not None and self.paused is False:
-            self.notification('Подсчет приостановлен!', 'primary')
+            self.notification('Подсчет приостановлен!', 'warning')
         self.paused = True
 
     """
