@@ -3,7 +3,7 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 02.03.2024
+# Updated: 14.03.2024
 # Website: https://bespredel.name
 
 from threading import Thread
@@ -56,7 +56,7 @@ def object_detector_init(location):
             db_client=db_client,
             video_stream=detector_config['video_path'],
             weights=detector_config['weights_path'],
-            limits=detector_config['limits'],
+            counting_area=detector_config['counting_area'],
             counting_area_color=tuple(detector_config['counting_area_color'])
         )
     return object_counters

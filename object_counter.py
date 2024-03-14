@@ -35,7 +35,7 @@ class ObjectCounter:
         self.device = kwargs.get('device', detector_config.get('device', 'cpu'))
         self.confidence = kwargs.get('confidence', detector_config.get('confidence'))
         self.iou = kwargs.get('iou', detector_config.get('iou'))
-        self.limits = kwargs.get('limits', detector_config.get('limits'))
+        self.counting_area = kwargs.get('counting_area', detector_config.get('counting_area'))
         self.counting_area_color = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
         self.video_scale = detector_config.get('video_show_scale', config.get("detection_default.video_show_scale", 50))
         self.video_quality = detector_config.get('video_show_quality', config.get("detection_default.video_show_quality", 50))
@@ -80,7 +80,7 @@ class ObjectCounter:
         self.DB = kwargs.get('db_client')
 
         # Set polygon
-        self.polygon = Polygon(self.limits)
+        self.polygon = Polygon(self.counting_area)
 
     """
     Reconnects to the video stream if the connection has been lost for more than N frames.
@@ -259,13 +259,13 @@ class ObjectCounter:
         alpha = 0.4
         overlay = image.copy()
         # cv2.rectangle(overlay,
-        #               (self.limits[0], self.limits[1]),
-        #               (self.limits[2], self.limits[3]),
+        #               (self.counting_area[0], self.counting_area[1]),
+        #               (self.counting_area[2], self.counting_area[3]),
         #               self.counting_area_color,
         #               -1)
 
         # Polygon corner points coordinates
-        pts = np.array(self.limits, np.int32)
+        pts = np.array(self.counting_area, np.int32)
         pts = pts.reshape((-1, 1, 2))
         cv2.fillPoly(overlay, [pts], self.counting_area_color)
 

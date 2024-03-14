@@ -23,7 +23,11 @@
     "video_show_scale": 50,
     "video_show_quality": 50,
     "weights_path": "yolo_cfg/models/yolov8n.pt",
-    "limits": [
+    "confidence": 0.7,
+    "iou": 0.7,
+    "device": 0,
+    "indicator_size": 10,
+    "counting_area": [
       [
         0,
         0
@@ -41,10 +45,6 @@
         100
       ]
     ],
-    "confidence": 0.7,
-    "iou": 0.7,
-    "device": 0,
-    "indicator_size": 10,
     "counting_area_color": [
       67,
       211,
@@ -60,7 +60,11 @@
       "video_show_scale": 70,
       "video_show_quality": 30,
       "weights_path": "yolo_cfg/models/yolov8n.pt",
-      "limits": [
+      "confidence": 0.7,
+      "iou": 0.7,
+      "device": 0,
+      "indicator_size": 10,
+      "counting_area": [
         [
           0,
           0
@@ -78,10 +82,6 @@
           100
         ]
       ],
-      "confidence": 0.7,
-      "iou": 0.7,
-      "device": 0,
-      "indicator_size": 10,
       "counting_area_color": [
         255,
         64,
