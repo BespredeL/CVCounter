@@ -3,18 +3,16 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 14.03.2024
+# Updated: 16.03.2024
 # Website: https://bespredel.name
 
 
 import time
-
 import cv2
 import numpy as np
 from imutils.video import VideoStream
 from ultralytics import YOLO, settings
 from shapely.geometry import Point, Polygon
-
 from system.error_logger import ErrorLogger
 from system.sort import Sort
 
@@ -38,8 +36,11 @@ class ObjectCounter:
         self.counting_area = kwargs.get('counting_area', detector_config.get('counting_area'))
         self.counting_area_color = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
         self.video_scale = detector_config.get('video_show_scale', config.get("detection_default.video_show_scale", 50))
-        self.video_quality = detector_config.get('video_show_quality', config.get("detection_default.video_show_quality", 50))
+        self.video_quality = detector_config.get('video_show_quality',
+                                                 config.get("detection_default.video_show_quality", 50))
         self.indicator_size = detector_config.get('indicator_size', config.get("detection_default.indicator_size", 10))
+
+        # Init variables
         self.total_objects = []
         self.total_count = 0
         self.current_count = 0
@@ -111,6 +112,53 @@ class ObjectCounter:
             time.sleep(5)
 
     """
+    Process the frame.
+
+    Parameters:
+        frame (numpy.ndarray): The frame to process.
+
+    Returns:
+        numpy.ndarray: The processed frame.
+    """
+
+    def process_frame(self, frame):
+        start_time = time.time()
+        boxes = self.detect(frame)
+        frame = self.draw_counting_area(frame)
+        frame = self.detect_count(frame, boxes)
+        self.frame_lost = 0
+
+        end_time = time.time()
+        fps = 1 / np.round(end_time - start_time, 2)
+        cv2.putText(frame, f'FPS: {int(fps)}', (20, 70),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 2)
+
+        return frame
+
+    """
+    Run the generation of frames.
+
+    Parameters:
+        self (object): The instance of the class.
+
+    Returns:
+        None
+    """
+
+    def gen_frames_run(self):
+        while self.running:
+            try:
+                frame = self.cap.read()
+                if frame is None:
+                    self.reconnect()
+                    continue
+
+                self.frame = self.process_frame(frame)
+            except Exception as e:
+                print(e)
+                self.reconnect()
+
+    """
     Generates frames from a video stream.
 
     Args:
@@ -128,22 +176,11 @@ class ObjectCounter:
                 if self.frame is not None:
                     frame = self.frame
                 else:
-                    start_time = time.time()
-
                     frame = self.cap.read()
-                    if frame is not None:
-                        boxes = self.detect(frame)
-                        frame = self.draw_counting_area(frame)
-                        frame = self.detect_count(frame, boxes)
-                        self.frame_lost = 0
-                    else:
+                    if frame is None:
                         self.reconnect()
                         continue
-
-                    end_time = time.time()
-                    fps = 1 / np.round(end_time - start_time, 2)
-                    cv2.putText(frame, f'FPS: {int(fps)}', (20, 70),
-                                cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 2)
+                    frame = self.process_frame(frame)
 
                 scale_percent = int(self.video_scale)  # percent of original size
                 width = int(frame.shape[1] * scale_percent / 100)
@@ -158,41 +195,6 @@ class ObjectCounter:
                        b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
             except Exception as e:
                 print(e)
-
-    """
-    Run the generation of frames.
-
-    Parameters:
-        self (object): The instance of the class.
-
-    Returns:
-        None
-    """
-
-    def gen_frames_run(self):
-        while self.running:
-            try:
-                start_time = time.time()
-
-                frame = self.cap.read()
-                if frame is not None:
-                    boxes = self.detect(frame)
-                    frame = self.draw_counting_area(frame)
-                    frame = self.detect_count(frame, boxes)
-                    self.frame_lost = 0
-                else:
-                    self.reconnect()
-                    continue
-
-                end_time = time.time()
-                fps = 1 / np.round(end_time - start_time, 2)
-                cv2.putText(frame, f'FPS: {int(fps)}', (20, 70),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 2)
-
-                self.frame = frame
-            except Exception as e:
-                print(e)
-                self.reconnect()
 
     """
     Counts the number of runs in the video stream.
