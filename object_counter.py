@@ -3,7 +3,7 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 16.03.2024
+# Updated: 19.03.2024
 # Website: https://bespredel.name
 
 
@@ -31,8 +31,9 @@ class ObjectCounter:
         # self.socketio = kwargs.get('socketio')
         self.weights = kwargs.get('weights', detector_config.get('weights_path'))
         self.device = kwargs.get('device', detector_config.get('device', 'cpu'))
-        self.confidence = kwargs.get('confidence', detector_config.get('confidence'))
-        self.iou = kwargs.get('iou', detector_config.get('iou'))
+        self.confidence = kwargs.get('confidence',
+                                     detector_config.get('confidence', config.get('detection_default.confidence', 0.5)))
+        self.iou = kwargs.get('iou', detector_config.get('iou', config.get('detection_default.iou', 0.7)))
         self.counting_area = kwargs.get('counting_area', detector_config.get('counting_area'))
         self.counting_area_color = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
         self.video_scale = detector_config.get('video_show_scale', config.get("detection_default.video_show_scale", 50))
@@ -78,7 +79,7 @@ class ObjectCounter:
         self.tracker = Sort(max_age=30, min_hits=3, iou_threshold=0.3)
 
         # DB
-        self.DB = kwargs.get('db_client')
+        self.DB = kwargs.get('db_client', None)
 
         # Set polygon
         self.polygon = Polygon(self.counting_area)
@@ -103,12 +104,17 @@ class ObjectCounter:
             if self.socketio is not None:
                 self.notification('Потеряно соединение с камерой!', 'danger')
 
-            # if self.cap is not None:
-            self.cap.stop()
-            self.cap = None
-            time.sleep(5)
+            try:
+                if self.cap and self.cap is not None:
+                    self.cap.stop()
+                self.cap = None
+                time.sleep(5)
 
-            self.cap = VideoStream(self.video_stream).start()
+                self.cap = VideoStream(self.video_stream).start()
+            except Exception as e:
+                # print(e)
+                print(f'Error reconnect: {self.video_stream}')
+
             time.sleep(5)
 
     """
@@ -123,6 +129,7 @@ class ObjectCounter:
 
     def process_frame(self, frame):
         start_time = time.time()
+
         boxes = self.detect(frame)
         frame = self.draw_counting_area(frame)
         frame = self.detect_count(frame, boxes)
@@ -139,13 +146,13 @@ class ObjectCounter:
     Run the generation of frames.
 
     Parameters:
-        self (object): The instance of the class.
+        None
 
     Returns:
         None
     """
 
-    def gen_frames_run(self):
+    def run_frames(self):
         while self.running:
             try:
                 frame = self.cap.read()
@@ -159,11 +166,10 @@ class ObjectCounter:
                 self.reconnect()
 
     """
-    Generates frames from a video stream.
+    Generator that yields frames in the form of JPEG images.
 
-    Args:
-        model (optional): The model to be used for object detection. Defaults to None.
-        video_stream (optional): The video stream to be used. Defaults to None.
+    Parameters:
+        None
 
     Returns:
         A generator that yields frames in the form of JPEG images.
@@ -176,6 +182,7 @@ class ObjectCounter:
                 if self.frame is not None:
                     frame = self.frame
                 else:
+                    # Attempt to restart in case of error/missing frame
                     frame = self.cap.read()
                     if frame is None:
                         self.reconnect()
@@ -200,7 +207,7 @@ class ObjectCounter:
     Counts the number of runs in the video stream.
 
     Parameters:
-        self (object): The instance of the class.
+        None
 
     Returns:
         None
@@ -314,9 +321,16 @@ class ObjectCounter:
 
     """
     Save count.
+    
+    Parameters:
+        location (str): The location of the object.
+        name (str): The name of the object.
+        correct_count (int): The correct count.
+        defect_count (int): The defect count.
+        active (int): The active status.
 
     Returns:
-        int: The total count.
+        dict: The total count.
     """
 
     def save_count(self, location, name, correct_count, defect_count, active=1):
@@ -324,6 +338,10 @@ class ObjectCounter:
         defect_count = int(defect_count)
         correct_count = int(correct_count)
         item_count = str(total_count - defect_count + correct_count)
+        if not self.DB.check_connection():
+            self.notification('Невозможно сохранить! Соединение с базой данных отсутствует.', 'warning')
+            return dict(total=total_count, defect=defect_count, correct=correct_count)
+
         result = self.DB.save_result(
             location=location,
             name=name,
@@ -348,7 +366,7 @@ class ObjectCounter:
     Resets the count of total objects and total count.
 
     Parameters:
-        self (object): The instance of the class.
+        location (str): The location of the object.
 
     Returns:
         None
@@ -359,7 +377,8 @@ class ObjectCounter:
         self.total_count = 0
         self.current_count = 0
 
-        self.DB.close_current_count(location)
+        if self.DB.check_connection():
+            self.DB.close_current_count(location)
 
         self.notification('Подсчет успешно завершен!', 'primary')
 
@@ -367,7 +386,10 @@ class ObjectCounter:
     Reset the current count.
 
     Parameters:
-        None
+        location (str): The location of the object.
+        name (str): The name of the object.
+        correct_count (int): The correct count.
+        defect_count (int): The defect count.
 
     Returns:
         None
@@ -379,14 +401,15 @@ class ObjectCounter:
         defect_count = int(defect_count)
         correct_count = int(correct_count)
         try:
-            self.DB.save_part_result(
-                location=location,
-                name=name,
-                current_count=current_count,
-                total_count=total_count,
-                defects_count=defect_count,
-                correct_count=correct_count
-            )
+            if self.DB.check_connection():
+                self.DB.save_part_result(
+                    location=location,
+                    name=name,
+                    current_count=current_count,
+                    total_count=total_count,
+                    defects_count=defect_count,
+                    correct_count=correct_count
+                )
         except Exception as e:
             print(e)
 
@@ -401,15 +424,15 @@ class ObjectCounter:
 
     Parameters:
         message (str): The message to be displayed.
-        type (str): The type of notification (success, danger, warning, info, primary, secondary).
+        notification_type (str): The type of notification (success, danger, warning, info, primary, secondary).
 
     Returns:
         None
     """
 
-    def notification(self, message='', type='primary'):
+    def notification(self, message='', notification_type='primary'):
         if self.socketio is not None:
-            self.socketio.emit(f'{self.location}_notification', {'type': type, 'message': message})
+            self.socketio.emit(f'{self.location}_notification', {'type': notification_type, 'message': message})
 
     """
     Start counting.

@@ -5,7 +5,7 @@
         <div id="current_count" class="display-1 pt-3">0</div>
     </div>
 
-    {% if(items is not none) %}
+    {% if(items and items is not none) %}
         <div class="border border-primary rounded mb-2 p-2">
             <select class="selectpicker form-control" id="item" name="item" data-width="auto" data-style="btn-body" data-live-search="true">
                 <option selected disabled>Выберите продукт</option>

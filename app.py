@@ -3,8 +3,9 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 14.03.2024
+# Updated: 19.03.2024
 # Website: https://bespredel.name
+
 
 from threading import Thread
 from flask import Flask, Response, abort, redirect, render_template, request, url_for
@@ -18,12 +19,12 @@ from system.db_client import DBClient
 # Init
 # ---------------------------------------
 
-# Load config
+# Read config
 config = ConfigManager("config.json")
 config.read_config()
 
 # Default settings
-debug = config.get("general.debug", False)
+debug = config.get("debug", False)
 locations = list(config.get("detections", {}).keys())
 locations_dict = dict([(k, v['label']) for k, v in config.get("detections", {}).items()])
 
@@ -41,6 +42,7 @@ db_client = DBClient(
     config.get('db.table_name')
 )
 
+# Init objects
 object_counters = dict()
 threading_detectors = dict()
 
@@ -68,10 +70,7 @@ def object_detector_init(location):
 
 @app.route('/')
 def index():
-    return render_template(
-        'index.html',
-        object_counters=locations_dict
-    )
+    return render_template('index.html', object_counters=locations_dict)
 
 
 @app.route('/settings')
@@ -97,7 +96,7 @@ def counter(location=None):
     object_detector_init(location)
 
     if location not in threading_detectors and location in object_counters:
-        threading_detectors[location] = Thread(target=object_counters[location].gen_frames_run)
+        threading_detectors[location] = Thread(target=object_counters[location].run_frames)
         threading_detectors[location].start()
 
     # items = db_client.get_items()
@@ -166,7 +165,7 @@ def save_count(location=None):
     )
 
     # object_detectors[name].reset_count()
-    return {'total_count': result.total, 'defect_count': result.defect, 'correct_count': result.correct}
+    return {'total_count': result['total'], 'defect_count': result['defect'], 'correct_count': result['correct']}
 
 
 @app.route('/reset_count/<string:location>')

@@ -3,7 +3,7 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 12.12.2023
+# Updated: 19.03.2024
 # Website: https://bespredel.name
 
 from datetime import datetime
@@ -20,23 +20,51 @@ class DBClient:
     table_name = None
 
     def __init__(self, host, user, password, database, table_name='cvcounters'):
-        self.conn = mysql.connector.connect(
-            host=host,
-            user=user,
-            password=password,
-            database=database,
-        )
+        # Log error
+        self.logger = ErrorLogger("errors.log")
+        self.conn = None
+
+        try:
+            self.conn = mysql.connector.connect(
+                host=host,
+                user=user,
+                password=password,
+                database=database,
+            )
+        except mysql.connector.Error as error:
+            self.conn = None
+            # self.logger.log_error(str(error))
+            self.logger.log_exception()
 
         self.table_name = table_name
 
         # Get a cursor
         # self.cur = self.conn.cursor()
 
-        # Log error
-        self.logger = ErrorLogger("errors.log")
-
         # Create table if it does not exist
-        self.create_table()
+        if self.check_connection():
+            self.create_table()
+
+    """
+    Check the connection to the database.
+
+    Parameters:
+        self (object): The instance of the class.
+
+    Returns:
+        bool: True if the connection is successful, False otherwise.
+    """
+
+    def check_connection(self):
+        if self.conn is None:
+            return False
+
+        try:
+            self.conn.ping(reconnect=True, attempts=3, delay=5)
+            return True
+        except mysql.connector.Error as error:
+            self.logger.log_error(str(error))
+            return False
 
     """
     Create a table if it does not already exist in the database. 
@@ -79,7 +107,7 @@ class DBClient:
     def save_result(self, location, name, item_count=0, source_count=0, defects_count=0, correct_count=0, active=1):
         result = False
         try:
-            if not self.conn.is_connected():
+            if not self.check_connection():
                 self.conn.connect()
 
             with self.conn.cursor() as db_cursor:
