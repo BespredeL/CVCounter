@@ -43,9 +43,6 @@ class DBClient:
     """
     Check the connection to the database.
 
-    Parameters:
-        self (object): The instance of the class.
-
     Returns:
         bool: True if the connection is successful, False otherwise.
     """
@@ -142,12 +139,15 @@ class DBClient:
     Saves part the result to the database.
 
     Parameters:
-        production_count (int): The count value production to be saved.
-        defects_count (int): The count value defects to be saved.
-        key (str): The key to identify the result. Defaults to an empty string.
-
+        location (str): The location of the part.
+        name (str): The name of the part.
+        current_count (int): The current count of the part.
+        total_count (int): The total count of the part.
+        defects_count (int): The count of defective parts.
+        correct_count (int): The count of correct parts.
+    
     Returns:
-        None
+        bool: True if the result was successfully saved, False otherwise.
     """
 
     def save_part_result(self, location, name, current_count=0, total_count=0, defects_count=0, correct_count=0):
@@ -209,10 +209,9 @@ class DBClient:
 
     Parameters:
         location (str): The location of the count.
-        name (str): The name of the count.
 
     Returns:
-        None
+        bool: True if the count was successfully closed, False otherwise.
     """
 
     def close_current_count(self, location):
@@ -247,9 +246,6 @@ class DBClient:
 
     Returns:
         int: The current count for the given key.
-
-    Raises:
-        mysql.connector.Error: If there is an error executing the database query.
     """
 
     def get_current_count(self, key=''):

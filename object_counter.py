@@ -31,13 +31,17 @@ class ObjectCounter:
         # self.socketio = kwargs.get('socketio')
         self.weights = kwargs.get('weights', detector_config.get('weights_path'))
         self.device = kwargs.get('device', detector_config.get('device', 'cpu'))
-        self.confidence = kwargs.get('confidence', detector_config.get('confidence', config.get('detection_default.confidence', 0.5)))
+        self.confidence = kwargs.get('confidence',
+                                     detector_config.get('confidence', config.get('detection_default.confidence', 0.5)))
         self.iou = kwargs.get('iou', detector_config.get('iou', config.get('detection_default.iou', 0.7)))
         self.counting_area = kwargs.get('counting_area', detector_config.get('counting_area'))
         self.counting_area_color = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
+        self.vid_stride = detector_config.get('vid_stride', config.get("detection_default.vid_stride", 1))
         self.video_scale = detector_config.get('video_show_scale', config.get("detection_default.video_show_scale", 50))
-        self.video_quality = detector_config.get('video_show_quality', config.get("detection_default.video_show_quality", 50))
+        self.video_quality = detector_config.get('video_show_quality',
+                                                 config.get("detection_default.video_show_quality", 50))
         self.indicator_size = detector_config.get('indicator_size', config.get("detection_default.indicator_size", 10))
+        self.classes = list(map(lambda x: int(x), detector_config.get('classes', {}).keys()))
 
         # Init variables
         self.total_objects = []
@@ -70,14 +74,14 @@ class ObjectCounter:
             self.cap = VideoStream(self.video_stream).start()
 
         # Disable analytics and crash reporting
-        settings.update({'sync': False})
+        # settings.update({'sync': False})
 
         # Model
-        self.model = YOLO(self.weights)
+        self.model = YOLO(self.weights, task="detect")
         self.tracker = Sort(max_age=30, min_hits=3, iou_threshold=0.3)
 
         # DB
-        self.DB = kwargs.get('db_client', None)
+        self.__DB = kwargs.get('db_client', None)
 
         # Set polygon
         self.polygon = Polygon(self.counting_area)
@@ -245,6 +249,8 @@ class ObjectCounter:
             conf=self.confidence,
             iou=self.iou,
             device=self.device,
+            vid_stride=self.vid_stride,
+            classes=self.classes
             # stream_buffer=False,
             # stream=True
         )
@@ -340,11 +346,11 @@ class ObjectCounter:
         defect_count = int(defect_count)
         correct_count = int(correct_count)
         item_count = str(total_count - defect_count + correct_count)
-        if not self.DB.check_connection():
+        if self.__DB is None or not self.__DB.check_connection():
             self.notification(trans('Impossible to save! There is no connection to the database.'), 'warning')
             return dict(total=total_count, defect=defect_count, correct=correct_count)
 
-        result = self.DB.save_result(
+        result = self.__DB.save_result(
             location=location,
             name=name,
             item_count=item_count,
@@ -379,8 +385,8 @@ class ObjectCounter:
         self.total_count = 0
         self.current_count = 0
 
-        if self.DB.check_connection():
-            self.DB.close_current_count(location)
+        if self.__DB is not None and self.__DB.check_connection():
+            self.__DB.close_current_count(location)
 
         self.notification(trans('Counting completed successfully!'), 'primary')
 
@@ -403,8 +409,8 @@ class ObjectCounter:
         defect_count = int(defect_count)
         correct_count = int(correct_count)
         try:
-            if self.DB.check_connection():
-                self.DB.save_part_result(
+            if self.__DB is not None and self.__DB.check_connection():
+                self.__DB.save_part_result(
                     location=location,
                     name=name,
                     current_count=current_count,

@@ -27,6 +27,7 @@
     "confidence": 0.7,
     "iou": 0.7,
     "device": 0,
+    "vid_stride": 1,
     "indicator_size": 10,
     "counting_area": [
       [
@@ -64,6 +65,7 @@
       "confidence": 0.7,
       "iou": 0.7,
       "device": 0,
+      "vid_stride": 1,
       "indicator_size": 10,
       "counting_area": [
         [
@@ -88,7 +90,12 @@
         64,
         0
       ],
-      "classes": {}
+      "classes": {
+        "2": "car",
+        "3": "motorcycle",
+        "5": "bus",
+        "7": "truck"
+      }
     },
   }
 }
