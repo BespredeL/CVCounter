@@ -3,7 +3,7 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 19.03.2024
+# Updated: 22.03.2024
 # Website: https://bespredel.name
 
 import traceback
@@ -20,7 +20,7 @@ class ErrorLogger:
     """
 
     def __init__(self, file_name):
-        self.file_name = file_name
+        self._file_name = file_name
 
     """
     Logs an error message with the current timestamp to a file.
@@ -33,7 +33,7 @@ class ErrorLogger:
     def log_error(self, error_message):
         try:
             current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            with open(self.file_name, "a") as file:
+            with open(self._file_name, "a") as file:
                 file.write(f"-----------------------------------------------------------\n")
                 file.write(f"[{current_time}] Error: {error_message}\n")
         except Exception as e:
@@ -49,7 +49,7 @@ class ErrorLogger:
     def log_exception(self):
         try:
             current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            with open(self.file_name, "a") as file:
+            with open(self._file_name, "a") as file:
                 file.write(f"-----------------------------------------------------------\n")
                 file.write(f"[{current_time}] Exception:\n")
                 traceback.print_exc(file=file)

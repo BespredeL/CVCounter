@@ -1,7 +1,8 @@
 {
   "general": {
     "debug": true,
-    "log_path": "errors.log"
+    "log_path": "errors.log",
+    "default_language": "ru"
   },
   "server": {
     "host": "0.0.0.0",

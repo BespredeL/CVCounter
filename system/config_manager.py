@@ -3,7 +3,7 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 28.02.2024
+# Updated: 22.03.2024
 # Website: https://bespredel.name
 
 import json
@@ -11,9 +11,22 @@ import ast
 
 
 class ConfigManager:
+    _instance = None
+    _init_path = None
+
+    def __new__(cls, config_path):
+        if cls._instance is None:
+            cls._instance = super(ConfigManager, cls).__new__(cls)
+            cls._instance._config_path = config_path
+            cls._instance._config = cls._instance.read_config()
+            cls._init_path = config_path
+        elif config_path != cls._init_path:
+            raise ValueError("Cannot instantiate ConfigManager with a different config path")
+        return cls._instance
+
     def __init__(self, config_path):
-        self.config_path = config_path
-        self.config = self.read_config()
+        self._config_path = config_path
+        self._config = self.read_config()
 
     """
     Reads the config file and returns it as a dictionary
@@ -27,10 +40,10 @@ class ConfigManager:
 
     def read_config(self):
         try:
-            with open(self.config_path, 'r', encoding='utf-8') as config_file:
+            with open(self._config_path, 'r', encoding='utf-8') as config_file:
                 return json.load(config_file)
         except FileNotFoundError:
-            raise ValueError(f"File '{self.config_path}' does not exist")
+            raise ValueError(f"File '{self._config_path}' does not exist")
 
     """
     Returns a value from the config
@@ -45,7 +58,7 @@ class ConfigManager:
 
     def get(self, keys, default=None):
         keys = keys.split('.')
-        val = self.config
+        val = self._config
         try:
             for key in keys:
                 val = val[key]
@@ -66,7 +79,7 @@ class ConfigManager:
 
     def set(self, keys, value):
         keys = keys.split('.')
-        val = self.config
+        val = self._config
         for key in keys[:-1]:
             val = val.setdefault(key, {})
         val[keys[-1]] = value
@@ -82,8 +95,8 @@ class ConfigManager:
     """
 
     def save_config(self):
-        with open(self.config_path, 'w', encoding='utf-8') as config_file:
-            json.dump(self.config, config_file)
+        with open(self._config_path, 'w', encoding='utf-8') as config_file:
+            json.dump(self._config, config_file)
 
     """
     Saves the config from the request
@@ -134,5 +147,5 @@ class ConfigManager:
 
             current_level[keys[-1]] = value
 
-        self.config = config_data
+        self._config = config_data
         self.save_config()

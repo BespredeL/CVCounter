@@ -3,7 +3,7 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 19.03.2024
+# Updated: 22.03.2024
 # Website: https://bespredel.name
 
 from datetime import datetime
@@ -14,32 +14,27 @@ from system.error_logger import ErrorLogger
 
 
 class DBClient:
-    conn = None
-    cur = None
-    logger = None
-    table_name = None
+    __conn = None
+    __logger = None
+    __table_name = None
 
     def __init__(self, host, user, password, database, table_name='cvcounters'):
         # Log error
-        self.logger = ErrorLogger("errors.log")
-        self.conn = None
+        self.__logger = ErrorLogger("errors.log")
+        self.__table_name = table_name
 
+        # Connection
         try:
-            self.conn = mysql.connector.connect(
+            self.__conn = mysql.connector.connect(
                 host=host,
                 user=user,
                 password=password,
                 database=database,
             )
         except mysql.connector.Error as error:
-            self.conn = None
+            self.__conn = None
             # self.logger.log_error(str(error))
-            self.logger.log_exception()
-
-        self.table_name = table_name
-
-        # Get a cursor
-        # self.cur = self.conn.cursor()
+            self.__logger.log_exception()
 
         # Create table if it does not exist
         if self.check_connection():
@@ -56,14 +51,14 @@ class DBClient:
     """
 
     def check_connection(self):
-        if self.conn is None:
+        if self.__conn is None:
             return False
 
         try:
-            self.conn.ping(reconnect=True, attempts=3, delay=5)
+            self.__conn.ping(reconnect=True, attempts=3, delay=5)
             return True
         except mysql.connector.Error as error:
-            self.logger.log_error(str(error))
+            self.__logger.log_error(str(error))
             return False
 
     """
@@ -72,9 +67,9 @@ class DBClient:
 
     def create_table(self):
         try:
-            with self.conn.cursor() as cursor:
+            with self.__conn.cursor() as cursor:
                 cursor.execute(f"""
-                    CREATE TABLE IF NOT EXISTS {self.table_name} (
+                    CREATE TABLE IF NOT EXISTS {self.__table_name} (
                         id INT AUTO_INCREMENT PRIMARY KEY,
                         active TINYINT(1) DEFAULT 1,
                         location VARCHAR(255) NOT NULL,
@@ -88,9 +83,9 @@ class DBClient:
                         updated_at TIMESTAMP NOT NULL
                     )
                 """)
-                self.conn.commit()
+                self.__conn.commit()
         except mysql.connector.Error as error:
-            self.logger.log_error(str(error))
+            self.__logger.log_error(str(error))
 
     """
     Saves the result to the database.
@@ -108,38 +103,38 @@ class DBClient:
         result = False
         try:
             if not self.check_connection():
-                self.conn.connect()
+                self.__conn.connect()
 
-            with self.conn.cursor() as db_cursor:
-                sql_query = f"SELECT * FROM {self.table_name} WHERE active = 1 AND location = %s AND name = %s"
+            with self.__conn.cursor() as db_cursor:
+                sql_query = f"SELECT * FROM {self.__table_name} WHERE active = 1 AND location = %s AND name = %s"
                 db_cursor.execute(sql_query, (location, name,))
                 db_select_result = db_cursor.fetchone()
 
                 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 if db_select_result is not None:
                     sql_query = (
-                        f"UPDATE {self.table_name} "
+                        f"UPDATE {self.__table_name} "
                         "SET active = %s, location = %s, name = %s, item_count = %s, source_count = %s, defects_count = %s, "
                         "correct_count = %s, created_at = %s, updated_at = %s "
                         "WHERE id = %s")
                     sql_val = (active, location, name, item_count, source_count, defects_count, correct_count,
                                now, now, db_select_result[0])
                     db_cursor.execute(sql_query, sql_val)
-                    self.conn.commit()
+                    self.__conn.commit()
                     result = True
                 else:
                     sql_query = (
-                        f"INSERT INTO {self.table_name} (active, location, name, item_count, source_count, defects_count, "
+                        f"INSERT INTO {self.__table_name} (active, location, name, item_count, source_count, defects_count, "
                         "correct_count, created_at, updated_at) "
                         "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)")
                     sql_val = (active, location, name, item_count, source_count, defects_count, correct_count, now, now)
                     db_cursor.execute(sql_query, sql_val)
-                    self.conn.commit()
+                    self.__conn.commit()
                     result = True
 
         except mysql.connector.Error as error:
-            self.logger.log_error(str(error))
-            self.logger.log_exception()
+            self.__logger.log_error(str(error))
+            self.__logger.log_exception()
 
         return result
 
@@ -158,11 +153,11 @@ class DBClient:
     def save_part_result(self, location, name, current_count=0, total_count=0, defects_count=0, correct_count=0):
         result = False
         try:
-            if not self.conn.is_connected():
-                self.conn.connect()
+            if not self.__conn.is_connected():
+                self.__conn.connect()
 
-            with self.conn.cursor() as db_cursor:
-                sql_query = f"SELECT * FROM {self.table_name} WHERE active = 1 AND location = %s AND name = %s"
+            with self.__conn.cursor() as db_cursor:
+                sql_query = f"SELECT * FROM {self.__table_name} WHERE active = 1 AND location = %s AND name = %s"
                 db_cursor.execute(sql_query, (location, name,))
                 db_select_result = db_cursor.fetchone()
 
@@ -187,25 +182,25 @@ class DBClient:
                 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 if db_select_result is not None:
                     sql_query = (
-                        f"UPDATE {self.table_name} "
+                        f"UPDATE {self.__table_name} "
                         "SET parts = %s, created_at = %s, updated_at = %s "
                         "WHERE id = %s")
                     sql_val = (new_parts, now, now, db_select_result[0])
                     db_cursor.execute(sql_query, sql_val)
-                    self.conn.commit()
+                    self.__conn.commit()
                     result = True
                 else:
                     sql_query = (
-                        f"INSERT INTO {self.table_name} (active, location, name, parts, created_at, updated_at) "
+                        f"INSERT INTO {self.__table_name} (active, location, name, parts, created_at, updated_at) "
                         "VALUES (%s, %s, %s, %s, %s, %s)")
                     sql_val = (1, location, name, new_parts, now, now)
                     db_cursor.execute(sql_query, sql_val)
-                    self.conn.commit()
+                    self.__conn.commit()
                     result = True
 
         except mysql.connector.Error as error:
-            self.logger.log_error(str(error))
-            self.logger.log_exception()
+            self.__logger.log_error(str(error))
+            self.__logger.log_exception()
 
         return result
 
@@ -223,23 +218,23 @@ class DBClient:
     def close_current_count(self, location):
         result = False
         try:
-            if not self.conn.is_connected():
-                self.conn.connect()
+            if not self.__conn.is_connected():
+                self.__conn.connect()
 
-            with self.conn.cursor() as db_cursor:
-                sql_query = f"SELECT * FROM {self.table_name} WHERE active = 1 AND location = %s"
+            with self.__conn.cursor() as db_cursor:
+                sql_query = f"SELECT * FROM {self.__table_name} WHERE active = 1 AND location = %s"
                 db_cursor.execute(sql_query, (location,))
                 db_select_result = db_cursor.fetchone()
 
                 if db_select_result:
-                    sql_query = f"UPDATE {self.table_name} SET active = %s WHERE id = %s"
+                    sql_query = f"UPDATE {self.__table_name} SET active = %s WHERE id = %s"
                     sql_val = (0, db_select_result[0])
                     db_cursor.execute(sql_query, sql_val)
-                    self.conn.commit()
+                    self.__conn.commit()
                     result = True
 
         except mysql.connector.Error as error:
-            self.logger.log_error(str(error))
+            self.__logger.log_error(str(error))
             # self.logger.log_exception()
 
         return result
@@ -260,15 +255,15 @@ class DBClient:
     def get_current_count(self, key=''):
         result = None
         try:
-            with self.conn.cursor() as db_cursor:
-                sql_query = f"SELECT * FROM {self.table_name} WHERE active = 1 AND name = %s"
+            with self.__conn.cursor() as db_cursor:
+                sql_query = f"SELECT * FROM {self.__table_name} WHERE active = 1 AND name = %s"
                 db_cursor.execute(sql_query, (key,))
                 db_select_result = db_cursor.fetchone()
 
             result = db_select_result[3]
 
         except mysql.connector.Error as error:
-            self.logger.log_error(str(error))
+            self.__logger.log_error(str(error))
             # self.logger.log_exception()
 
         return result
@@ -286,7 +281,7 @@ class DBClient:
             return None
 
         except mysql.connector.Error as error:
-            self.logger.log_error(str(error))
+            self.__logger.log_error(str(error))
             # self.logger.log_exception()
 
     """

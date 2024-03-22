@@ -1,14 +1,14 @@
 <!-- START: Right block -->
 <div class="col-12 col-lg-3">
     <div class="bg-warning text-dark rounded px-2 my-2 position-relative">
-        <div class="h4 position-absolute">Кол-во: <span id="total_count">0</span></div>
+        <div class="h4 position-absolute">{{ trans('Quantity:') }} <span id="total_count">0</span></div>
         <div id="current_count" class="display-1 pt-3">0</div>
     </div>
 
     {% if(items and items is not none) %}
         <div class="border border-primary rounded mb-2 p-2">
             <select class="selectpicker form-control" id="item" name="item" data-width="auto" data-style="btn-body" data-live-search="true">
-                <option selected disabled>Выберите продукт</option>
+                <option selected disabled>{{ trans('Select product') }}</option>
                 {% for item in items %}
                     <option value="{{ item.No_ }}">[{{ item.No_ }}] {{ item.Description }}</option>
                 {% endfor %}
@@ -18,7 +18,7 @@
 
     <div class="border border-danger-subtle rounded mb-2 p-2">
         <div class="col-12 mb-3">
-            <label for="defect_count" class="form-label h4">Брак</label>
+            <label for="defect_count" class="form-label h4">{{ trans('Defective products') }}</label>
             <div class="input-group" id="defect_count">
                 <button class="btn btn-sm btn-secondary input-plus">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-plus-lg"
@@ -56,14 +56,14 @@
             </div>
             <div class="row">
                 <button class="btn btn-secondary col m-1 fs-5" data-value="0">0</button>
-                <button class="btn btn-warning text-black col-4 m-1 reset text-truncate">Сбросить</button>
+                <button class="btn btn-warning text-black col-4 m-1 reset text-truncate">{{ trans('Reset') }}</button>
             </div>
         </div>
     </div>
 
     <div class="border border-warning-subtle rounded mb-2 p-2">
         <div class="col-12 mb-3">
-            <label for="correct_count" class="form-label h4">Корректировка</label>
+            <label for="correct_count" class="form-label h4">{{ trans('Correct count') }}</label>
             <button class="btn btn-outline-info float-end" data-bs-toggle="collapse" data-bs-target="#collapseСorrect" aria-expanded="false"
                     aria-controls="collapseСorrect"
                     style="--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem;">
@@ -117,14 +117,14 @@
             <div class="row">
                 <button class="btn btn-secondary col m-1 fs-5" data-value="-">+/-</button>
                 <button class="btn btn-secondary col m-1 fs-5" data-value="0">0</button>
-                <button class="btn btn-warning text-black col m-1 reset text-truncate">Сбросить</button>
+                <button class="btn btn-warning text-black col m-1 reset text-truncate">{{ trans('Reset') }}</button>
             </div>
         </div>
     </div>
 
     <div class="col-12 mb-3 px-2">
         <div class="row mb-3">
-            <button class="btn btn-primary col mb-3 m-1" id="btn_reset_current">Новая партия</button>
+            <button class="btn btn-primary col mb-3 m-1" id="btn_reset_current">{{ trans('New batch') }}</button>
         </div>
 
         <div class="row mb-3">
@@ -133,7 +133,7 @@
                      viewBox="0 0 16 16">
                     <path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"/>
                 </svg>
-                <span>Пауза</span>
+                <span>{{ trans('Pause') }}</span>
             </button>
 
             <button class="btn {{ 'btn-info' if is_paused else 'btn-outline-secondary' }} btn-sm col mb-3 m-1" id="btn_start">
@@ -142,7 +142,7 @@
                      viewBox="0 0 16 16">
                     <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/>
                 </svg>
-                <span>Старт</span>
+                <span>{{ trans('Start') }}</span>
             </button>
 
             {#<button class="btn btn-secondary btn-sm col mb-3 m-1" id="btn_stop">
@@ -154,8 +154,8 @@
         </div>
 
         <div class="row">
-            <button class="btn btn-success col mb-3 m-1" id="btn_save">Сохранить</button>
-            <button class="btn btn-danger col mb-3 m-1" id="btn_reset">Сбросить</button>
+            <button class="btn btn-success col mb-3 m-1" id="btn_save">{{ trans('Save') }}</button>
+            <button class="btn btn-danger col mb-3 m-1" id="btn_reset">{{ trans('Reset') }}</button>
         </div>
     </div>
 </div>

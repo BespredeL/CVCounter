@@ -1,15 +1,12 @@
 <div class="row d-none d-md-flex">
     <div class="col-4">
         <div class="border border-2 border-danger-subtle rounded-3 p-1 mx-1 text-center small">
-            В поле "Брак" указывается количество бракованных изделий.<br>
-            Значение в поле "Брак" уменьшает количество "Всего".
+            {{ trans('The "Defect" field indicates the number of defective products.<br>The value in the "Defect" field reduces the "Total" quantity.') | safe }}
         </div>
     </div>
     <div class="col-8">
         <div class="border border-2 border-warning-subtle rounded-3 p-1 mx-1 text-center small">
-            В поле "Корректировка" может быть указано как положительное, так и отрицательное значение.<br>
-            Корректировка необходима например в случаях когда изготовления снимались с линии, если программа посчитала кол-во
-            некорректно и т.п.
+            {{ trans('In the "Adjustment" field, both a positive and negative value can be indicated.<br>Adjustment is necessary, for example, in cases when products were removed from the line, if the program counted the quantity incorrectly, etc.') | safe }}
         </div>
     </div>
 </div>

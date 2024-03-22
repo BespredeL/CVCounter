@@ -3,9 +3,8 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 19.03.2024
+# Updated: 22.03.2024
 # Website: https://bespredel.name
-
 
 import time
 import cv2
@@ -14,6 +13,7 @@ from imutils.video import VideoStream
 from ultralytics import YOLO, settings
 from shapely.geometry import Point, Polygon
 from system.error_logger import ErrorLogger
+from system.translate import trans
 from system.sort import Sort
 
 
@@ -31,14 +31,12 @@ class ObjectCounter:
         # self.socketio = kwargs.get('socketio')
         self.weights = kwargs.get('weights', detector_config.get('weights_path'))
         self.device = kwargs.get('device', detector_config.get('device', 'cpu'))
-        self.confidence = kwargs.get('confidence',
-                                     detector_config.get('confidence', config.get('detection_default.confidence', 0.5)))
+        self.confidence = kwargs.get('confidence', detector_config.get('confidence', config.get('detection_default.confidence', 0.5)))
         self.iou = kwargs.get('iou', detector_config.get('iou', config.get('detection_default.iou', 0.7)))
         self.counting_area = kwargs.get('counting_area', detector_config.get('counting_area'))
         self.counting_area_color = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
         self.video_scale = detector_config.get('video_show_scale', config.get("detection_default.video_show_scale", 50))
-        self.video_quality = detector_config.get('video_show_quality',
-                                                 config.get("detection_default.video_show_quality", 50))
+        self.video_quality = detector_config.get('video_show_quality', config.get("detection_default.video_show_quality", 50))
         self.indicator_size = detector_config.get('indicator_size', config.get("detection_default.indicator_size", 10))
 
         # Init variables
@@ -100,9 +98,9 @@ class ObjectCounter:
         if self.frame_lost > 10:
             self.frame_lost = 0
             # self.logger.log_error('Reconnect ' + self.location + '...')
-            print(f'Reconnect {self.location}...')
+            print(trans('Reconnect {location}...', location=self.location))
             if self.socketio is not None:
-                self.notification('Потеряно соединение с камерой!', 'danger')
+                self.notification(trans('Lost connection to camera!'), 'danger')
 
             try:
                 if self.cap and self.cap is not None:
@@ -113,7 +111,10 @@ class ObjectCounter:
                 self.cap = VideoStream(self.video_stream).start()
             except Exception as e:
                 # print(e)
-                print(f'Error reconnect: {self.video_stream}')
+                if self.video_stream is str:
+                    print(trans('Error reconnect: {video_path}', video_path=self.video_stream))
+                else:
+                    print(trans('Error reconnect'))
 
             time.sleep(5)
 
@@ -267,6 +268,7 @@ class ObjectCounter:
     def draw_counting_area(self, image):
         alpha = 0.4
         overlay = image.copy()
+        # Rectangle coordinates
         # cv2.rectangle(overlay,
         #               (self.counting_area[0], self.counting_area[1]),
         #               (self.counting_area[2], self.counting_area[3]),
@@ -339,7 +341,7 @@ class ObjectCounter:
         correct_count = int(correct_count)
         item_count = str(total_count - defect_count + correct_count)
         if not self.DB.check_connection():
-            self.notification('Невозможно сохранить! Соединение с базой данных отсутствует.', 'warning')
+            self.notification(trans('Impossible to save! There is no connection to the database.'), 'warning')
             return dict(total=total_count, defect=defect_count, correct=correct_count)
 
         result = self.DB.save_result(
@@ -356,9 +358,9 @@ class ObjectCounter:
             # self.total_objects = []
             # self.total_count = 0
             # self.current_count = 0
-            self.notification('Успешно сохранено!', 'success')
+            self.notification(trans('Saved successfully!'), 'success')
         else:
-            self.notification('Ошибка сохранения!', 'danger')
+            self.notification(trans('Save error!'), 'danger')
 
         return dict(total=total_count, defect=defect_count, correct=correct_count)
 
@@ -380,7 +382,7 @@ class ObjectCounter:
         if self.DB.check_connection():
             self.DB.close_current_count(location)
 
-        self.notification('Подсчет успешно завершен!', 'primary')
+        self.notification(trans('Counting completed successfully!'), 'primary')
 
     """
     Reset the current count.
@@ -417,7 +419,7 @@ class ObjectCounter:
 
         if self.socketio is not None:
             self.socketio.emit(f'{location}_count', {'total': total_count, 'current': 0})
-            self.notification('Счетчик сброшен!', 'primary')
+            self.notification(trans('The counter has been reset!'), 'primary')
 
     """
     Emit a notification to the client.
@@ -447,7 +449,7 @@ class ObjectCounter:
     def start(self):
         # self.running = True
         if self.socketio is not None and self.paused is True:
-            self.notification('Подсчет запущен!', 'success')
+            self.notification(trans('Counting has started!'), 'success')
         self.paused = False
 
     """
@@ -462,7 +464,7 @@ class ObjectCounter:
 
     def stop(self):
         if self.socketio is not None and self.running is True:
-            self.notification('Подсчет остановлен!', 'primary')
+            self.notification(trans('Counting has stopped!'), 'primary')
         self.running = False
 
     """
@@ -477,7 +479,7 @@ class ObjectCounter:
 
     def pause(self):
         if self.socketio is not None and self.paused is False:
-            self.notification('Подсчет приостановлен!', 'warning')
+            self.notification(trans('Counting has paused!'), 'warning')
         self.paused = True
 
     """

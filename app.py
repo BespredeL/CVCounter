@@ -3,9 +3,8 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 19.03.2024
+# Updated: 22.03.2024
 # Website: https://bespredel.name
-
 
 from threading import Thread
 from flask import Flask, Response, abort, redirect, render_template, request, url_for
@@ -14,10 +13,11 @@ from markupsafe import escape
 from object_counter import ObjectCounter
 from system.config_manager import ConfigManager
 from system.db_client import DBClient
+from system.translate import trans
 
-# ---------------------------------------
+# --------------------------------------------------------------------------------
 # Init
-# ---------------------------------------
+# --------------------------------------------------------------------------------
 
 # Read config
 config = ConfigManager("config.json")
@@ -33,6 +33,13 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = config.get("socketio_key", False)
 socketio = SocketIO(app)
 
+
+# Context processor
+@app.context_processor
+def utility_processor():
+    return dict(config=config, trans=trans)
+
+
 # Start DB
 db_client = DBClient(
     config.get('db.host'),
@@ -46,6 +53,10 @@ db_client = DBClient(
 object_counters = dict()
 threading_detectors = dict()
 
+
+# --------------------------------------------------------------------------------
+# Functions
+# --------------------------------------------------------------------------------
 
 def object_detector_init(location):
     global object_counters, threading_detectors, config
@@ -91,7 +102,7 @@ def settings_save():
 def counter(location=None):
     location = escape(location)
     if location not in locations:
-        abort(400, 'Detection config not found')
+        abort(400, trans('Detection config not found'))
 
     object_detector_init(location)
 
@@ -114,7 +125,7 @@ def counter(location=None):
 def get_frames(location=None):
     location = escape(location)
     if location not in object_counters:
-        abort(400, 'Detection config not found')
+        abort(400, trans('Detection config not found'))
 
     return Response(
         object_counters[location].get_frames(),
@@ -126,7 +137,7 @@ def get_frames(location=None):
 def counter_t(location=None):
     location = escape(location)
     if location not in locations:
-        abort(400, 'Detection config not found')
+        abort(400, trans('Detection config not found'))
 
     object_detector_init(location)
 
@@ -151,7 +162,7 @@ def counter_t(location=None):
 def save_count(location=None):
     location = escape(location)
     if location not in object_counters:
-        abort(400, 'Detection config not found')
+        abort(400, trans('Detection config not found'))
 
     item_no = ""  # request.form['item_no']
     correct_count = request.form['correct_count']
@@ -172,7 +183,7 @@ def save_count(location=None):
 def reset_count(location=None):
     location = escape(location)
     if location not in object_counters:
-        abort(400, 'Detection config not found')
+        abort(400, trans('Detection config not found'))
 
     object_counters[location].reset_count(location=location)
 
@@ -183,7 +194,7 @@ def reset_count(location=None):
 def reset_count_current(location=None):
     location = escape(location)
     if location not in object_counters:
-        abort(400, 'Detection config not found')
+        abort(400, trans('Detection config not found'))
 
     item_no = request.form['item_no']
     correct_count = request.form['correct_count']
@@ -204,7 +215,7 @@ def reset_count_current(location=None):
 def start_count(location=None):
     location = escape(location)
     if location not in object_counters:
-        abort(400, 'Detection config not found')
+        abort(400, trans('Detection config not found'))
 
     object_counters[location].start()
 
@@ -215,7 +226,7 @@ def start_count(location=None):
 def stop_count(location=None):
     location = escape(location)
     if location not in object_counters:
-        abort(400, 'Detection config not found')
+        abort(400, trans('Detection config not found'))
 
     object_counters[location].stop()
 
@@ -226,7 +237,7 @@ def stop_count(location=None):
 def pause_count(location=None):
     location = escape(location)
     if location not in object_counters:
-        abort(400, 'Detection config not found')
+        abort(400, trans('Detection config not found'))
 
     object_counters[location].pause()
 
