@@ -46,8 +46,8 @@ $(function () {
     socket.io.on("reconnect", (attempt) => {
         $('#alert-container').html(
             '<div class="alert alert-success mt-3 d-flex justify-content-between" role="alert">' +
-            '<span class="h3">Соединение с сервером установлено</span>' +
-            '<a href="#" onclick="location.reload()" class="btn btn-warning">Перезагрузить страницу</a>' +
+            '<span class="h3">' + window.trans('Connection to server successful') + '</span>' +
+            '<a href="#" onclick="location.reload()" class="btn btn-warning">' + window.trans('Reload page') + '</a>' +
             '</div>'
         );
 
@@ -61,8 +61,8 @@ $(function () {
     window.socket.io.on("error", (error) => {
         $('#alert-container').html(
             '<div class="alert alert-danger mt-3 d-flex justify-content-between" role="alert">' +
-            '<span class="h3">Ошибка соединения с сервером. Обратитесь в IT отдел.</span>' +
-            '<a href="#" onclick="location.reload()" class="btn btn-warning" id="reload-btn"> Перезагрузить страницу</a>' +
+            '<span class="h3">' + window.trans('Error connecting to the server. Contact the IT department.') + '</span>' +
+            '<a href="#" onclick="location.reload()" class="btn btn-warning" id="reload-btn">' + window.trans('Reload page') + '</a>' +
             '</div>'
         );
 
