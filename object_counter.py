@@ -3,18 +3,18 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 22.03.2024
+# Updated: 26.03.2024
 # Website: https://bespredel.name
 
 import time
 import cv2
 import numpy as np
-from imutils.video import VideoStream
-from ultralytics import YOLO, settings
 from shapely.geometry import Point, Polygon
+from ultralytics import YOLO, settings
 from system.error_logger import ErrorLogger
-from system.translate import trans
 from system.sort import Sort
+from system.translate import trans
+from system.video_stream_manager import VideoStreamManager
 
 
 class ObjectCounter:
@@ -31,17 +31,15 @@ class ObjectCounter:
         # self.socketio = kwargs.get('socketio')
         self.weights = kwargs.get('weights', detector_config.get('weights_path'))
         self.device = kwargs.get('device', detector_config.get('device', 'cpu'))
-        self.confidence = kwargs.get('confidence',
-                                     detector_config.get('confidence', config.get('detection_default.confidence', 0.5)))
+        self.confidence = kwargs.get('confidence', detector_config.get('confidence', config.get('detection_default.confidence', 0.5)))
         self.iou = kwargs.get('iou', detector_config.get('iou', config.get('detection_default.iou', 0.7)))
         self.counting_area = kwargs.get('counting_area', detector_config.get('counting_area'))
         self.counting_area_color = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
-        self.vid_stride = detector_config.get('vid_stride', config.get("detection_default.vid_stride", 1))
         self.video_scale = detector_config.get('video_show_scale', config.get("detection_default.video_show_scale", 50))
-        self.video_quality = detector_config.get('video_show_quality',
-                                                 config.get("detection_default.video_show_quality", 50))
+        self.video_quality = detector_config.get('video_show_quality', config.get("detection_default.video_show_quality", 50))
         self.indicator_size = detector_config.get('indicator_size', config.get("detection_default.indicator_size", 10))
-        self.classes = list(map(lambda x: int(x), detector_config.get('classes', {}).keys()))
+        self.vid_stride = detector_config.get('vid_stride', config.get("detection_default.vid_stride", 1))
+        self.classes = detector_config.get('classes', {})
 
         # Init variables
         self.total_objects = []
@@ -68,20 +66,22 @@ class ObjectCounter:
 
         # Video
         self.video_stream = kwargs.get('video_stream', detector_config['video_path'])
-        if not self.video_stream.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://', 'tcp://')):
-            self.cap = self.video_stream
-        else:
-            self.cap = VideoStream(self.video_stream).start()
+        # if not self.video_stream.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://', 'tcp://')):
+        #     self.cap = self.video_stream
+        # else:
+        #     self.cap = VideoStream(self.video_stream).start()
+        self.vsm = VideoStreamManager(self.video_stream)
+        self.vsm.start()
 
         # Disable analytics and crash reporting
-        # settings.update({'sync': False})
+        settings.update({'sync': False})
 
         # Model
-        self.model = YOLO(self.weights, task="detect")
+        self.model = YOLO(self.weights)
         self.tracker = Sort(max_age=30, min_hits=3, iou_threshold=0.3)
 
         # DB
-        self.__DB = kwargs.get('db_client', None)
+        self.DB = kwargs.get('db_client', None)
 
         # Set polygon
         self.polygon = Polygon(self.counting_area)
@@ -107,12 +107,7 @@ class ObjectCounter:
                 self.notification(trans('Lost connection to camera!'), 'danger')
 
             try:
-                if self.cap and self.cap is not None:
-                    self.cap.stop()
-                self.cap = None
-                time.sleep(5)
-
-                self.cap = VideoStream(self.video_stream).start()
+                self.vsm.reconnect()
             except Exception as e:
                 # print(e)
                 if self.video_stream is str:
@@ -160,7 +155,7 @@ class ObjectCounter:
     def run_frames(self):
         while self.running:
             try:
-                frame = self.cap.read()
+                frame = self.vsm.get_frame()
                 if frame is None:
                     self.reconnect()
                     continue
@@ -188,7 +183,7 @@ class ObjectCounter:
                     frame = self.frame
                 else:
                     # Attempt to restart in case of error/missing frame
-                    frame = self.cap.read()
+                    frame = self.vsm.get_frame()
                     if frame is None:
                         self.reconnect()
                         continue
@@ -221,7 +216,7 @@ class ObjectCounter:
     def count_run(self):
         while self.running:
             try:
-                frame = self.cap.read()
+                frame = self.vsm.get_frame()
                 if frame is None:
                     self.reconnect()
                     continue
@@ -244,13 +239,17 @@ class ObjectCounter:
     """
 
     def detect(self, image):
+        classes_list = None
+        if self.classes is not None and isinstance(self.classes, dict) and len(self.classes) > 0:
+            classes_list = list(map(int, self.classes.keys()))
+
         results = self.model.predict(
             image,
             conf=self.confidence,
             iou=self.iou,
             device=self.device,
             vid_stride=self.vid_stride,
-            classes=self.classes
+            classes=classes_list
             # stream_buffer=False,
             # stream=True
         )
@@ -274,12 +273,6 @@ class ObjectCounter:
     def draw_counting_area(self, image):
         alpha = 0.4
         overlay = image.copy()
-        # Rectangle coordinates
-        # cv2.rectangle(overlay,
-        #               (self.counting_area[0], self.counting_area[1]),
-        #               (self.counting_area[2], self.counting_area[3]),
-        #               self.counting_area_color,
-        #               -1)
 
         # Polygon corner points coordinates
         pts = np.array(self.counting_area, np.int32)
@@ -346,11 +339,11 @@ class ObjectCounter:
         defect_count = int(defect_count)
         correct_count = int(correct_count)
         item_count = str(total_count - defect_count + correct_count)
-        if self.__DB is None or not self.__DB.check_connection():
+        if not self.DB.check_connection():
             self.notification(trans('Impossible to save! There is no connection to the database.'), 'warning')
             return dict(total=total_count, defect=defect_count, correct=correct_count)
 
-        result = self.__DB.save_result(
+        result = self.DB.save_result(
             location=location,
             name=name,
             item_count=item_count,
@@ -385,8 +378,8 @@ class ObjectCounter:
         self.total_count = 0
         self.current_count = 0
 
-        if self.__DB is not None and self.__DB.check_connection():
-            self.__DB.close_current_count(location)
+        if self.DB.check_connection():
+            self.DB.close_current_count(location)
 
         self.notification(trans('Counting completed successfully!'), 'primary')
 
@@ -409,8 +402,8 @@ class ObjectCounter:
         defect_count = int(defect_count)
         correct_count = int(correct_count)
         try:
-            if self.__DB is not None and self.__DB.check_connection():
-                self.__DB.save_part_result(
+            if self.DB.check_connection():
+                self.DB.save_part_result(
                     location=location,
                     name=name,
                     current_count=current_count,

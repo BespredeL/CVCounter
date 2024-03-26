@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ config.get('general.default_language', 'ru') | striptags | trim }}" data-bs-theme="dark">
+<html lang="ru" data-bs-theme="dark">
 <head>
     <!--
      Developer: Александр Киреев (https://bespredel.name)
@@ -23,7 +23,7 @@
     <div class="toast-container position-fixed bottom-0 start-0 p-3" id="toast-container"></div>
     <!-- START: Header block -->
     <div class="row">
-        <div class="col-12 col-lg-9">
+        <div class="col-12">
             {% block header %}{% endblock %}
         </div>
     </div>
@@ -80,6 +80,7 @@
 
         return app_lang[str];
     }
+
 </script>
 <script src="{{ url_for('static', filename='assets/js/jquery-3.7.1.min.js') }}"></script>
 <script src="{{ url_for('static', filename='assets/bootstrap5/js/bootstrap.bundle.min.js') }}"></script>

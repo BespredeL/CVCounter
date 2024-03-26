@@ -24,12 +24,7 @@
     "video_show_scale": 50,
     "video_show_quality": 50,
     "weights_path": "yolo_cfg/models/yolov8n.pt",
-    "confidence": 0.7,
-    "iou": 0.7,
-    "device": 0,
-    "vid_stride": 1,
-    "indicator_size": 10,
-    "counting_area": [
+    "limits": [
       [
         0,
         0
@@ -47,6 +42,11 @@
         100
       ]
     ],
+    "confidence": 0.7,
+    "iou": 0.7,
+    "device": 0,
+    "vid_stride": 1,
+    "indicator_size": 10,
     "counting_area_color": [
       67,
       211,
@@ -62,12 +62,7 @@
       "video_show_scale": 70,
       "video_show_quality": 30,
       "weights_path": "yolo_cfg/models/yolov8n.pt",
-      "confidence": 0.7,
-      "iou": 0.7,
-      "device": 0,
-      "vid_stride": 1,
-      "indicator_size": 10,
-      "counting_area": [
+      "limits": [
         [
           0,
           0
@@ -85,17 +80,17 @@
           100
         ]
       ],
+      "confidence": 0.7,
+      "iou": 0.7,
+      "device": 0,
+      "vid_stride": 1,
+      "indicator_size": 10,
       "counting_area_color": [
         255,
         64,
         0
       ],
-      "classes": {
-        "2": "car",
-        "3": "motorcycle",
-        "5": "bus",
-        "7": "truck"
-      }
+      "classes": {}
     },
   }
 }
