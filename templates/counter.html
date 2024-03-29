@@ -5,7 +5,7 @@
 {% block content %}
     <div class="row mb-3">
         <!-- START: Left block -->
-        <div class="col-12 col-lg-9 d-flex justify-content-center position-relative mt-2">
+        <div class="col-12 col-lg-9 d-flex justify-content-center position-relative my-2">
             <div class="img-container">
                 <img id="video_feed" class="text-center rounded" src="{{ url_for('get_frames', location=location) }}" alt=""/>
             </div>
@@ -23,8 +23,6 @@
 
         {% include 'partials/counter_sidebar_right.html' %}
     </div>
-
-    {#{% include 'partials/counter_bottom_help.html' %}#}
 {% endblock %}
 
 {% block footer %}

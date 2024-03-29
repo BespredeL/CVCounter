@@ -1,12 +1,16 @@
 <!-- START: Right block -->
 <div class="col-12 col-lg-3">
-    <div class="bg-warning text-dark rounded px-2 my-2 position-relative">
-        <div class="h4 position-absolute">{{ trans('Quantity:') }} <span id="total_count">0</span></div>
-        <div id="current_count" class="display-1 pt-3">0</div>
-    </div>
+    {% if counter_on_sidebar is not none and counter_on_sidebar  %}
+        <!-- Counter block -->
+        <div class="bg-warning text-dark rounded position-relative my-2 px-2">
+            <div class="h4 position-absolute">{{ trans('Quantity:') }} <span id="total_count">0</span></div>
+            <div id="current_count" class="display-1 pt-3">0</div>
+        </div>
+    {% endif %}
 
     {% if(items and items is not none) %}
-        <div class="border border-primary rounded mb-2 p-2">
+        <!-- Select product -->
+        <div class="border border-primary rounded my-2 p-2">
             <select class="selectpicker form-control" id="item" name="item" data-width="auto" data-style="btn-body" data-live-search="true">
                 <option selected disabled>{{ trans('Select product') }}</option>
                 {% for item in items %}
@@ -16,7 +20,8 @@
         </div>
     {% endif %}
 
-    <div class="border border-danger-subtle rounded mb-2 p-2">
+    <!-- Defect keyboard -->
+    <div class="border border-danger-subtle rounded my-2 p-2">
         <div class="col-12 mb-3">
             <label for="defect_count" class="form-label h4">{{ trans('Defective products') }}</label>
             <div class="input-group" id="defect_count">
@@ -61,7 +66,8 @@
         </div>
     </div>
 
-    <div class="border border-warning-subtle rounded mb-2 p-2">
+    <!-- Correct keyboard -->
+    <div class="border border-warning-subtle rounded my-2 p-2">
         <div class="col-12 mb-3">
             <label for="correct_count" class="form-label h4">{{ trans('Correct count') }}</label>
             <button class="btn btn-outline-info float-end" data-bs-toggle="collapse" data-bs-target="#collapseСorrect" aria-expanded="false"
@@ -122,6 +128,7 @@
         </div>
     </div>
 
+    <!-- Buttons -->
     <div class="col-12 mb-3 px-2">
         <div class="row mb-3">
             <button class="btn btn-primary col mb-3 m-1" id="btn_reset_current">{{ trans('New batch') }}</button>

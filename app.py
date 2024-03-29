@@ -3,7 +3,7 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 22.03.2024
+# Updated: 29.03.2024
 # Website: https://bespredel.name
 
 from threading import Thread
@@ -117,7 +117,8 @@ def counter(location=None):
         title=locations_dict.get(location, ),
         location=location,
         # items=items,
-        is_paused=object_counters[location].is_pause()
+        is_paused=object_counters[location].is_pause(),
+        counter_on_sidebar=True
     )
 
 
@@ -152,7 +153,8 @@ def counter_t(location=None):
         title=locations_dict.get(location, ),
         location=location,
         # items=items,
-        is_paused=object_counters[location].is_pause()
+        is_paused=object_counters[location].is_pause(),
+        # counter_on_sidebar=False
     )
 
 
