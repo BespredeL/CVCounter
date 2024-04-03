@@ -10,7 +10,7 @@ from threading import Thread
 from flask import Flask, Response, abort, redirect, render_template, request, url_for
 from flask_socketio import SocketIO
 from markupsafe import escape
-from object_counter import ObjectCounter
+from system.object_counter import ObjectCounter
 from system.config_manager import ConfigManager
 from system.db_client import DBClient
 from system.translate import trans
