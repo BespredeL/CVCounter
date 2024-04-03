@@ -26,14 +26,14 @@ class DBClient:
         # Connection
         try:
             self.__conn = mysql.connector.connect(
-                host=host,
-                user=user,
-                password=password,
-                database=database,
+                host=str(host),
+                user=str(user),
+                password=str(password),
+                database=str(database),
             )
-        except mysql.connector.Error as error:
+        except (mysql.connector.Error, Exception) as e:
             self.__conn = None
-            # self.logger.log_error(str(error))
+            # self.__logger.log_error(str(e))
             self.__logger.log_exception()
 
         # Create table if it does not exist
@@ -42,6 +42,9 @@ class DBClient:
 
     """
     Check the connection to the database.
+
+    Parameters:
+        self (object): The instance of the class.
 
     Returns:
         bool: True if the connection is successful, False otherwise.
@@ -139,15 +142,12 @@ class DBClient:
     Saves part the result to the database.
 
     Parameters:
-        location (str): The location of the part.
-        name (str): The name of the part.
-        current_count (int): The current count of the part.
-        total_count (int): The total count of the part.
-        defects_count (int): The count of defective parts.
-        correct_count (int): The count of correct parts.
-    
+        production_count (int): The count value production to be saved.
+        defects_count (int): The count value defects to be saved.
+        key (str): The key to identify the result. Defaults to an empty string.
+
     Returns:
-        bool: True if the result was successfully saved, False otherwise.
+        None
     """
 
     def save_part_result(self, location, name, current_count=0, total_count=0, defects_count=0, correct_count=0):
@@ -209,12 +209,14 @@ class DBClient:
 
     Parameters:
         location (str): The location of the count.
+        name (str): The name of the count.
 
     Returns:
-        bool: True if the count was successfully closed, False otherwise.
+        None
     """
 
     def close_current_count(self, location):
+        location = str(location)
         result = False
         try:
             if not self.__conn.is_connected():
@@ -246,9 +248,13 @@ class DBClient:
 
     Returns:
         int: The current count for the given key.
+
+    Raises:
+        mysql.connector.Error: If there is an error executing the database query.
     """
 
     def get_current_count(self, key=''):
+        key = str(key)
         result = None
         try:
             with self.__conn.cursor() as db_cursor:

@@ -13,8 +13,8 @@ from imutils.video import VideoStream
 
 class VideoStreamManager:
     def __init__(self, video_stream):
-        self.video_stream = video_stream
-        self.cap = None
+        self.__video_stream = video_stream
+        self.__cap = None
 
     """
     Starts the video stream.
@@ -25,9 +25,9 @@ class VideoStreamManager:
 
     def start(self):
         if not self.is_stream():
-            self.cap = self.video_stream
+            self.__cap = self.__video_stream
         else:
-            self.cap = VideoStream(self.video_stream).start()
+            self.__cap = VideoStream(self.__video_stream).start()
 
     """
     A method to stop the video capture, if it's currently active.
@@ -37,9 +37,9 @@ class VideoStreamManager:
     """
 
     def stop(self):
-        if self.cap is not None:
-            self.cap.stop()
-            self.cap = None
+        if self.__cap is not None:
+            self.__cap.stop()
+            self.__cap = None
 
     """
     Check if the video stream is a valid stream by verifying if it starts with common protocols.
@@ -49,7 +49,7 @@ class VideoStreamManager:
     """
 
     def is_stream(self):
-        return self.video_stream.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://', 'tcp://'))
+        return self.__video_stream.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://', 'tcp://'))
 
     """
     A method to retrieve a frame using the 'cap' attribute.
@@ -60,8 +60,8 @@ class VideoStreamManager:
 
     def get_frame(self):
         frame = None
-        if self.cap is not None:
-            frame = self.cap.read()
+        if self.__cap is not None:
+            frame = self.__cap.read()
         return frame
 
     """
