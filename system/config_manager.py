@@ -43,7 +43,7 @@ class ConfigManager:
             with open(self._config_path, 'r', encoding='utf-8') as config_file:
                 return json.load(config_file)
         except FileNotFoundError:
-            raise ValueError(f"File '{self._config_path}' does not exist")
+            raise ValueError(f"Configuration file '{self._config_path}' does not exist")
 
     """
     Returns a value from the config

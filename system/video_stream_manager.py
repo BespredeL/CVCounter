@@ -3,7 +3,7 @@
 
 # Developed by: Alexander Kireev
 # Created: 26.03.2024
-# Updated: 26.03.2024
+# Updated: 19.04.2024
 # Website: https://bespredel.name
 
 import time
@@ -19,6 +19,9 @@ class VideoStreamManager:
     """
     Starts the video stream.
 
+    Parameters:
+        None
+        
     Returns:
         None
     """
@@ -32,6 +35,9 @@ class VideoStreamManager:
     """
     A method to stop the video capture, if it's currently active.
     
+    Parameters:
+        None
+    
     Returns:
         None
     """
@@ -44,6 +50,9 @@ class VideoStreamManager:
     """
     Check if the video stream is a valid stream by verifying if it starts with common protocols.
     
+    Parameters:
+        None
+    
     Returns:
         bool: True if the video stream is a valid stream, False otherwise
     """
@@ -53,6 +62,9 @@ class VideoStreamManager:
 
     """
     A method to retrieve a frame using the 'cap' attribute.
+    
+    Parameters:
+        None
     
     Returns:
         frame: A frame from the video stream
@@ -66,6 +78,9 @@ class VideoStreamManager:
 
     """
     Reconnects to the video stream
+    
+    Parameters:
+        None
     
     Returns:
         None

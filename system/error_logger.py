@@ -3,7 +3,7 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 22.03.2024
+# Updated: 19.04.2024
 # Website: https://bespredel.name
 
 import traceback
@@ -13,8 +13,10 @@ from datetime import datetime
 class ErrorLogger:
     """
     Initializes a new instance of the class.
+
     Parameters:
         file_name (str): The name of the file.
+
     Returns:
         None
     """
@@ -24,8 +26,13 @@ class ErrorLogger:
 
     """
     Logs an error message with the current timestamp to a file.
+    
     Parameters:
         error_message (str): The error message to be logged.
+        
+    Raises:
+        Exception: If there is an error while writing to the file.
+        
     Returns:
         None
     """
@@ -42,6 +49,10 @@ class ErrorLogger:
     """
     Logs the exception that occurred during the execution of the program.
     This function takes no parameters.
+    
+    Parameters:
+        None
+    
     Returns:
         None
     """

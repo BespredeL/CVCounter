@@ -90,7 +90,12 @@
         64,
         0
       ],
-      "classes": {}
+      "classes": {},
+      "dataset_create": {
+        "enable": true,
+        "probability": 0.05,
+        "path": "yolo_cfg/saved_images/ExampleCam"
+      }
     },
   }
 }

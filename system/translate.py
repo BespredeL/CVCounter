@@ -3,13 +3,34 @@
 
 # Developed by: Alexander Kireev
 # Created: 22.03.2024
-# Updated: 22.03.2024
+# Updated: 19.04.2024
 # Website: https://bespredel.name
 
 import json
 
+"""
+Translates the given text to the specified language using the provided translations.
 
-# TODO: There are no ideas yet on how to select a language from the settings using already loaded settings
+Parameters:
+    text (str): The text to be translated.
+    lang (str, optional): The language code to translate the text to. Defaults to 'ru'.
+    **kwargs: Additional keyword arguments to be used for placeholder replacement in the translated text.
+
+Returns:
+    str: The translated text with any placeholder replacements made.
+
+Raises:
+    None
+
+Examples:
+    >>> trans('Hello', lang='ru')
+    'Привет'
+
+    >>> trans('The weather is {weather}', lang='ru', weather='sunny')
+    'Погода солнечная'
+"""
+
+
 def trans(text, lang='ru', **kwargs):
     def load_translations(language_code):
         try:
@@ -17,8 +38,6 @@ def trans(text, lang='ru', **kwargs):
             with open(file_path, "r", encoding="utf-8") as file:
                 translations = json.load(file)
             return translations
-        except FileNotFoundError:
-            return {}
         except Exception:
             return {}
 
