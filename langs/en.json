@@ -12,6 +12,8 @@
   "Counting has stopped!": "Counting has stopped!",
   "Counting has paused!": "Counting has paused!",
   "Total:": "Total:",
+  "Input": "Input:",
+  "Output": "Output:",
   "Video": "Video",
   "Text": "Text",
   "Quantity:": "Quantity:",
@@ -26,8 +28,6 @@
   "Pause": "Pause",
   "Reset counter": "Reset counter",
   "Settings": "Settings",
-  "The \"Defect\" field indicates the number of defective products.<br>The value in the \"Defect\" field reduces the \"Total\" quantity.": "The \"Defect\" field indicates the number of defective products.<br>The value in the \"Defect\" field reduces the \"Total\" quantity.",
-  "In the \"Adjustment\" field, both a positive and negative value can be indicated.<br>Adjustment is necessary, for example, in cases when products were removed from the line, if the program counted the quantity incorrectly, etc.": "In the \"Adjustment\" field, both a positive and negative value can be indicated.<br>Adjustment is necessary, for example, in cases when products were removed from the line, if the program counted the quantity incorrectly, etc.",
   "Connection to server successful": "Connection to server successful",
   "Error connecting to the server. Contact the IT department.": "Error connecting to the server. Contact the IT department.",
   "Reload page": "Reload page"

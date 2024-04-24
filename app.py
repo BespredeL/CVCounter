@@ -3,7 +3,7 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 29.03.2024
+# Updated: 22.04.2024
 # Website: https://bespredel.name
 
 from threading import Thread
@@ -154,6 +154,40 @@ def counter_t(location=None):
         location=location,
         # items=items,
         is_paused=object_counters[location].is_pause(),
+        # counter_on_sidebar=False
+    )
+
+
+@app.route('/counter_t_multi/<string:location_first>/<string:location_second>')
+def counter_multi_t(location_first, location_second):
+    location_first = escape(location_first)
+    location_second = escape(location_second)
+    if location_first not in locations or location_second not in locations:
+        abort(400, trans('Detection config not found'))
+
+    # Init objects and threads for first locations
+    object_detector_init(location_first)
+    if location_first not in threading_detectors and location_first in object_counters:
+        threading_detectors[location_first] = Thread(target=object_counters[location_first].count_run)
+        threading_detectors[location_first].start()
+
+    # Init objects and threads for second locations
+    object_detector_init(location_second)
+    if location_second not in threading_detectors and location_second in object_counters:
+        threading_detectors[location_second] = Thread(target=object_counters[location_second].count_run)
+        threading_detectors[location_second].start()
+
+    # items = db_client.get_items()
+
+    title = locations_dict.get(location_first, ) + ' - ' + locations_dict.get(location_second, )
+
+    return render_template(
+        'counter_text_multi.html',
+        title=title,
+        location_in=location_first,
+        location_out=location_second,
+        # items=items,
+        is_paused=object_counters[location_first].is_pause() or object_counters[location_second].is_pause(),
         # counter_on_sidebar=False
     )
 

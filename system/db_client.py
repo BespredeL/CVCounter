@@ -63,6 +63,12 @@ class DBClient:
 
     """
     Create a table if it does not already exist in the database. 
+    
+    Parameters:
+        None
+
+    Returns:
+        None
     """
 
     def create_table(self):
@@ -91,10 +97,14 @@ class DBClient:
     Saves the result to the database.
 
     Parameters:
-        production_count (int): The count value production to be saved.
+        location (str): The location of the image.
+        name (str): The name of the image.
+        item_count (int): The count value item to be saved.
+        source_count (int): The count value source to be saved.
         defects_count (int): The count value defects to be saved.
-        key (str): The key to identify the result. Defaults to an empty string.
-
+        correct_count (int): The count value correct to be saved.
+        active (int): The status of the image.
+        
     Returns:
         None
     """
@@ -142,9 +152,12 @@ class DBClient:
     Saves part the result to the database.
 
     Parameters:
-        production_count (int): The count value production to be saved.
-        defects_count (int): The count value defects to be saved.
-        key (str): The key to identify the result. Defaults to an empty string.
+        location (str): The location of the image.
+        name (str): The name of the image.
+        current_count (int): The count value current to be saved. Default is 0.
+        total_count (int): The count value total to be saved. Default is 0.
+        defects_count (int): The count value defects to be saved. Default is 0.
+        correct_count (int): The count value correct to be saved. Default is 0.
 
     Returns:
         None
@@ -272,6 +285,9 @@ class DBClient:
 
     """
     Retrieves items from the database.
+    
+    Parameters:
+        None
 
     Returns:
         A list of items retrieved from the database.

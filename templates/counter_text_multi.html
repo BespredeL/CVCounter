@@ -1,0 +1,274 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title.title() }}{% endblock %}
+
+{% block content %}
+    <div class="row mb-3">
+        <!-- START: Left block -->
+        <div class="col-12 col-lg-9 d-flex justify-content-center align-items-center position-relative">
+            <div class="text-center col-6 border-end">
+                <div class="display-5 text-muted">{{ trans('Input') }}</div>
+                <div id="current_count_in" class="display-1 current_count_txt">0</div>
+                <hr>
+                <div class="display-5 text-muted">{{ trans('Total:') }}</div>
+                <div id="total_count_in" class="display-1 total_count_txt text-muted">0</div>
+            </div>
+
+            <div class="text-center col-6">
+                <div class="display-5 text-muted">{{ trans('Output') }}</div>
+                <div id="current_count_out" class="display-1 current_count_txt">0</div>
+                <hr>
+                <div class="display-5 text-muted">{{ trans('Total:') }}</div>
+                <div id="total_count_out" class="display-1 total_count_txt text-muted">0</div>
+            </div>
+
+            <div class="{{ 'd-flex' if is_paused else 'd-none' }} justify-content-center align-items-center rounded-end-3"
+                 id="pause_display"
+                 style="position: absolute;top: 0;left: 0;width: 100%;height: 100%;background-color: rgb(0 0 0 / 80%);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" fill="currentColor" class="bi bi-pause"
+                     viewBox="0 0 16 16">
+                    <path d="M6 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5m4 0a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5"/>
+                </svg>
+            </div>
+        </div>
+        <!-- END: Left block -->
+
+        {% include 'partials/counter_sidebar_right.html' %}
+    </div>
+    {#{% include 'partials/counter_bottom_help.html' %}#}
+{% endblock %}
+
+{% block footer %}
+    <link href="{{ url_for('static', filename='assets/bootstrap-select-1.14/css/bootstrap-select.min.css') }}" rel="stylesheet">
+    <script src="{{ url_for('static', filename='assets/bootstrap-select-1.14/js/bootstrap-select.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='assets/bootstrap-select-1.14/js/i18n/defaults-ru_RU.min.js') }}"></script>
+
+    <script>
+        $(function () {
+            //---------------------------------------------------------------------------
+            // Socket IO
+            //---------------------------------------------------------------------------
+
+            // Обработчик получения счетчика
+            socket.on('{{ location_in }}_count', function (data) {
+                if (data.total > 0) {
+                    let defect_count = parseInt($("#defect_count input").val());
+                    defect_count = defect_count > 0 ? defect_count : 0;
+
+                    let correct_count = parseInt($("#correct_count input").val());
+                    correct_count = !isNaN(correct_count) ? correct_count : 0;
+
+                    let current_count = parseInt(data.current);
+                    current_count = current_count > 0 ? current_count : 0;
+
+                    let total_count = parseInt(data.total);
+                    total_count = total_count > 0 ? total_count : 0;
+
+                    $('#current_count_in').html(current_count);
+                    $('#total_count_in').html(total_count - defect_count + correct_count);
+                } else {
+                    $('#current_count_in').html('0');
+                    $('#total_count_in').html('0');
+                }
+            });
+
+            socket.on('{{ location_out }}_count', function (data) {
+                if (data.total > 0) {
+                    let defect_count = parseInt($("#defect_count input").val());
+                    defect_count = defect_count > 0 ? defect_count : 0;
+
+                    let correct_count = parseInt($("#correct_count input").val());
+                    correct_count = !isNaN(correct_count) ? correct_count : 0;
+
+                    let current_count = parseInt(data.current);
+                    current_count = current_count > 0 ? current_count : 0;
+
+                    let total_count = parseInt(data.total);
+                    total_count = total_count > 0 ? total_count : 0;
+
+                    $('#current_count_out').html(current_count);
+                    $('#total_count_out').html(total_count - defect_count + correct_count);
+                } else {
+                    $('#current_count_out').html('0');
+                    $('#total_count_out').html('0');
+                }
+            });
+
+            // Обработчик получения уведомлений
+            socket.on('{{ location }}_notification', function (data) {
+                if (data.message.length > 0) {
+                    showToast(data.message, data.type);
+                }
+            });
+
+            //---------------------------------------------------------------------------
+            // Bootstrap Select
+            //---------------------------------------------------------------------------
+
+            $('.selectpicker').selectpicker();
+
+            //---------------------------------------------------------------------------
+            // Keyboard
+            //---------------------------------------------------------------------------
+
+            $('.input-plus').on('click', function () {
+                let $input = $(this).parent().find('input');
+                let value = parseInt($input.val());
+                let validate_value = true;
+                if ($input.attr('max') !== undefined) {
+                    validate_value = value < parseInt($input.attr('max'));
+                }
+                if (!isNaN(value) && validate_value) {
+                    $input.val(value + 1);
+                }
+            });
+
+            $('.input-minus').on('click', function () {
+                let $input = $(this).parent().find('input');
+                let value = parseInt($input.val());
+                let validate_value = true;
+                if ($input.attr('min') !== undefined) {
+                    validate_value = value > parseInt($input.attr('min'));
+                }
+                if (!isNaN(value) && validate_value) {
+                    $input.val(value - 1);
+                }
+            });
+
+            $('#correct_clear').on('click', function () {
+                $('#correct_count input').val(0);
+            });
+
+            $('.keyboard button').on('click', function () {
+                let $this = $(this);
+                let $input = $('#' + $this.parent().parent().data('input-id') + ' input');
+                let value = $this.data('value');
+                let input_val = $input.val();
+                input_val = input_val.replace(/[^0-9\-]/g, '');
+
+                if ($this.hasClass('reset')) {
+                    $input.val(0);
+                    return;
+                }
+
+                if (value === '-') {
+                    input_val = -(input_val);
+                } else {
+                    input_val = input_val + value;
+                }
+
+                if (input_val > 999999 || input_val < -999999) {
+                    return;
+                }
+
+                $input.val(parseInt(input_val));
+            });
+
+            //---------------------------------------------------------------------------
+            // Form buttons
+            //---------------------------------------------------------------------------
+
+            $('#btn_save').on('click', function () {
+                let correct_count = $('#correct_count input').val();
+                let defect_count = $('#defect_count input').val();
+                let item_no = $('#item').val();
+
+                $.ajax({
+                    url: '{{ url_for('save_count', location=location) }}',
+                    method: 'post',
+                    data: {
+                        'item_no': item_no,
+                        'correct_count': parseInt(correct_count),
+                        'defect_count': parseInt(defect_count)
+                    },
+                    success: function (data) {
+                        if (!data) {
+                            data = 0;
+                        }
+                        $("#total_count").html(data.total_count);
+                        $("#correct_count input").val(data.correct_count);
+                        $("#defect_count input").val(data.defect_count);
+                    }
+                });
+            });
+
+            $('#btn_reset').on('click', function () {
+                $.ajax({
+                    url: '{{ url_for('reset_count', location=location) }}',
+                    method: 'get',
+                    data: {},
+                    success: function (data) {
+                        if (!data) {
+                            data = 0;
+                        }
+                        $("#total_count").html(data.total_count);
+                        $("#product_count input").val(data.total_count);
+                        $("#defect_count input").val(data.defect_count);
+                    }
+                });
+            });
+
+            $('#btn_reset_current').on('click', function () {
+                let item_no = $('#item').val();
+                let correct_count = $('#correct_count input').val();
+                let defect_count = $('#defect_count input').val();
+
+                $.ajax({
+                    url: '{{ url_for('reset_count_current', location=location) }}',
+                    method: 'post',
+                    data: {
+                        'item_no': item_no || '',
+                        'correct_count': parseInt(correct_count) || 0,
+                        'defect_count': parseInt(defect_count) || 0
+                    },
+                    success: function (data) {
+                        if (!data) {
+                            data = 0;
+                        }
+                        $("#current_count").val(data.current_count);
+                    }
+                });
+            });
+
+            //---------------------------------------------------------------------------
+            // Form buttons 2
+            //---------------------------------------------------------------------------
+            $('#btn_start').on('click', function () {
+                $.ajax({
+                    url: '{{ url_for('start_count', location=location) }}',
+                    method: 'get',
+                    data: {},
+                    success: function () {
+                        $('#btn_pause').removeClass('btn-warning').addClass('btn-outline-secondary');
+                        $('#btn_start').removeClass('btn-info').addClass('btn-outline-secondary');
+                        $('#pause_display').removeClass('d-flex').addClass('d-none');
+                    }
+                });
+            });
+
+            $('#btn_pause').on('click', function () {
+                $.ajax({
+                    url: '{{ url_for('pause_count', location=location) }}',
+                    method: 'get',
+                    data: {},
+                    success: function () {
+                        $('#btn_pause').removeClass('btn-outline-secondary').addClass('btn-warning');
+                        $('#btn_start').removeClass('btn-outline-secondary').addClass('btn-info');
+                        $('#pause_display').removeClass('d-none').addClass('d-flex');
+                    }
+                });
+            });
+
+            {#$('#btn_stop').on('click', function () {
+                $.ajax({
+                    url: '{{ url_for('stop_count', location=location) }}',
+                    method: 'get',
+                    data: {},
+                    success: function () {
+                        //$("#total_count").html(data.total_count);
+                    }
+                });
+            });#}
+        });
+    </script>
+{% endblock %}

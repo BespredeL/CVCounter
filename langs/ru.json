@@ -12,6 +12,8 @@
   "Counting has stopped!": "Подсчет остановлен!",
   "Counting has paused!": "Подсчет приостановлен!",
   "Total:": "Всего:",
+  "Input": "Вход:",
+  "Output": "Выход:",
   "Video": "Видео",
   "Text": "Текст",
   "Quantity:": "Кол-во:",
@@ -26,8 +28,6 @@
   "Pause": "Пауза",
   "Reset counter": "Сбросить счетчик",
   "Settings": "Настройки",
-  "The \"Defect\" field indicates the number of defective products.<br>The value in the \"Defect\" field reduces the \"Total\" quantity.": "В поле \"Брак\" указывается количество бракованных изделий.<br>Значение в поле \"Брак\" уменьшает количество \"Всего\".",
-  "In the \"Adjustment\" field, both a positive and negative value can be indicated.<br>Adjustment is necessary, for example, in cases when products were removed from the line, if the program counted the quantity incorrectly, etc.": "В поле \"Корректировка\" может быть указано как положительное, так и отрицательное значение.<br>Корректировка необходима например в случаях когда изготовления снимались с линии, если программа посчитала кол-во некорректно и т.п.",
   "Connection to server successful": "Соединение с сервером установлено",
   "Error connecting to the server. Contact the IT department.": "Ошибка соединения с сервером. Обратитесь в IT отдел.",
   "Reload page": "Перезагрузить страницу"

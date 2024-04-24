@@ -3,7 +3,7 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 19.04.2024
+# Updated: 18.04.2024
 # Website: https://bespredel.name
 
 import os
@@ -34,14 +34,12 @@ class ObjectCounter:
         # self.socketio = kwargs.get('socketio')
         self.weights = kwargs.get('weights', detector_config.get('weights_path'))
         self.device = kwargs.get('device', detector_config.get('device', 'cpu'))
-        self.confidence = kwargs.get('confidence',
-                                     detector_config.get('confidence', config.get('detection_default.confidence', 0.5)))
+        self.confidence = kwargs.get('confidence', detector_config.get('confidence', config.get('detection_default.confidence', 0.5)))
         self.iou = kwargs.get('iou', detector_config.get('iou', config.get('detection_default.iou', 0.7)))
         self.counting_area = kwargs.get('counting_area', detector_config.get('counting_area'))
         self.counting_area_color = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
         self.video_scale = detector_config.get('video_show_scale', config.get("detection_default.video_show_scale", 50))
-        self.video_quality = detector_config.get('video_show_quality',
-                                                 config.get("detection_default.video_show_quality", 50))
+        self.video_quality = detector_config.get('video_show_quality', config.get("detection_default.video_show_quality", 50))
         self.indicator_size = detector_config.get('indicator_size', config.get("detection_default.indicator_size", 10))
         self.vid_stride = detector_config.get('vid_stride', config.get("detection_default.vid_stride", 1))
         self.classes = detector_config.get('classes', {})
@@ -146,8 +144,7 @@ class ObjectCounter:
 
         # Save images from training dataset
         if bool(self.dataset['enable']) is True:
-            if last_total_count != self.total_count and frame_copy is not None and random.random() < float(
-                    self.dataset['probability']):
+            if last_total_count != self.total_count and frame_copy is not None and random.random() < float(self.dataset['probability']):
                 if not os.path.exists(self.dataset['path']):
                     os.makedirs(self.dataset['path'])
                 location_clean = re.sub('[^A-Za-z0-9-_]+', '', self.location)
