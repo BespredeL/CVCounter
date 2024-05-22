@@ -4,8 +4,9 @@ This is my first experience working with Python, so it turned out the way it did
 
 This solution implements 2 types of views:
 
-- **Main view** - a page displaying the counter values and a video with recognition results
-- **Text view** - a page displaying only the counter values
+1. **Main view** - a page displaying the counter values and a video with recognition results
+2. **Text view** - a page displaying only the counter values
+3. **Text view with two counters** - a page on which the value of 2 counters is displayed (for example, at the input and output)
 
 After several options, I decided to implement it with Flask, i.e. as a mini website solution, 
 as it allows to avoid installing any additional software on the clients. 
