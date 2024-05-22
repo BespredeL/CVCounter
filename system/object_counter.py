@@ -3,7 +3,7 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 18.04.2024
+# Updated: 22.05.2024
 # Website: https://bespredel.name
 
 import os
@@ -21,32 +21,20 @@ from system.video_stream_manager import VideoStreamManager
 
 
 class ObjectCounter:
+    FRAME_LOST_THRESHOLD = 10
+    RECONNECT_DELAY = 5  # seconds
+    FPS_POSITION = (20, 70)
+    FPS_FONT_SCALE = 1.5
+    FPS_COLOR = (0, 0, 255)
+    FPS_THICKNESS = 2
+    POLYGON_ALPHA = 0.4
 
     def __init__(self, location, socketio, config, **kwargs):
-        # Load config
-        config.read_config()
-        detector_config = config.get("detections." + location)
-
-        # Init config
-        self.location = location
-        self.socketio = socketio
-        # self.location = kwargs.get('location')
-        # self.socketio = kwargs.get('socketio')
-        self.weights = kwargs.get('weights', detector_config.get('weights_path'))
-        self.device = kwargs.get('device', detector_config.get('device', 'cpu'))
-        self.confidence = kwargs.get('confidence', detector_config.get('confidence', config.get('detection_default.confidence', 0.5)))
-        self.iou = kwargs.get('iou', detector_config.get('iou', config.get('detection_default.iou', 0.7)))
-        self.counting_area = kwargs.get('counting_area', detector_config.get('counting_area'))
-        self.counting_area_color = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
-        self.video_scale = detector_config.get('video_show_scale', config.get("detection_default.video_show_scale", 50))
-        self.video_quality = detector_config.get('video_show_quality', config.get("detection_default.video_show_quality", 50))
-        self.indicator_size = detector_config.get('indicator_size', config.get("detection_default.indicator_size", 10))
-        self.vid_stride = detector_config.get('vid_stride', config.get("detection_default.vid_stride", 1))
-        self.classes = detector_config.get('classes', {})
-        self.dataset = detector_config.get('dataset_create', {})
+        # Load and initialize config
+        self._initialize_config(location, socketio, config, kwargs)
 
         # Init variables
-        self.total_objects = []
+        self.total_objects = set()
         self.total_count = 0
         self.current_count = 0
         self.frame = None
@@ -55,25 +43,10 @@ class ObjectCounter:
         self.paused = False
 
         # Init logger
-        log_path = config.get("general.log_path")
-        if self.location != '':
-            log_path = f'error_{self.location}.log'
+        log_path = f'error_{self.location}.log' if self.location else config.get("general.log_path")
         self.logger = ErrorLogger(log_path)
 
-        # Started counter value from config
-        total_count = detector_config.get('start_total_count', 0)
-        if total_count is not None and total_count > 0:
-            self.total_count = int(total_count)
-            self.total_objects = [item for item in range(-self.total_count, 0)]
-            config.set("detections." + self.location + ".start_total_count", 0)
-            config.save_config()
-
-        # Video
-        self.video_stream = kwargs.get('video_stream', detector_config['video_path'])
-        # if not self.video_stream.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://', 'tcp://')):
-        #     self.cap = self.video_stream
-        # else:
-        #     self.cap = VideoStream(self.video_stream).start()
+        # Initialize video stream
         self.vsm = VideoStreamManager(self.video_stream)
         self.vsm.start()
 
@@ -91,6 +64,76 @@ class ObjectCounter:
         self.polygon = Polygon(self.counting_area)
 
     """
+    Initializes the configuration for the object counter.
+
+    Parameters:
+        location (str): The location of the object counter.
+        socketio (SocketIO): The SocketIO instance.
+        config (Config): The configuration object.
+        kwargs (dict): Additional keyword arguments.
+
+    Returns:
+        None
+
+    Initializes the following attributes:
+        - self.location (str): The location of the object counter.
+        - self.socketio (SocketIO): The SocketIO instance.
+        - self.weights (str): The path to the weights file.
+        - self.device (str): The device to use for inference ('cpu' by default).
+        - self.confidence (float): The confidence threshold for object detection.
+        - self.iou (float): The IoU threshold for object detection.
+        - self.counting_area (list): The coordinates of the counting area.
+        - self.counting_area_color (tuple): The color of the counting area.
+        - self.video_scale (int): The scale of the video.
+        - self.video_quality (int): The quality of the video.
+        - self.indicator_size (int): The size of the indicator.
+        - self.vid_stride (int): The stride for video processing.
+        - self.classes (dict): The classes for object detection.
+        - self.dataset (dict): The dataset for creating the object counter.
+        - self.video_stream (str): The path to the video stream.
+        - self.total_count (int): The total count of objects.
+        - self.total_objects (list): The list of total objects.
+
+    If the 'start_total_count' key in the detector_config is greater than 0, sets the total_count and total_objects attributes and updates the configuration file.
+    """
+
+    def _initialize_config(self, location, socketio, config, kwargs):
+        config.read_config()
+        detector_config = config.get(f"detections.{location}")
+
+        self.location = location
+        self.socketio = socketio
+        # self.location = kwargs.get('location')
+        # self.socketio = kwargs.get('socketio')
+        self.weights = kwargs.get('weights', detector_config.get('weights_path'))
+        self.device = kwargs.get('device', detector_config.get('device', 'cpu'))
+        self.confidence = kwargs.get('confidence', detector_config.get('confidence', config.get('detection_default.confidence', 0.5)))
+        self.iou = kwargs.get('iou', detector_config.get('iou', config.get('detection_default.iou', 0.7)))
+        self.counting_area = kwargs.get('counting_area', detector_config.get('counting_area'))
+        self.counting_area_color = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
+        self.video_scale = detector_config.get('video_show_scale', config.get("detection_default.video_show_scale", 50))
+        self.video_quality = detector_config.get('video_show_quality', config.get("detection_default.video_show_quality", 50))
+        self.indicator_size = detector_config.get('indicator_size', config.get("detection_default.indicator_size", 10))
+        self.vid_stride = detector_config.get('vid_stride', config.get("detection_default.vid_stride", 1))
+        self.classes = detector_config.get('classes', {})
+        self.dataset = detector_config.get('dataset_create', {})
+
+        # Video
+        self.video_stream = kwargs.get('video_stream', detector_config['video_path'])
+        # if not self.video_stream.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://', 'tcp://')):
+        #     self.cap = self.video_stream
+        # else:
+        #     self.cap = VideoStream(self.video_stream).start()
+
+        # Started counter value from config
+        total_count = detector_config.get('start_total_count', 0)
+        if total_count > 0:
+            self.total_count = int(total_count)
+            self.total_objects = set(range(-self.total_count, 0))
+            config.set(f"detections.{self.location}.start_total_count", 0)
+            config.save_config()
+
+    """
     Reconnects to the video stream if the connection has been lost for more than N frames.
 
     Parameters:
@@ -103,7 +146,7 @@ class ObjectCounter:
     def reconnect(self):
         self.frame = None
         self.frame_lost += 1
-        if self.frame_lost > 10:
+        if self.frame_lost > self.FRAME_LOST_THRESHOLD:
             self.frame_lost = 0
             # self.logger.log_error('Reconnect ' + self.location + '...')
             print(trans('Reconnect {location}...', location=self.location))
@@ -114,12 +157,9 @@ class ObjectCounter:
                 self.vsm.reconnect()
             except Exception as e:
                 # print(e)
-                if self.video_stream is str:
-                    print(trans('Error reconnect: {video_path}', video_path=self.video_stream))
-                else:
-                    print(trans('Error reconnect'))
+                print(trans('Error reconnect: {video_path}', video_path=self.video_stream if isinstance(self.video_stream, str) else ''))
 
-            time.sleep(5)
+            time.sleep(self.RECONNECT_DELAY)
 
     """
     Process the frame.
@@ -133,7 +173,6 @@ class ObjectCounter:
 
     def process_frame(self, frame):
         start_time = time.time()
-
         frame_copy = frame.copy()
         last_total_count = self.total_count
 
@@ -143,22 +182,32 @@ class ObjectCounter:
         self.frame_lost = 0
 
         # Save images from training dataset
-        if bool(self.dataset['enable']) is True:
-            if last_total_count != self.total_count and frame_copy is not None and random.random() < float(self.dataset['probability']):
-                if not os.path.exists(self.dataset['path']):
-                    os.makedirs(self.dataset['path'])
-                location_clean = re.sub('[^A-Za-z0-9-_]+', '', self.location)
-                create_time = int(time.time())
-                cv2.imwrite(f'{self.dataset["path"]}/{location_clean}_{create_time}.jpg',
-                            frame_copy, [cv2.IMWRITE_JPEG_QUALITY, 100])
+        if self.dataset.get('enable') and last_total_count != self.total_count and random.random() < float(self.dataset['probability']):
+            self._save_dataset_image(frame_copy)
 
         # FPS counter on the frame
-        end_time = time.time()
-        fps = 1 / np.round(end_time - start_time, 2)
-        cv2.putText(frame, f'FPS: {int(fps)}', (20, 70),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 2)
+        fps = int(1 / (time.time() - start_time))
+        cv2.putText(frame, f'FPS: {fps}', self.FPS_POSITION, cv2.FONT_HERSHEY_SIMPLEX, self.FPS_FONT_SCALE, self.FPS_COLOR, self.FPS_THICKNESS)
 
         return frame
+
+    """
+    Saves an image to the dataset path if it exists.
+
+    Parameters:
+        frame (numpy.ndarray): The image frame to be saved.
+
+    Returns:
+        None
+    """
+
+    def _save_dataset_image(self, frame):
+        dataset_path = self.dataset.get('path')
+        if not os.path.exists(dataset_path):
+            os.makedirs(dataset_path)
+        location_clean = re.sub('[^A-Za-z0-9-_]+', '', self.location)
+        create_time = int(time.time())
+        cv2.imwrite(f'{dataset_path}/{location_clean}_{create_time}.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 100])
 
     """
     Run the generation of frames.
@@ -177,7 +226,6 @@ class ObjectCounter:
                 if frame is None:
                     self.reconnect()
                     continue
-
                 self.frame = self.process_frame(frame)
             except Exception as e:
                 print(e)
@@ -197,29 +245,47 @@ class ObjectCounter:
         self.frame_lost = 0
         while self.running:
             try:
-                if self.frame is not None:
-                    frame = self.frame
-                else:
-                    # Attempt to restart in case of error/missing frame
-                    frame = self.vsm.get_frame()
-                    if frame is None:
-                        self.reconnect()
-                        continue
-                    frame = self.process_frame(frame)
-
-                scale_percent = int(self.video_scale)  # percent of original size
-                width = int(frame.shape[1] * scale_percent / 100)
-                height = int(frame.shape[0] * scale_percent / 100)
-                frame = cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
-
+                frame = self.frame if self.frame is not None else self._reconnect_and_get_frame()
+                if frame is None:
+                    continue
+                frame = self._resize_frame(frame)
                 ret, frame = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, int(self.video_quality)])
-
-                frame = frame.tobytes()
-
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + frame.tobytes() + b'\r\n')
             except Exception as e:
                 print(e)
+
+    """
+    Retrieves a frame from the video stream manager (vsm) and processes it.
+
+    This function first calls the `get_frame()` method of the `vsm` object to retrieve a frame. 
+    If the frame is `None`, it calls the `reconnect()` method to reconnect to the video stream. 
+    Finally, it calls the `process_frame()` method to process the frame and returns the processed frame.
+
+    Returns:
+        The processed frame obtained from the video stream.
+    """
+
+    def _reconnect_and_get_frame(self):
+        frame = self.vsm.get_frame()
+        if frame is None:
+            self.reconnect()
+        return self.process_frame(frame)
+
+    """
+    Resizes the given frame to a specified scale percentage.
+
+    Parameters:
+        frame (numpy.ndarray): The frame to be resized.
+
+    Returns:
+        numpy.ndarray: The resized frame.
+    """
+
+    def _resize_frame(self, frame):
+        scale_percent = int(self.video_scale)
+        width = int(frame.shape[1] * scale_percent / 100)
+        height = int(frame.shape[0] * scale_percent / 100)
+        return cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
 
     """
     Counts the number of runs in the video stream.
@@ -238,10 +304,8 @@ class ObjectCounter:
                 if frame is None:
                     self.reconnect()
                     continue
-
                 boxes = self.detect(frame)
                 self.detect_count(frame, boxes)
-
             except Exception as e:
                 print(e)
                 self.reconnect()
@@ -257,9 +321,7 @@ class ObjectCounter:
     """
 
     def detect(self, image):
-        classes_list = None
-        if self.classes is not None and isinstance(self.classes, dict) and len(self.classes) > 0:
-            classes_list = list(map(int, self.classes.keys()))
+        classes_list = list(map(int, self.classes.keys())) if self.classes else None
 
         results = self.model.predict(
             image,
@@ -275,7 +337,6 @@ class ObjectCounter:
         xyxy = results[0].boxes.xyxy.cpu().numpy()
         conf = results[0].boxes.conf.cpu().numpy()
         detections = np.concatenate((xyxy, conf.reshape(-1, 1)), axis=1)
-
         return self.tracker.update(detections)
 
     """
@@ -289,15 +350,13 @@ class ObjectCounter:
     """
 
     def draw_counting_area(self, image):
-        alpha = 0.4
         overlay = image.copy()
 
         # Polygon corner points coordinates
-        pts = np.array(self.counting_area, np.int32)
-        pts = pts.reshape((-1, 1, 2))
+        pts = np.array(self.counting_area, np.int32).reshape((-1, 1, 2))
         cv2.fillPoly(overlay, [pts], self.counting_area_color)
 
-        return cv2.addWeighted(overlay, alpha, image, 1 - alpha, 0)
+        return cv2.addWeighted(overlay, self.POLYGON_ALPHA, image, 1 - self.POLYGON_ALPHA, 0)
 
     """
     Draws boxes on an image and returns the modified image.
@@ -316,24 +375,23 @@ class ObjectCounter:
         if self.paused:
             return image
 
+        indicator_size = int(self.indicator_size)
+
         for result in boxes:
-            x1, y1, x2, y2, rid = result
-            x1, y1, x2, y2 = map(int, result[:4])
-            w, h = x2 - x1, y2 - y1
-            cx, cy = x1 + w // 2, y1 + h // 2
-            cv2.circle(image, (cx, cy), int(self.indicator_size), (255, 0, 255), cv2.FILLED)
-            if self.total_objects.count(rid) != 0:
-                cv2.circle(image, (cx, cy), int(self.indicator_size), (0, 255, 0), cv2.FILLED)
+            x1, y1, x2, y2, rid = map(int, result[:5])  # Unpack all values as integers
+            cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+            color = (0, 255, 0) if rid in self.total_objects else (255, 0, 255)
+            cv2.circle(image, (cx, cy), indicator_size, color, cv2.FILLED)
 
             # Check if the object is within the counting area
             point = Point(cx, cy)
-            if point.within(self.polygon) and self.total_objects.count(rid) == 0:
-                self.total_objects.append(rid)
+            if point.within(self.polygon) and rid not in self.total_objects:
+                self.total_objects.add(rid)
                 self.current_count += 1
 
             self.total_count = len(self.total_objects)
 
-        if self.socketio is not None:
+        if self.socketio:
             self.socketio.emit(f'{self.location}_count', {'total': self.total_count, 'current': self.current_count})
 
         return image
@@ -357,6 +415,7 @@ class ObjectCounter:
         defect_count = int(defect_count)
         correct_count = int(correct_count)
         item_count = str(total_count - defect_count + correct_count)
+
         if not self.DB.check_connection():
             self.notification(trans('Impossible to save! There is no connection to the database.'), 'warning')
             return dict(total=total_count, defect=defect_count, correct=correct_count)
@@ -392,7 +451,7 @@ class ObjectCounter:
     """
 
     def reset_count(self, location):
-        self.total_objects = []
+        self.total_objects.clear()
         self.total_count = 0
         self.current_count = 0
 
@@ -450,7 +509,7 @@ class ObjectCounter:
     """
 
     def notification(self, message='', notification_type='primary'):
-        if self.socketio is not None:
+        if self.socketio:
             self.socketio.emit(f'{self.location}_notification', {'type': notification_type, 'message': message})
 
     """
@@ -465,7 +524,7 @@ class ObjectCounter:
 
     def start(self):
         # self.running = True
-        if self.socketio is not None and self.paused is True:
+        if self.socketio and self.paused:
             self.notification(trans('Counting has started!'), 'success')
         self.paused = False
 
@@ -480,7 +539,7 @@ class ObjectCounter:
     """
 
     def stop(self):
-        if self.socketio is not None and self.running is True:
+        if self.socketio and self.paused:
             self.notification(trans('Counting has stopped!'), 'primary')
         self.running = False
 
@@ -495,7 +554,7 @@ class ObjectCounter:
     """
 
     def pause(self):
-        if self.socketio is not None and self.paused is False:
+        if self.socketio and not self.paused:
             self.notification(trans('Counting has paused!'), 'warning')
         self.paused = True
 

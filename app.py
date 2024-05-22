@@ -3,10 +3,10 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 22.04.2024
+# Updated: 22.05.2024
 # Website: https://bespredel.name
 
-from threading import Thread
+from threading import Thread, Lock
 from flask import Flask, Response, abort, redirect, render_template, request, url_for
 from flask_socketio import SocketIO
 from markupsafe import escape
@@ -50,8 +50,9 @@ db_client = DBClient(
 )
 
 # Init objects
-object_counters = dict()
-threading_detectors = dict()
+object_counters = {}
+threading_detectors = {}
+lock = Lock()
 
 
 # --------------------------------------------------------------------------------
@@ -60,18 +61,19 @@ threading_detectors = dict()
 
 def object_detector_init(location):
     global object_counters, threading_detectors, config
-    if location not in object_counters:
-        detector_config = config.get("detections." + location)
-        object_counters[location] = ObjectCounter(
-            location=location,
-            socketio=socketio,
-            config=config,
-            db_client=db_client,
-            video_stream=detector_config['video_path'],
-            weights=detector_config['weights_path'],
-            counting_area=detector_config['counting_area'],
-            counting_area_color=tuple(detector_config['counting_area_color'])
-        )
+    with lock:
+        if location not in object_counters:
+            detector_config = config.get("detections." + location)
+            object_counters[location] = ObjectCounter(
+                location=location,
+                socketio=socketio,
+                config=config,
+                db_client=db_client,
+                video_stream=detector_config['video_path'],
+                weights=detector_config['weights_path'],
+                counting_area=detector_config['counting_area'],
+                counting_area_color=tuple(detector_config['counting_area_color'])
+            )
     return object_counters
 
 
@@ -94,7 +96,6 @@ def settings():
 def settings_save():
     _config = ConfigManager("config.json")
     _config.save_from_request(request.form)
-
     return redirect(url_for('settings'))
 
 
@@ -105,10 +106,10 @@ def counter(location=None):
         abort(400, trans('Detection config not found'))
 
     object_detector_init(location)
-
-    if location not in threading_detectors and location in object_counters:
-        threading_detectors[location] = Thread(target=object_counters[location].run_frames)
-        threading_detectors[location].start()
+    with lock:
+        if location not in threading_detectors and location in object_counters:
+            threading_detectors[location] = Thread(target=object_counters[location].run_frames)
+            threading_detectors[location].start()
 
     # items = db_client.get_items()
 
@@ -141,10 +142,10 @@ def counter_t(location=None):
         abort(400, trans('Detection config not found'))
 
     object_detector_init(location)
-
-    if location not in threading_detectors and location in object_counters:
-        threading_detectors[location] = Thread(target=object_counters[location].count_run)
-        threading_detectors[location].start()
+    with lock:
+        if location not in threading_detectors and location in object_counters:
+            threading_detectors[location] = Thread(target=object_counters[location].count_run)
+            threading_detectors[location].start()
 
     # items = db_client.get_items()
 
@@ -165,17 +166,19 @@ def counter_multi_t(location_first, location_second):
     if location_first not in locations or location_second not in locations:
         abort(400, trans('Detection config not found'))
 
-    # Init objects and threads for first locations
+    # Init objects and threads for first location
     object_detector_init(location_first)
-    if location_first not in threading_detectors and location_first in object_counters:
-        threading_detectors[location_first] = Thread(target=object_counters[location_first].count_run)
-        threading_detectors[location_first].start()
+    with lock:
+        if location_first not in threading_detectors and location_first in object_counters:
+            threading_detectors[location_first] = Thread(target=object_counters[location_first].count_run)
+            threading_detectors[location_first].start()
 
-    # Init objects and threads for second locations
+    # Init objects and threads for second location
     object_detector_init(location_second)
-    if location_second not in threading_detectors and location_second in object_counters:
-        threading_detectors[location_second] = Thread(target=object_counters[location_second].count_run)
-        threading_detectors[location_second].start()
+    with lock:
+        if location_second not in threading_detectors and location_second in object_counters:
+            threading_detectors[location_second] = Thread(target=object_counters[location_second].count_run)
+            threading_detectors[location_second].start()
 
     # items = db_client.get_items()
 
@@ -254,7 +257,6 @@ def start_count(location=None):
         abort(400, trans('Detection config not found'))
 
     object_counters[location].start()
-
     return {'result': 0}
 
 
@@ -265,7 +267,6 @@ def stop_count(location=None):
         abort(400, trans('Detection config not found'))
 
     object_counters[location].stop()
-
     return {'result': 0}
 
 
@@ -276,7 +277,6 @@ def pause_count(location=None):
         abort(400, trans('Detection config not found'))
 
     object_counters[location].pause()
-
     return {'result': 0}
 
 
