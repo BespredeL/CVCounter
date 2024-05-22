@@ -94,7 +94,8 @@ class ObjectCounter:
         - self.total_count (int): The total count of objects.
         - self.total_objects (list): The list of total objects.
 
-    If the 'start_total_count' key in the detector_config is greater than 0, sets the total_count and total_objects attributes and updates the configuration file.
+    If the 'start_total_count' key in the detector_config is greater than 0, 
+    sets the total_count and total_objects attributes and updates the configuration file.
     """
 
     def _initialize_config(self, location, socketio, config, kwargs):
