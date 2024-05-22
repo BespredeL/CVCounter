@@ -26,7 +26,7 @@
 - Если вам помогло это решение, вы можете проспонсировать меня отправив слово "Спасибо". Ссылки на контакты ниже =))
 - Если нужна помощь с внедрением, можем обсудить =).
 
-## Screenshots
+## <div align="center">Screenshots</div>
 <img src="https://github.com/BespredeL/BespredeL/blob/c27b6d786e6569cbaa17d49eac8c7433812a1024/Desktop-2023.12.31-13.16.42.01.gif" alt="" width="360">
 <img src="https://github.com/BespredeL/BespredeL/blob/c27b6d786e6569cbaa17d49eac8c7433812a1024/Main%20View.png" alt="" width="360">
 <img src="https://github.com/BespredeL/BespredeL/blob/c27b6d786e6569cbaa17d49eac8c7433812a1024/Text%20View.png" alt="" width="360">
