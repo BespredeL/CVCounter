@@ -3,7 +3,7 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 22.05.2024
+# Updated: 10.06.2024
 # Website: https://bespredel.name
 
 import os
@@ -92,7 +92,7 @@ class ObjectCounter:
         - self.dataset (dict): The dataset for creating the object counter.
         - self.video_stream (str): The path to the video stream.
         - self.total_count (int): The total count of objects.
-        - self.total_objects (list): The list of total objects.
+        - self.total_objects (set): The set of total objects.
 
     If the 'start_total_count' key in the detector_config is greater than 0, 
     sets the total_count and total_objects attributes and updates the configuration file.
@@ -144,7 +144,7 @@ class ObjectCounter:
         None
     """
 
-    def reconnect(self):
+    def _reconnect(self):
         self.frame = None
         self.frame_lost += 1
         if self.frame_lost > self.FRAME_LOST_THRESHOLD:
@@ -152,7 +152,7 @@ class ObjectCounter:
             # self.logger.log_error('Reconnect ' + self.location + '...')
             print(trans('Reconnect {location}...', location=self.location))
             if self.socketio is not None:
-                self.notification(trans('Lost connection to camera!'), 'danger')
+                self._notification(trans('Lost connection to camera!'), 'danger')
 
             try:
                 self.vsm.reconnect()
@@ -172,14 +172,14 @@ class ObjectCounter:
         numpy.ndarray: The processed frame.
     """
 
-    def process_frame(self, frame):
+    def _process_frame(self, frame):
         start_time = time.time()
         frame_copy = frame.copy()
         last_total_count = self.total_count
 
-        boxes = self.detect(frame)
-        frame = self.draw_counting_area(frame)
-        frame = self.detect_count(frame, boxes)
+        boxes = self._detect(frame)
+        frame = self._draw_counting_area(frame)
+        frame = self._detect_count(frame, boxes)
         self.frame_lost = 0
 
         # Save images from training dataset
@@ -188,7 +188,8 @@ class ObjectCounter:
 
         # FPS counter on the frame
         fps = int(1 / (time.time() - start_time))
-        cv2.putText(frame, f'FPS: {fps}', self.FPS_POSITION, cv2.FONT_HERSHEY_SIMPLEX, self.FPS_FONT_SCALE, self.FPS_COLOR, self.FPS_THICKNESS)
+        cv2.putText(frame, f'FPS: {fps}',
+                    self.FPS_POSITION, cv2.FONT_HERSHEY_SIMPLEX, self.FPS_FONT_SCALE, self.FPS_COLOR, self.FPS_THICKNESS)
 
         return frame
 
@@ -225,12 +226,12 @@ class ObjectCounter:
             try:
                 frame = self.vsm.get_frame()
                 if frame is None:
-                    self.reconnect()
+                    self._reconnect()
                     continue
-                self.frame = self.process_frame(frame)
+                self.frame = self._process_frame(frame)
             except Exception as e:
                 print(e)
-                self.reconnect()
+                self._reconnect()
 
     """
     Generator that yields frames in the form of JPEG images.
@@ -269,8 +270,8 @@ class ObjectCounter:
     def _reconnect_and_get_frame(self):
         frame = self.vsm.get_frame()
         if frame is None:
-            self.reconnect()
-        return self.process_frame(frame)
+            self._reconnect()
+        return self._process_frame(frame)
 
     """
     Resizes the given frame to a specified scale percentage.
@@ -303,13 +304,13 @@ class ObjectCounter:
             try:
                 frame = self.vsm.get_frame()
                 if frame is None:
-                    self.reconnect()
+                    self._reconnect()
                     continue
-                boxes = self.detect(frame)
-                self.detect_count(frame, boxes)
+                boxes = self._detect(frame)
+                self._detect_count(frame, boxes)
             except Exception as e:
                 print(e)
-                self.reconnect()
+                self._reconnect()
 
     """
     Detects objects in an image using a pre-trained model.
@@ -321,7 +322,7 @@ class ObjectCounter:
         ndarray: An array of updated results after tracking the detected objects.
     """
 
-    def detect(self, image):
+    def _detect(self, image):
         classes_list = list(map(int, self.classes.keys())) if self.classes else None
 
         results = self.model.predict(
@@ -350,7 +351,7 @@ class ObjectCounter:
         numpy.ndarray: The image with the counting area drawn on it.
     """
 
-    def draw_counting_area(self, image):
+    def _draw_counting_area(self, image):
         overlay = image.copy()
 
         # Polygon corner points coordinates
@@ -372,7 +373,7 @@ class ObjectCounter:
         numpy.ndarray: The modified image with the boxes drawn on it.
     """
 
-    def detect_count(self, image, boxes):
+    def _detect_count(self, image, boxes):
         if self.paused:
             return image
 
@@ -398,6 +399,21 @@ class ObjectCounter:
         return image
 
     """
+    Emit a notification to the client.
+
+    Parameters:
+        message (str): The message to be displayed.
+        notification_type (str): The type of notification (success, danger, warning, info, primary, secondary).
+
+    Returns:
+        None
+    """
+
+    def _notification(self, message='', notification_type='primary'):
+        if self.socketio:
+            self.socketio.emit(f'{self.location}_notification', {'type': notification_type, 'message': message})
+
+    """
     Save count.
     
     Parameters:
@@ -418,7 +434,7 @@ class ObjectCounter:
         item_count = str(total_count - defect_count + correct_count)
 
         if not self.DB.check_connection():
-            self.notification(trans('Impossible to save! There is no connection to the database.'), 'warning')
+            self._notification(trans('Impossible to save! There is no connection to the database.'), 'warning')
             return dict(total=total_count, defect=defect_count, correct=correct_count)
 
         result = self.DB.save_result(
@@ -435,9 +451,9 @@ class ObjectCounter:
             # self.total_objects = []
             # self.total_count = 0
             # self.current_count = 0
-            self.notification(trans('Saved successfully!'), 'success')
+            self._notification(trans('Saved successfully!'), 'success')
         else:
-            self.notification(trans('Save error!'), 'danger')
+            self._notification(trans('Save error!'), 'danger')
 
         return dict(total=total_count, defect=defect_count, correct=correct_count)
 
@@ -459,7 +475,7 @@ class ObjectCounter:
         if self.DB.check_connection():
             self.DB.close_current_count(location)
 
-        self.notification(trans('Counting completed successfully!'), 'primary')
+        self._notification(trans('Counting completed successfully!'), 'primary')
 
     """
     Reset the current count.
@@ -496,22 +512,7 @@ class ObjectCounter:
 
         if self.socketio is not None:
             self.socketio.emit(f'{location}_count', {'total': total_count, 'current': 0})
-            self.notification(trans('The counter has been reset!'), 'primary')
-
-    """
-    Emit a notification to the client.
-
-    Parameters:
-        message (str): The message to be displayed.
-        notification_type (str): The type of notification (success, danger, warning, info, primary, secondary).
-
-    Returns:
-        None
-    """
-
-    def notification(self, message='', notification_type='primary'):
-        if self.socketio:
-            self.socketio.emit(f'{self.location}_notification', {'type': notification_type, 'message': message})
+            self._notification(trans('The counter has been reset!'), 'primary')
 
     """
     Start counting.
@@ -526,7 +527,7 @@ class ObjectCounter:
     def start(self):
         # self.running = True
         if self.socketio and self.paused:
-            self.notification(trans('Counting has started!'), 'success')
+            self._notification(trans('Counting has started!'), 'success')
         self.paused = False
 
     """
@@ -541,7 +542,7 @@ class ObjectCounter:
 
     def stop(self):
         if self.socketio and self.paused:
-            self.notification(trans('Counting has stopped!'), 'primary')
+            self._notification(trans('Counting has stopped!'), 'primary')
         self.running = False
 
     """
@@ -556,7 +557,7 @@ class ObjectCounter:
 
     def pause(self):
         if self.socketio and not self.paused:
-            self.notification(trans('Counting has paused!'), 'warning')
+            self._notification(trans('Counting has paused!'), 'warning')
         self.paused = True
 
     """

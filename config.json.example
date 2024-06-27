@@ -24,7 +24,7 @@
     "video_show_scale": 50,
     "video_show_quality": 50,
     "weights_path": "yolo_cfg/models/yolov8n.pt",
-    "limits": [
+    "counting_area": [
       [
         0,
         0
@@ -62,7 +62,7 @@
       "video_show_scale": 70,
       "video_show_quality": 30,
       "weights_path": "yolo_cfg/models/yolov8n.pt",
-      "limits": [
+      "counting_area": [
         [
           0,
           0
@@ -96,6 +96,6 @@
         "probability": 0.05,
         "path": "yolo_cfg/saved_images/ExampleCam"
       }
-    },
+    }
   }
 }
