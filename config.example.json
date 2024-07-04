@@ -9,7 +9,7 @@
         "port": 80,
         "threaded": true,
         "use_reloader": false,
-        "log_output": true,
+        "log_output": false,
         "socketio_key": ""
     },
     "db": {
