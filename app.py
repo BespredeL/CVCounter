@@ -3,7 +3,7 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 22.05.2024
+# Updated: 04.07.2024
 # Website: https://bespredel.name
 
 from threading import Thread, Lock
@@ -14,6 +14,8 @@ from system.object_counter import ObjectCounter
 from system.config_manager import ConfigManager
 from system.db_client import DBClient
 from system.translate import trans
+import re
+import os
 
 # --------------------------------------------------------------------------------
 # Init
@@ -33,13 +35,6 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = config.get("socketio_key", False)
 socketio = SocketIO(app)
 
-
-# Context processor
-@app.context_processor
-def utility_processor():
-    return dict(config=config, trans=trans)
-
-
 # Start DB
 db_client = DBClient(
     config.get('db.host'),
@@ -53,6 +48,31 @@ db_client = DBClient(
 object_counters = {}
 threading_detectors = {}
 lock = Lock()
+
+
+# --------------------------------------------------------------------------------
+# Helpers
+# --------------------------------------------------------------------------------
+def slug(s):
+    s = s.lower().strip()
+    s = re.sub(r'[^\w\s-]', '', s)
+    s = re.sub(r'[\s_-]+', '-', s)
+    s = re.sub(r'^-+|-+$', '', s)
+    return s
+
+
+# Template filter
+@app.template_filter('slug')
+def _slug(string):
+    if not string:
+        return ""
+    return slug(string)
+
+
+# Context processor
+@app.context_processor
+def utility_processor():
+    return dict(config=config, trans=trans)
 
 
 # --------------------------------------------------------------------------------
@@ -160,7 +180,7 @@ def counter_t(location=None):
 
 
 @app.route('/counter_t_multi/<string:location_first>/<string:location_second>')
-def counter_multi_t(location_first, location_second):
+def counter_t_multi(location_first, location_second):
     location_first = escape(location_first)
     location_second = escape(location_second)
     if location_first not in locations or location_second not in locations:
@@ -180,8 +200,7 @@ def counter_multi_t(location_first, location_second):
             threading_detectors[location_second] = Thread(target=object_counters[location_second].count_run)
             threading_detectors[location_second].start()
 
-    # items = db_client.get_items()
-
+    # Page title
     title = locations_dict.get(location_first, ) + ' - ' + locations_dict.get(location_second, )
 
     return render_template(
@@ -189,9 +208,8 @@ def counter_multi_t(location_first, location_second):
         title=title,
         location_in=location_first,
         location_out=location_second,
-        # items=items,
-        is_paused=object_counters[location_first].is_pause() or object_counters[location_second].is_pause(),
-        # counter_on_sidebar=False
+        location_in_label=locations_dict.get(location_first, ),
+        location_out_label=locations_dict.get(location_second, ),
     )
 
 
@@ -281,6 +299,23 @@ def pause_count(location=None):
 
 
 # --------------------------------------------------------------------------------
+
+@app.route('/page/<string:name>')
+def page(name):
+    page_name = escape(name)
+    page_name = re.sub('[^A-Za-z0-9-_]+', '', page_name)
+
+    if page_name == '':
+        abort(400, trans('Page not found'))
+
+    path = os.path.join(app.root_path, 'templates', 'pages', page_name + '.html')
+    if os.path.exists(path) is False or os.path.isfile(path) is False:
+        abort(400, trans('Page not found'))
+
+    return render_template('pages/' + page_name + '.html')
+
+
+# --------------------------------------------------------------------------------
 # Server run
 # --------------------------------------------------------------------------------
 
@@ -293,5 +328,5 @@ if __name__ == '__main__':
         # threaded=config.get('server.threaded'),
         log_output=config.get('server.log_output'),
         use_reloader=config.get('server.use_reloader'),
-        allow_unsafe_werkzeug=True
+        allow_unsafe_werkzeug=config.get('general.debug')
     )

@@ -18,7 +18,7 @@ Server specifications:
 
 AMD Ryzen 5 3600
 - GeForce GTX 1050 Ti (4GB)
-- All main settings are located in the config.json file (rename config.json.example to config.json)
+- All main settings are located in the config.json file (rename config.example.json to config.json)
 
 P.S.:
 - Friends, if you don't mind, please don't remove my copyright at the bottom of the page. It's not a requirement, but if you leave it, I'll be very grateful to you!

@@ -2,7 +2,7 @@
 
 {% block header %}
     <a href="{{ url_for('index') }}" class="text-decoration-none text-body">
-        <h1>{% block title %}CVCounter{% endblock %}</h1>
+        <h1>{% block title %}{{ trans('Settings') }} - CVCounter{% endblock %}</h1>
     </a>
 {% endblock %}
 
@@ -14,7 +14,7 @@
             <div class="col-12 mb-3">
                 <form method="POST" action="{{ url_for('settings_save') }}">
                     <div class="d-flex justify-content-between align-items-center sticky-top bg-body py-3">
-                        <h2 class="mb-0">{{ trans('Settings') }}</h2>
+                        <h2 class="mb-0">{#{{ trans('Settings') }}#}</h2>
                         <div>
                             {{ forms.button(trans('Save')) }}
                         </div>

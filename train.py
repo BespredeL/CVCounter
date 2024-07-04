@@ -3,7 +3,7 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 19.12.2023
+# Updated: 03.07.2024
 # Website: https://bespredel.name
 
 import os
@@ -32,7 +32,7 @@ if __name__ == '__main__':
         model.train(
             data=f'{cfg_dir}/cfg/{model_name}.yaml',
             imgsz=640,  # (640, 480)
-            epochs=5,
+            epochs=300,
             # pretrained=True,
             batch=-1,
             name=f'{model_name}',
@@ -45,7 +45,6 @@ if __name__ == '__main__':
             model.export(format=export_format, device=0, simplify=True)
 
     if mode == 'export':
-        # Export
         # Load a model
         model = YOLO(f'{cfg_dir}/runs/{model_task}/{model_name}/weights/best.pt')  # load a custom trained model
 

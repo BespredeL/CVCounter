@@ -4,7 +4,61 @@
     <h1 class="border-bottom">{% block title %}CVCounter{% endblock %}</h1>
 {% endblock %}
 
+{% block footer %}
+    <script>
+        $(document).ready(function () {
+
+            /**
+             * On click the start button redirect to the counter
+             */
+            $('#counterTextMultiStart').on('click', function () {
+                let counterTextMultiIn = $('#counterTextMulti input[name="counter_in"]:checked');
+                let counterTextMultiOut = $('#counterTextMulti input[name="counter_out"]:checked');
+                if (!counterTextMultiIn.val() || !counterTextMultiOut.val()) {
+                    alert('{{ trans('Please select both inputs') }}');
+                    return;
+                }
+
+                window.location.href = '{{ url_for('counter_t_multi', location_first='', location_second='') }}'
+                    + counterTextMultiIn.val()
+                    + '/' + counterTextMultiOut.val();
+            });
+
+            /**
+             * On change the radio buttons disable
+             * the other radio buttons with the same name
+             */
+            $('#counterTextMulti').on('change', function (e) {
+                if (e.target.name === 'counter_in') {
+                    const selectedValue = e.target.value;
+                    $('#counterTextMulti input[name="counter_out"]').each(function () {
+                        this.disabled = this.value === selectedValue;
+                    });
+                }
+
+                if (e.target.name === 'counter_out') {
+                    const selectedValue = e.target.value;
+                    $('#counterTextMulti input[name="counter_in"]').each(function () {
+                        this.disabled = this.value === selectedValue;
+                    });
+                }
+            });
+
+        });
+    </script>
+{% endblock %}
+
 {% block content %}
+    <div class="row border-bottom py-3">
+        <div class="col-12">
+            <h4>{{ trans('Pages') }}:</h4>
+            <div class="d-grid gap-2 d-md-block ms-0 ms-md-3">
+                <a href="{{ url_for('page', name='help') }}" class="btn btn-secondary m-2">{{ trans('Help') }}</a>
+                <a href="{{ url_for('settings') }}" class="btn btn-secondary m-2">{{ trans('Settings') }}</a>
+            </div>
+        </div>
+    </div>
+
     <div class="row border-bottom py-3">
         <div class="col-12">
             <h4>{{ trans('Video') }}:</h4>
@@ -17,7 +71,7 @@
         </div>
     </div>
 
-    <div class="row py-3">
+    <div class="row border-bottom py-3">
         <div class="col-12">
             <h4>{{ trans('Text') }}:</h4>
             <div class="d-grid gap-2 d-md-block ms-0 ms-md-3">
@@ -25,6 +79,44 @@
                     <a href="{{ url_for('counter_t', location=k) }}" class="btn btn-primary m-2"
                        target="_blank">{{ object_counters[k]|striptags|title }}</a>
                 {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row border-bottom py-3">
+        <div class="col-12">
+            <h4>{{ trans('Text double') }}:</h4>
+            <div class="d-flex justify-content-start flex-wrap" id="counterTextMulti">
+
+                <div class="mb-3 me-3 pe-3 border-end">
+                    <div class="mb-1 fw-bold">{{ trans('Counter on the left:') }}</div>
+                    {% for k in object_counters %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" value="{{ k }}" name="counter_in"
+                                   id="counterIn{{ k|striptags|slug }}">
+                            <label class="form-check-label" for="counterIn{{ k|striptags|slug }}">
+                                {{ object_counters[k]|striptags|title }}
+                            </label>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-3 me-3">
+                    <div class="mb-1 fw-bold">{{ trans('Counter on the right:') }}</div>
+                    {% for k in object_counters %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" value="{{ k }}" name="counter_out"
+                                   id="counterOut{{ k|striptags|slug }}">
+                            <label class="form-check-label" for="counterOut{{ k|striptags|slug }}">
+                                {{ object_counters[k]|striptags|title }}
+                            </label>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="col-12">
+                    <button class="btn btn-primary" id="counterTextMultiStart">{{ trans('Start counting') }}</button>
+                </div>
             </div>
         </div>
     </div>
