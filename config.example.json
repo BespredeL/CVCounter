@@ -17,7 +17,7 @@
         "user": "",
         "password": "",
         "database": "",
-        "prefix": "ed379i_"
+        "prefix": "example379i_"
     },
     "detection_default": {
         "video_path": "",
