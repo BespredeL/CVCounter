@@ -23,8 +23,8 @@ os.makedirs(f'{cfg_dir}/cfg', exist_ok=True)
 os.makedirs(f'{cfg_dir}/datasets', exist_ok=True)
 os.makedirs(f'{cfg_dir}/models', exist_ok=True)
 
-# Load the model
-model = YOLO(f'{cfg_dir}/models/{default_model_name}')  # load a pretrained model (recommended for training)
+# Load a pretrained model (recommended for training)
+model = YOLO(f'{cfg_dir}/models/{default_model_name}')
 
 # Training
 if __name__ == '__main__':
@@ -45,8 +45,8 @@ if __name__ == '__main__':
             model.export(format=export_format, device=0, simplify=True)
 
     if mode == 'export':
-        # Load a model
-        model = YOLO(f'{cfg_dir}/runs/{model_task}/{model_name}/weights/best.pt')  # load a custom trained model
+        # Load a custom trained model
+        model = YOLO(f'{cfg_dir}/runs/{model_task}/{model_name}/weights/best.pt')
 
         # Export the model
         model.export(format=export_format, device=0, simplify=True)
