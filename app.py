@@ -6,16 +6,18 @@
 # Updated: 04.07.2024
 # Website: https://bespredel.name
 
-from threading import Thread, Lock
-from flask import Flask, Response, abort, redirect, render_template, request, url_for
+import os
+import re
+from threading import Lock, Thread
+
+from flask import Flask, Response, abort, flash, redirect, render_template, request, url_for
 from flask_socketio import SocketIO
 from markupsafe import escape
-from system.object_counter import ObjectCounter
+
 from system.config_manager import ConfigManager
 from system.db_client import DBClient
-from system.translate import trans
-import re
-import os
+from system.object_counter import ObjectCounter
+from system.translate import trans as translate
 
 # --------------------------------------------------------------------------------
 # Init
@@ -32,7 +34,9 @@ locations_dict = dict([(k, v['label']) for k, v in config.get("detections", {}).
 
 # Start Flask
 app = Flask(__name__)
-app.config['SECRET_KEY'] = config.get("socketio_key", False)
+app.config['SECRET_KEY'] = config.get("server.secret_key", False)
+app.config['DATABASE'] = config.get("db", False)
+app.config["TEMPLATES_AUTO_RELOAD"] = True
 socketio = SocketIO(app)
 
 # Start DB
@@ -41,7 +45,7 @@ db_client = DBClient(
     config.get('db.user'),
     config.get('db.password'),
     config.get('db.database'),
-    config.get('db.table_name')
+    config.get('db.prefix')
 )
 
 # Init objects
@@ -69,10 +73,15 @@ def _slug(string):
     return slug(string)
 
 
+@app.template_global()
+def trans(string):
+    return translate(string)
+
+
 # Context processor
 @app.context_processor
 def utility_processor():
-    return dict(config=config, trans=trans)
+    return dict(config=config)
 
 
 # --------------------------------------------------------------------------------
@@ -103,7 +112,7 @@ def object_detector_init(location):
 
 @app.route('/')
 def index():
-    return render_template('index.html', object_counters=locations_dict)
+    return render_template('index.html', object_counters=locations_dict, running_counters=threading_detectors)
 
 
 @app.route('/settings')
@@ -116,6 +125,7 @@ def settings():
 def settings_save():
     _config = ConfigManager("config.json")
     _config.save_from_request(request.form)
+    flash(trans('Settings saved'))
     return redirect(url_for('settings'))
 
 
@@ -285,7 +295,10 @@ def stop_count(location=None):
         abort(400, trans('Detection config not found'))
 
     object_counters[location].stop()
-    return {'result': 0}
+    del object_counters[location]
+    del threading_detectors[location]
+    # return {'result': 0}
+    return redirect(url_for('index'))
 
 
 @app.route('/pause_count/<string:location>')

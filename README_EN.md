@@ -47,7 +47,7 @@ P.S.:
     "user": "", // database user
     "password": "", // database password
     "database": "", // database name
-    "table_name": "cvcounters" // database table name
+    "prefix": "" // database table prefix
   },
   "detection_default": { // default detection config
     "video_path": "", // path to video file or camera src

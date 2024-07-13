@@ -10,14 +10,14 @@
         "threaded": true,
         "use_reloader": false,
         "log_output": false,
-        "socketio_key": ""
+        "secret_key": ""
     },
     "db": {
         "host": "localhost",
         "user": "",
         "password": "",
         "database": "",
-        "table_name": "cvcounters"
+        "prefix": "ed379i_"
     },
     "detection_default": {
         "video_path": "",

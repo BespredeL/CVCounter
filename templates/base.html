@@ -88,15 +88,27 @@
 <!-- END: Scripts -->
 
 <!-- START: Toast content -->
-<div class="toast align-items-center text-bg-primary border-0" id="successToast" role="alert" aria-live="assertive"
-     aria-atomic="true">
-    <div class="d-flex">
-        <div class="toast-body">
-            {% block toast_content %}{% endblock %}
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <div class="toast-container position-fixed bottom-0 end-0 p-3">
+            {% for message in messages %}
+                <div class="toast align-items-center text-bg-primary border-0 toast-show" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            {{ message }}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            {% endfor %}
+            <script>
+                $(document).ready(function () {
+                    $('.toast-show').toast('show');
+                });
+            </script>
         </div>
-        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-    </div>
-</div>
+    {% endif %}
+{% endwith %}
 <!-- END: Toast content -->
 
 <!-- START: Footer block -->

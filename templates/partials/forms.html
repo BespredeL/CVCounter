@@ -3,7 +3,7 @@
     {% set field_id = prefix ~ key %}
     {% if value is mapping %}
         <div class="card border-secondary mb-3">
-            <h6 class="card-header bg-secondary text-light py-1">{{ key.replace('_', ' ')|title }}</h6>
+            <h6 class="card-header bg-secondary text-light py-1">{{ trans(key.replace('_', ' ')|title) }}</h6>
             <div class="card-body">
                 {% for sub_key, sub_value in value.items() %}
                     {{ generate_form_fields(sub_key, sub_value, field_id ~ '-') }}
@@ -12,7 +12,7 @@
         </div>
     {% else %}
         <div class="mb-3">
-            <label for="{{ field_id }}" class="form-label">{{ key.replace('_', ' ')|title }}</label>
+            <label for="{{ field_id }}" class="form-label">{{ trans(key.replace('_', ' ')|title) }}</label>
             {% if value is string %}
                 <input type="text" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}" class="form-control" placeholder="">
             {% elif value is boolean %}
@@ -41,8 +41,8 @@
 {# Input fields #}
 {% macro input(name, value='', label='', type='text') -%}
     <div class="mb-3">
-        {% if label %}
-            <label for="{{ name }}" class="form-label">{{ label }}</label>
+        {% if label or name %}
+            <label for="{{ name }}" class="form-label">{{ label or name }}</label>
         {% endif %}
         <input type="{{ type }}" value="{{ value|e }}" name="{{ name }}" id="{{ name }}" class="form-control">
     </div>

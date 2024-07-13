@@ -16,12 +16,12 @@ from system.error_logger import ErrorLogger
 class DBClient:
     __conn = None
     __logger = None
-    __table_name = None
+    __prefix = None
 
-    def __init__(self, host, user, password, database, table_name='cvcounters'):
+    def __init__(self, host, user, password, database, prefix=''):
         # Log error
         self.__logger = ErrorLogger("errors.log")
-        self.__table_name = table_name
+        self.__prefix = prefix
 
         # Connection
         try:
@@ -62,7 +62,7 @@ class DBClient:
             return False
 
     """
-    Create a table if it does not already exist in the database. 
+    Create a tables if it does not already exist in the database. 
     
     Parameters:
         None
@@ -75,7 +75,7 @@ class DBClient:
         try:
             with self.__conn.cursor() as cursor:
                 cursor.execute(f"""
-                    CREATE TABLE IF NOT EXISTS {self.__table_name} (
+                    CREATE TABLE IF NOT EXISTS {self.__prefix}cvcounter (
                         id INT AUTO_INCREMENT PRIMARY KEY,
                         active TINYINT(1) DEFAULT 1,
                         location VARCHAR(255) NOT NULL,
@@ -116,14 +116,14 @@ class DBClient:
                 self.__conn.connect()
 
             with self.__conn.cursor() as db_cursor:
-                sql_query = f"SELECT * FROM {self.__table_name} WHERE active = 1 AND location = %s AND name = %s"
+                sql_query = f"SELECT * FROM {self.__prefix}cvcounter WHERE active = 1 AND location = %s AND name = %s"
                 db_cursor.execute(sql_query, (location, name,))
                 db_select_result = db_cursor.fetchone()
 
                 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 if db_select_result is not None:
                     sql_query = (
-                        f"UPDATE {self.__table_name} "
+                        f"UPDATE {self.__prefix}cvcounter "
                         "SET active = %s, location = %s, name = %s, item_count = %s, source_count = %s, defects_count = %s, "
                         "correct_count = %s, created_at = %s, updated_at = %s "
                         "WHERE id = %s")
@@ -134,7 +134,7 @@ class DBClient:
                     result = True
                 else:
                     sql_query = (
-                        f"INSERT INTO {self.__table_name} (active, location, name, item_count, source_count, defects_count, "
+                        f"INSERT INTO {self.__prefix}cvcounter (active, location, name, item_count, source_count, defects_count, "
                         "correct_count, created_at, updated_at) "
                         "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)")
                     sql_val = (active, location, name, item_count, source_count, defects_count, correct_count, now, now)
@@ -170,7 +170,7 @@ class DBClient:
                 self.__conn.connect()
 
             with self.__conn.cursor() as db_cursor:
-                sql_query = f"SELECT * FROM {self.__table_name} WHERE active = 1 AND location = %s AND name = %s"
+                sql_query = f"SELECT * FROM {self.__prefix}cvcounter WHERE active = 1 AND location = %s AND name = %s"
                 db_cursor.execute(sql_query, (location, name,))
                 db_select_result = db_cursor.fetchone()
 
@@ -195,7 +195,7 @@ class DBClient:
                 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 if db_select_result is not None:
                     sql_query = (
-                        f"UPDATE {self.__table_name} "
+                        f"UPDATE {self.__prefix}cvcounter "
                         "SET parts = %s, created_at = %s, updated_at = %s "
                         "WHERE id = %s")
                     sql_val = (new_parts, now, now, db_select_result[0])
@@ -204,7 +204,7 @@ class DBClient:
                     result = True
                 else:
                     sql_query = (
-                        f"INSERT INTO {self.__table_name} (active, location, name, parts, created_at, updated_at) "
+                        f"INSERT INTO {self.__prefix}cvcounter (active, location, name, parts, created_at, updated_at) "
                         "VALUES (%s, %s, %s, %s, %s, %s)")
                     sql_val = (1, location, name, new_parts, now, now)
                     db_cursor.execute(sql_query, sql_val)
@@ -236,12 +236,12 @@ class DBClient:
                 self.__conn.connect()
 
             with self.__conn.cursor() as db_cursor:
-                sql_query = f"SELECT * FROM {self.__table_name} WHERE active = 1 AND location = %s"
+                sql_query = f"SELECT * FROM {self.__prefix}cvcounter WHERE active = 1 AND location = %s"
                 db_cursor.execute(sql_query, (location,))
                 db_select_result = db_cursor.fetchone()
 
                 if db_select_result:
-                    sql_query = f"UPDATE {self.__table_name} SET active = %s WHERE id = %s"
+                    sql_query = f"UPDATE {self.__prefix}cvcounter SET active = %s WHERE id = %s"
                     sql_val = (0, db_select_result[0])
                     db_cursor.execute(sql_query, sql_val)
                     self.__conn.commit()
@@ -271,7 +271,7 @@ class DBClient:
         result = None
         try:
             with self.__conn.cursor() as db_cursor:
-                sql_query = f"SELECT * FROM {self.__table_name} WHERE active = 1 AND name = %s"
+                sql_query = f"SELECT * FROM {self.__prefix}cvcounter WHERE active = 1 AND name = %s"
                 db_cursor.execute(sql_query, (key,))
                 db_select_result = db_cursor.fetchone()
 
