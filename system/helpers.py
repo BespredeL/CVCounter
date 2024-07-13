@@ -7,6 +7,7 @@
 # Website: https://bespredel.name
 
 import json
+import re
 
 """
 Translates the given text to the specified language using the provided translations.
@@ -51,3 +52,22 @@ def trans(text, lang='ru', **kwargs):
             text = text.replace('{' + key + '}', str(value))
 
     return text
+
+
+"""
+Create slug
+
+Parameters:
+    s (str): The text to be slug.
+
+Returns:
+    str: Slug string
+"""
+
+
+def slug(s):
+    s = s.lower().strip()
+    s = re.sub(r'[^\w\s-]', '', s)
+    s = re.sub(r'[\s_-]+', '-', s)
+    s = re.sub(r'^-+|-+$', '', s)
+    return s

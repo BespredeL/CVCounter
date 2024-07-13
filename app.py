@@ -17,7 +17,8 @@ from markupsafe import escape
 from system.config_manager import ConfigManager
 from system.db_client import DBClient
 from system.object_counter import ObjectCounter
-from system.translate import trans as translate
+from system.helpers import trans as translate
+from system.helpers import slug
 
 # --------------------------------------------------------------------------------
 # Init
@@ -57,13 +58,6 @@ lock = Lock()
 # --------------------------------------------------------------------------------
 # Helpers
 # --------------------------------------------------------------------------------
-def slug(s):
-    s = s.lower().strip()
-    s = re.sub(r'[^\w\s-]', '', s)
-    s = re.sub(r'[\s_-]+', '-', s)
-    s = re.sub(r'^-+|-+$', '', s)
-    return s
-
 
 # Template filter
 @app.template_filter('slug')

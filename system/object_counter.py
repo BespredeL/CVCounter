@@ -16,7 +16,7 @@ from shapely.geometry import Point, Polygon
 from ultralytics import YOLO, settings
 from system.error_logger import ErrorLogger
 from system.sort import Sort
-from system.translate import trans
+from system.helpers import trans
 from system.video_stream_manager import VideoStreamManager
 
 
