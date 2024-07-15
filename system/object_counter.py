@@ -10,13 +10,15 @@ import os
 import random
 import re
 import time
+
 import cv2
 import numpy as np
 from shapely.geometry import Point, Polygon
 from ultralytics import YOLO, settings
+
 from system.error_logger import ErrorLogger
-from system.sort import Sort
 from system.helpers import trans
+from system.sort import Sort
 from system.video_stream_manager import VideoStreamManager
 
 
