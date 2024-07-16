@@ -9,6 +9,72 @@
 {% block content %}
     <div class="row py-3 mb-5">
         <div class="col-12 border-bottom mb-3 pb-3">
+            <div class="h4">{{ trans('Index') }}</div>
+
+            <table class="table table-bordered table-sm mb-3">
+                <tr>
+                    <td class="align-middle">
+                        <div class="btn-group m-2" role="group" aria-label="">
+                            <a href="#" class="btn btn-secondary" target="_blank">{{ trans('Counter name') }}</a>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn dropdown-toggle btn-secondary"></button>
+                            </div>
+                        </div>
+                    </td>
+                    <td>{{ trans('Counter not running') }}</td>
+                </tr>
+
+                <tr>
+                    <td class="align-middle">
+                        <div>
+                            <div class="btn-group m-2" role="group" aria-label="">
+                                <a href="#" class="btn btn-success" target="_blank">{{ trans('Counter name') }}</a>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn dropdown-toggle btn-success"></button>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>{{ trans('Counter running') }}</td>
+                </tr>
+
+                <tr>
+                    <td class="align-middle">
+                        <div>
+                            <div class="btn-group m-2" role="group" aria-label="">
+                                <a href="#" class="btn btn-warning" target="_blank">{{ trans('Counter name') }}</a>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn dropdown-toggle btn-warning"></button>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>{{ trans('Counter paused') }}</td>
+                </tr>
+
+                <tr>
+                    <td class="align-middle">
+                        <ul class="dropdown-menu d-block position-relative" style="max-width: 150px">
+                            <li><span class="dropdown-item ">{{ trans('Run') }}</span></li>
+                            <li><span class="dropdown-item">{{ trans('Stop') }}</span></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li><span class="dropdown-item">{{ trans('Start') }}</span></li>
+                            <li><span class="dropdown-item">{{ trans('Pause') }}</span></li>
+                        </ul>
+                    </td>
+                    <td>
+                        {{ trans('Button actions') }}:
+                        <ul>
+                            <li>{{ trans('Run') }} - {{ trans('Run the counter') }}</li>
+                        </ul>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="col-12 border-bottom mb-3 pb-3">
             <div class="h4">{{ trans('Video') }} / {{ trans('Text') }}</div>
 
             <table class="table table-bordered table-sm mb-3">

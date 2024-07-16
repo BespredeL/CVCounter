@@ -7,22 +7,84 @@
 {% block footer %}
     <script>
         $(document).ready(function () {
+            /**
+             * Handler for receiving counter statuses
+             */
+            socket.on('counter_status_event', function (data) {
+                function updateClasses(baseId, remove, add) {
+                    const baseSelector = '#' + baseId + '_' + data.data.location;
+                    const btnSelector = baseSelector + ' a.btn, ' + baseSelector + ' button.dropdown-toggle';
+                    const btnCounterRun = baseSelector + ' a.counter_run';
+                    const btnCounterStop = 'a.counter_stop';
+                    const btnCounterStart = 'a.counter_start';
+                    const btnCounterPause = 'a.counter_pause';
+
+                    $(btnSelector).removeClass(remove).addClass(add);
+                    if (add === 'btn-success') {
+                        $(btnCounterRun).addClass('disabled');
+                        $(btnCounterStop).removeClass('disabled');
+                        $(btnCounterStart).addClass('disabled');
+                        $(btnCounterPause).removeClass('disabled');
+                    } else if (add === 'btn-warning') {
+                        $(btnCounterStart).removeClass('disabled');
+                        $(btnCounterPause).addClass('disabled');
+                    } else if (add === 'btn-secondary') {
+                        $(btnCounterRun).removeClass('disabled');
+                        $(btnCounterStop).addClass('disabled');
+                        $(btnCounterStart).addClass('disabled');
+                        $(btnCounterPause).addClass('disabled');
+                    }
+                }
+
+                switch (data.data.status) {
+                    case 'started':
+                        updateClasses('counter_video', 'btn-secondary btn-warning', 'btn-success');
+                        updateClasses('counter_text', 'btn-secondary btn-warning', 'btn-success');
+                        break;
+                    case 'stopped':
+                        updateClasses('counter_video', 'btn-success btn-warning', 'btn-secondary');
+                        updateClasses('counter_text', 'btn-success btn-warning', 'btn-secondary');
+                        break;
+                    case 'paused':
+                        updateClasses('counter_video', 'btn-success', 'btn-warning');
+                        updateClasses('counter_text', 'btn-success', 'btn-warning');
+                        break;
+                }
+            });
+
+            /**
+             * On click the dropdown menu
+             */
+            $('.dropdown-item').on('click', function (e) {
+                e.preventDefault();
+
+                let href = $(this).attr('href');
+                $.ajax({
+                    url: href,
+                    method: 'GET',
+                    success: function (response) {
+                        //console.log('Успешно!', response);
+                    },
+                    error: function (xhr, status, error) {
+                        //console.error('Произошла ошибка', error);
+                    }
+                });
+            });
 
             /**
              * On click the start button redirect to the counter
              */
             $('#counterTextMultiStart').on('click', function () {
-                let counterTextMultiIn = $('#counterTextMulti input[name="counter_in"]:checked');
-                let counterTextMultiOut = $('#counterTextMulti input[name="counter_out"]:checked');
-                if (!counterTextMultiIn.val() || !counterTextMultiOut.val()) {
+                let counterTextMultiIn = $('#counterTextMulti input[name="counter_in"]:checked').val();
+                let counterTextMultiOut = $('#counterTextMulti input[name="counter_out"]:checked').val();
+                if (!counterTextMultiIn || !counterTextMultiOut) {
                     alert('{{ trans('Please select both inputs') }}');
                     return false;
                 }
 
-                let url = '{{ url_for('counter_t_multi', location_first='', location_second='') }}';
-                url = url.replace(/\/+$/, '');
-                url = url + '/' + counterTextMultiIn.val() + '/' + counterTextMultiOut.val();
-                window.open(url, '_blank');
+                let baseUrl = '{{ url_for('counter_t_multi', location_first='', location_second='') }}'.replace(/\/+$/, '');
+                let fullUrl = baseUrl + '/' + counterTextMultiIn + '/' + counterTextMultiOut;
+                window.open(fullUrl, '_blank');
             });
 
             /**
@@ -30,19 +92,11 @@
              * the other radio buttons with the same name
              */
             $('#counterTextMulti').on('change', function (e) {
-                if (e.target.name === 'counter_in') {
-                    const selectedValue = e.target.value;
-                    $('#counterTextMulti input[name="counter_out"]').each(function () {
-                        this.disabled = this.value === selectedValue;
-                    });
-                }
-
-                if (e.target.name === 'counter_out') {
-                    const selectedValue = e.target.value;
-                    $('#counterTextMulti input[name="counter_in"]').each(function () {
-                        this.disabled = this.value === selectedValue;
-                    });
-                }
+                let opposite = e.target.name === 'counter_in' ? 'counter_out' : 'counter_in';
+                let selectedValue = e.target.value;
+                $('#counterTextMulti input[name="' + opposite + '"]').each(function () {
+                    this.disabled = this.value === selectedValue;
+                });
             });
 
         });
@@ -65,26 +119,39 @@
     <div class="row border-bottom py-3">
         <div class="col-12">
             <h4>{{ trans('Video') }}:</h4>
-            <div class="d-grid gap-2 d-md-block ms-0 ms-md-3">
+            <div class="d-grid gap-2 d-md-block ms-0 ms-md-3" id="counter_video">
                 {% for k in object_counters %}
-                    {% if k not in running_counters %}
-                        <a href="{{ url_for('counter', location=k) }}" class="btn m-2 btn-secondary" target="_blank">
+                    <div class="btn-group m-2" role="group" aria-label="" id="counter_video_{{ k }}">
+                        <a href="{{ url_for('counter', location=k) }}"
+                           class="btn btn-{{ counter_status_class(k) }}" target="_blank">
                             {{ object_counters[k]|striptags|title }}
                         </a>
-                    {% else %}
-                        <div class="btn-group m-2" role="group" aria-label="">
-                            <a href="{{ url_for('counter', location=k) }}" class="btn btn-success" target="_blank">
-                                {{ object_counters[k]|striptags|title }}
-                            </a>
-                            <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown"
-                                        aria-expanded="false"></button>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="{{ url_for('stop_count', location=k) }}">{{ trans('Stop') }}</a></li>
-                                </ul>
-                            </div>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn dropdown-toggle btn-{{ counter_status_class(k) }}"
+                                    data-bs-toggle="dropdown" aria-expanded="false"></button>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item counter_run {% if counter_status(k) == 'running' %}disabled{% endif %}"
+                                       href="{{ url_for('counter', location=k) }}" target="_blank">{{ trans('Run') }}</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item counter_stop {% if counter_status(k) == 'stopped' %}disabled{% endif %}"
+                                       href="{{ url_for('stop_count', location=k) }}">{{ trans('Stop') }}</a>
+                                </li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li>
+                                    <a class="dropdown-item counter_start {% if counter_status(k) not in ['paused'] %}disabled{% endif %}"
+                                       href="{{ url_for('start_count', location=k) }}">{{ trans('Start') }}</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item counter_pause {% if counter_status(k) in ['paused', 'stopped'] %}disabled{% endif %}"
+                                       href="{{ url_for('pause_count', location=k) }}">{{ trans('Pause') }}</a>
+                                </li>
+                            </ul>
                         </div>
-                    {% endif %}
+                    </div>
                 {% endfor %}
             </div>
         </div>
@@ -94,26 +161,41 @@
     <div class="row border-bottom py-3">
         <div class="col-12">
             <h4>{{ trans('Text') }}:</h4>
-            <div class="d-grid gap-2 d-md-block ms-0 ms-md-3">
+            <div class="d-grid gap-1 d-md-block ms-0 ms-md-3" id="counter_text">
                 {% for k in object_counters %}
-                    {% if k not in running_counters %}
-                        <a href="{{ url_for('counter_t', location=k) }}" class="btn m-2 btn-primary" target="_blank">
+                    <div class="btn-group m-2" role="group" aria-label="" id="counter_text_{{ k }}">
+                        <a href="{{ url_for('counter_t', location=k) }}"
+                           class="btn btn-{{ counter_status_class(k) }}" target="_blank">
                             {{ object_counters[k]|striptags|title }}
                         </a>
-                    {% else %}
-                        <div class="btn-group m-2" role="group" aria-label="">
-                            <a href="{{ url_for('counter_t', location=k) }}" class="btn btn-success" target="_blank">
-                                {{ object_counters[k]|striptags|title }}
-                            </a>
-                            <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown"
-                                        aria-expanded="false"></button>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="{{ url_for('stop_count', location=k) }}">{{ trans('Stop') }}</a></li>
-                                </ul>
-                            </div>
+                        <div class="btn-group" role="group">
+                            <button type="button"
+                                    class="btn dropdown-toggle btn-{{ counter_status_class(k) }}"
+                                    data-bs-toggle="dropdown" aria-expanded="false"></button>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item counter_run {% if counter_status(k) == 'running' %}disabled{% endif %}"
+                                       href="{{ url_for('counter_t', location=k) }}"
+                                       target="_blank">{{ trans('Run') }}</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item counter_stop {% if counter_status(k) == 'stopped' %}disabled{% endif %}"
+                                       href="{{ url_for('stop_count', location=k) }}">{{ trans('Stop') }}</a>
+                                </li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li>
+                                    <a class="dropdown-item counter_start {% if counter_status(k) not in ['paused'] %}disabled{% endif %}"
+                                       href="{{ url_for('start_count', location=k) }}">{{ trans('Start') }}</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item counter_pause {% if counter_status(k) in ['paused', 'stopped'] %}disabled{% endif %}"
+                                       href="{{ url_for('pause_count', location=k) }}">{{ trans('Pause') }}</a>
+                                </li>
+                            </ul>
                         </div>
-                    {% endif %}
+                    </div>
                 {% endfor %}
             </div>
         </div>
@@ -124,7 +206,6 @@
         <div class="col-12">
             <h4>{{ trans('Text double') }}:</h4>
             <div class="d-flex justify-content-start flex-wrap" id="counterTextMulti">
-
                 <div class="mb-3 me-3 pe-3 border-end">
                     <div class="mb-1 fw-bold">{{ trans('Counter on the left:') }}</div>
                     {% for k in object_counters %}

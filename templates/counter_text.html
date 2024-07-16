@@ -15,8 +15,7 @@
 
             <div class="{{ 'd-flex' if is_paused else 'd-none' }} justify-content-center align-items-center rounded-end-3 pause_display"
                  id="pause_display">
-                <svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" fill="currentColor" class="bi bi-pause"
-                     viewBox="0 0 16 16">
+                <svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" fill="currentColor" class="bi bi-pause" viewBox="0 0 16 16">
                     <path d="M6 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5m4 0a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5"/>
                 </svg>
             </div>
@@ -29,9 +28,9 @@
 {% endblock %}
 
 {% block footer %}
-    <link href="{{ url_for('static', filename='assets/bootstrap-select-1.14/css/bootstrap-select.min.css') }}" rel="stylesheet">
+    {#<link href="{{ url_for('static', filename='assets/bootstrap-select-1.14/css/bootstrap-select.min.css') }}" rel="stylesheet">
     <script src="{{ url_for('static', filename='assets/bootstrap-select-1.14/js/bootstrap-select.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='assets/bootstrap-select-1.14/js/i18n/defaults-ru_RU.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='assets/bootstrap-select-1.14/js/i18n/defaults-ru_RU.min.js') }}"></script>#}
 
     <script>
         $(function () {
@@ -39,41 +38,52 @@
             // Socket IO
             //---------------------------------------------------------------------------
 
-            // Обработчик получения счетчика
+            // Counter get handler
             socket.on('{{ location }}_count', function (data) {
-                if (data.total > 0) {
-                    let defect_count = parseInt($("#defect_count input").val());
-                    defect_count = defect_count > 0 ? defect_count : 0;
+                let defect_count = Math.max(parseInt($("#defect_count input").val()) || 0, 0);
+                let correct_count = Math.max(parseInt($("#correct_count input").val()) || 0, 0);
+                let current_count = Math.max(data.current || 0, 0);
+                let total_count = Math.max(data.total || 0, 0);
 
-                    let correct_count = parseInt($("#correct_count input").val());
-                    correct_count = !isNaN(correct_count) ? correct_count : 0;
-
-                    let current_count = parseInt(data.current);
-                    current_count = current_count > 0 ? current_count : 0;
-
-                    let total_count = parseInt(data.total);
-                    total_count = total_count > 0 ? total_count : 0;
-
+                if (total_count > 0) {
                     $('#current_count').html(current_count);
                     $('#total_count').html(total_count - defect_count + correct_count);
                 } else {
-                    $('#current_count').html('0');
-                    $('#total_count').html('0');
+                    $('#current_count, #total_count').html('0');
                 }
             });
 
-            // Обработчик получения уведомлений
+            // Notification receipt handler
             socket.on('{{ location }}_notification', function (data) {
                 if (data.message.length > 0) {
                     showToast(data.message, data.type);
                 }
             });
 
+            // Counter status handler
+            socket.on('counter_status_event', function (data) {
+                if (data.data.location === '{{ location }}') {
+                    switch (data.data.status) {
+                        case 'paused':
+                            $('#btn_pause').removeClass('btn-outline-secondary').addClass('btn-warning');
+                            $('#btn_start').removeClass('btn-outline-secondary').addClass('btn-info');
+                            $('#pause_display').removeClass('d-none').addClass('d-flex');
+                            break;
+                        case 'started':
+                            $('#btn_pause').removeClass('btn-warning').addClass('btn-outline-secondary');
+                            $('#btn_start').removeClass('btn-info').addClass('btn-outline-secondary');
+                            $('#pause_display').removeClass('d-flex').addClass('d-none');
+                            break;
+                    }
+                }
+
+            })
+
             //---------------------------------------------------------------------------
             // Bootstrap Select
             //---------------------------------------------------------------------------
 
-            $('.selectpicker').selectpicker();
+            //$('.selectpicker').selectpicker();
 
             //---------------------------------------------------------------------------
             // Keyboard

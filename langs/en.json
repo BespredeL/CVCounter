@@ -30,6 +30,7 @@
     "Start": "Start",
     "Stop": "Stop",
     "Pause": "Pause",
+    "Run": "Run",
     "Reset counter": "Reset counter",
     "Settings": "Settings",
     "Connection to server successful": "Connection to server successful",

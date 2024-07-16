@@ -72,6 +72,24 @@ def trans(string):
     return translate(string)
 
 
+@app.template_global()
+def counter_status(key):
+    if key not in threading_detectors:
+        return 'stopped'
+    if object_counters[key].is_pause():
+        return 'paused'
+    return 'running'
+
+
+@app.template_global()
+def counter_status_class(key):
+    if key not in threading_detectors:
+        return 'secondary'
+    if object_counters[key].is_pause():
+        return 'warning'
+    return 'success'
+
+
 # Context processor
 @app.context_processor
 def utility_processor():
@@ -100,13 +118,20 @@ def object_detector_init(location):
     return object_counters
 
 
+def is_ajax():
+    return str(request.headers.get('X-Requested-With')).lower() == 'XMLHttpRequest'.lower()
+
+
 # --------------------------------------------------------------------------------
 # Routes
 # --------------------------------------------------------------------------------
 
 @app.route('/')
 def index():
-    return render_template('index.html', object_counters=locations_dict, running_counters=threading_detectors)
+    return render_template(
+        'index.html',
+        object_counters=locations_dict,
+        running_counters=threading_detectors)
 
 
 @app.route('/settings')
@@ -279,7 +304,23 @@ def start_count(location=None):
         abort(400, trans('Detection config not found'))
 
     object_counters[location].start()
-    return {'result': 0}
+
+    if is_ajax() is True:
+        return {'status': 'started'}
+    return redirect(url_for('index'))
+
+
+@app.route('/pause_count/<string:location>')
+def pause_count(location=None):
+    location = escape(location)
+    if location not in object_counters:
+        abort(400, trans('Detection config not found'))
+
+    object_counters[location].pause()
+
+    if is_ajax() is True:
+        return {'status': 'paused'}
+    return redirect(url_for('index'))
 
 
 @app.route('/stop_count/<string:location>')
@@ -291,18 +332,10 @@ def stop_count(location=None):
     object_counters[location].stop()
     del object_counters[location]
     del threading_detectors[location]
-    # return {'result': 0}
+
+    if is_ajax() is True:
+        return {'status': 'stopped'}
     return redirect(url_for('index'))
-
-
-@app.route('/pause_count/<string:location>')
-def pause_count(location=None):
-    location = escape(location)
-    if location not in object_counters:
-        abort(400, trans('Detection config not found'))
-
-    object_counters[location].pause()
-    return {'result': 0}
 
 
 # --------------------------------------------------------------------------------

@@ -3,7 +3,7 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 10.06.2024
+# Updated: 16.07.2024
 # Website: https://bespredel.name
 
 import os
@@ -224,6 +224,8 @@ class ObjectCounter:
     """
 
     def run_frames(self):
+        self._event('counter_status', {'status': 'started', 'location': self.location})
+
         while self.running:
             try:
                 frame = self.vsm.get_frame()
@@ -302,6 +304,8 @@ class ObjectCounter:
     """
 
     def count_run(self):
+        self._event('counter_status', {'status': 'started', 'location': self.location})
+
         while self.running:
             try:
                 frame = self.vsm.get_frame()
@@ -416,6 +420,21 @@ class ObjectCounter:
             self.socketio.emit(f'{self.location}_notification', {'type': notification_type, 'message': message})
 
     """
+    Emit an event to the client.
+
+    Parameters:
+        event (str): The name of the event.
+        data (dict): The data associated with the event.
+
+    Returns:
+        None
+    """
+
+    def _event(self, event, data):
+        if self.socketio:
+            self.socketio.emit(f'{event}_event', {'data': data})
+
+    """
     Save count.
     
     Parameters:
@@ -528,8 +547,9 @@ class ObjectCounter:
 
     def start(self):
         # self.running = True
-        if self.socketio and self.paused:
+        if self.paused:
             self._notification(trans('Counting has started!'), 'success')
+            self._event('counter_status', {'status': 'started', 'location': self.location})
         self.paused = False
 
     """
@@ -543,8 +563,9 @@ class ObjectCounter:
     """
 
     def stop(self):
-        if self.socketio and self.paused:
+        if self.running:
             self._notification(trans('Counting has stopped!'), 'primary')
+            self._event('counter_status', {'status': 'stopped', 'location': self.location})
         self.running = False
 
     """
@@ -558,8 +579,9 @@ class ObjectCounter:
     """
 
     def pause(self):
-        if self.socketio and not self.paused:
+        if not self.paused:
             self._notification(trans('Counting has paused!'), 'warning')
+            self._event('counter_status', {'status': 'paused', 'location': self.location})
         self.paused = True
 
     """

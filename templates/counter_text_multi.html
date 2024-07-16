@@ -61,40 +61,25 @@
             // Socket IO
             //---------------------------------------------------------------------------
 
-            // Обработчик получения счетчика
+            // Counter IN get handler
             socket.on('{{ location_in }}_count', function (data) {
-                if (data.total > 0) {
-                    let current_count = parseInt(data.current);
-                    current_count = current_count > 0 ? current_count : 0;
+                let current_count = Math.max(0, parseInt(data.current));
+                let total_count = data.total > 0 ? Math.max(0, parseInt(data.total)) : 0;
 
-                    let total_count = parseInt(data.total);
-                    total_count = total_count > 0 ? total_count : 0;
-
-                    $('.current_count_{{ location_in|slug }}').html(current_count);
-                    $('.total_count_{{ location_in|slug }}').html(total_count);
-                } else {
-                    $('.current_count_{{ location_in|slug }}').html('0');
-                    $('.total_count_{{ location_in|slug }}').html('0');
-                }
+                $('.current_count_{{ location_in|slug }}').html(current_count);
+                $('.total_count_{{ location_in|slug }}').html(total_count);
             });
 
+            // Counter OUT get handler
             socket.on('{{ location_out }}_count', function (data) {
-                if (data.total > 0) {
-                    let current_count = parseInt(data.current);
-                    current_count = current_count > 0 ? current_count : 0;
+                let current_count = Math.max(0, parseInt(data.current));
+                let total_count = data.total > 0 ? Math.max(0, parseInt(data.total)) : 0;
 
-                    let total_count = parseInt(data.total);
-                    total_count = total_count > 0 ? total_count : 0;
-
-                    $('.current_count_{{ location_out|slug }}').html(current_count);
-                    $('.total_count_{{ location_out|slug }}').html(total_count);
-                } else {
-                    $('.current_count_{{ location_out|slug }}').html('0');
-                    $('.total_count_{{ location_out|slug }}').html('0');
-                }
+                $('.current_count_{{ location_out|slug }}').html(current_count);
+                $('.total_count_{{ location_out|slug }}').html(total_count);
             });
 
-            // Обработчик получения уведомлений
+            // Notification receipt handler
             socket.on('{{ location }}_notification', function (data) {
                 if (data.message.length > 0) {
                     showToast(data.message, data.type);
