@@ -81,5 +81,15 @@
     "Probability": "Вероятность",
     "Path": "Путь",
     "Label": "Наименование",
-    "Start Total Count": "Стартовое количество"
+    "Start Total Count": "Стартовое количество",
+    "Start page": "Главная страница",
+    "Counter name": "Имя счётчика",
+    "Counter not running": "Счётчик не запущен",
+    "Counter running": "Счётчик запущен",
+    "Counter paused": "Счётчик приостановлен",
+    "Button actions": "Действия кнопки",
+    "Run the counter": "Запустить счётчик",
+    "Stop the counter": "Остановить счётчик",
+    "Start the counter": "Продолжить подсчёт",
+    "Pause the counter": "Приостановить подсчёт"
 }

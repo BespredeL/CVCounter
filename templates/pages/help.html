@@ -9,13 +9,13 @@
 {% block content %}
     <div class="row py-3 mb-5">
         <div class="col-12 border-bottom mb-3 pb-3">
-            <div class="h4">{{ trans('Index') }}</div>
+            <div class="h4">{{ trans('Start page') }}</div>
 
             <table class="table table-bordered table-sm mb-3">
                 <tr>
                     <td class="align-middle">
                         <div class="btn-group m-2" role="group" aria-label="">
-                            <a href="#" class="btn btn-secondary" target="_blank">{{ trans('Counter name') }}</a>
+                            <a href="#" class="btn btn-secondary">{{ trans('Counter name') }}</a>
                             <div class="btn-group" role="group">
                                 <button type="button" class="btn dropdown-toggle btn-secondary"></button>
                             </div>
@@ -28,7 +28,7 @@
                     <td class="align-middle">
                         <div>
                             <div class="btn-group m-2" role="group" aria-label="">
-                                <a href="#" class="btn btn-success" target="_blank">{{ trans('Counter name') }}</a>
+                                <a href="#" class="btn btn-success">{{ trans('Counter name') }}</a>
                                 <div class="btn-group" role="group">
                                     <button type="button" class="btn dropdown-toggle btn-success"></button>
                                 </div>
@@ -42,7 +42,7 @@
                     <td class="align-middle">
                         <div>
                             <div class="btn-group m-2" role="group" aria-label="">
-                                <a href="#" class="btn btn-warning" target="_blank">{{ trans('Counter name') }}</a>
+                                <a href="#" class="btn btn-warning">{{ trans('Counter name') }}</a>
                                 <div class="btn-group" role="group">
                                     <button type="button" class="btn dropdown-toggle btn-warning"></button>
                                 </div>
@@ -55,19 +55,22 @@
                 <tr>
                     <td class="align-middle">
                         <ul class="dropdown-menu d-block position-relative" style="max-width: 150px">
-                            <li><span class="dropdown-item ">{{ trans('Run') }}</span></li>
-                            <li><span class="dropdown-item">{{ trans('Stop') }}</span></li>
+                            <li><a href="#" class="dropdown-item ">{{ trans('Run') }}</a></li>
+                            <li><a href="#" class="dropdown-item">{{ trans('Stop') }}</a></li>
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
-                            <li><span class="dropdown-item">{{ trans('Start') }}</span></li>
-                            <li><span class="dropdown-item">{{ trans('Pause') }}</span></li>
+                            <li><a href="#" class="dropdown-item">{{ trans('Start') }}</a></li>
+                            <li><a href="#" class="dropdown-item">{{ trans('Pause') }}</a></li>
                         </ul>
                     </td>
                     <td>
                         {{ trans('Button actions') }}:
                         <ul>
                             <li>{{ trans('Run') }} - {{ trans('Run the counter') }}</li>
+                            <li>{{ trans('Stop') }} - {{ trans('Stop the counter') }}</li>
+                            <li>{{ trans('Start') }} - {{ trans('Start the counter') }}</li>
+                            <li>{{ trans('Pause') }} - {{ trans('Pause the counter') }}</li>
                         </ul>
                     </td>
                 </tr>
@@ -90,26 +93,32 @@
                 </tr>
                 <tr>
                     <td class="align-middle">
-                        <div class="border border-danger-subtle rounded my-2 me-3 p-2 d-inline-block" style="max-width: 290px">
+                        <div class="border border-danger-subtle rounded my-2 me-3 p-2 d-inline-block"
+                             style="max-width: 290px">
                             <div class="col-12 mb-3">
-                                <label for="defect_count" class="form-label h4">{{ trans('Defective products') }}</label>
+                                <label for="defect_count"
+                                       class="form-label h4">{{ trans('Defective products') }}</label>
                                 <div class="input-group">
                                     <button class="btn btn-sm btn-secondary input-plus">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
+                                             fill="currentColor"
                                              class="bi bi-plus-lg"
                                              viewBox="0 0 16 16">
                                             <path fill-rule="evenodd"
                                                   d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"></path>
                                         </svg>
                                     </button>
-                                    <input type="number" class="form-control form-control-lg" aria-label="" name="defect_count" value="0"
+                                    <input type="number" class="form-control form-control-lg" aria-label=""
+                                           name="defect_count" value="0"
                                            min="0" max="999999"
                                            maxlength="9">
                                     <button class="btn btn-sm btn-secondary input-minus">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
+                                             fill="currentColor"
                                              class="bi bi-dash-lg"
                                              viewBox="0 0 16 16">
-                                            <path fill-rule="evenodd" d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8"></path>
+                                            <path fill-rule="evenodd"
+                                                  d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8"></path>
                                         </svg>
                                     </button>
                                 </div>
@@ -142,7 +151,8 @@
                 </tr>
                 <tr>
                     <td class="align-middle">
-                        <div class="border border-warning-subtle rounded my-2 me-3 p-2 d-inline-block" style="max-width: 290px">
+                        <div class="border border-warning-subtle rounded my-2 me-3 p-2 d-inline-block"
+                             style="max-width: 290px">
                             <div class="col-12 mb-3">
                                 <label for="correct_count" class="form-label h4">{{ trans('Correct count') }}</label>
                                 <button class="btn btn-outline-info float-end"
@@ -156,7 +166,8 @@
                                 </button>
                                 <button class="btn btn-outline-danger float-end me-2"
                                         style="--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-trash"
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                                         class="bi bi-trash"
                                          viewBox="0 0 16 16">
                                         <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
                                         <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
@@ -164,19 +175,23 @@
                                 </button>
                                 <div class="input-group">
                                     <button class="btn btn-sm btn-secondary input-plus">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
+                                             fill="currentColor"
                                              class="bi bi-plus-lg"
                                              viewBox="0 0 16 16">
                                             <path fill-rule="evenodd"
                                                   d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"></path>
                                         </svg>
                                     </button>
-                                    <input type="number" class="form-control form-control-lg" aria-label="" value="0" maxlength="9">
+                                    <input type="number" class="form-control form-control-lg" aria-label="" value="0"
+                                           maxlength="9">
                                     <button class="btn btn-sm btn-secondary input-minus">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
+                                             fill="currentColor"
                                              class="bi bi-dash-lg"
                                              viewBox="0 0 16 16">
-                                            <path fill-rule="evenodd" d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8"></path>
+                                            <path fill-rule="evenodd"
+                                                  d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8"></path>
                                         </svg>
                                     </button>
                                 </div>
@@ -211,7 +226,8 @@
                 <tr>
                     <td class="align-middle">
                         <button class="btn btn-outline-secondary btn-sm me-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" class="bi bi-pause-fill"
+                            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor"
+                                 class="bi bi-pause-fill"
                                  viewBox="0 0 16 16">
                                 <path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"/>
                             </svg>
@@ -223,7 +239,8 @@
                 <tr>
                     <td class="align-middle">
                         <button class="btn btn-outline-secondary btn-sm me-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" class="bi bi-play-fill"
+                            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor"
+                                 class="bi bi-play-fill"
                                  viewBox="0 0 16 16">
                                 <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/>
                             </svg>
@@ -294,7 +311,8 @@
         <div class="col-12 border-bottom mb-3 pb-3">
             <div class="h4">Лицензия / License</div>
             <div>
-                AGPL-3.0 License: This OSI-approved open-source license is ideal for students and enthusiasts, promoting open collaboration
+                AGPL-3.0 License: This OSI-approved open-source license is ideal for students and enthusiasts, promoting
+                open collaboration
                 and knowledge sharing.
             </div>
         </div>
