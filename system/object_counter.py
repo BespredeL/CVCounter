@@ -108,8 +108,7 @@ class ObjectCounter:
         self.socketio = socketio
         self.weights = kwargs.get('weights', detector_config.get('weights_path'))
         self.device = kwargs.get('device', detector_config.get('device', 'cpu'))
-        self.confidence = kwargs.get('confidence',
-                                     detector_config.get('confidence', config_manager.get('detection_default.confidence', 0.5)))
+        self.confidence = kwargs.get('confidence', detector_config.get('confidence', config_manager.get('detection_default.confidence', 0.5)))
         self.iou = kwargs.get('iou', detector_config.get('iou', config_manager.get('detection_default.iou', 0.7)))
         self.counting_area = kwargs.get('counting_area', detector_config.get('counting_area'))
         self.counting_area_color = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
