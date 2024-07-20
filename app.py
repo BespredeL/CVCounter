@@ -15,7 +15,7 @@ from flask_socketio import SocketIO
 from markupsafe import escape
 
 from system.config_manager import ConfigManager
-from system.db_client import DBClient
+from system.database_manager import DatabaseManager
 from system.object_counter import ObjectCounter
 from system.helpers import trans as translate
 from system.helpers import slug
@@ -41,7 +41,7 @@ app.config["TEMPLATES_AUTO_RELOAD"] = True
 socketio = SocketIO(app)
 
 # Start DB
-db_client = DBClient(
+db_manager = DatabaseManager(
     config.get('db.host'),
     config.get('db.user'),
     config.get('db.password'),
@@ -101,15 +101,15 @@ def utility_processor():
 # --------------------------------------------------------------------------------
 
 def object_detector_init(location):
-    global object_counters, threading_detectors, config
+    global object_counters, config, db_manager, socketio
     with lock:
         if location not in object_counters:
             detector_config = config.get("detections." + location)
             object_counters[location] = ObjectCounter(
                 location=location,
                 socketio=socketio,
-                config=config,
-                db_client=db_client,
+                config_manager=config,
+                db_manager=db_manager,
                 video_stream=detector_config['video_path'],
                 weights=detector_config['weights_path'],
                 counting_area=detector_config['counting_area'],

@@ -31,9 +31,9 @@ class ObjectCounter:
     FPS_THICKNESS = 2
     POLYGON_ALPHA = 0.4
 
-    def __init__(self, location, socketio, config, **kwargs):
+    def __init__(self, location, socketio, config_manager, **kwargs):
         # Load and initialize config
-        self._initialize_config(location, socketio, config, kwargs)
+        self._initialize_config(location, socketio, config_manager, kwargs)
 
         # Init variables
         self.total_objects = set()
@@ -45,7 +45,7 @@ class ObjectCounter:
         self.paused = False
 
         # Init logger
-        log_path = f'error_{self.location}.log' if self.location else config.get("general.log_path")
+        log_path = f'error_{self.location}.log' if self.location else config_manager.get("general.log_path")
         self.logger = ErrorLogger(log_path)
 
         # Initialize video stream
@@ -60,7 +60,7 @@ class ObjectCounter:
         self.tracker = Sort(max_age=30, min_hits=3, iou_threshold=0.3)
 
         # DB
-        self.DB = kwargs.get('db_client', None)
+        self.db_manager = kwargs.get('db_manager', None)
 
         # Set polygon
         self.polygon = Polygon(self.counting_area)
@@ -71,7 +71,7 @@ class ObjectCounter:
     Parameters:
         location (str): The location of the object counter.
         socketio (SocketIO): The SocketIO instance.
-        config (Config): The configuration object.
+        config_manager (ConfigManager): The configuration object.
         kwargs (dict): Additional keyword arguments.
 
     Returns:
@@ -100,41 +100,36 @@ class ObjectCounter:
     sets the total_count and total_objects attributes and updates the configuration file.
     """
 
-    def _initialize_config(self, location, socketio, config, kwargs):
-        config.read_config()
-        detector_config = config.get(f"detections.{location}")
+    def _initialize_config(self, location, socketio, config_manager, kwargs):
+        config_manager.read_config()
+        detector_config = config_manager.get(f"detections.{location}")
 
         self.location = location
         self.socketio = socketio
-        # self.location = kwargs.get('location')
-        # self.socketio = kwargs.get('socketio')
         self.weights = kwargs.get('weights', detector_config.get('weights_path'))
         self.device = kwargs.get('device', detector_config.get('device', 'cpu'))
-        self.confidence = kwargs.get('confidence', detector_config.get('confidence', config.get('detection_default.confidence', 0.5)))
-        self.iou = kwargs.get('iou', detector_config.get('iou', config.get('detection_default.iou', 0.7)))
+        self.confidence = kwargs.get('confidence',
+                                     detector_config.get('confidence', config_manager.get('detection_default.confidence', 0.5)))
+        self.iou = kwargs.get('iou', detector_config.get('iou', config_manager.get('detection_default.iou', 0.7)))
         self.counting_area = kwargs.get('counting_area', detector_config.get('counting_area'))
         self.counting_area_color = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
-        self.video_scale = detector_config.get('video_show_scale', config.get("detection_default.video_show_scale", 50))
-        self.video_quality = detector_config.get('video_show_quality', config.get("detection_default.video_show_quality", 50))
-        self.indicator_size = detector_config.get('indicator_size', config.get("detection_default.indicator_size", 10))
-        self.vid_stride = detector_config.get('vid_stride', config.get("detection_default.vid_stride", 1))
+        self.video_scale = detector_config.get('video_show_scale', config_manager.get("detection_default.video_show_scale", 50))
+        self.video_quality = detector_config.get('video_show_quality', config_manager.get("detection_default.video_show_quality", 50))
+        self.indicator_size = detector_config.get('indicator_size', config_manager.get("detection_default.indicator_size", 10))
+        self.vid_stride = detector_config.get('vid_stride', config_manager.get("detection_default.vid_stride", 1))
         self.classes = detector_config.get('classes', {})
         self.dataset = detector_config.get('dataset_create', {})
 
         # Video
         self.video_stream = kwargs.get('video_stream', detector_config['video_path'])
-        # if not self.video_stream.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://', 'tcp://')):
-        #     self.cap = self.video_stream
-        # else:
-        #     self.cap = VideoStream(self.video_stream).start()
 
         # Started counter value from config
         total_count = detector_config.get('start_total_count', 0)
         if total_count > 0:
             self.total_count = int(total_count)
             self.total_objects = set(range(-self.total_count, 0))
-            config.set(f"detections.{self.location}.start_total_count", 0)
-            config.save_config()
+            config_manager.set(f"detections.{self.location}.start_total_count", 0)
+            config_manager.save_config()
 
     """
     Reconnects to the video stream if the connection has been lost for more than N frames.
@@ -153,8 +148,7 @@ class ObjectCounter:
             self.frame_lost = 0
             # self.logger.log_error('Reconnect ' + self.location + '...')
             print(trans('Reconnect {location}...', location=self.location))
-            if self.socketio is not None:
-                self._notification(trans('Lost connection to camera!'), 'danger')
+            self._notification(trans('Lost connection to camera!'), 'danger')
 
             try:
                 self.vsm.reconnect()
@@ -399,8 +393,7 @@ class ObjectCounter:
 
             self.total_count = len(self.total_objects)
 
-        if self.socketio:
-            self.socketio.emit(f'{self.location}_count', {'total': self.total_count, 'current': self.current_count})
+        self._emit(f'{self.location}_count', {'total': self.total_count, 'current': self.current_count})
 
         return image
 
@@ -416,8 +409,7 @@ class ObjectCounter:
     """
 
     def _notification(self, message='', notification_type='primary'):
-        if self.socketio:
-            self.socketio.emit(f'{self.location}_notification', {'type': notification_type, 'message': message})
+        self._emit(f'{self.location}_notification', {'type': notification_type, 'message': message})
 
     """
     Emit an event to the client.
@@ -431,12 +423,26 @@ class ObjectCounter:
     """
 
     def _event(self, event, data):
+        self._emit(f'{event}_event', {'data': data})
+
+    """
+    Emit an event to the client.
+
+    Parameters:
+        event (str): The name of the event.
+        data (dict): The data associated with the event.
+
+    Returns:
+        None
+    """
+
+    def _emit(self, event, data):
         if self.socketio:
-            self.socketio.emit(f'{event}_event', {'data': data})
+            self.socketio.emit(event, data)
 
     """
     Save count.
-    
+
     Parameters:
         location (str): The location of the object.
         name (str): The name of the object.
@@ -454,11 +460,11 @@ class ObjectCounter:
         correct_count = int(correct_count)
         item_count = str(total_count - defect_count + correct_count)
 
-        if not self.DB.check_connection():
+        if not self.db_manager.check_connection():
             self._notification(trans('Impossible to save! There is no connection to the database.'), 'warning')
             return dict(total=total_count, defect=defect_count, correct=correct_count)
 
-        result = self.DB.save_result(
+        result = self.db_manager.save_result(
             location=location,
             name=name,
             item_count=item_count,
@@ -493,8 +499,8 @@ class ObjectCounter:
         self.total_count = 0
         self.current_count = 0
 
-        if self.DB.check_connection():
-            self.DB.close_current_count(location)
+        if self.db_manager.check_connection():
+            self.db_manager.close_current_count(location)
 
         self._notification(trans('Counting completed successfully!'), 'primary')
 
@@ -517,8 +523,8 @@ class ObjectCounter:
         defect_count = int(defect_count)
         correct_count = int(correct_count)
         try:
-            if self.DB.check_connection():
-                self.DB.save_part_result(
+            if self.db_manager.check_connection():
+                self.db_manager.save_part_result(
                     location=location,
                     name=name,
                     current_count=current_count,
@@ -531,9 +537,8 @@ class ObjectCounter:
 
         self.current_count = 0
 
-        if self.socketio is not None:
-            self.socketio.emit(f'{location}_count', {'total': total_count, 'current': 0})
-            self._notification(trans('The counter has been reset!'), 'primary')
+        self._emit(f'{location}_count', {'total': total_count, 'current': 0})
+        self._notification(trans('The counter has been reset!'), 'primary')
 
     """
     Start counting.

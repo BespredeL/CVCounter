@@ -13,7 +13,7 @@ import json
 from system.error_logger import ErrorLogger
 
 
-class DBClient:
+class DatabaseManager:
     __conn = None
     __logger = None
     __prefix = None
