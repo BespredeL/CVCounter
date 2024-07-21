@@ -3,14 +3,14 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 22.03.2024
+# Updated: 21.07.2024
 # Website: https://bespredel.name
 
 from datetime import datetime
 from functools import lru_cache
 import mysql.connector
 import json
-from system.error_logger import ErrorLogger
+from system.Logger import ErrorLogger
 
 
 class DatabaseManager:

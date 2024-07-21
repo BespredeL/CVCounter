@@ -3,7 +3,7 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 16.07.2024
+# Updated: 21.07.2024
 # Website: https://bespredel.name
 
 import os
@@ -16,10 +16,10 @@ import numpy as np
 from shapely.geometry import Point, Polygon
 from ultralytics import YOLO, settings
 
-from system.error_logger import ErrorLogger
+from system.Logger import ErrorLogger
 from system.helpers import trans
 from system.sort import Sort
-from system.video_stream_manager import VideoStreamManager
+from system.VideoStreamManager import VideoStreamManager
 
 
 class ObjectCounter:

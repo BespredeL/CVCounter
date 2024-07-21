@@ -3,7 +3,7 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 22.03.2024
+# Updated: 21.07.2024
 # Website: https://bespredel.name
 
 import json

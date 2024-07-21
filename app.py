@@ -3,7 +3,7 @@
 
 # Developed by: Alexander Kireev
 # Created: 01.11.2023
-# Updated: 04.07.2024
+# Updated: 21.07.2024
 # Website: https://bespredel.name
 
 import os
@@ -14,9 +14,9 @@ from flask import Flask, Response, abort, flash, redirect, render_template, requ
 from flask_socketio import SocketIO
 from markupsafe import escape
 
-from system.config_manager import ConfigManager
-from system.database_manager import DatabaseManager
-from system.object_counter import ObjectCounter
+from system.ConfigManager import ConfigManager
+from system.DatabaseManager import DatabaseManager
+from system.ObjectCounter import ObjectCounter
 from system.helpers import trans as translate
 from system.helpers import slug
 
