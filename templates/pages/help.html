@@ -60,8 +60,15 @@
                 </tr>
 
                 <tr>
-                    <td class="align-middle">
-                        <ul class="dropdown-menu d-block position-relative" style="max-width: 150px">
+                    <td>
+                        <div class="btn-group mx-2 my-1" role="group" aria-label="">
+                            <a href="#" class="btn btn-secondary">{{ trans('Counter name') }}</a>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn dropdown-toggle btn-secondary"
+                                style="background-color: var(--bs-btn-hover-bg);border-color: var(--bs-btn-hover-border-color);"></button>
+                            </div>
+                        </div>
+                        <ul class="dropdown-menu d-block position-relative mx-2 ms-md-5" style="max-width: 150px">
                             <li>
                                 <a href="#" class="dropdown-item ">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
