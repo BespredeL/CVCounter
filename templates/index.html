@@ -15,9 +15,9 @@
                     const baseSelector = '#' + baseId + '_' + data.data.location;
                     const btnSelector = baseSelector + ' a.btn, ' + baseSelector + ' button.dropdown-toggle';
                     const btnCounterRun = baseSelector + ' a.counter_run';
-                    const btnCounterStop = 'a.counter_stop';
-                    const btnCounterStart = 'a.counter_start';
-                    const btnCounterPause = 'a.counter_pause';
+                    const btnCounterStart = baseSelector + ' a.counter_start';
+                    const btnCounterStop = baseSelector + ' a.counter_stop';
+                    const btnCounterPause = baseSelector + ' a.counter_pause';
 
                     $(btnSelector).removeClass(remove).addClass(add);
                     if (add === 'btn-success') {
@@ -25,14 +25,20 @@
                         $(btnCounterStop).removeClass('disabled');
                         $(btnCounterStart).addClass('disabled');
                         $(btnCounterPause).removeClass('disabled');
+
+                        showToast('{{ trans("Counting has started!") }}', 'success');
                     } else if (add === 'btn-warning') {
                         $(btnCounterStart).removeClass('disabled');
                         $(btnCounterPause).addClass('disabled');
+
+                        showToast('{{ trans("Counting has paused!") }}', 'warning');
                     } else if (add === 'btn-secondary') {
                         $(btnCounterRun).removeClass('disabled');
                         $(btnCounterStop).addClass('disabled');
                         $(btnCounterStart).addClass('disabled');
                         $(btnCounterPause).addClass('disabled');
+
+                        showToast('{{ trans("Counting has stopped!") }}', 'secondary');
                     }
                 }
 

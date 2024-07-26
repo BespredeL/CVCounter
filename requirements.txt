@@ -9,16 +9,16 @@ numpy~=1.26.3
 matplotlib~=3.8.1
 scikit-image~=0.22.0
 filterpy~=1.4.5
-opencv-python~=4.9.0.80
+opencv-python~=4.10.0.82
 ultralytics>=8.0.211
-flask~=3.0.0
-flask-socketio~=5.3.6
+Flask~=3.0.3
+Flask-SocketIO~=5.3.6
 imutils~=0.5.4
 pyodbc~=5.1
 mysql-connector-python~=8.2
 MarkupSafe~=2.1.3
-torch>=2.2.2+cu118
 shapely~=2.0.2
+torch~=2.3.1+cu118
 
 # Export --------------------------------------
 # coremltools>=7.0  # CoreML export
