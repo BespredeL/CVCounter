@@ -1,5 +1,5 @@
 /**
- * Developed by: Alexander Kireev
+ * Developed by: Aleksandr Kireev
  * Created: 01.11.2023
  * Updated: 07.03.2024
  * Website: https://bespredel.name

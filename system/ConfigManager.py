@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # ! python3
 
-# Developed by: Alexander Kireev
+# Developed by: Aleksandr Kireev
 # Created: 01.11.2023
 # Updated: 21.07.2024
 # Website: https://bespredel.name

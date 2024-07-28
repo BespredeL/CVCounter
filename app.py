@@ -1,24 +1,22 @@
 # -*- coding: utf-8 -*-
 # ! python3
 
-# Developed by: Alexander Kireev
+# Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 21.07.2024
+# Updated: 23.07.2024
 # Website: https://bespredel.name
 
 import os
 import re
 from threading import Lock, Thread
-
 from flask import Flask, Response, abort, flash, redirect, render_template, request, url_for
 from flask_socketio import SocketIO
 from markupsafe import escape
-
 from system.ConfigManager import ConfigManager
 from system.DatabaseManager import DatabaseManager
 from system.ObjectCounter import ObjectCounter
-from system.helpers import trans as translate
 from system.helpers import slug
+from system.helpers import trans as translate
 
 # --------------------------------------------------------------------------------
 # Init
@@ -107,10 +105,10 @@ def object_detector_init(location):
             detector_config = config.get("detections." + location)
             object_counters[location] = ObjectCounter(
                 location=location,
-                socketio=socketio,
                 config_manager=config,
+                socketio=socketio,
+                video_path=detector_config['video_path'],
                 db_manager=db_manager,
-                video_stream=detector_config['video_path'],
                 weights=detector_config['weights_path'],
                 counting_area=detector_config['counting_area'],
                 counting_area_color=tuple(detector_config['counting_area_color'])
@@ -132,20 +130,6 @@ def index():
         'index.html',
         object_counters=locations_dict,
         running_counters=threading_detectors)
-
-
-@app.route('/settings')
-def settings():
-    _config = ConfigManager("config.json")
-    return render_template('settings.html', config=_config.read_config())
-
-
-@app.route('/settings_save', methods=['POST'])
-def settings_save():
-    _config = ConfigManager("config.json")
-    _config.save_from_request(request.form)
-    flash(trans('Settings saved'))
-    return redirect(url_for('settings'))
 
 
 @app.route('/counter/<string:location>')
@@ -340,17 +324,31 @@ def stop_count(location=None):
 
 # --------------------------------------------------------------------------------
 
+@app.route('/settings')
+def settings():
+    _config = ConfigManager("config.json")
+    return render_template('settings.html', config=_config.read_config())
+
+
+@app.route('/settings_save', methods=['POST'])
+def settings_save():
+    _config = ConfigManager("config.json")
+    _config.save_from_request(request.form)
+    flash(trans('Settings saved'))
+    return redirect(url_for('settings'))
+
+
 @app.route('/page/<string:name>')
 def page(name):
     page_name = escape(name)
     page_name = re.sub('[^A-Za-z0-9-_]+', '', page_name)
 
     if page_name == '':
-        abort(400, trans('Page not found'))
+        abort(404, trans('Page not found'))
 
     path = os.path.join(app.root_path, 'templates', 'pages', page_name + '.html')
     if os.path.exists(path) is False or os.path.isfile(path) is False:
-        abort(400, trans('Page not found'))
+        abort(404, trans('Page not found'))
 
     return render_template('pages/' + page_name + '.html')
 

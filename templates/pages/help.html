@@ -11,7 +11,7 @@
         <div class="col-12 border-bottom mb-3 pb-3">
             <div class="h4">{{ trans('Start page') }}</div>
 
-            <table class="table table-bordered table-hover table-sm mb-3">
+            <table class="table table-bordered table-sm mb-3">
                 <thead>
                 <tr>
                     <th scope="col" class="w-50">{{ trans('Element') }}</th>
@@ -60,15 +60,55 @@
                 </tr>
 
                 <tr>
-                    <td class="align-middle">
-                        <ul class="dropdown-menu d-block position-relative" style="max-width: 150px">
-                            <li><a href="#" class="dropdown-item ">{{ trans('Run') }}</a></li>
-                            <li><a href="#" class="dropdown-item">{{ trans('Stop') }}</a></li>
+                    <td>
+                        <div class="btn-group mx-2 my-1" role="group" aria-label="">
+                            <a href="#" class="btn btn-secondary">{{ trans('Counter name') }}</a>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn dropdown-toggle btn-secondary"
+                                        style="background-color: var(--bs-btn-hover-bg);border-color: var(--bs-btn-hover-border-color);"></button>
+                            </div>
+                        </div>
+                        <ul class="dropdown-menu d-block position-relative mx-2 ms-md-5" style="max-width: 150px">
+                            <li>
+                                <a href="#" class="dropdown-item ">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                                         class="bi bi-power" viewBox="0 0 18 18">
+                                        <path d="M7.5 1v7h1V1z"/>
+                                        <path d="M3 8.812a5 5 0 0 1 2.578-4.375l-.485-.874A6 6 0 1 0 11 3.616l-.501.865A5 5 0 1 1 3 8.812"/>
+                                    </svg>
+                                    {{ trans('Run') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" class="dropdown-item">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                                         class="bi bi-stop-fill" viewBox="0 0 18 18">
+                                        <path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5"/>
+                                    </svg>
+                                    {{ trans('Stop') }}
+                                </a>
+                            </li>
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
-                            <li><a href="#" class="dropdown-item">{{ trans('Start') }}</a></li>
-                            <li><a href="#" class="dropdown-item">{{ trans('Pause') }}</a></li>
+                            <li>
+                                <a href="#" class="dropdown-item">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                                         class="bi bi-play-fill" viewBox="0 0 18 18">
+                                        <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/>
+                                    </svg>
+                                    {{ trans('Start') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" class="dropdown-item">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                                         class="bi bi-pause-fill" viewBox="0 0 18 18">
+                                        <path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"/>
+                                    </svg>
+                                    {{ trans('Pause') }}
+                                </a>
+                            </li>
                         </ul>
                     </td>
                     <td>
@@ -88,7 +128,7 @@
         <div class="col-12 border-bottom mb-3 pb-3">
             <div class="h4">{{ trans('Video') }} / {{ trans('Text') }}</div>
 
-            <table class="table table-bordered table-hover table-sm mb-3">
+            <table class="table table-bordered table-sm mb-3">
                 <thead>
                 <tr>
                     <th scope="col" class="w-50">{{ trans('Element') }}</th>
@@ -286,7 +326,7 @@
         <div class="col-12 border-bottom mb-3 pb-3">
             <div class="h4">{{ trans('Text double') }}</div>
 
-            <table class="table table-bordered table-hover table-sm mb-3">
+            <table class="table table-bordered table-sm mb-3">
                 <thead>
                 <tr>
                     <th scope="col" class="w-50">{{ trans('Element') }}</th>
@@ -320,7 +360,7 @@
 
         <div class="col-12 border-bottom mb-3 pb-3">
             <div class="h4">{{ trans('Developer') }}</div>
-            <div>Александр Киреев (Alexander Kireev)</div>
+            <div>Александр Киреев (Aleksandr Kireev)</div>
             <div>{{ trans('Website') }}: <a href="https://bespredel.name">https://bespredel.name</a></div>
             <div>{{ trans('E-mail') }}: <a href="mailto:hello@bespredel.name">hello@bespredel.name</a></div>
             <div>{{ trans('GitHub') }}: <a href="https://github.com/BespredeL">https://github.com/BespredeL</a></div>

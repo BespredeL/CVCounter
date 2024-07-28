@@ -96,7 +96,7 @@ P.S.:
 
 ## <div align="center">Author</div>
 
-Alexander Kireev
+Aleksandr Kireev
 
 Website: [https://bespredel.name](https://bespredel.name)<br>
 E-mail: [hello@bespredel.name](mailto:hello@bespredel.name)<br>

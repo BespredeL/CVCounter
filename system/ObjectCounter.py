@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # ! python3
 
-# Developed by: Alexander Kireev
+# Developed by: Aleksandr Kireev
 # Created: 01.11.2023
 # Updated: 21.07.2024
 # Website: https://bespredel.name
@@ -17,6 +17,7 @@ from shapely.geometry import Point, Polygon
 from ultralytics import YOLO, settings
 
 from system.Logger import ErrorLogger
+from system.NotificationManager import NotificationManager
 from system.helpers import trans
 from system.sort import Sort
 from system.VideoStreamManager import VideoStreamManager
@@ -31,9 +32,9 @@ class ObjectCounter:
     FPS_THICKNESS = 2
     POLYGON_ALPHA = 0.4
 
-    def __init__(self, location, socketio, config_manager, **kwargs):
+    def __init__(self, location, config_manager, socketio, **kwargs):
         # Load and initialize config
-        self._initialize_config(location, socketio, config_manager, kwargs)
+        self._initialize_config(location, config_manager, kwargs)
 
         # Init variables
         self.total_objects = set()
@@ -45,11 +46,13 @@ class ObjectCounter:
         self.paused = False
 
         # Init logger
-        log_path = f'error_{self.location}.log' if self.location else config_manager.get("general.log_path")
-        self.logger = ErrorLogger(log_path)
+        self.logger = ErrorLogger(f'error_{self.location}.log' if self.location else config_manager.get("general.log_path"))
 
-        # Initialize video stream
-        self.vsm = VideoStreamManager(self.video_stream)
+        # Init notification manager
+        self.notif_manager = NotificationManager(socketio=socketio, location=location)
+
+        # Initialize video stream manager
+        self.vsm = VideoStreamManager(self.video_path)
         self.vsm.start()
 
         # Disable analytics and crash reporting
@@ -59,7 +62,7 @@ class ObjectCounter:
         self.model = YOLO(self.weights)
         self.tracker = Sort(max_age=30, min_hits=3, iou_threshold=0.3)
 
-        # DB
+        # Init Database manager
         self.db_manager = kwargs.get('db_manager', None)
 
         # Set polygon
@@ -79,7 +82,7 @@ class ObjectCounter:
 
     Initializes the following attributes:
         - self.location (str): The location of the object counter.
-        - self.socketio (SocketIO): The SocketIO instance.
+        - self.config_manager (ConfigManager): The ConfigManager instance.
         - self.weights (str): The path to the weights file.
         - self.device (str): The device to use for inference ('cpu' by default).
         - self.confidence (float): The confidence threshold for object detection.
@@ -92,7 +95,7 @@ class ObjectCounter:
         - self.vid_stride (int): The stride for video processing.
         - self.classes (dict): The classes for object detection.
         - self.dataset (dict): The dataset for creating the object counter.
-        - self.video_stream (str): The path to the video stream.
+        - self.video_path (str): The path to the video.
         - self.total_count (int): The total count of objects.
         - self.total_objects (set): The set of total objects.
 
@@ -100,15 +103,15 @@ class ObjectCounter:
     sets the total_count and total_objects attributes and updates the configuration file.
     """
 
-    def _initialize_config(self, location, socketio, config_manager, kwargs):
+    def _initialize_config(self, location, config_manager, kwargs):
         config_manager.read_config()
         detector_config = config_manager.get(f"detections.{location}")
 
         self.location = location
-        self.socketio = socketio
         self.weights = kwargs.get('weights', detector_config.get('weights_path'))
         self.device = kwargs.get('device', detector_config.get('device', 'cpu'))
-        self.confidence = kwargs.get('confidence', detector_config.get('confidence', config_manager.get('detection_default.confidence', 0.5)))
+        self.confidence = kwargs.get('confidence',
+                                     detector_config.get('confidence', config_manager.get('detection_default.confidence', 0.5)))
         self.iou = kwargs.get('iou', detector_config.get('iou', config_manager.get('detection_default.iou', 0.7)))
         self.counting_area = kwargs.get('counting_area', detector_config.get('counting_area'))
         self.counting_area_color = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
@@ -120,7 +123,7 @@ class ObjectCounter:
         self.dataset = detector_config.get('dataset_create', {})
 
         # Video
-        self.video_stream = kwargs.get('video_stream', detector_config['video_path'])
+        self.video_path = kwargs.get('video_path', detector_config['video_path'])
 
         # Started counter value from config
         total_count = detector_config.get('start_total_count', 0)
@@ -147,13 +150,13 @@ class ObjectCounter:
             self.frame_lost = 0
             # self.logger.log_error('Reconnect ' + self.location + '...')
             print(trans('Reconnect {location}...', location=self.location))
-            self._notification(trans('Lost connection to camera!'), 'danger')
+            self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
 
             try:
                 self.vsm.reconnect()
             except Exception as e:
                 # print(e)
-                print(trans('Error reconnect: {video_path}', video_path=self.video_stream if isinstance(self.video_stream, str) else ''))
+                print(trans('Error reconnect: {location}', location=self.location))
 
             time.sleep(self.RECONNECT_DELAY)
 
@@ -217,7 +220,7 @@ class ObjectCounter:
     """
 
     def run_frames(self):
-        self._event('counter_status', {'status': 'started', 'location': self.location})
+        self.notif_manager.event('counter_status', {'status': 'started', 'location': self.location})
 
         while self.running:
             try:
@@ -297,7 +300,7 @@ class ObjectCounter:
     """
 
     def count_run(self):
-        self._event('counter_status', {'status': 'started', 'location': self.location})
+        self.notif_manager.event('counter_status', {'status': 'started', 'location': self.location})
 
         while self.running:
             try:
@@ -392,52 +395,9 @@ class ObjectCounter:
 
             self.total_count = len(self.total_objects)
 
-        self._emit(f'{self.location}_count', {'total': self.total_count, 'current': self.current_count})
+        self.notif_manager.emit(f'{self.location}_count', {'total': self.total_count, 'current': self.current_count})
 
         return image
-
-    """
-    Emit a notification to the client.
-
-    Parameters:
-        message (str): The message to be displayed.
-        notification_type (str): The type of notification (success, danger, warning, info, primary, secondary).
-
-    Returns:
-        None
-    """
-
-    def _notification(self, message='', notification_type='primary'):
-        self._emit(f'{self.location}_notification', {'type': notification_type, 'message': message})
-
-    """
-    Emit an event to the client.
-
-    Parameters:
-        event (str): The name of the event.
-        data (dict): The data associated with the event.
-
-    Returns:
-        None
-    """
-
-    def _event(self, event, data):
-        self._emit(f'{event}_event', {'data': data})
-
-    """
-    Emit an event to the client.
-
-    Parameters:
-        event (str): The name of the event.
-        data (dict): The data associated with the event.
-
-    Returns:
-        None
-    """
-
-    def _emit(self, event, data):
-        if self.socketio:
-            self.socketio.emit(event, data)
 
     """
     Save count.
@@ -460,7 +420,7 @@ class ObjectCounter:
         item_count = str(total_count - defect_count + correct_count)
 
         if not self.db_manager.check_connection():
-            self._notification(trans('Impossible to save! There is no connection to the database.'), 'warning')
+            self.notif_manager.notify(trans('Impossible to save! There is no connection to the database.'), 'warning')
             return dict(total=total_count, defect=defect_count, correct=correct_count)
 
         result = self.db_manager.save_result(
@@ -477,9 +437,9 @@ class ObjectCounter:
             # self.total_objects = []
             # self.total_count = 0
             # self.current_count = 0
-            self._notification(trans('Saved successfully!'), 'success')
+            self.notif_manager.notify(trans('Saved successfully!'), 'success')
         else:
-            self._notification(trans('Save error!'), 'danger')
+            self.notif_manager.notify(trans('Save error!'), 'danger')
 
         return dict(total=total_count, defect=defect_count, correct=correct_count)
 
@@ -501,7 +461,7 @@ class ObjectCounter:
         if self.db_manager.check_connection():
             self.db_manager.close_current_count(location)
 
-        self._notification(trans('Counting completed successfully!'), 'primary')
+        self.notif_manager.notify(trans('Counting completed successfully!'), 'primary')
 
     """
     Reset the current count.
@@ -536,8 +496,8 @@ class ObjectCounter:
 
         self.current_count = 0
 
-        self._emit(f'{location}_count', {'total': total_count, 'current': 0})
-        self._notification(trans('The counter has been reset!'), 'primary')
+        self.notif_manager.emit(f'{location}_count', {'total': total_count, 'current': 0})
+        self.notif_manager.notify(trans('The counter has been reset!'), 'primary')
 
     """
     Start counting.
@@ -552,8 +512,8 @@ class ObjectCounter:
     def start(self):
         # self.running = True
         if self.paused:
-            self._notification(trans('Counting has started!'), 'success')
-            self._event('counter_status', {'status': 'started', 'location': self.location})
+            self.notif_manager.notify(trans('Counting has started!'), 'success')
+            self.notif_manager.event('counter_status', {'status': 'started', 'location': self.location})
         self.paused = False
 
     """
@@ -568,8 +528,8 @@ class ObjectCounter:
 
     def stop(self):
         if self.running:
-            self._notification(trans('Counting has stopped!'), 'primary')
-            self._event('counter_status', {'status': 'stopped', 'location': self.location})
+            self.notif_manager.notify(trans('Counting has stopped!'), 'primary')
+            self.notif_manager.event('counter_status', {'status': 'stopped', 'location': self.location})
         self.running = False
 
     """
@@ -584,8 +544,8 @@ class ObjectCounter:
 
     def pause(self):
         if not self.paused:
-            self._notification(trans('Counting has paused!'), 'warning')
-            self._event('counter_status', {'status': 'paused', 'location': self.location})
+            self.notif_manager.notify(trans('Counting has paused!'), 'warning')
+            self.notif_manager.event('counter_status', {'status': 'paused', 'location': self.location})
         self.paused = True
 
     """
