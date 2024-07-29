@@ -8,17 +8,18 @@
 
 import os
 import re
-import psutil
-import gpustat
 from threading import Lock, Thread
+
+import gpustat
+import psutil
 from flask import Flask, Response, abort, flash, redirect, render_template, request, url_for
 from flask_socketio import SocketIO
 from markupsafe import escape
+
 from system.ConfigManager import ConfigManager
 from system.DatabaseManager import DatabaseManager
 from system.ObjectCounter import ObjectCounter
-from system.helpers import slug
-from system.helpers import trans as translate
+from system.helpers import slug, trans as translate
 
 # --------------------------------------------------------------------------------
 # Init
