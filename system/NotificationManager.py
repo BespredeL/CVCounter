@@ -3,11 +3,17 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 21.07.2024
-# Updated: 21.07.2024
+# Updated: 03.09.2024
 # Website: https://bespredel.name
 
 class NotificationManager:
     def __init__(self, socketio, location):
+        if not socketio:
+            raise ValueError("socketio instance is required")
+
+        if not isinstance(location, str):
+            raise TypeError("location must be a string")
+
         self.socketio = socketio
         self.location = location
 

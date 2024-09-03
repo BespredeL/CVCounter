@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 26.03.2024
-# Updated: 21.07.2024
+# Updated: 03.09.2024
 # Website: https://bespredel.name
 
 import time
@@ -13,8 +13,39 @@ from imutils.video import VideoStream
 
 class VideoStreamManager:
     def __init__(self, video_stream):
+        if not video_stream:
+            raise ValueError("A video stream source is required")
+
         self.__video_stream = video_stream
         self.__cap = None
+
+    """
+    Get the video stream source.
+    
+    Parameters:
+        None
+    
+    Returns:
+        str: The video stream source
+    """
+
+    @property
+    def video_stream(self):
+        return self.__video_stream
+
+    """
+    Get the video capture object.
+    
+    Parameters:
+        None
+    
+    Returns:
+        cv2.VideoCapture: The video capture object
+    """
+
+    @property
+    def cap(self):
+        return self.__cap
 
     """
     Starts the video stream.
@@ -27,10 +58,13 @@ class VideoStreamManager:
     """
 
     def start(self):
-        if not self.is_stream():
-            self.__cap = self.__video_stream
-        else:
-            self.__cap = VideoStream(self.__video_stream).start()
+        try:
+            if self.is_stream():
+                self.__cap = self.__video_stream
+            else:
+                self.__cap = VideoStream(self.__video_stream).start()
+        except Exception as e:
+            print(f"An error occurred while starting the video stream: {e}")
 
     """
     A method to stop the video capture, if it's currently active.
@@ -43,9 +77,14 @@ class VideoStreamManager:
     """
 
     def stop(self):
-        if self.__cap is not None:
-            self.__cap.stop()
-            self.__cap = None
+        try:
+            if self.is_stream():
+                self.__cap.stop()
+                self.__cap = None
+            else:
+                print("Stream is not active.")
+        except Exception as e:
+            print(f"An error occurred while stopping the video stream: {e}")
 
     """
     Check if the video stream is a valid stream by verifying if it starts with common protocols.
@@ -58,7 +97,8 @@ class VideoStreamManager:
     """
 
     def is_stream(self):
-        return self.__video_stream.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://', 'tcp://'))
+        return not (isinstance(self.__video_stream, str)
+                    and self.__video_stream.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://', 'tcp://')))
 
     """
     A method to retrieve a frame using the 'cap' attribute.

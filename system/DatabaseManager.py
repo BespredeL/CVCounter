@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 21.07.2024
+# Updated: 03.09.2024
 # Website: https://bespredel.name
 
 from datetime import datetime
@@ -24,6 +24,32 @@ class DatabaseManager:
         self.__prefix = prefix
 
         # Connection
+        self.connect(host, user, password, database)
+
+        # Create table if it does not exist
+        if self.check_connection():
+            self.create_table()
+
+    """
+    Destructor method for the class. Closes the connection and cursor.
+    """
+
+    def __del__(self):
+        pass
+        #if self.__conn is not None:
+        #    self.__conn.close()
+
+    """
+    Connect to the database.
+
+    Parameters:
+        self (object): The instance of the class.
+
+    Returns:
+        None
+    """
+
+    def connect(self, host, user, password, database):
         try:
             self.__conn = mysql.connector.connect(
                 host=str(host),
@@ -35,10 +61,6 @@ class DatabaseManager:
             self.__conn = None
             # self.__logger.log_error(str(e))
             self.__logger.log_exception()
-
-        # Create table if it does not exist
-        if self.check_connection():
-            self.create_table()
 
     """
     Check the connection to the database.
@@ -301,12 +323,3 @@ class DatabaseManager:
         except mysql.connector.Error as error:
             self.__logger.log_error(str(error))
             # self.logger.log_exception()
-
-    """
-    Destructor method for the class. Closes the connection and cursor.
-    """
-
-    def __del__(self):
-        pass
-        # self.conn.close()
-        # self.cur.close()

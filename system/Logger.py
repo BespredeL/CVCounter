@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 21.07.2024
+# Updated: 03.09.2024
 # Website: https://bespredel.name
 
 import traceback
@@ -32,12 +32,8 @@ class ErrorLogger:
     """
 
     def _write_log(self, log_entry):
-        try:
-            with open(self._file_name, "a") as file:
-                file.write("-----------------------------------------------------------\n")
-                file.write(log_entry)
-        except Exception as e:
-            print(f"Failed to write log: {str(e)}")
+        with open(self._file_name, 'a') as file:
+            file.write(log_entry)
 
     """
     Logs a message with the current timestamp to a file.
@@ -48,7 +44,6 @@ class ErrorLogger:
     """
 
     def log(self, message_type, message):
-
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         log_entry = f"[{current_time}] {message_type}: {message}\n"
         self._write_log(log_entry)
