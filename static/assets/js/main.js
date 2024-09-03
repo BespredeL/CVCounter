@@ -33,6 +33,37 @@ function deleteCookie(name) {
     document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/;';
 }
 
+// Full screen switch
+function toggleFullscreen() {
+    const element = document.documentElement;
+
+    if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
+        if (element.requestFullscreen) {
+            element.requestFullscreen();
+        } else if (element.webkitRequestFullscreen) { // Chrome, Safari, and Opera
+            element.webkitRequestFullscreen();
+        } else if (element.mozRequestFullScreen) { // Firefox
+            element.mozRequestFullScreen();
+        } else if (element.msRequestFullscreen) { // IE/Edge
+            element.msRequestFullscreen();
+        }
+
+        return true;
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) { /* Safari */
+            document.webkitExitFullscreen();
+        } else if (document.mozCancelFullScreen) { /* Firefox */
+            document.mozCancelFullScreen();
+        } else if (document.msExitFullscreen) { /* IE11 */
+            document.msExitFullscreen();
+        }
+
+        return false;
+    }
+}
+
 $(function () {
     // Bootstrap Tooltip
     const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
@@ -124,4 +155,15 @@ $(function () {
 
     // Bootstrap Select
     //$('.selectpicker').selectpicker();
+
+    // Switching full screen mode
+    $('#toggle-fullscreen').on('click', function () {
+        if (toggleFullscreen()) {
+            $(this).find('.bi-arrows-angle-expand').addClass('d-none');
+            $(this).find('.bi-arrows-angle-contract').removeClass('d-none');
+        } else {
+            $(this).find('.bi-arrows-angle-expand').removeClass('d-none');
+            $(this).find('.bi-arrows-angle-contract').addClass('d-none');
+        }
+    });
 });
