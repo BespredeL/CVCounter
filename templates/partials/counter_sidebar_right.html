@@ -5,6 +5,11 @@
         <div class="bg-warning text-dark rounded position-relative my-2 px-2">
             <div class="h4 position-absolute">{{ trans('Quantity:') }} <span id="total_count">0</span></div>
             <div id="current_count" class="display-1 pt-3">0</div>
+
+            <div class="h5 d-flex justify-content-between w-100 mt-2 pb-1 border-top border-dark-subtle">
+                <div>{{ trans('Defective products') }}: <span id="defect_count">0</span></div>
+                <div>{{ trans('Corr.') }}: <span id="correct_count">0</span></div>
+            </div>
         </div>
     {% endif %}
 
@@ -23,8 +28,8 @@
     <!-- Defect keyboard -->
     <div class="border border-danger-subtle rounded my-2 p-2">
         <div class="col-12 mb-3">
-            <label for="defect_count" class="form-label h4">{{ trans('Defective products') }}</label>
-            <div class="input-group" id="defect_count">
+            <label for="defect_keyboard" class="form-label h4">{{ trans('Defective products') }}</label>
+            <div class="input-group" id="defect_keyboard">
                 <button class="btn btn-sm btn-secondary input-plus">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-plus-lg"
                          viewBox="0 0 16 16">
@@ -43,7 +48,7 @@
             </div>
         </div>
 
-        <div class="col-12 keyboard keyboard-defect px-2" data-input-id="defect_count">
+        <div class="col-12 keyboard keyboard-defect px-2" data-input-id="defect_keyboard">
             <div class="row">
                 <button class="btn btn-secondary col m-1 fs-5" data-value="1">1</button>
                 <button class="btn btn-secondary col m-1 fs-5" data-value="2">2</button>
@@ -61,7 +66,14 @@
             </div>
             <div class="row">
                 <button class="btn btn-secondary col m-1 fs-5" data-value="0">0</button>
-                <button class="btn btn-warning text-black col-4 m-1 reset text-truncate">{{ trans('Reset') }}</button>
+                <button class="btn btn-danger col-4 m-1 reset text-truncate">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-trash"
+                         viewBox="0 0 16 16">
+                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"></path>
+                        <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"></path>
+                    </svg>
+                    {{ trans('Reset') }}
+                </button>
             </div>
         </div>
     </div>
@@ -69,7 +81,7 @@
     <!-- Correct keyboard -->
     <div class="border border-warning-subtle rounded my-2 p-2">
         <div class="col-12 mb-3">
-            <label for="correct_count" class="form-label h4">{{ trans('Correct count') }}</label>
+            <label for="correct_keyboard" class="form-label h4">{{ trans('Correct count') }}</label>
             <button class="btn btn-outline-info float-end" data-bs-toggle="collapse" data-bs-target="#collapseСorrect" aria-expanded="false"
                     aria-controls="collapseСorrect"
                     style="--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem;">
@@ -86,7 +98,7 @@
                     <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
                 </svg>
             </button>
-            <div class="input-group" id="correct_count">
+            <div class="input-group" id="correct_keyboard">
                 <button class="btn btn-sm btn-secondary input-plus">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-plus-lg"
                          viewBox="0 0 16 16">
@@ -104,7 +116,7 @@
             </div>
         </div>
 
-        <div class="col-12 keyboard keyboard-correct px-2 collapse" data-input-id="correct_count" id="collapseСorrect">
+        <div class="col-12 keyboard keyboard-correct px-2 collapse" data-input-id="correct_keyboard" id="collapseСorrect">
             <div class="row">
                 <button class="btn btn-secondary col m-1 fs-5" data-value="1">1</button>
                 <button class="btn btn-secondary col m-1 fs-5" data-value="2">2</button>
@@ -123,7 +135,14 @@
             <div class="row">
                 <button class="btn btn-secondary col m-1 fs-5" data-value="-">+/-</button>
                 <button class="btn btn-secondary col m-1 fs-5" data-value="0">0</button>
-                <button class="btn btn-warning text-black col m-1 reset text-truncate">{{ trans('Reset') }}</button>
+                <button class="btn btn-danger col m-1 reset text-truncate">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-trash"
+                         viewBox="0 0 16 16">
+                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"></path>
+                        <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"></path>
+                    </svg>
+                    {{ trans('Reset') }}
+                </button>
             </div>
         </div>
     </div>

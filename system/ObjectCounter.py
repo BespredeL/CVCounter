@@ -40,6 +40,8 @@ class ObjectCounter:
         self.total_objects = set()
         self.total_count = 0
         self.current_count = 0
+        self.defect_count = 0
+        self.correct_count = 0
         self.frame = None
         self.frame_lost = 0
         self.running = True
@@ -395,7 +397,14 @@ class ObjectCounter:
 
             self.total_count = len(self.total_objects)
 
-        self.notif_manager.emit(f'{self.location}_count', {'total': self.total_count, 'current': self.current_count})
+        self.total_count -= self.defect_count
+        self.total_count += self.correct_count
+        self.notif_manager.emit(f'{self.location}_count', {
+            'total': self.total_count,
+            'current': self.current_count,
+            'defect': self.defect_count,
+            'correct': self.correct_count
+        })
 
         return image
 
@@ -457,6 +466,8 @@ class ObjectCounter:
         self.total_objects.clear()
         self.total_count = 0
         self.current_count = 0
+        self.defect_count = 0
+        self.correct_count = 0
 
         if self.db_manager.check_connection():
             self.db_manager.close_current_count(location)
@@ -495,6 +506,8 @@ class ObjectCounter:
             print(e)
 
         self.current_count = 0
+        self.defect_count += defect_count
+        self.correct_count += correct_count
 
         self.notif_manager.emit(f'{location}_count', {'total': total_count, 'current': 0})
         self.notif_manager.notify(trans('The counter has been reset!'), 'primary')

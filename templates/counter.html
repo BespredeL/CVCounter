@@ -39,17 +39,18 @@
 
             // Counter get handler
             socket.on('{{ location }}_count', function (data) {
-                let defect_count = Math.max(parseInt($("#defect_count input").val()) || 0, 0);
-                let correct_count = Math.max(parseInt($("#correct_count input").val()) || 0, 0);
-                let current_count = Math.max(data.current || 0, 0);
-                let total_count = Math.max(data.total || 0, 0);
+                const defect_count = Math.max(parseInt($("#defect_keyboard input").val(), 10) || 0, 0);
+                const correct_count = parseInt($("#correct_keyboard input").val(), 10) || 0;
 
-                if (total_count > 0) {
-                    $('#current_count').html(current_count);
-                    $('#total_count').html(total_count - defect_count + correct_count);
-                } else {
-                    $('#current_count, #total_count').html('0');
-                }
+                const updateCount = (selector, count) => {
+                    $(selector).html(Math.max(count - defect_count + correct_count, 0));
+                };
+
+                updateCount('#total_count', data.total || 0);
+                updateCount('#current_count', data.current || 0);
+
+                $('#defect_count').html(defect_count + data.defect || 0);
+                $('#correct_count').html(correct_count + data.correct || 0);
             });
 
             // Notification receipt handler
@@ -75,8 +76,7 @@
                             break;
                     }
                 }
-
-            })
+            });
 
             //---------------------------------------------------------------------------
             // Bootstrap Select
@@ -113,7 +113,7 @@
             });
 
             $('#correct_clear').on('click', function () {
-                $('#correct_count input').val(0);
+                $('#correct_keyboard input').val(0);
             });
 
             $('.keyboard button').on('click', function () {
@@ -146,9 +146,9 @@
             //---------------------------------------------------------------------------
 
             $('#btn_save').on('click', function () {
-                let correct_count = $('#correct_count input').val();
-                let defect_count = $('#defect_count input').val();
                 let item_no = $('#item').val();
+                let defect_count = $('#defect_keyboard input').val();
+                let correct_count = $('#correct_keyboard input').val();
 
                 $.ajax({
                     url: '{{ url_for('save_count', location=location) }}',
@@ -163,8 +163,8 @@
                             data = 0;
                         }
                         $("#total_count").html(data.total_count);
-                        $("#correct_count input").val(data.correct_count);
-                        $("#defect_count input").val(data.defect_count);
+                        $("#defect_keyboard input").val(data.defect_count);
+                        $("#correct_keyboard input").val(data.correct_count);
                     }
                 });
             });
@@ -179,16 +179,16 @@
                             data = 0;
                         }
                         $("#total_count").html(data.total_count);
-                        $("#product_count input").val(data.total_count);
-                        $("#defect_count input").val(data.defect_count);
+                        $("#defect_keyboard input").val(data.defect_count || 0);
+                        $("#correct_keyboard input").val(data.correct_count || 0);
                     }
                 });
             });
 
             $('#btn_reset_current').on('click', function () {
                 let item_no = $('#item').val();
-                let correct_count = $('#correct_count input').val();
-                let defect_count = $('#defect_count input').val();
+                let defect_count = $('#defect_keyboard input').val();
+                let correct_count = $('#correct_keyboard input').val();
 
                 $.ajax({
                     url: '{{ url_for('reset_count_current', location=location) }}',
@@ -203,6 +203,8 @@
                             data = 0;
                         }
                         $("#current_count").val(data.current_count);
+                        $("#defect_keyboard input").val(data.defect_count || 0);
+                        $("#correct_keyboard input").val(data.correct_count || 0);
                     }
                 });
             });

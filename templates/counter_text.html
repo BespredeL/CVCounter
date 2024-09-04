@@ -8,14 +8,26 @@
         <div class="col-12 col-lg-9 d-flex justify-content-center align-items-center position-relative">
             <div class="text-center w-100">
                 <div id="current_count" class="display-1 current_count_txt">0</div>
-                <hr>
-                <div class="display-5 text-muted">{{ trans('Total:') }}</div>
-                <div id="total_count" class="display-1 total_count_txt text-muted">0</div>
+                <div class="border-top d-flex justify-content-between">
+                    <div>
+                        <div class="display-5 text-muted">{{ trans('Defective products') }}:</div>
+                        <div id="defect_count" class="display-1 total_count_txt text-muted">0</div>
+                    </div>
+                    <div>
+                        <div class="display-5 text-muted">{{ trans('Total:') }}</div>
+                        <div id="total_count" class="display-1 total_count_txt text-muted">0</div>
+                    </div>
+                    <div>
+                        <div class="display-5 text-muted">{{ trans('Corr.') }}:</div>
+                        <div id="correct_count" class="display-1 total_count_txt text-muted">0</div>
+                    </div>
+                </div>
             </div>
 
             <div class="{{ 'd-flex' if is_paused else 'd-none' }} justify-content-center align-items-center rounded-end-3 pause_display"
                  id="pause_display">
-                <svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" fill="currentColor" class="bi bi-pause" viewBox="0 0 16 16">
+                <svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" fill="currentColor" class="bi bi-pause"
+                     viewBox="0 0 16 16">
                     <path d="M6 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5m4 0a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5"/>
                 </svg>
             </div>
@@ -42,17 +54,18 @@
 
             // Counter get handler
             socket.on('{{ location }}_count', function (data) {
-                let defect_count = Math.max(parseInt($("#defect_count input").val()) || 0, 0);
-                let correct_count = Math.max(parseInt($("#correct_count input").val()) || 0, 0);
-                let current_count = Math.max(data.current || 0, 0);
-                let total_count = Math.max(data.total || 0, 0);
+                const defect_count = Math.max(parseInt($("#defect_keyboard input").val(), 10) || 0, 0);
+                const correct_count = parseInt($("#correct_keyboard input").val(), 10) || 0;
 
-                if (total_count > 0) {
-                    $('#current_count').html(current_count);
-                    $('#total_count').html(total_count - defect_count + correct_count);
-                } else {
-                    $('#current_count, #total_count').html('0');
-                }
+                const updateCount = (selector, count) => {
+                    $(selector).html(Math.max(count - defect_count + correct_count, 0));
+                };
+
+                updateCount('#total_count', data.total || 0);
+                updateCount('#current_count', data.current || 0);
+
+                $('#defect_count').html(defect_count + data.defect || 0);
+                $('#correct_count').html(correct_count + data.correct || 0);
             });
 
             // Notification receipt handler
@@ -78,8 +91,7 @@
                             break;
                     }
                 }
-
-            })
+            });
 
             //---------------------------------------------------------------------------
             // Bootstrap Select
@@ -116,7 +128,7 @@
             });
 
             $('#correct_clear').on('click', function () {
-                $('#correct_count input').val(0);
+                $('#correct_keyboard input').val(0);
             });
 
             $('.keyboard button').on('click', function () {
@@ -149,9 +161,9 @@
             //---------------------------------------------------------------------------
 
             $('#btn_save').on('click', function () {
-                let correct_count = $('#correct_count input').val();
-                let defect_count = $('#defect_count input').val();
                 let item_no = $('#item').val();
+                let defect_count = $('#defect_count input').val();
+                let correct_count = $('#correct_count input').val();
 
                 $.ajax({
                     url: '{{ url_for('save_count', location=location) }}',
@@ -166,8 +178,8 @@
                             data = 0;
                         }
                         $("#total_count").html(data.total_count);
-                        $("#correct_count input").val(data.correct_count);
-                        $("#defect_count input").val(data.defect_count);
+                        $("#defect_keyboard input").val(data.defect_count);
+                        $("#correct_keyboard input").val(data.correct_count);
                     }
                 });
             });
@@ -182,16 +194,16 @@
                             data = 0;
                         }
                         $("#total_count").html(data.total_count);
-                        $("#product_count input").val(data.total_count);
-                        $("#defect_count input").val(data.defect_count);
+                        $("#defect_keyboard input").val(data.defect_count || 0);
+                        $("#correct_keyboard input").val(data.correct_count || 0);
                     }
                 });
             });
 
             $('#btn_reset_current').on('click', function () {
                 let item_no = $('#item').val();
-                let correct_count = $('#correct_count input').val();
-                let defect_count = $('#defect_count input').val();
+                let defect_count = $('#defect_keyboard input').val();
+                let correct_count = $('#correct_keyboard input').val();
 
                 $.ajax({
                     url: '{{ url_for('reset_count_current', location=location) }}',
@@ -206,6 +218,8 @@
                             data = 0;
                         }
                         $("#current_count").val(data.current_count);
+                        $("#defect_keyboard input").val(data.defect_count || 0);
+                        $("#correct_keyboard input").val(data.correct_count || 0);
                     }
                 });
             });
