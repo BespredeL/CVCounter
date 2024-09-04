@@ -397,10 +397,8 @@ class ObjectCounter:
 
             self.total_count = len(self.total_objects)
 
-        self.total_count -= self.defect_count
-        self.total_count += self.correct_count
         self.notif_manager.emit(f'{self.location}_count', {
-            'total': self.total_count,
+            'total': self.total_count - self.defect_count + self.correct_count,
             'current': self.current_count,
             'defect': self.defect_count,
             'correct': self.correct_count
