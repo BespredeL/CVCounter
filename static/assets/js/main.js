@@ -1,7 +1,7 @@
 /**
  * Developed by: Aleksandr Kireev
  * Created: 01.11.2023
- * Updated: 07.03.2024
+ * Updated: 04.09.2024
  * Website: https://bespredel.name
  */
 
@@ -49,6 +49,24 @@ function deleteCookie(name) {
 }
 
 /**
+ * Set theme
+ *
+ * @param theme
+ */
+function setTheme(theme) {
+    $('html').attr('data-bs-theme', theme);
+    let themeSwitch = $('#theme-switch');
+    if (theme === 'light') {
+        themeSwitch.find('.bi-brightness-high').removeClass('d-none');
+        themeSwitch.find('.bi-moon-stars').addClass('d-none');
+    } else {
+        themeSwitch.find('.bi-moon-stars').removeClass('d-none');
+        themeSwitch.find('.bi-brightness-high').addClass('d-none');
+    }
+    setCookie('theme', theme, 365);
+}
+
+/**
  * Toggle fullscreen
  *
  * @returns {boolean}
@@ -90,86 +108,86 @@ $(function () {
 
     // Соединение с сервером
     window.socket = io();
-    let timerReload = 0;
 
     // Успешное переподключение к серверу
     socket.io.on("reconnect", (attempt) => {
-        $('#alert-container').html(
-            '<div class="alert alert-success mt-3 d-flex justify-content-between" role="alert">' +
-            '<span class="h3">' + window.trans('Connection to server successful') + '</span>' +
-            '<a href="#" onclick="location.reload()" class="btn btn-warning">' + window.trans('Reload page') + '</a>' +
-            '</div>'
-        );
+        const alertContainer = $('#alert-container');
+        const alertHtml = `
+            <div class="alert alert-success mt-3 d-flex justify-content-between" role="alert">
+                <span class="h3">${window.trans('Connection to server successful')}</span>
+                <button id="reload-btn" class="btn btn-warning">${window.trans('Reload page')}</button>
+            </div>`;
 
-        timerReload = setTimeout(function () {
-            $('#alert-container').html('');
+        alertContainer.html(alertHtml);
+
+        $('#reload-btn').on('click', () => {
+            location.reload();
+        });
+
+        const timerReload = setTimeout(() => {
+            alertContainer.html('');
             location.reload();
         }, 1000 * 60 * 15);
     });
 
     // Ошибка соединения с сервером
     window.socket.io.on("error", (error) => {
-        $('#alert-container').html(
-            '<div class="alert alert-danger mt-3 d-flex justify-content-between" role="alert">' +
-            '<span class="h3">' + window.trans('Error connecting to the server. Contact the IT department.') + '</span>' +
-            '<a href="#" onclick="location.reload()" class="btn btn-warning" id="reload-btn">' + window.trans('Reload page') + '</a>' +
-            '</div>'
-        );
+        const alertContainer = $('#alert-container');
+        const alertHtml = `
+            <div class="alert alert-danger mt-3 d-flex justify-content-between" role="alert">
+                <span class="h3">${window.trans('Error connecting to the server. Contact the IT department.')}</span>
+                <button id="reload-btn" class="btn btn-warning" id="reload-btn">${window.trans('Reload page')}</button>
+            </div>`;
 
-        /*setTimeout(function () {
-            $('#reload-btn').removeClass('d-none');
-        }, 60 * 2 * 1000);
+        alertContainer.html(alertHtml);
 
-        timerReload && clearTimeout(timerReload);*/
+        $('#reload-btn').on('click', () => {
+            location.reload();
+        });
+
+        /*const timerReload = setTimeout(() => {
+            alertContainer.html('');
+            location.reload();
+        }, 1000 * 60 * 15);*/
     });
 
     // Всплывающие уведомления
     window.showToast = function (message, type = 'primary') {
-        let toast = document.createElement("div");
-        toast.className = "toast align-items-center text-bg-" + type + " border-0";
-        //toast.textContent = message;
-        toast.innerHTML = '<div class="d-flex">' +
-            '<div class="toast-body">' + message + '</div>' +
-            '<button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>' +
-            '</div>'
+        const toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) return;
+
+        const toast = document.createElement("div");
+        toast.className = `toast align-items-center text-bg-${type} border-0`;
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>`;
         toast.setAttribute("role", "alert");
         toast.setAttribute("aria-live", "assertive");
         toast.setAttribute("aria-atomic", "true");
 
-        document.getElementById('toast-container').appendChild(toast);
+        toastContainer.appendChild(toast);
 
-        let bsToast = new bootstrap.Toast(toast);
+        const bsToast = new bootstrap.Toast(toast);
         bsToast.show();
+
+        toast.addEventListener('hidden.bs.toast', () => {
+            toast.remove();
+        });
     }
 
-    // Смена темы
-    $('html').attr('data-bs-theme', function () {
+    // Установка начальной темы при загрузке страницы
+    $(document).ready(function () {
         let theme = getCookie('theme') || 'dark';
-        let themeSwitch = $('#theme-switch');
-        if (theme === 'light') {
-            themeSwitch.find('.bi-brightness-high').addClass('d-none');
-            themeSwitch.find('.bi-moon-stars').removeClass('d-none');
-        } else {
-            themeSwitch.find('.bi-moon-stars').addClass('d-none');
-            themeSwitch.find('.bi-brightness-high').removeClass('d-none');
-        }
-        return theme;
+        setTheme(theme);
     });
 
+    // Смена темы при клике на переключатель
     $('#theme-switch').on('click', function () {
-        let theme = $('html').attr('data-bs-theme');
-        let themeSwitch = $('#theme-switch');
-        if (theme === 'light') {
-            $('html').attr('data-bs-theme', 'dark');
-            themeSwitch.find('.bi-brightness-high').removeClass('d-none');
-            themeSwitch.find('.bi-moon-stars').addClass('d-none');
-            setCookie('theme', 'dark', 365);
-        } else {
-            $('html').attr('data-bs-theme', 'light');
-            themeSwitch.find('.bi-moon-stars').removeClass('d-none');
-            themeSwitch.find('.bi-brightness-high').addClass('d-none');
-            setCookie('theme', 'light', 365);
-        }
+        let currentTheme = $('html').attr('data-bs-theme');
+        let newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        setTheme(newTheme);
     });
 
     // Bootstrap Select
