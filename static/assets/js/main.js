@@ -5,7 +5,13 @@
  * Website: https://bespredel.name
  */
 
-// Set a cookie
+/**
+ * Set a cookie
+ *
+ * @param name
+ * @param value
+ * @param days
+ */
 function setCookie(name, value, days) {
     let expires = "";
     if (days) {
@@ -16,7 +22,12 @@ function setCookie(name, value, days) {
     document.cookie = name + "=" + value + expires + "; path=/";
 }
 
-// Get a cookie value
+/**
+ * Get a cookie
+ *
+ * @param name
+ * @returns {null|string}
+ */
 function getCookie(name) {
     const nameEQ = name + "=";
     const ca = document.cookie.split(';');
@@ -28,12 +39,20 @@ function getCookie(name) {
     return null;
 }
 
-// Delete a cookie
+/**
+ * Delete a cookie
+ *
+ * @param name
+ */
 function deleteCookie(name) {
     document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/;';
 }
 
-// Full screen switch
+/**
+ * Toggle fullscreen
+ *
+ * @returns {boolean}
+ */
 function toggleFullscreen() {
     const element = document.documentElement;
 

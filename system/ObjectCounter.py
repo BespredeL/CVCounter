@@ -18,9 +18,9 @@ from ultralytics import YOLO, settings
 
 from system.Logger import ErrorLogger
 from system.NotificationManager import NotificationManager
+from system.VideoStreamManager import VideoStreamManager
 from system.helpers import trans
 from system.sort import Sort
-from system.VideoStreamManager import VideoStreamManager
 
 
 class ObjectCounter:

@@ -31,6 +31,8 @@
         <script src="{{ url_for('static', filename='assets/bootstrap-select-1.14/js/i18n/defaults-ru_RU.min.js') }}"></script>
     {% endif %}
 
+    <script src="{{ url_for('static', filename='assets/js/counter.js') }}"></script>
+
     <script>
         $(function () {
             //---------------------------------------------------------------------------
@@ -85,169 +87,31 @@
             //$('.selectpicker').selectpicker();
 
             //---------------------------------------------------------------------------
-            // Keyboard
-            //---------------------------------------------------------------------------
-
-            $('.input-plus').on('click', function () {
-                let $input = $(this).parent().find('input');
-                let value = parseInt($input.val());
-                let validate_value = true;
-                if ($input.attr('max') !== undefined) {
-                    validate_value = value < parseInt($input.attr('max'));
-                }
-                if (!isNaN(value) && validate_value) {
-                    $input.val(value + 1);
-                }
-            });
-
-            $('.input-minus').on('click', function () {
-                let $input = $(this).parent().find('input');
-                let value = parseInt($input.val());
-                let validate_value = true;
-                if ($input.attr('min') !== undefined) {
-                    validate_value = value > parseInt($input.attr('min'));
-                }
-                if (!isNaN(value) && validate_value) {
-                    $input.val(value - 1);
-                }
-            });
-
-            $('#correct_clear').on('click', function () {
-                $('#correct_keyboard input').val(0);
-            });
-
-            $('.keyboard button').on('click', function () {
-                let $this = $(this);
-                let $input = $('#' + $this.parent().parent().data('input-id') + ' input');
-                let value = $this.data('value');
-                let input_val = $input.val();
-                input_val = input_val.replace(/[^0-9\-]/g, '');
-
-                if ($this.hasClass('reset')) {
-                    $input.val(0);
-                    return;
-                }
-
-                if (value === '-') {
-                    input_val = -(input_val);
-                } else {
-                    input_val = input_val + value;
-                }
-
-                if (input_val > 999999 || input_val < -999999) {
-                    return;
-                }
-
-                $input.val(parseInt(input_val));
-            });
-
-            //---------------------------------------------------------------------------
             // Form buttons
             //---------------------------------------------------------------------------
 
             $('#btn_save').on('click', function () {
-                let item_no = $('#item').val();
-                let defect_count = $('#defect_keyboard input').val();
-                let correct_count = $('#correct_keyboard input').val();
-
-                $.ajax({
-                    url: '{{ url_for('save_count', location=location) }}',
-                    method: 'post',
-                    data: {
-                        'item_no': item_no,
-                        'correct_count': parseInt(correct_count),
-                        'defect_count': parseInt(defect_count)
-                    },
-                    success: function (data) {
-                        if (!data) {
-                            data = 0;
-                        }
-                        $("#total_count").html(data.total_count);
-                        $("#defect_keyboard input").val(data.defect_count);
-                        $("#correct_keyboard input").val(data.correct_count);
-                    }
-                });
+                saveCount("{{ url_for('save_count', location=location) }}");
             });
 
             $('#btn_reset').on('click', function () {
-                $.ajax({
-                    url: '{{ url_for('reset_count', location=location) }}',
-                    method: 'get',
-                    data: {},
-                    success: function (data) {
-                        if (!data) {
-                            data = 0;
-                        }
-                        $("#total_count").html(data.total_count);
-                        $("#defect_keyboard input").val(data.defect_count || 0);
-                        $("#correct_keyboard input").val(data.correct_count || 0);
-                    }
-                });
+                resetCount("{{ url_for('reset_count', location=location) }}");
             });
 
             $('#btn_reset_current').on('click', function () {
-                let item_no = $('#item').val();
-                let defect_count = $('#defect_keyboard input').val();
-                let correct_count = $('#correct_keyboard input').val();
-
-                $.ajax({
-                    url: '{{ url_for('reset_count_current', location=location) }}',
-                    method: 'post',
-                    data: {
-                        'item_no': item_no || '',
-                        'correct_count': parseInt(correct_count) || 0,
-                        'defect_count': parseInt(defect_count) || 0
-                    },
-                    success: function (data) {
-                        if (!data) {
-                            data = 0;
-                        }
-                        $("#current_count").val(data.current_count);
-                        $("#defect_keyboard input").val(data.defect_count || 0);
-                        $("#correct_keyboard input").val(data.correct_count || 0);
-                    }
-                });
+                resetCountCurrent("{{ url_for('reset_count_current', location=location) }}");
             });
 
             //---------------------------------------------------------------------------
             // Form buttons 2
             //---------------------------------------------------------------------------
             $('#btn_start').on('click', function () {
-                $.ajax({
-                    url: '{{ url_for('start_count', location=location) }}',
-                    method: 'get',
-                    data: {},
-                    success: function () {
-                        $('#btn_pause').removeClass('btn-warning').addClass('btn-outline-secondary');
-                        $('#btn_start').removeClass('btn-info').addClass('btn-outline-secondary');
-                        $('#pause_display').removeClass('d-flex').addClass('d-none');
-                    }
-                });
+                startCount("{{ url_for('start_count', location=location) }}");
             });
 
             $('#btn_pause').on('click', function () {
-                $.ajax({
-                    url: '{{ url_for('pause_count', location=location) }}',
-                    method: 'get',
-                    data: {},
-                    success: function () {
-                        $('#btn_pause').removeClass('btn-outline-secondary').addClass('btn-warning');
-                        $('#btn_start').removeClass('btn-outline-secondary').addClass('btn-info');
-                        $('#pause_display').removeClass('d-none').addClass('d-flex');
-                    }
-                });
+                pauseCount("{{ url_for('pause_count', location=location) }}");
             });
-
-            {#$('#btn_stop').on('click', function () {
-                $.ajax({
-                    url: '{{ url_for('stop_count', location=location) }}',
-                    method: 'get',
-                    data: {},
-                    success: function () {
-                        //$("#total_count").html(data.total_count);
-                    }
-                });
-            });#}
         });
     </script>
 {% endblock %}
