@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 21.07.2024
+# Updated: 05.09.2024
 # Website: https://bespredel.name
 
 import os
@@ -16,7 +16,7 @@ import numpy as np
 from shapely.geometry import Point, Polygon
 from ultralytics import YOLO, settings
 
-from system.Logger import ErrorLogger
+from system.Logger import Logger
 from system.NotificationManager import NotificationManager
 from system.VideoStreamManager import VideoStreamManager
 from system.helpers import trans
@@ -33,9 +33,6 @@ class ObjectCounter:
     POLYGON_ALPHA = 0.4
 
     def __init__(self, location, config_manager, socketio, **kwargs):
-        # Load and initialize config
-        self._initialize_config(location, config_manager, kwargs)
-
         # Init variables
         self.total_objects = set()
         self.total_count = 0
@@ -47,8 +44,11 @@ class ObjectCounter:
         self.running = True
         self.paused = False
 
+        # Load and initialize config
+        self._initialize_config(location, config_manager, kwargs)
+
         # Init logger
-        self.logger = ErrorLogger(f'error_{self.location}.log' if self.location else config_manager.get("general.log_path"))
+        self.logger = Logger(f'error_{self.location}.log' if self.location else config_manager.get("general.log_path"))
 
         # Init notification manager
         self.notif_manager = NotificationManager(socketio=socketio, location=location)
@@ -128,9 +128,9 @@ class ObjectCounter:
         self.video_path = kwargs.get('video_path', detector_config['video_path'])
 
         # Started counter value from config
-        start_count = detector_config.get('start_total_count', 0)
+        start_count = int(detector_config.get('start_total_count', 0))
         if start_count > 0:
-            self.total_count = int(start_count)
+            self.total_count = start_count
             self.total_objects = set(range(-start_count, 0))
             config_manager.set(f"detections.{self.location}.start_total_count", 0)
             config_manager.save_config()

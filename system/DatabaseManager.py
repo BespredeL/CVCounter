@@ -3,14 +3,14 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 03.09.2024
+# Updated: 05.09.2024
 # Website: https://bespredel.name
 
 from datetime import datetime
 from functools import lru_cache
 import mysql.connector
 import json
-from system.Logger import ErrorLogger
+from system.Logger import Logger
 
 
 class DatabaseManager:
@@ -20,7 +20,7 @@ class DatabaseManager:
 
     def __init__(self, host, user, password, database, prefix=''):
         # Log error
-        self.__logger = ErrorLogger("errors.log")
+        self.__logger = Logger("errors.log")
         self.__prefix = prefix
 
         # Connection

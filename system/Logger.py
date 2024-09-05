@@ -3,14 +3,14 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 03.09.2024
+# Updated: 05.09.2024
 # Website: https://bespredel.name
 
 import traceback
 from datetime import datetime
 
 
-class ErrorLogger:
+class Logger:
     """
     Initializes a new instance of the class.
 
