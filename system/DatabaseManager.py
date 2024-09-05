@@ -29,9 +29,13 @@ class DatabaseManager:
 
     def __init__(self, host, user, password, database, prefix=''):
         self.__logger = Logger("errors.log")
+        self.__host = host
+        self.__user = user
+        self.__password = password
+        self.__database = database
         self.__prefix = prefix
         self.__conn = None
-        self.connect(host, user, password, database)
+        self.connect()
 
         if self.check_connection():
             self.create_table()
@@ -40,23 +44,19 @@ class DatabaseManager:
     Connect to the database.
 
     Parameters:
-        self (object): The instance of the class.
-        host (str): Host name.
-        user (str): Username.
-        password (str): Password.
-        database (str): Database name.
+        None
 
     Returns:
         None
     """
 
-    def connect(self, host, user, password, database):
+    def connect(self):
         try:
             self.__conn = mysql.connector.connect(
-                host=str(host),
-                user=str(user),
-                password=str(password),
-                database=str(database),
+                host=str(self.__host),
+                user=str(self.__user),
+                password=str(self.__password),
+                database=str(self.__database),
             )
         except (mysql.connector.Error, Exception) as e:
             self.__conn = None
