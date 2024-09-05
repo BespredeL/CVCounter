@@ -131,7 +131,7 @@ class ObjectCounter:
         total_count = detector_config.get('start_total_count', 0)
         if total_count > 0:
             self.total_count = int(total_count)
-            self.total_objects = set(range(-self.total_count, 0))
+            self.total_objects = set(range(-total_count, 0))
             config_manager.set(f"detections.{self.location}.start_total_count", 0)
             config_manager.save_config()
 
