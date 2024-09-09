@@ -59,11 +59,13 @@
     "Use Reloader": "Использовать перезагрузку",
     "Secret Key": "Секретный ключ",
     "Token": "Токен",
+    "Users": "Пользователи",
     "Db": "База данных",
     "User": "Пользователь",
     "Password": "Пароль",
     "Name": "Имя",
     "Prefix": "Префикс наименования таблиц",
+    "Detections": "Обнаружения",
     "Detection Default": "Обнаружение по умолчанию",
     "Video Path": "Путь к видео",
     "Video Show Scale": "Масштаб отображения видео",
@@ -101,5 +103,11 @@
     "License": "Лицензия",
     "Element": "Элемент",
     "Description": "Описание",
-    "Please select 2 counters": "Пожалуйста, выберите 2 счётчика"
+    "Please select 2 counters": "Пожалуйста, выберите 2 счётчика",
+    "Switch theme color": "Переключить цвет темы",
+    "Switch fullscreen mode": "Переключить полноэкранный режим",
+    "Back to homepage": "Вернуться на главную страницу",
+    "Current password": "Текущий пароль",
+    "New password": "Новый пароль",
+    "Confirm new password": "Подтвердите новый пароль"
 }

@@ -59,11 +59,13 @@
     "Use Reloader": "Use Reloader",
     "Secret Key": "Secret Key",
     "Token": "Token",
+    "Users": "Пользователи",
     "Db": "Db",
     "User": "User",
     "Password": "Password",
     "Name": "Name",
     "Prefix": "Prefix",
+    "Detections": "Detections",
     "Detection Default": "Detection Default",
     "Video Path": "Video Path",
     "Video Show Scale": "Video Show Scale",
@@ -101,5 +103,11 @@
     "License": "License",
     "Element": "Element",
     "Description": "Description",
-    "Please select 2 counters": "Please select 2 counters"
+    "Please select 2 counters": "Please select 2 counters",
+    "Switch theme color": "Switch theme color",
+    "Switch fullscreen mode": "Switch fullscreen mode",
+    "Back to homepage": "Back to homepage",
+    "Current password": "Current password",
+    "New password": "New password",
+    "Confirm new password": "Confirm new password"
 }

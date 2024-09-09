@@ -9,7 +9,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}{% endblock %} - CVCounter</title>
     <!-- Styles -->
-    <link rel="shortcut icon" href="{{ url_for('static', filename='assets/favicon.ico') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='icons/favicon.ico') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='icons/favicon-16x16.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='site.webmanifest') }}">
+
     <link href="{{ url_for('static', filename='assets/bootstrap5/css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='assets/css/style.css') }}" rel="stylesheet">
     <!-- Scripts -->
@@ -41,7 +46,8 @@
 
 <!-- START: Theme switch -->
 <div class="theme-switcher bottom-0 start-0 p-3 d-flex justify-content-start">
-    <button type="button" class="btn btn-sm d-flex align-items-center" id="theme-switch">
+    <button type="button" class="btn btn-sm d-flex align-items-center" id="theme-switch"
+            data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{ trans('Switch theme color') }}">
         {% set currentTheme = (request.cookies.get('theme')|striptags|trim) or 'dark' %}
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
              class="bi bi-brightness-high {{ currentTheme == 'light' and 'd-none' or '' }}" viewBox="0 0 16 16">
@@ -54,7 +60,8 @@
         </svg>
     </button>
 
-    <button type="button" class="btn btn-sm d-flex align-items-center" id="toggle-fullscreen">
+    <button type="button" class="btn btn-sm d-flex align-items-center" id="toggle-fullscreen"
+            data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{ trans('Switch fullscreen mode') }}">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrows-angle-expand"
              viewBox="0 0 16 16">
             <path fill-rule="evenodd"
@@ -66,6 +73,15 @@
                   d="M.172 15.828a.5.5 0 0 0 .707 0l4.096-4.096V14.5a.5.5 0 1 0 1 0v-3.975a.5.5 0 0 0-.5-.5H1.5a.5.5 0 0 0 0 1h2.768L.172 15.121a.5.5 0 0 0 0 .707M15.828.172a.5.5 0 0 0-.707 0l-4.096 4.096V1.5a.5.5 0 1 0-1 0v3.975a.5.5 0 0 0 .5.5H14.5a.5.5 0 0 0 0-1h-2.768L15.828.879a.5.5 0 0 0 0-.707"/>
         </svg>
     </button>
+
+    <a href="/" class="btn btn-sm d-flex align-items-center"
+       data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{ trans('Back to homepage') }}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-return-left"
+             viewBox="0 0 16 16">
+            <path fill-rule="evenodd"
+                  d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/>
+        </svg>
+    </a>
 </div>
 <!-- END: Theme switch -->
 

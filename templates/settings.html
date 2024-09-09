@@ -11,7 +11,21 @@
 {% block content %}
     <div class="col-12 col-md-8 mx-auto">
         <div class="row">
-            <div class="col-12 mb-3">
+            <div class="col-md-4 mb-3 mt-3">
+                <div class="list-group mb-3 py-3 sticky-top" id="pills-tab" role="tablist">
+                    {% for key, value in config.items() %}
+                        <button class="list-group-item list-group-item-action {% if loop.first %}active{% endif %}"
+                                id="pills-{{ key }}-tab" data-bs-toggle="pill" data-bs-target="#pills-{{ key }}" role="tab"
+                                aria-controls="pills-{{ key }}" aria-selected="true">
+                            {{ trans(key.replace('_', ' ')|title) }}
+                            {#<p class="mb-1">Some placeholder content in a paragraph.</p>
+                            <small>And some small print.</small>#}
+                        </button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="col-md-8 mb-3">
                 <form method="POST" action="{{ url_for('settings_save') }}">
                     <div class="d-flex justify-content-between align-items-center sticky-top bg-body py-3">
                         <h2 class="mb-0">{#{{ trans('Settings') }}#}</h2>
@@ -19,15 +33,36 @@
                             {{ forms.button(trans('Save')) }}
                         </div>
                     </div>
-                    {% for key, value in config.items() %}
-                        {% if value is not mapping %}
-                            <div class="card border-secondary mb-3">
-                                <div class="card-body">{{ forms.generate_form_fields(key, value) }}</div>
+                    <div class="tab-content" id="pills-tabContent">
+                        {% for key, value in config.items() %}
+                            <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="pills-{{ key }}" role="tabpanel"
+                                 aria-labelledby="pills-{{ key }}-tab" tabindex="0">
+                                {% if key != 'users' %}
+                                    {% if value is not mapping %}
+                                        <div class="card border-secondary mb-3">
+                                            <div class="card-body">{{ forms.generate_form_fields(key, value) }}</div>
+                                        </div>
+                                    {% else %}
+                                        {{ forms.generate_form_fields(key, value) }}
+                                    {% endif %}
+                                {% else %}
+                                    <div class="card border-secondary mb-3">
+                                        <h6 class="card-header bg-secondary text-light py-1">{{ trans(key.replace('_', ' ')|title) }}</h6>
+                                        <div class="card-body">
+                                            {% for username, password in value.items() %}
+                                                <div class="card border-secondary mb-3">
+                                                    <h6 class="card-header bg-secondary text-light py-1">{{ trans(username.replace('_', ' ')|title) }}</h6>
+                                                    <div class="card-body">
+                                                        {{ forms.input('users-' + username, '', trans('New password')) }}
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% endif %}
                             </div>
-                        {% else %}
-                            {{ forms.generate_form_fields(key, value) }}
-                        {% endif %}
-                    {% endfor %}
+                        {% endfor %}
+                    </div>
                 </form>
             </div>
         </div>

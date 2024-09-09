@@ -13,8 +13,10 @@ from threading import Lock, Thread
 import gpustat
 import psutil
 from flask import Flask, Response, abort, flash, redirect, render_template, request, url_for
+from flask_httpauth import HTTPBasicAuth
 from flask_socketio import SocketIO
 from markupsafe import escape
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from system.ConfigManager import ConfigManager
 from system.DatabaseManager import DatabaseManager
@@ -36,6 +38,11 @@ locations_dict = dict([(k, v['label']) for k, v in config.get("detections", {}).
 
 # Start Flask
 app = Flask(__name__)
+
+# Auth
+auth = HTTPBasicAuth()
+users = config.get("users", {})
+
 app.config['SECRET_KEY'] = config.get("server.secret_key", False)
 app.config['DATABASE'] = config.get("db", False)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
@@ -95,6 +102,14 @@ def counter_status_class(key):
 @app.context_processor
 def utility_processor():
     return dict(config=config)
+
+
+# Auth
+@auth.verify_password
+def verify_password(username, password):
+    if username in users and check_password_hash(users.get(username), password):
+        return username
+    return None
 
 
 # --------------------------------------------------------------------------------
@@ -328,15 +343,26 @@ def stop_count(location=None):
 # --------------------------------------------------------------------------------
 
 @app.route('/settings')
+@auth.login_required
 def settings():
     _config = ConfigManager("config.json")
     return render_template('settings.html', config=_config.read_config())
 
 
 @app.route('/settings_save', methods=['POST'])
+@auth.login_required
 def settings_save():
+    form_data = request.form.to_dict()
+
+    # Retrieving users from a form and encrypting passwords
+    for key, value in form_data.items():
+        if key.startswith('users-'):
+            form_data[key] = generate_password_hash(value)
+
+    # Saving updated form data to a configuration file
     _config = ConfigManager("config.json")
-    _config.save_from_request(request.form)
+    _config.save_from_request(form_data)
+
     flash(trans('Settings saved'))
     return redirect(url_for('settings'))
 

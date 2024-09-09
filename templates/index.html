@@ -90,7 +90,7 @@
 
                 let baseUrl = '{{ url_for('counter_t_multi', location_first='', location_second='') }}'.replace(/\/+$/, '');
                 let fullUrl = baseUrl + '/' + counterTextMultiIn + '/' + counterTextMultiOut;
-                window.open(fullUrl, '_blank');
+                window.open(fullUrl);
             });
 
             /**
@@ -108,29 +108,29 @@
             /**
              * System load
              */
-            {% if config.get('general.debug', False) %}
-            let intervalSystemLoad = setInterval(function () {
-                let systemLoad = $('#system_load');
-                $.ajax({
-                    url: "{{ url_for('get_system_load') }}",
-                    method: 'GET',
-                    success: function (response) {
+                {% if config.get('general.debug', False) %}
+                    let intervalSystemLoad = setInterval(function () {
+                    let systemLoad = $('#system_load');
+                    $.ajax({
+                        url: "{{ url_for('get_system_load') }}",
+                        method: 'GET',
+                        success: function (response) {
 
-                        let loadText = 'CPU: ' + response.cpu_percent + '%';
-                        loadText += ' / Mem used: ' + response.memory_percent + '%';
-                        loadText += ' (' + response.memory_used + 'GB)';
-                        if (response.gpu_percent) {
-                            loadText += ' / ' + response.gpu_percent;
+                            let loadText = 'CPU: ' + response.cpu_percent + '%';
+                            loadText += ' / Mem used: ' + response.memory_percent + '%';
+                            loadText += ' (' + response.memory_used + 'GB)';
+                            if (response.gpu_percent) {
+                                loadText += ' / ' + response.gpu_percent;
+                            }
+
+                            systemLoad.text(loadText);
+                        },
+                        error: function (xhr, status, error) {
+                            //
                         }
-
-                        systemLoad.text(loadText);
-                    },
-                    error: function (xhr, status, error) {
-                        //
-                    }
-                });
-            }, 5000);
-            {% endif %}
+                    });
+                }, 5000);
+                {% endif %}
         });
     </script>
 {% endblock %}
@@ -155,7 +155,7 @@
                 {% for k in object_counters %}
                     <div class="btn-group m-2" role="group" aria-label="" id="counter_video_{{ k }}">
                         <a href="{{ url_for('counter', location=k) }}"
-                           class="btn btn-{{ counter_status_class(k) }}" target="_blank">
+                           class="btn btn-{{ counter_status_class(k) }}">
                             {{ object_counters[k]|striptags|title }}
                         </a>
                         <div class="btn-group" role="group">
@@ -226,7 +226,7 @@
                 {% for k in object_counters %}
                     <div class="btn-group m-2" role="group" aria-label="" id="counter_text_{{ k }}">
                         <a href="{{ url_for('counter_t', location=k) }}"
-                           class="btn btn-{{ counter_status_class(k) }}" target="_blank">
+                           class="btn btn-{{ counter_status_class(k) }}">
                             {{ object_counters[k]|striptags|title }}
                         </a>
                         <div class="btn-group" role="group">
