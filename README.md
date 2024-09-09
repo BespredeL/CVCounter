@@ -33,7 +33,10 @@
     "debug": true, // включить режим отладки
     "log_path": "errors.log", // путь к файлу журнала
     "default_language": "ru", // язык по умолчанию
-    "allow_unsafe_werkzeug": false // разрешить небезопасные операции в werkzeug
+    "allow_unsafe_werkzeug": false, // разрешить небезопасные операции в werkzeug
+    "button_change_theme": true, // показать кнопку изменения темы
+    "button_fullscreen": true, // показать кнопку перехода в полноэкранный режим
+    "button_backward": false // показать кнопку назад
   },
   "server": {
     "host": "0.0.0.0", // адрес сервера

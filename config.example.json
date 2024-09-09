@@ -3,7 +3,10 @@
         "debug": true,
         "log_path": "errors.log",
         "default_language": "ru",
-        "allow_unsafe_werkzeug": false
+        "allow_unsafe_werkzeug": false,
+        "button_change_theme": true,
+        "button_fullscreen": true,
+        "button_backward": false
     },
     "server": {
         "host": "0.0.0.0",

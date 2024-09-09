@@ -33,7 +33,10 @@ P.S.:
     "debug": true, // enable debug mode
     "log_path": "errors.log", // path to log file
     "default_language": "ru", // default language
-    "allow_unsafe_werkzeug": false // allow unsafe operations in werkzeug
+    "allow_unsafe_werkzeug": false, // allow unsafe operations in werkzeug
+    "button_change_theme": true, // show button changing theme
+    "button_fullscreen": true, // show button fullscreen
+    "button_backward": false // show back button
   },
   "server": {
     "host": "0.0.0.0", // server host
