@@ -418,5 +418,5 @@ if __name__ == '__main__':
         # threaded=config.get('server.threaded'),
         log_output=config.get('server.log_output'),
         use_reloader=config.get('server.use_reloader'),
-        allow_unsafe_werkzeug=config.get('general.debug')
+        allow_unsafe_werkzeug=config.get('general.allow_unsafe_werkzeug', config.get('general.debug'))
     )

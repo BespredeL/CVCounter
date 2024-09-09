@@ -32,7 +32,8 @@ P.S.:
   "general": {
     "debug": true, // enable debug mode
     "log_path": "errors.log", // path to log file
-    "default_language": "ru" // default language
+    "default_language": "ru", // default language
+    "allow_unsafe_werkzeug": false // allow unsafe operations in werkzeug
   },
   "server": {
     "host": "0.0.0.0", // server host
@@ -41,6 +42,10 @@ P.S.:
     "use_reloader": false, // enable reloader mode
     "log_output": true, // enable log output
     "socketio_key": "" // socketio key
+  },
+  "users": {
+    // login:password default admin:admin
+    "admin": "scrypt:32768:8:1$rsdPYhqaQqpXQQ0o$aa3359c86228b4cee5fe8c4ed694db4b371fa7fab5100fa7b446db7e1ed8077e3bb63228d4a1899aeeef9b8d15f8e8bdbcc3457f020bcb3ec320332c76b5896b" // login:password
   },
   "db": {
     "host": "localhost", // database host

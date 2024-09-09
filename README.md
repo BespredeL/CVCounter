@@ -32,7 +32,8 @@
   "general": {
     "debug": true, // включить режим отладки
     "log_path": "errors.log", // путь к файлу журнала
-    "default_language": "ru" // язык по умолчанию
+    "default_language": "ru", // язык по умолчанию
+    "allow_unsafe_werkzeug": false // разрешить небезопасные операции в werkzeug
   },
   "server": {
     "host": "0.0.0.0", // адрес сервера
@@ -41,6 +42,10 @@
     "use_reloader": false, // включить режим перезагрузки
     "log_output": true, // включить вывод журнала
     "socketio_key": "" // socketio ключ
+  },
+  "users": {
+    // логин:пароль по умолчанию admin:admin
+    "admin": "scrypt:32768:8:1$rsdPYhqaQqpXQQ0o$aa3359c86228b4cee5fe8c4ed694db4b371fa7fab5100fa7b446db7e1ed8077e3bb63228d4a1899aeeef9b8d15f8e8bdbcc3457f020bcb3ec320332c76b5896b" // логин:пароль
   },
   "db": {
     "host": "localhost", // хост базы данных
