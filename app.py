@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 29.07.2024
+# Updated: 09.09.2024
 # Website: https://bespredel.name
 
 import os
@@ -104,7 +104,7 @@ def utility_processor():
     return dict(config=config)
 
 
-# Auth
+# Auth handlers
 @auth.verify_password
 def verify_password(username, password):
     if username in users and check_password_hash(users.get(username), password):
