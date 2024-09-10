@@ -346,7 +346,7 @@ def stop_count(location=None):
 @auth.login_required
 def settings():
     _config = ConfigManager("config.json")
-    return render_template('settings.html', config=_config.read_config())
+    return render_template('settings.html', _config=_config.read_config())
 
 
 @app.route('/settings_save', methods=['POST'])

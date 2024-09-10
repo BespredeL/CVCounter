@@ -2,7 +2,7 @@
 
 {% block header %}
     <a href="{{ url_for('index') }}" class="text-decoration-none text-body">
-        <h1 class="border-bottom">{% block title %}{{ trans('Help') }} - CVCounter{% endblock %}</h1>
+        <h1 class="border-bottom pb-1">CVCounter - {% block title %}{{ trans('Help') }}{% endblock %}</h1>
     </a>
 {% endblock %}
 

@@ -2,7 +2,7 @@
 
 {% block header %}
     <a href="{{ url_for('index') }}" class="text-decoration-none text-body">
-        <h1>{% block title %}{{ trans('Settings') }} - CVCounter{% endblock %}</h1>
+        <h1 class="border-bottom pb-1">CVCounter - {% block title %}{{ trans('Settings') }}{% endblock %}</h1>
     </a>
 {% endblock %}
 
@@ -13,7 +13,7 @@
         <div class="row">
             <div class="col-md-4 mb-3 mt-3">
                 <div class="list-group mb-3 py-3 sticky-top" id="pills-tab" role="tablist">
-                    {% for key, value in config.items() %}
+                    {% for key, value in _config.items() %}
                         <button class="list-group-item list-group-item-action {% if loop.first %}active{% endif %}"
                                 id="pills-{{ key }}-tab" data-bs-toggle="pill" data-bs-target="#pills-{{ key }}" role="tab"
                                 aria-controls="pills-{{ key }}" aria-selected="true">
@@ -34,7 +34,7 @@
                         </div>
                     </div>
                     <div class="tab-content" id="pills-tabContent">
-                        {% for key, value in config.items() %}
+                        {% for key, value in _config.items() %}
                             <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="pills-{{ key }}" role="tabpanel"
                                  aria-labelledby="pills-{{ key }}-tab" tabindex="0">
                                 {% if key != 'users' %}

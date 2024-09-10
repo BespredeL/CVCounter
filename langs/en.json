@@ -109,5 +109,9 @@
     "Back to homepage": "Back to homepage",
     "Current password": "Current password",
     "New password": "New password",
-    "Confirm new password": "Confirm new password"
+    "Confirm new password": "Confirm new password",
+    "Button Change Theme": "Show button \"Change Theme\"",
+    "Button Fullscreen": "Show button \"Fullscreen\"",
+    "Button Backward": "Show button \"Backward\"",
+    "Settings saved": "Settings saved"
 }

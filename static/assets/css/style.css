@@ -20,12 +20,12 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
     border-radius: 5px !important;
 }
 
-.theme-switcher {
-    position: static;
+.footer-link {
+    position: absolute;
 }
 
 @media (min-width: 992px) {
-    .theme-switcher {
+    .footer-link {
         position: fixed;
     }
 }
