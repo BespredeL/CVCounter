@@ -20,12 +20,16 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
     border-radius: 5px !important;
 }
 
-.footer-link {
-    position: absolute;
+.footer-links {
+    position: relative;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    z-index: 3;
 }
 
-@media (min-width: 992px) {
-    .footer-link {
+@media (min-width: 1200px) {
+    .footer-links {
         position: fixed;
     }
 }
