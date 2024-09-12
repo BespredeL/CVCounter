@@ -108,8 +108,8 @@
             /**
              * System load
              */
-                {% if config.get('general.debug', False) %}
-                    let intervalSystemLoad = setInterval(function () {
+            {% if config.get('general.debug', False) %}
+                let intervalSystemLoad = setInterval(function () {
                     let systemLoad = $('#system_load');
                     $.ajax({
                         url: "{{ url_for('get_system_load') }}",
@@ -126,11 +126,11 @@
                             systemLoad.text(loadText);
                         },
                         error: function (xhr, status, error) {
-                            //
+                            console.error('An error has occurred', error);
                         }
                     });
                 }, 5000);
-                {% endif %}
+            {% endif %}
         });
     </script>
 {% endblock %}

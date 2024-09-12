@@ -384,6 +384,9 @@ def page(name):
 
 @app.route('/get_system_load')
 def get_system_load():
+    if is_ajax() is False:
+        abort(400, trans('Bad request'))
+
     kb = float(1024)
     mb = float(kb ** 2)
     gb = float(kb ** 3)

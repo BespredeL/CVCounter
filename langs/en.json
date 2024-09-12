@@ -113,5 +113,6 @@
     "Button Change Theme": "Show button \"Change Theme\"",
     "Button Fullscreen": "Show button \"Fullscreen\"",
     "Button Backward": "Show button \"Backward\"",
-    "Settings saved": "Settings saved"
+    "Settings saved": "Settings saved",
+    "Bad request": "Bad request"
 }
