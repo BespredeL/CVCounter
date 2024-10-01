@@ -10,8 +10,6 @@ import os
 import re
 from threading import Lock, Thread
 
-import gpustat
-import psutil
 from flask import Flask, Response, abort, flash, redirect, render_template, request, url_for
 from flask_httpauth import HTTPBasicAuth
 from flask_socketio import SocketIO
@@ -380,32 +378,6 @@ def page(name):
         abort(404, trans('Page not found'))
 
     return render_template('pages/' + page_name + '.html')
-
-
-@app.route('/get_system_load')
-def get_system_load():
-    if is_ajax() is False:
-        abort(400, trans('Bad request'))
-
-    kb = float(1024)
-    mb = float(kb ** 2)
-    gb = float(kb ** 3)
-
-    cpu_percent = round(float(psutil.cpu_percent(interval=5)), 1)
-    mem_total = round(float(psutil.virtual_memory()[0] / gb), 1)
-    mem_free = round(float(psutil.virtual_memory()[1] / gb), 1)
-    mem_used = round(float(psutil.virtual_memory()[3] / gb), 1)
-    mem_percent = round(float(mem_used / mem_total * 100), 1)
-    gpu_stats = gpustat.GPUStatCollection.new_query()
-
-    gpu_usage = ''
-    for gpu in gpu_stats.gpus:
-        gpu_usage = f"GPU: {gpu.utilization}% ({gpu.name})"
-
-    return {"cpu_percent": cpu_percent,
-            "memory_percent": mem_percent,
-            "memory_used": mem_used,
-            "gpu_percent": gpu_usage}
 
 
 # --------------------------------------------------------------------------------
