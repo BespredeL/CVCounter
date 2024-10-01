@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 09.09.2024
+# Updated: 01.10.2024
 # Website: https://bespredel.name
 
 import os
