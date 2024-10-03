@@ -2,8 +2,8 @@
 This solution is far from ideal, probably just a piece of ..., but it works =)<br> 
 This is my first experience working with Python, so it turned out the way it did.
 
-This solution implements 3 types of views:
 
+**This solution implements 3 types of views:**
 1. **Main view** - a page displaying the counter values and a video with recognition results
 2. **Text view** - a page displaying only the counter values
 3. **Text view with two counters** - a page on which the value of 2 counters is displayed (for example, at the input and output)
@@ -15,12 +15,13 @@ Moreover, this solution is not resource-intensive for clients (except for the ma
 I managed to run 5 simultaneous counts (without video output), and 4 counts with video output.
 
 Server specifications:
-
-AMD Ryzen 5 3600
+- AMD Ryzen 5 3600
 - GeForce GTX 1050 Ti (4GB)
-- All main settings are located in the config.json file (rename config.example.json to config.json)
 
-P.S.:
+All main settings are located in the config.json file (rename config.example.json to config.json)
+You can run the browser in kiosk mode to prevent exiting it (for example, for Google Chrome, you can specify "--kiosk --start-fullscreen" at startup)
+
+**P.S.:** 
 - Friends, if you don't mind, please don't remove my copyright at the bottom of the page. It's not a requirement, but if you leave it, I'll be very grateful to you!
 - All of this was implemented without any specifications and nobody believed in success, so there is currently some chaos, but I will try to redo everything more correctly =)
 - If this solution helped you, you can sponsor me by sending the word "Thanks". Contact details are below =))
