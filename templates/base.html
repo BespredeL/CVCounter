@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-bs-theme="dark">
+<html lang="ru" class="h-100" data-bs-theme="dark">
 <head>
     <!--
      Developer: Aleksandr Kireev (https://bespredel.name)
@@ -24,8 +24,8 @@
     {% block head %}{% endblock %}
     <!-- END: Head block -->
 </head>
-<body>
-<div class="container-fluid min-vh-100">
+<body class="d-flex flex-column h-100">
+<div class="container-fluid">
     <div class="toast-container position-fixed bottom-0 start-0 p-3" id="toast-container"></div>
     <!-- START: Header block -->
     <div class="row">
@@ -95,15 +95,26 @@
 
         <div class="translate-middle-x d-none d-md-block"></div>
 
-        <div class="d-flex align-items-center justify-content-end">
-            <a href="https://createdby.ru" class="d-none d-sm-block text-body-secondary text-decoration-none font-monospace lh-1 small"
-               data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
-               data-bs-title="Computer Vision Counter"
-               target="_blank">CVCounter</a>
-            <span class="d-none d-sm-block text-body-secondary font-monospace lh-1 small">&nbsp;|&nbsp;</span>
-            <a href="https://bespredel.name" class="text-body-secondary text-decoration-none font-monospace lh-1 small" target="_blank"
-               data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
-               data-bs-title="Разработчик системы: <br><b>Александр Киреев</b>">Dev: Александр Киреев</a>
+        <div class="d-flex align-items-center justify-content-end mt-auto">
+            {% if url_for(request.endpoint, **request.view_args) == "/" %}
+                <a href="https://createdby.ru" class="d-none d-sm-block text-body-secondary text-decoration-none font-monospace lh-1 small"
+                   data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
+                   data-bs-title="Computer Vision Counter"
+                   target="_blank">CVCounter</a>
+                <span class="d-none d-sm-block text-body-secondary font-monospace lh-1 small">&nbsp;|&nbsp;</span>
+                <a href="https://bespredel.name" class="text-body-secondary text-decoration-none font-monospace lh-1 small"
+                   data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
+                   data-bs-title="Разработчик системы: <br><b>Александр Киреев</b>"
+                   target="_blank">Dev: Александр Киреев</a>
+            {% else %}
+                <a href="#" class="d-none d-sm-block text-body-secondary text-decoration-none font-monospace lh-1 small"
+                   data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
+                   data-bs-title="Computer Vision Counter">CVCounter</a>
+                <span class="d-none d-sm-block text-body-secondary font-monospace lh-1 small">&nbsp;|&nbsp;</span>
+                <a href="#" class="text-body-secondary text-decoration-none font-monospace lh-1 small"
+                   data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
+                   data-bs-title="Разработчик системы: <br><b>Александр Киреев</b>">Dev: Александр Киреев</a>
+            {% endif %}
         </div>
     </div>
 </div>
