@@ -73,12 +73,12 @@ def _slug(string):
     return slug(string)
 
 
-@app.template_global()
+@app.template_global
 def trans(string):
     return translate(string)
 
 
-@app.template_global()
+@app.template_global
 def counter_status(key):
     if key not in threading_detectors:
         return 'stopped'
@@ -87,7 +87,7 @@ def counter_status(key):
     return 'running'
 
 
-@app.template_global()
+@app.template_global
 def counter_status_class(key):
     if key not in threading_detectors:
         return 'secondary'
