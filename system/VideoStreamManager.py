@@ -60,7 +60,9 @@ class VideoStreamManager:
     def start(self):
         try:
             if self.is_stream():
-                self.__cap = self.__video_stream
+                if self.__cap is not None:
+                    self.__cap.stop()
+                self.__cap = VideoStream(self.__video_stream).start()
             else:
                 self.__cap = VideoStream(self.__video_stream).start()
         except Exception as e:
@@ -78,7 +80,7 @@ class VideoStreamManager:
 
     def stop(self):
         try:
-            if self.is_stream():
+            if self.is_stream() and self.__cap is not None:
                 self.__cap.stop()
                 self.__cap = None
             else:
@@ -129,4 +131,6 @@ class VideoStreamManager:
     def reconnect(self):
         self.stop()
         time.sleep(5)
+        print("Reconnecting to video stream...")
         self.start()
+        print("Reconnected to video stream")

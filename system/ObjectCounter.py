@@ -26,6 +26,7 @@ from system.sort import Sort
 class ObjectCounter:
     FRAME_LOST_THRESHOLD = 10
     RECONNECT_DELAY = 5  # seconds
+    MAX_RECONNECT_DELAY = 60  # seconds
     FPS_POSITION = (20, 70)
     FPS_FONT_SCALE = 1.5
     FPS_COLOR = (0, 0, 255)
@@ -160,7 +161,12 @@ class ObjectCounter:
                 # print(e)
                 print(trans('Error reconnect: {location}', location=self.location))
 
+            # Sleep for N seconds before reconnecting
+            print(trans('Sleeping for {delay} seconds before next reconnect attempt.', delay=self.RECONNECT_DELAY))
             time.sleep(self.RECONNECT_DELAY)
+
+            # Increase the delay for the next attempt (exponential growth)
+            self.RECONNECT_DELAY = min(self.RECONNECT_DELAY * 2, self.MAX_RECONNECT_DELAY)
 
     """
     Process the frame.
