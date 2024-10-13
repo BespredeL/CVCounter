@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 01.10.2024
+# Updated: 13.10.2024
 # Website: https://bespredel.name
 
 import os
@@ -42,18 +42,11 @@ auth = HTTPBasicAuth()
 users = config.get("users", {})
 
 app.config['SECRET_KEY'] = config.get("server.secret_key", False)
-app.config['DATABASE'] = config.get("db", False)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 socketio = SocketIO(app)
 
 # Start DB
-db_manager = DatabaseManager(
-    config.get('db.host'),
-    config.get('db.user'),
-    config.get('db.password'),
-    config.get('db.database'),
-    config.get('db.prefix')
-)
+db_manager = DatabaseManager(config.get("db", "sqlite:///:memory:"))
 
 # Init objects
 object_counters = {}
@@ -160,13 +153,10 @@ def counter(location=None):
             threading_detectors[location] = Thread(target=object_counters[location].run_frames)
             threading_detectors[location].start()
 
-    # items = db_client.get_items()
-
     return render_template(
         'counter.html',
         title=locations_dict.get(location, ),
         location=location,
-        # items=items,
         is_paused=object_counters[location].is_pause(),
         counter_on_sidebar=True
     )
@@ -196,13 +186,10 @@ def counter_t(location=None):
             threading_detectors[location] = Thread(target=object_counters[location].count_run)
             threading_detectors[location].start()
 
-    # items = db_client.get_items()
-
     return render_template(
         'counter_text.html',
         title=locations_dict.get(location, ),
         location=location,
-        # items=items,
         is_paused=object_counters[location].is_pause(),
         # counter_on_sidebar=False
     )
@@ -250,12 +237,10 @@ def save_count(location=None):
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
 
-    item_no = ""  # request.form['item_no']
     correct_count = request.form['correct_count']
     defect_count = request.form['defect_count']
     result = object_counters[location].save_count(
         location=location,
-        name=item_no,
         correct_count=correct_count,
         defect_count=defect_count,
         active=1
@@ -282,12 +267,10 @@ def reset_count_current(location=None):
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
 
-    item_no = request.form['item_no']
     correct_count = request.form['correct_count']
     defect_count = request.form['defect_count']
     object_counters[location].reset_count_current(
         location=location,
-        name=item_no,
         correct_count=correct_count,
         defect_count=defect_count
     )
@@ -363,6 +346,40 @@ def settings_save():
 
     flash(trans('Settings saved'))
     return redirect(url_for('settings'))
+
+
+@app.route('/reports')
+def reports():
+    return render_template(
+        'reports.html',
+        object_counters=locations_dict
+    )
+
+
+@app.route('/reports/<string:location>')
+def report_view(location):
+    r_page = request.args.get('page', 1, type=int)
+    per_page = 10
+
+    pagination = db_manager.get_paginated(location, r_page, per_page)
+
+    if pagination is None:
+        abort(404, trans('Page not found'))
+
+
+    items = pagination['results']
+    current_page = pagination['page']
+    total_items = pagination['total']
+    total_pages = (total_items + per_page - 1) // per_page
+
+    return render_template(
+        'reports_list.html',
+        object_counters=locations_dict,
+        items=items,
+        location=location,
+        current_page=current_page,
+        total_pages=total_pages
+    )
 
 
 @app.route('/page/<string:name>')

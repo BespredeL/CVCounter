@@ -51,13 +51,7 @@
     // логин:пароль по умолчанию admin:admin
     "admin": "scrypt:32768:8:1$rsdPYhqaQqpXQQ0o$aa3359c86228b4cee5fe8c4ed694db4b371fa7fab5100fa7b446db7e1ed8077e3bb63228d4a1899aeeef9b8d15f8e8bdbcc3457f020bcb3ec320332c76b5896b" // логин:пароль
   },
-  "db": {
-    "host": "localhost", // хост базы данных
-    "user": "", // пользователь базы данных
-    "password": "", // пароль базы данных
-    "database": "", // имя базы данных
-    "prefix": "" // префикс таблицы базы данных
-  },
+  "db": "sqlite:///system/database.db", // подключения к базе данных
   "detection_default": { // конфигурация обнаружения по умолчанию
     "video_path": "", // путь к видеофайлу или источнику камеры
     "video_show_scale": 50, // масштаб вывода видео на странице

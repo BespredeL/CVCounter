@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 05.09.2024
+# Updated: 13.10.2024
 # Website: https://bespredel.name
 
 import os
@@ -426,20 +426,15 @@ class ObjectCounter:
         dict: The total count.
     """
 
-    def save_count(self, location, name, correct_count, defect_count, active=1):
+    def save_count(self, location, correct_count, defect_count, active=1):
         total_count = int(self.total_count)
         defect_count = int(defect_count)
         correct_count = int(correct_count)
-        item_count = str(total_count - defect_count + correct_count)
-
-        if not self.db_manager.check_connection():
-            self.notif_manager.notify(trans('Impossible to save! There is no connection to the database.'), 'warning')
-            return dict(total=total_count, defect=defect_count, correct=correct_count)
+        corrent_total_count = str(total_count - defect_count + correct_count)
 
         result = self.db_manager.save_result(
             location=location,
-            name=name,
-            item_count=item_count,
+            total_count=corrent_total_count,
             source_count=total_count,
             correct_count=correct_count,
             defects_count=defect_count,
@@ -473,8 +468,7 @@ class ObjectCounter:
         self.defect_count = 0
         self.correct_count = 0
 
-        if self.db_manager.check_connection():
-            self.db_manager.close_current_count(location)
+        self.db_manager.close_current_count(location)
 
         self.notif_manager.notify(trans('Counting completed successfully!'), 'primary')
 
@@ -491,21 +485,19 @@ class ObjectCounter:
         None
     """
 
-    def reset_count_current(self, location, name, correct_count, defect_count):
+    def reset_count_current(self, location, correct_count, defect_count):
         current_count = int(self.current_count)
         total_count = int(self.total_count)
         defect_count = int(defect_count)
         correct_count = int(correct_count)
         try:
-            if self.db_manager.check_connection():
-                self.db_manager.save_part_result(
-                    location=location,
-                    name=name,
-                    current_count=current_count,
-                    total_count=total_count,
-                    defects_count=defect_count,
-                    correct_count=correct_count
-                )
+            self.db_manager.save_part_result(
+                location=location,
+                current_count=current_count,
+                total_count=total_count,
+                defects_count=defect_count,
+                correct_count=correct_count
+            )
         except Exception as e:
             print(e)
 

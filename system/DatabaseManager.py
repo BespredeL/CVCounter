@@ -3,275 +3,222 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 05.09.2024
+# Updated: 13.10.2024
 # Website: https://bespredel.name
 
 import json
 from datetime import datetime
-from functools import lru_cache
 
-import mysql.connector
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Boolean
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import sessionmaker, declarative_base
 
 from system.Logger import Logger
+
+Base = declarative_base()
+
+
+class CVCounter(Base):
+    __tablename__ = 'cvcounter'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    active = Column(Boolean, default=True)
+    location = Column(String(255), nullable=False)
+    total_count = Column(Integer, default=0)
+    source_count = Column(Integer, default=0)
+    defects_count = Column(Integer, default=0)
+    correct_count = Column(Integer, default=0)
+    parts = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
 
 class DatabaseManager:
     """
-    Database manager.
+    Database manager using SQLAlchemy.
 
     Args:
-        host (str): Host name.
-        user (str): Username.
-        password (str): Password.
-        database (str): Database name.
-        prefix (str, optional): Prefix. Defaults to ''.
+        db_url (str): Database connection URL.
+        prefix (str, optional): Table prefix. Defaults to ''.
     """
 
-    def __init__(self, host, user, password, database, prefix=''):
+    def __init__(self, db_url, prefix=''):
         self.__logger = Logger("errors.log")
-        self.__host = host
-        self.__user = user
-        self.__password = password
-        self.__database = database
+        self.__engine = create_engine(db_url)
         self.__prefix = prefix
-        self.__conn = None
-        self.connect()
+        self.__sessionmaker = sessionmaker(bind=self.__engine)
 
-        if self.check_connection():
-            self.create_table()
+        # Создаем таблицы, если их еще нет
+        Base.metadata.create_all(self.__engine)
 
     """
-    Connect to the database.
-
-    Parameters:
-        None
-
+    Creates and returns a new session.
+    
     Returns:
-        None
+        Session: A new session.
     """
 
-    def connect(self):
+    def create_session(self):
+        return self.__sessionmaker()
+
+    """
+    Saves a result to the database.
+    
+    Args:
+        location (str): The location of the result.
+        total_count (int, optional): The total count. Defaults to 0.
+        source_count (int, optional): The source count. Defaults to 0.
+        defects_count (int, optional): The defects count. Defaults to 0.
+        correct_count (int, optional): The correct count. Defaults to 0.
+        active (bool, optional): The active status. Defaults to True.
+    """
+
+    def save_result(self, location, total_count=0, source_count=0, defects_count=0, correct_count=0, active=True):
+        session = self.create_session()
         try:
-            self.__conn = mysql.connector.connect(
-                host=str(self.__host),
-                user=str(self.__user),
-                password=str(self.__password),
-                database=str(self.__database),
-            )
-        except (mysql.connector.Error, Exception) as e:
-            self.__conn = None
-            self.__logger.log_exception()
-
-    """
-    Check the connection to the database.
-
-    Parameters:
-        self (object): The instance of the class.
-
-    Returns:
-        bool: True if the connection is successful, False otherwise.
-    """
-
-    def check_connection(self):
-        if self.__conn is None:
-            return False
-        try:
-            self.__conn.ping(reconnect=True, attempts=3, delay=5)
+            result = session.query(CVCounter).filter_by(location=location, active=True).first()
+            if result:
+                # Обновляем существующую запись
+                result.active = active
+                result.total_count = total_count
+                result.source_count = source_count
+                result.defects_count = defects_count
+                result.correct_count = correct_count
+                result.updated_at = datetime.now()
+            else:
+                # Вставляем новую запись
+                new_result = CVCounter(
+                    active=active,
+                    location=location,
+                    total_count=total_count,
+                    source_count=source_count,
+                    defects_count=defects_count,
+                    correct_count=correct_count,
+                    created_at=datetime.now(),
+                    updated_at=datetime.now()
+                )
+                session.add(new_result)
+            session.commit()
             return True
-        except mysql.connector.Error as error:
-            self.__logger.log_error(str(error))
-            return False
-
-    """
-    Create a tables if it does not already exist in the database. 
-
-    Parameters:
-        None
-
-    Returns:
-        None
-    """
-
-    def create_table(self):
-        try:
-            with self.__conn.cursor() as cursor:
-                cursor.execute(f"""
-                    CREATE TABLE IF NOT EXISTS {self.__prefix}cvcounter (
-                        id INT AUTO_INCREMENT PRIMARY KEY,
-                        active TINYINT(1) DEFAULT 1,
-                        location VARCHAR(255) NOT NULL,
-                        name VARCHAR(255) NOT NULL,
-                        item_count INT DEFAULT 0,
-                        source_count INT DEFAULT 0,
-                        defects_count INT DEFAULT 0,
-                        correct_count INT DEFAULT 0,
-                        parts TEXT DEFAULT NULL,
-                        created_at TIMESTAMP NOT NULL,
-                        updated_at TIMESTAMP NOT NULL
-                    )
-                """)
-                self.__conn.commit()
-        except mysql.connector.Error as error:
-            self.__logger.log_error(str(error))
-
-    """
-    Execute query.
-
-    Parameters:
-        query (str): The query to be executed.
-        params (dict, optional): The parameters to be used in the query. Defaults to None.
-
-    Returns:
-        object: The result of the query.
-    """
-
-    def execute_query(self, query, params=None):
-        try:
-            if not self.check_connection():
-                self.connect()
-            with self.__conn.cursor() as cursor:
-                cursor.execute(query, params)
-                self.__conn.commit()
-                return cursor
-        except mysql.connector.Error as error:
+        except SQLAlchemyError as error:
+            session.rollback()
             self.__logger.log_error(str(error))
             self.__logger.log_exception()
-        return None
+            return False
+        finally:
+            session.close()
 
     """
-    Saves the result to the database.
-
-    Parameters:
-        location (str): The location of the image.
-        name (str): The name of the image.
-        item_count (int): The count value item to be saved.
-        source_count (int): The count value source to be saved.
-        defects_count (int): The count value defects to be saved.
-        correct_count (int): The count value correct to be saved.
-        active (int): The status of the image.
-
-    Returns:
-        None
+    Saves a part result to the database.
+    
+    Args:
+        location (str): The location of the result.
+        current_count (int, optional): The current count. Defaults to 0.
+        total_count (int, optional): The total count. Defaults to 0.
+        defects_count (int, optional): The defects count. Defaults to 0.
+        correct_count (int, optional): The correct count. Defaults to 0.
     """
 
-    def save_result(self, location, name, item_count=0, source_count=0, defects_count=0, correct_count=0, active=1):
-        result = False
-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        cursor = self.execute_query(
-            f"SELECT * FROM {self.__prefix}cvcounter WHERE active = 1 AND location = %s AND name = %s", (location, name))
-        if cursor:
-            db_select_result = cursor.fetchone()
-            if db_select_result:
-                query = (f"UPDATE {self.__prefix}cvcounter "
-                         "SET active = %s, location = %s, name = %s, item_count = %s, source_count = %s, defects_count = %s, "
-                         "correct_count = %s, created_at = %s, updated_at = %s "
-                         "WHERE id = %s")
-                values = (active, location, name, item_count, source_count, defects_count, correct_count, now, now, db_select_result[0])
-            else:
-                query = (f"INSERT INTO {self.__prefix}cvcounter (active, location, name, item_count, source_count, defects_count, "
-                         "correct_count, created_at, updated_at) "
-                         "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)")
-                values = (active, location, name, item_count, source_count, defects_count, correct_count, now, now)
-            result = self.execute_query(query, values) is not None
-        return result
+    def save_part_result(self, location, current_count=0, total_count=0, defects_count=0, correct_count=0):
+        session = self.create_session()
+        try:
+            result = session.query(CVCounter).filter_by(location=location, active=True).first()
+            if result:
+                # Обновляем поле parts
+                parts = json.loads(result.parts) if result.parts else []
+                parts.append({
+                    'current': current_count,
+                    'total': total_count,
+                    'defects': defects_count,
+                    'correct': correct_count,
+                    'created_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                })
+                parts = sorted(parts, key=lambda x: x['created_at'], reverse=True)
+                result.parts = json.dumps(parts)
+                result.updated_at = datetime.now()
+                session.commit()
+                return True
+            return False
+        except SQLAlchemyError as error:
+            session.rollback()
+            self.__logger.log_error(str(error))
+            self.__logger.log_exception()
+            return False
+        finally:
+            session.close()
 
     """
-    Saves part the result to the database.
-
-    Parameters:
-        location (str): The location of the image.
-        name (str): The name of the image.
-        current_count (int): The count value current to be saved. Default is 0.
-        total_count (int): The count value total to be saved. Default is 0.
-        defects_count (int): The count value defects to be saved. Default is 0.
-        correct_count (int): The count value correct to be saved. Default is 0.
-
-    Returns:
-        None
-    """
-
-    def save_part_result(self, location, name, current_count=0, total_count=0, defects_count=0, correct_count=0):
-        result = False
-        cursor = self.execute_query(
-            f"SELECT * FROM {self.__prefix}cvcounter WHERE active = 1 AND location = %s AND name = %s", (location, name))
-        if cursor:
-            db_select_result = cursor.fetchone()
-            parts = json.loads(db_select_result[8]) if db_select_result and db_select_result[8] else []
-            parts.append({
-                'current': current_count,
-                'total': total_count,
-                'defects': defects_count,
-                'correct': correct_count,
-                'created_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            })
-            parts = sorted(parts, key=lambda x: x['created_at'], reverse=True)
-            new_parts = json.dumps(parts)
-            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            if db_select_result:
-                query = (f"UPDATE {self.__prefix}cvcounter SET parts = %s, created_at = %s, updated_at = %s WHERE id = %s")
-                values = (new_parts, now, now, db_select_result[0])
-            else:
-                query = (f"INSERT INTO {self.__prefix}cvcounter (active, location, name, parts, created_at, updated_at) "
-                         "VALUES (%s, %s, %s, %s, %s, %s)")
-                values = (1, location, name, new_parts, now, now)
-            result = self.execute_query(query, values) is not None
-        return result
-
-    """
-    Closes the current count for a specific location and name.
-
-    Parameters:
-        location (str): The location of the count.
-        name (str): The name of the count.
-
-    Returns:
-        None
+    Closes the current counter for the specified location.
+    
+    Args:
+        location (str): The location of the counter to close.
     """
 
     def close_current_count(self, location):
-        result = False
-        cursor = self.execute_query(
-            f"SELECT * FROM {self.__prefix}cvcounter WHERE active = 1 AND location = %s", (location,))
-        if cursor:
-            db_select_result = cursor.fetchone()
-            if db_select_result:
-                result = self.execute_query(
-                    f"UPDATE {self.__prefix}cvcounter SET active = %s WHERE id = %s", (0, db_select_result[0])) is not None
-        return result
+        session = self.create_session()
+        try:
+            result = session.query(CVCounter).filter_by(location=location, active=True).first()
+            if result:
+                result.active = False
+                result.updated_at = datetime.now()
+                session.commit()
+                return True
+            return False
+        except SQLAlchemyError as error:
+            session.rollback()
+            self.__logger.log_error(str(error))
+            return False
+        finally:
+            session.close()
 
     """
-    Retrieves the current count for a given key from the database.
+    Returns the current counter for the given key.
 
-    Parameters:
-        key (str): The key to use for retrieving the count. Default is an empty string.
+    Args:
+        key (str, optional): The key. Defaults to ''.
 
     Returns:
-        int: The current count for the given key.
-
-    Raises:
-        mysql.connector.Error: If there is an error executing the database query.
+        int: The current counter.
     """
 
     def get_current_count(self, key=''):
-        cursor = self.execute_query(
-            f"SELECT * FROM {self.__prefix}cvcounter WHERE active = 1 AND name = %s", (key,))
-        return cursor.fetchone()[3] if cursor else None
+        session = self.create_session()
+        try:
+            result = session.query(CVCounter).filter_by(active=True, location=key).first()
+            return result.total_count if result else None
+        except SQLAlchemyError as error:
+            self.__logger.log_error(str(error))
+            return None
+        finally:
+            session.close()
 
     """
-    Retrieves items from the database.
+    Returns all counters for the given key.
 
-    Parameters:
-        None
+    Args:
+        key (str, optional): The key. Defaults to ''.
 
     Returns:
-        A list of items retrieved from the database.
+        list: A list of counters.
     """
 
-    @lru_cache(maxsize=128)
-    def get_items(self):
+    def get_paginated(self, key: str = '', page: int = 1, per_page: int = 10):
+        session = self.create_session()
         try:
-            return None
+            query = session.query(CVCounter).filter_by(location=key)
+            total = query.count()  # Getting the total number of records
+            results = query.offset((page - 1) * per_page).limit(per_page).all()  # Applying offset and limit
 
-        except mysql.connector.Error as error:
-            self.__logger.log_error(str(error))
-            # self.logger.log_exception()
+            return {
+                'total': total,
+                'page': page,
+                'per_page': per_page,
+                'results': results,
+                'has_next': page * per_page < total,  # Checking if there is a next page
+                'has_prev': page > 1  # Checking if there is a previous page
+            }
+        except SQLAlchemyError as error:
+            self.__logger.log_error(f"Error retrieving counters for key '{key}': {str(error)}")
+            return None  # Return None on error
+        finally:
+            session.close()

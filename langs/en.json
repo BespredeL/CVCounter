@@ -114,5 +114,14 @@
     "Button Fullscreen": "Show button \"Fullscreen\"",
     "Button Backward": "Show button \"Backward\"",
     "Settings saved": "Settings saved",
-    "Bad request": "Bad request"
+    "Bad request": "Bad request",
+    "No data": "No data",
+    "Reports": "Reports",
+    "Location": "Location",
+    "Total": "Total",
+    "Source": "Source",
+    "Defect": "Defect",
+    "Correct": "Correct",
+    "Created": "Created",
+    "Updated": "Updated"
 }

@@ -13,18 +13,6 @@
         </div>
     {% endif %}
 
-    {% if(items and items is not none) %}
-        <!-- Select product -->
-        <div class="border border-primary rounded my-2 p-2">
-            <select class="selectpicker form-control" id="item" name="item" data-width="auto" data-style="btn-body" data-live-search="true">
-                <option selected disabled>{{ trans('Select product') }}</option>
-                {% for item in items %}
-                    <option value="{{ item.No_ }}">[{{ item.No_ }}] {{ item.Description }}</option>
-                {% endfor %}
-            </select>
-        </div>
-    {% endif %}
-
     <!-- Defect keyboard -->
     <div class="border border-danger-subtle rounded my-2 p-2">
         <div class="col-12 mb-3">

@@ -11,7 +11,6 @@
  * @param url
  */
 function saveCount(url) {
-    let item_no = $('#item').val();
     let defect_count = $('#defect_keyboard input').val();
     let correct_count = $('#correct_keyboard input').val();
 
@@ -19,7 +18,6 @@ function saveCount(url) {
         url: url,
         method: 'post',
         data: {
-            'item_no': item_no,
             'correct_count': parseInt(correct_count),
             'defect_count': parseInt(defect_count)
         },
@@ -69,7 +67,6 @@ function resetCount(url) {
  * @param url
  */
 function resetCountCurrent(url) {
-    let item_no = $('#item').val();
     let defect_count = $('#defect_keyboard input').val();
     let correct_count = $('#correct_keyboard input').val();
 
@@ -77,7 +74,6 @@ function resetCountCurrent(url) {
         url: url,
         method: 'post',
         data: {
-            'item_no': item_no || '',
             'correct_count': parseInt(correct_count) || 0,
             'defect_count': parseInt(defect_count) || 0
         },
