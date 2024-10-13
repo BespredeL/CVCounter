@@ -18,6 +18,7 @@ pyodbc~=5.1
 scikit-image~=0.22
 shapely~=2.0.2
 SQLAlchemy~=2.0.35
+#mysqlclient==2.1.1
 torch>=2.2.2+cu118,<=2.3.1+cu118
 ultralytics>=8.3
 Werkzeug~=3.0
