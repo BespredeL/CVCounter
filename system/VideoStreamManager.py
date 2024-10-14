@@ -3,11 +3,12 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 26.03.2024
-# Updated: 03.09.2024
+# Updated: 14.10.2024
 # Website: https://bespredel.name
 
 import time
 
+import cv2
 from imutils.video import VideoStream
 
 
@@ -18,6 +19,7 @@ class VideoStreamManager:
 
         self.__video_stream = video_stream
         self.__cap = None
+        self.__fps = 30
 
     """
     Get the video stream source.
@@ -59,12 +61,21 @@ class VideoStreamManager:
 
     def start(self):
         try:
+            # Check if the source is a streaming URL or a local video/camera
             if self.is_stream():
                 if self.__cap is not None:
                     self.__cap.stop()
                 self.__cap = VideoStream(self.__video_stream).start()
+                self.__fps = 30
             else:
-                self.__cap = VideoStream(self.__video_stream).start()
+                self.__cap = cv2.VideoCapture(self.__video_stream)
+                if not self.__cap.isOpened():
+                    raise ValueError(f"Cannot open video stream: {self.__video_stream}")
+
+                # Получаем частоту кадров (FPS) для видеофайлов
+                self.__fps = self.__cap.get(cv2.CAP_PROP_FPS)
+                if self.__fps == 0:
+                    self.__fps = 30
         except Exception as e:
             print(f"An error occurred while starting the video stream: {e}")
 
@@ -80,8 +91,11 @@ class VideoStreamManager:
 
     def stop(self):
         try:
-            if self.is_stream() and self.__cap is not None:
-                self.__cap.stop()
+            if self.__cap is not None:
+                if self.is_stream():
+                    self.__cap.stop()
+                else:
+                    self.__cap.release()
                 self.__cap = None
             else:
                 print("Stream is not active.")
@@ -115,8 +129,59 @@ class VideoStreamManager:
     def get_frame(self):
         frame = None
         if self.__cap is not None:
-            frame = self.__cap.read()
+            if self.is_stream():
+                frame = self.__cap.read()
+            else:
+                ret, frame = self.__cap.read()
+                if not ret:
+                    print("Failed to grab frame")
         return frame
+
+    """
+    A method to get the FPS of the video stream.
+    
+    Parameters:
+        None
+    
+    Returns:
+        int: The FPS of the video stream
+    """
+
+    def get_fps(self):
+        return self.__fps
+
+    """
+    A method to encode the frame.
+    
+    Parameters:
+        frame: The frame to encode
+        quality: The quality of the encoded frame
+        ext: The extension of the encoded frame
+    
+    Returns:
+        frame_encoded: The encoded frame
+    """
+
+    def encoding_frame(self, frame, quality=95, ext="jpg"):
+        ret, frame_encoded = cv2.imencode("." + ext, frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
+        return frame_encoded
+
+    """
+    Resizes the frame.
+    
+    Parameters:
+        frame: The frame to resize
+        width: The width of the resized frame
+        height: The height of the resized frame
+    
+    Returns:
+        frame: The resized frame
+    """
+
+    def resize_frame(self, frame, scale_percent=70):
+        width = int(frame.shape[1] * scale_percent / 100)
+        height = int(frame.shape[0] * scale_percent / 100)
+        return cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
 
     """
     Reconnects to the video stream

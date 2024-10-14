@@ -258,8 +258,8 @@ class ObjectCounter:
                 frame = self.frame if self.frame is not None else self._reconnect_and_get_frame()
                 if frame is None:
                     continue
-                frame = self._resize_frame(frame)
-                ret, frame = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, int(self.video_quality)])
+                frame = self.vsm.resize_frame(frame, int(self.video_scale))
+                frame = self.vsm.encoding_frame(frame, int(self.video_quality), 'jpg')
                 yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + frame.tobytes() + b'\r\n')
             except Exception as e:
                 print(e)
@@ -280,22 +280,6 @@ class ObjectCounter:
         if frame is None:
             self._reconnect()
         return self._process_frame(frame)
-
-    """
-    Resizes the given frame to a specified scale percentage.
-
-    Parameters:
-        frame (numpy.ndarray): The frame to be resized.
-
-    Returns:
-        numpy.ndarray: The resized frame.
-    """
-
-    def _resize_frame(self, frame):
-        scale_percent = int(self.video_scale)
-        width = int(frame.shape[1] * scale_percent / 100)
-        height = int(frame.shape[0] * scale_percent / 100)
-        return cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
 
     """
     Counts the number of runs in the video stream.
