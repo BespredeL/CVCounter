@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # ! python3
-
+import json
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
 # Updated: 13.10.2024
@@ -153,11 +153,18 @@ def counter(location=None):
             threading_detectors[location] = Thread(target=object_counters[location].run_frames)
             threading_detectors[location].start()
 
+    custom_fields = config.get('custom_fields', {})
+    current_count = object_counters[location].get_current_count()
+    if current_count is not None:
+        for field in custom_fields:
+            field['value'] = current_count['custom_fields'].get(field['name'], "")
+
     return render_template(
         'counter.html',
         title=locations_dict.get(location, ),
         location=location,
         is_paused=object_counters[location].is_pause(),
+        custom_fields=custom_fields,
         counter_on_sidebar=True
     )
 
@@ -186,11 +193,18 @@ def counter_t(location=None):
             threading_detectors[location] = Thread(target=object_counters[location].count_run)
             threading_detectors[location].start()
 
+    custom_fields = config.get('custom_fields', {})
+    current_count = object_counters[location].get_current_count()
+    if current_count is not None:
+        for field in custom_fields:
+            field['value'] = current_count['custom_fields'].get(field['name'], "")
+
     return render_template(
         'counter_text.html',
         title=locations_dict.get(location, ),
         location=location,
         is_paused=object_counters[location].is_pause(),
+        custom_fields=custom_fields,
         # counter_on_sidebar=False
     )
 
@@ -239,15 +253,21 @@ def save_count(location=None):
 
     correct_count = request.form['correct_count']
     defect_count = request.form['defect_count']
+    custom_fields = request.form['custom_fields']
     result = object_counters[location].save_count(
         location=location,
         correct_count=correct_count,
         defect_count=defect_count,
+        custom_fields=custom_fields,
         active=1
     )
 
     # object_detectors[name].reset_count()
-    return {'total_count': result['total'], 'defect_count': result['defect'], 'correct_count': result['correct']}
+    return {
+        'total_count': result['total'],
+        'defect_count': result['defect'],
+        'correct_count': result['correct']
+    }
 
 
 @app.route('/reset_count/<string:location>')
@@ -366,7 +386,6 @@ def report_view(location):
     if pagination is None:
         abort(404, trans('Page not found'))
 
-
     items = pagination['results']
     current_page = pagination['page']
     total_items = pagination['total']
@@ -378,7 +397,8 @@ def report_view(location):
         items=items,
         location=location,
         current_page=current_page,
-        total_pages=total_pages
+        total_pages=total_pages,
+        json=json
     )
 
 

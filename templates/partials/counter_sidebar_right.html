@@ -1,3 +1,5 @@
+{% import 'partials/forms.html' as forms %}
+
 <!-- START: Right block -->
 <div class="col-12 col-lg-3">
     {% if counter_on_sidebar is not none and counter_on_sidebar %}
@@ -13,127 +15,167 @@
         </div>
     {% endif %}
 
-    <!-- Defect keyboard -->
-    <div class="border border-danger-subtle rounded my-2 p-2">
-        <div class="col-12 mb-3">
-            <label for="defect_keyboard" class="form-label h4">{{ trans('Defective products') }}</label>
-            <div class="input-group" id="defect_keyboard">
-                <button class="btn btn-sm btn-secondary input-plus">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-plus-lg"
+    {% if true %}
+        <!-- Defect keyboard -->
+        <div class="border border-danger-subtle rounded my-2 p-2">
+            <div class="col-12 mb-3">
+                <label for="defect_keyboard" class="form-label h4">{{ trans('Defective products') }}</label>
+                <button class="btn btn-outline-info float-end" data-bs-toggle="collapse" data-bs-target="#collapseDefect"
+                        aria-expanded="false"
+                        aria-controls="collapseDefect"
+                        style="--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-keyboard align-middle"
                          viewBox="0 0 16 16">
-                        <path fill-rule="evenodd"
-                              d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"></path>
+                        <path d="M14 5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM2 4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/>
+                        <path d="M13 10.25a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm0-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5 0A.25.25 0 0 1 8.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 8 8.75zm2 0a.25.25 0 0 1 .25-.25h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5a.25.25 0 0 1-.25-.25zm1 2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5-2A.25.25 0 0 1 6.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 6 8.75zm-2 0A.25.25 0 0 1 4.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 4 8.75zm-2 0A.25.25 0 0 1 2.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 2 8.75zm11-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0A.25.25 0 0 1 9.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 9 6.75zm-2 0A.25.25 0 0 1 7.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 7 6.75zm-2 0A.25.25 0 0 1 5.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 5 6.75zm-3 0A.25.25 0 0 1 2.25 6h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5A.25.25 0 0 1 2 6.75zm0 4a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm2 0a.25.25 0 0 1 .25-.25h5.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-5.5a.25.25 0 0 1-.25-.25z"/>
                     </svg>
                 </button>
-                <input type="number" class="form-control form-control-lg" aria-label="" name="defect_count" value="0" min="0" max="999999"
-                       maxlength="9">
-                <button class="btn btn-sm btn-secondary input-minus">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-dash-lg"
-                         viewBox="0 0 16 16">
-                        <path fill-rule="evenodd" d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8"></path>
-                    </svg>
-                </button>
-            </div>
-        </div>
-
-        <div class="col-12 keyboard keyboard-defect px-2" data-input-id="defect_keyboard">
-            <div class="row">
-                <button class="btn btn-secondary col m-1 fs-5" data-value="1">1</button>
-                <button class="btn btn-secondary col m-1 fs-5" data-value="2">2</button>
-                <button class="btn btn-secondary col m-1 fs-5" data-value="3">3</button>
-            </div>
-            <div class="row">
-                <button class="btn btn-secondary col m-1 fs-5" data-value="4">4</button>
-                <button class="btn btn-secondary col m-1 fs-5" data-value="5">5</button>
-                <button class="btn btn-secondary col m-1 fs-5" data-value="6">6</button>
-            </div>
-            <div class="row">
-                <button class="btn btn-secondary col m-1 fs-5" data-value="7">7</button>
-                <button class="btn btn-secondary col m-1 fs-5" data-value="8">8</button>
-                <button class="btn btn-secondary col m-1 fs-5" data-value="9">9</button>
-            </div>
-            <div class="row">
-                <button class="btn btn-secondary col m-1 fs-5" data-value="0">0</button>
-                <button class="btn btn-danger col-4 m-1 reset text-truncate">
+                <button class="btn btn-outline-danger float-end me-2" id="defect_clear"
+                        style="--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-trash"
                          viewBox="0 0 16 16">
-                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"></path>
-                        <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"></path>
+                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+                        <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
                     </svg>
-                    {{ trans('Reset') }}
                 </button>
+
+                <div class="input-group" id="defect_keyboard">
+                    <button class="btn btn-sm btn-secondary input-plus">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-plus-lg"
+                             viewBox="0 0 16 16">
+                            <path fill-rule="evenodd"
+                                  d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"></path>
+                        </svg>
+                    </button>
+                    <input type="number" class="form-control form-control-lg" aria-label="" name="defect_count" value="0" min="0"
+                           max="999999"
+                           maxlength="9">
+                    <button class="btn btn-sm btn-secondary input-minus">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-dash-lg"
+                             viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="col-12 keyboard keyboard-defect px-2 collapse" data-input-id="defect_keyboard" id="collapseDefect">
+                <div class="row">
+                    <button class="btn btn-secondary col m-1 fs-5" data-value="1">1</button>
+                    <button class="btn btn-secondary col m-1 fs-5" data-value="2">2</button>
+                    <button class="btn btn-secondary col m-1 fs-5" data-value="3">3</button>
+                </div>
+                <div class="row">
+                    <button class="btn btn-secondary col m-1 fs-5" data-value="4">4</button>
+                    <button class="btn btn-secondary col m-1 fs-5" data-value="5">5</button>
+                    <button class="btn btn-secondary col m-1 fs-5" data-value="6">6</button>
+                </div>
+                <div class="row">
+                    <button class="btn btn-secondary col m-1 fs-5" data-value="7">7</button>
+                    <button class="btn btn-secondary col m-1 fs-5" data-value="8">8</button>
+                    <button class="btn btn-secondary col m-1 fs-5" data-value="9">9</button>
+                </div>
+                <div class="row">
+                    <button class="btn btn-secondary col m-1 fs-5" data-value="0">0</button>
+                    <button class="btn btn-danger col-4 m-1 reset text-truncate">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-trash"
+                             viewBox="0 0 16 16">
+                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"></path>
+                            <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"></path>
+                        </svg>
+                        {{ trans('Reset') }}
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
+    {% endif %}
 
-    <!-- Correct keyboard -->
-    <div class="border border-warning-subtle rounded my-2 p-2">
-        <div class="col-12 mb-3">
-            <label for="correct_keyboard" class="form-label h4">{{ trans('Correct count') }}</label>
-            <button class="btn btn-outline-info float-end" data-bs-toggle="collapse" data-bs-target="#collapseСorrect" aria-expanded="false"
-                    aria-controls="collapseСorrect"
-                    style="--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-keyboard align-middle"
-                     viewBox="0 0 16 16">
-                    <path d="M14 5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM2 4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/>
-                    <path d="M13 10.25a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm0-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5 0A.25.25 0 0 1 8.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 8 8.75zm2 0a.25.25 0 0 1 .25-.25h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5a.25.25 0 0 1-.25-.25zm1 2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5-2A.25.25 0 0 1 6.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 6 8.75zm-2 0A.25.25 0 0 1 4.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 4 8.75zm-2 0A.25.25 0 0 1 2.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 2 8.75zm11-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0A.25.25 0 0 1 9.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 9 6.75zm-2 0A.25.25 0 0 1 7.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 7 6.75zm-2 0A.25.25 0 0 1 5.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 5 6.75zm-3 0A.25.25 0 0 1 2.25 6h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5A.25.25 0 0 1 2 6.75zm0 4a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm2 0a.25.25 0 0 1 .25-.25h5.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-5.5a.25.25 0 0 1-.25-.25z"/>
-                </svg>
-            </button>
-            <button class="btn btn-outline-danger float-end me-2" id="correct_clear"
-                    style="--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
-                    <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
-                    <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
-                </svg>
-            </button>
-            <div class="input-group" id="correct_keyboard">
-                <button class="btn btn-sm btn-secondary input-plus">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-plus-lg"
+    {% if true %}
+        <!-- Correct keyboard -->
+        <div class="border border-warning-subtle rounded my-2 p-2">
+            <div class="col-12 mb-3">
+                <label for="correct_keyboard" class="form-label h4">{{ trans('Correct count') }}</label>
+                <button class="btn btn-outline-info float-end" data-bs-toggle="collapse" data-bs-target="#collapseСorrect"
+                        aria-expanded="false"
+                        aria-controls="collapseСorrect"
+                        style="--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-keyboard align-middle"
                          viewBox="0 0 16 16">
-                        <path fill-rule="evenodd"
-                              d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"></path>
+                        <path d="M14 5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM2 4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/>
+                        <path d="M13 10.25a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm0-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5 0A.25.25 0 0 1 8.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 8 8.75zm2 0a.25.25 0 0 1 .25-.25h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5a.25.25 0 0 1-.25-.25zm1 2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5-2A.25.25 0 0 1 6.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 6 8.75zm-2 0A.25.25 0 0 1 4.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 4 8.75zm-2 0A.25.25 0 0 1 2.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 2 8.75zm11-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0A.25.25 0 0 1 9.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 9 6.75zm-2 0A.25.25 0 0 1 7.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 7 6.75zm-2 0A.25.25 0 0 1 5.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 5 6.75zm-3 0A.25.25 0 0 1 2.25 6h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5A.25.25 0 0 1 2 6.75zm0 4a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm2 0a.25.25 0 0 1 .25-.25h5.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-5.5a.25.25 0 0 1-.25-.25z"/>
                     </svg>
                 </button>
-                <input type="number" class="form-control form-control-lg" aria-label="" name="correct_count" value="0" maxlength="9">
-                <button class="btn btn-sm btn-secondary input-minus">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-dash-lg"
-                         viewBox="0 0 16 16">
-                        <path fill-rule="evenodd" d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8"></path>
-                    </svg>
-                </button>
-            </div>
-        </div>
-
-        <div class="col-12 keyboard keyboard-correct px-2 collapse" data-input-id="correct_keyboard" id="collapseСorrect">
-            <div class="row">
-                <button class="btn btn-secondary col m-1 fs-5" data-value="1">1</button>
-                <button class="btn btn-secondary col m-1 fs-5" data-value="2">2</button>
-                <button class="btn btn-secondary col m-1 fs-5" data-value="3">3</button>
-            </div>
-            <div class="row">
-                <button class="btn btn-secondary col m-1 fs-5" data-value="4">4</button>
-                <button class="btn btn-secondary col m-1 fs-5" data-value="5">5</button>
-                <button class="btn btn-secondary col m-1 fs-5" data-value="6">6</button>
-            </div>
-            <div class="row">
-                <button class="btn btn-secondary col m-1 fs-5" data-value="7">7</button>
-                <button class="btn btn-secondary col m-1 fs-5" data-value="8">8</button>
-                <button class="btn btn-secondary col m-1 fs-5" data-value="9">9</button>
-            </div>
-            <div class="row">
-                <button class="btn btn-secondary col m-1 fs-5" data-value="-">+/-</button>
-                <button class="btn btn-secondary col m-1 fs-5" data-value="0">0</button>
-                <button class="btn btn-danger col m-1 reset text-truncate">
+                <button class="btn btn-outline-danger float-end me-2" id="correct_clear"
+                        style="--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-trash"
                          viewBox="0 0 16 16">
-                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"></path>
-                        <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"></path>
+                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+                        <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
                     </svg>
-                    {{ trans('Reset') }}
                 </button>
+                <div class="input-group" id="correct_keyboard">
+                    <button class="btn btn-sm btn-secondary input-plus">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-plus-lg"
+                             viewBox="0 0 16 16">
+                            <path fill-rule="evenodd"
+                                  d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"></path>
+                        </svg>
+                    </button>
+                    <input type="number" class="form-control form-control-lg" aria-label="" name="correct_count" value="0" maxlength="9">
+                    <button class="btn btn-sm btn-secondary input-minus">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-dash-lg"
+                             viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="col-12 keyboard keyboard-correct px-2 collapse" data-input-id="correct_keyboard" id="collapseСorrect">
+                <div class="row">
+                    <button class="btn btn-secondary col m-1 fs-5" data-value="1">1</button>
+                    <button class="btn btn-secondary col m-1 fs-5" data-value="2">2</button>
+                    <button class="btn btn-secondary col m-1 fs-5" data-value="3">3</button>
+                </div>
+                <div class="row">
+                    <button class="btn btn-secondary col m-1 fs-5" data-value="4">4</button>
+                    <button class="btn btn-secondary col m-1 fs-5" data-value="5">5</button>
+                    <button class="btn btn-secondary col m-1 fs-5" data-value="6">6</button>
+                </div>
+                <div class="row">
+                    <button class="btn btn-secondary col m-1 fs-5" data-value="7">7</button>
+                    <button class="btn btn-secondary col m-1 fs-5" data-value="8">8</button>
+                    <button class="btn btn-secondary col m-1 fs-5" data-value="9">9</button>
+                </div>
+                <div class="row">
+                    <button class="btn btn-secondary col m-1 fs-5" data-value="-">+/-</button>
+                    <button class="btn btn-secondary col m-1 fs-5" data-value="0">0</button>
+                    <button class="btn btn-danger col m-1 reset text-truncate">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-trash"
+                             viewBox="0 0 16 16">
+                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"></path>
+                            <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"></path>
+                        </svg>
+                        {{ trans('Reset') }}
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
+    {% endif %}
+
+    {% if custom_fields is not none and custom_fields|length > 0 %}
+        <div>
+            {% for field in custom_fields %}
+                <div class="mb-3">
+                    {% if field.label or field.name %}
+                        <label for="{{ field.name }}" class="form-label">{{ field.label or field.name }}</label>
+                    {% endif %}
+                    <input type="{{ field.type }}" value="{{ field.value|e }}" name="{{ field.name }}" id="{{ field.name }}"
+                           class="form-control custom_field">
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
 
     <!-- Buttons -->
     <div class="col-12 mb-3 px-2">

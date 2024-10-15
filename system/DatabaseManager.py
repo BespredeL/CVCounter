@@ -29,6 +29,7 @@ class CVCounter(Base):
     defects_count = Column(Integer, default=0)
     correct_count = Column(Integer, default=0)
     parts = Column(Text, nullable=True)
+    custom_fields = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
@@ -70,13 +71,25 @@ class DatabaseManager:
         source_count (int, optional): The source count. Defaults to 0.
         defects_count (int, optional): The defects count. Defaults to 0.
         correct_count (int, optional): The correct count. Defaults to 0.
+        custom_fields (str, optional): The custom fields. Defaults to ''.
         active (bool, optional): The active status. Defaults to True.
     """
 
-    def save_result(self, location, total_count=0, source_count=0, defects_count=0, correct_count=0, active=True):
+    def save_result(self, location, total_count=0, source_count=0, defects_count=0, correct_count=0, custom_fields='', active=True):
         session = self.create_session()
         try:
             result = session.query(CVCounter).filter_by(location=location, active=True).first()
+
+            # Обновляем существующие custom_fields
+            existing_custom_fields = json.loads(result.custom_fields) if result.custom_fields else {}
+            new_custom_fields = json.loads(custom_fields)
+            if new_custom_fields:
+                # Объединение нового и существующего словаря
+                existing_custom_fields.update(new_custom_fields)
+                custom_fields = json.dumps(existing_custom_fields)
+            else:
+                custom_fields = '{}'
+
             if result:
                 # Обновляем существующую запись
                 result.active = active
@@ -84,6 +97,7 @@ class DatabaseManager:
                 result.source_count = source_count
                 result.defects_count = defects_count
                 result.correct_count = correct_count
+                result.custom_fields = custom_fields
                 result.updated_at = datetime.now()
             else:
                 # Вставляем новую запись
@@ -94,6 +108,7 @@ class DatabaseManager:
                     source_count=source_count,
                     defects_count=defects_count,
                     correct_count=correct_count,
+                    custom_fields=custom_fields,
                     created_at=datetime.now(),
                     updated_at=datetime.now()
                 )
@@ -178,14 +193,14 @@ class DatabaseManager:
         key (str, optional): The key. Defaults to ''.
 
     Returns:
-        int: The current counter.
+        CVCounter: The current counter.
     """
 
     def get_current_count(self, key=''):
         session = self.create_session()
         try:
             result = session.query(CVCounter).filter_by(active=True, location=key).first()
-            return result.total_count if result else None
+            return result if result else None
         except SQLAlchemyError as error:
             self.__logger.log_error(str(error))
             return None

@@ -20,6 +20,9 @@
                     <th scope="col">{{ trans('Correct') }}</th>
                     <th scope="col">{{ trans('Created') }}</th>
                     <th scope="col">{{ trans('Updated') }}</th>
+                    {% for field in config.get('custom_fields', []) %}
+                        <th scope="col">{{ field.label }}</th>
+                    {% endfor %}
                 </tr>
                 </thead>
                 <tbody>
@@ -33,10 +36,15 @@
                         <td>{{ v.correct_count }}</td>
                         <td>{{ v.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
                         <td>{{ v.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+
+                        {% set custom_fields = json.loads(v.custom_fields) %}
+                        {% for field in config.get('custom_fields', []) %}
+                            <td>{{ custom_fields[field.name] }}</td>
+                        {% endfor %}
                     </tr>
                 {% else %}
                     <tr>
-                        <td colspan="8" class="text-center">{{ trans('No data') }}</td>
+                        <td colspan="{{ config.get('custom_fields', [])|length + 8 }}" class="text-center">{{ trans('No data') }}</td>
                     </tr>
                 {% endfor %}
                 </tbody>

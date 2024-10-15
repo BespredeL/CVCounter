@@ -11,15 +11,21 @@
  * @param url
  */
 function saveCount(url) {
-    let defect_count = $('#defect_keyboard input').val();
-    let correct_count = $('#correct_keyboard input').val();
+    let defect_count = $('#defect_keyboard input').val() || 0;
+    let correct_count = $('#correct_keyboard input').val() || 0;
+    let custom_fields = {};
+
+    $('.custom_field').each(function () {
+        custom_fields[this.name] = this.value;
+    });
 
     $.ajax({
         url: url,
         method: 'post',
         data: {
             'correct_count': parseInt(correct_count),
-            'defect_count': parseInt(defect_count)
+            'defect_count': parseInt(defect_count),
+            'custom_fields': JSON.stringify(custom_fields)
         },
         success: function (data) {
             if (!data) {

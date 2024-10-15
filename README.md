@@ -52,6 +52,18 @@
     "admin": "scrypt:32768:8:1$rsdPYhqaQqpXQQ0o$aa3359c86228b4cee5fe8c4ed694db4b371fa7fab5100fa7b446db7e1ed8077e3bb63228d4a1899aeeef9b8d15f8e8bdbcc3457f020bcb3ec320332c76b5896b" // логин:пароль
   },
   "db": "sqlite:///system/database.db", // подключения к базе данных
+  "custom_fields": [ // конфигурация пользовательских полей
+    {
+      "name": "field_one", // название поля
+      "label": "Field One", // подпись поля
+      "type": "text" // тип поля
+    },
+    {
+      "name": "field_two", // название поля
+      "label": "Field Two", // подпись поля
+      "type": "text" // тип поля
+    }
+  ],
   "detection_default": { // конфигурация обнаружения по умолчанию
     "video_path": "", // путь к видеофайлу или источнику камеры
     "video_show_scale": 50, // масштаб вывода видео на странице

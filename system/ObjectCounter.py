@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # ! python3
-
+import json
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
 # Updated: 13.10.2024
@@ -397,6 +397,34 @@ class ObjectCounter:
         return image
 
     """
+    Get current count.
+
+    Parameters:
+        None
+
+    Returns:
+        dict: The current count.
+    """
+
+    def get_current_count(self):
+        result = self.db_manager.get_current_count(self.location)
+        if result is None:
+            return {}
+
+        return {
+            'active': result.active,
+            'location': result.location,
+            'total_count': result.total_count,
+            'source_count': result.source_count,
+            'defects_count': result.defects_count,
+            'correct_count': result.correct_count,
+            'parts': json.loads(result.parts) if result.parts else [],
+            'custom_fields': json.loads(result.custom_fields) if result.custom_fields else [],
+            'created_at': result.created_at.strftime("%Y-%m-%d %H:%M:%S") if result.created_at else None,
+            'updated_at': result.updated_at.strftime("%Y-%m-%d %H:%M:%S") if result.updated_at else None
+        }
+
+    """
     Save count.
 
     Parameters:
@@ -410,18 +438,19 @@ class ObjectCounter:
         dict: The total count.
     """
 
-    def save_count(self, location, correct_count, defect_count, active=1):
+    def save_count(self, location, correct_count, defect_count, custom_fields, active=1):
         total_count = int(self.total_count)
         defect_count = int(defect_count)
         correct_count = int(correct_count)
-        corrent_total_count = str(total_count - defect_count + correct_count)
+        current_total_count = str(total_count - defect_count + correct_count)
 
         result = self.db_manager.save_result(
             location=location,
-            total_count=corrent_total_count,
+            total_count=current_total_count,
             source_count=total_count,
             correct_count=correct_count,
             defects_count=defect_count,
+            custom_fields=custom_fields,
             active=active
         )
 

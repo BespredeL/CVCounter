@@ -37,6 +37,10 @@ $(function () {
         $('#correct_keyboard input').val(0);
     });
 
+    $('#defect_clear').on('click', function () {
+        $('#defect_keyboard input').val(0);
+    });
+
     // Обработчик для кнопок клавиатуры
     $('.keyboard button').on('click', function () {
         let $this = $(this);
