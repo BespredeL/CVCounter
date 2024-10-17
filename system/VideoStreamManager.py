@@ -72,7 +72,7 @@ class VideoStreamManager:
                 if not self.__cap.isOpened():
                     raise ValueError(f"Cannot open video stream: {self.__video_stream}")
 
-                # Получаем частоту кадров (FPS) для видеофайлов
+                # Getting the frame rate (FPS) for video files
                 self.__fps = self.__cap.get(cv2.CAP_PROP_FPS)
                 if self.__fps == 0:
                     self.__fps = 30
@@ -113,8 +113,8 @@ class VideoStreamManager:
     """
 
     def is_stream(self):
-        return not (isinstance(self.__video_stream, str)
-                    and self.__video_stream.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://', 'tcp://')))
+        return (isinstance(self.__video_stream, str)
+                and self.__video_stream.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://', 'tcp://')))
 
     """
     A method to retrieve a frame using the 'cap' attribute.
