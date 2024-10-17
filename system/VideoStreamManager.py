@@ -163,7 +163,8 @@ class VideoStreamManager:
     """
 
     def encoding_frame(self, frame, quality=95, ext="jpg"):
-        ret, frame_encoded = cv2.imencode("." + ext, frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
+        ext = ext if ext.startswith(".") else "." + ext
+        ret, frame_encoded = cv2.imencode(ext, frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
         return frame_encoded
 
     """
