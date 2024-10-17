@@ -36,8 +36,10 @@ function saveCount(url) {
                 };
             }
             $("#total_count").html(data.total_count);
-            $("#defect_keyboard input").val(data.defect_count);
-            $("#correct_keyboard input").val(data.correct_count);
+            // $("#defect_keyboard input").val(data.defect_count);
+            // $("#correct_keyboard input").val(data.correct_count);
+            $("#defect_keyboard input").val(0);
+            $("#correct_keyboard input").val(0);
         }
     });
 }
@@ -63,6 +65,15 @@ function resetCount(url) {
             $("#total_count").html(data.total_count);
             $("#defect_keyboard input").val(data.defect_count || 0);
             $("#correct_keyboard input").val(data.correct_count || 0);
+            $(".custom_field").each(function () {
+                if ($(this).is('input[type="checkbox"], input[type="radio"]')) {
+                    $(this).prop('checked', false);
+                } else if ($(this).is('input, textarea')) {
+                    $(this).val('');
+                } else if ($(this).is('select')) {
+                    $(this).prop('selectedIndex', 0);
+                }
+            });
         }
     });
 }

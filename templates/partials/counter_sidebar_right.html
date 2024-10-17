@@ -8,14 +8,20 @@
             <div class="h4 position-absolute">{{ trans('Quantity:') }} <span id="total_count">0</span></div>
             <div id="current_count" class="display-1 pt-3">0</div>
 
-            <div class="h5 d-flex justify-content-between w-100 mt-2 pb-1 border-top border-dark-subtle">
-                <div>{{ trans('Defective products') }}: <span id="defect_count">0</span></div>
-                <div>{{ trans('Corr.') }}: <span id="correct_count">0</span></div>
-            </div>
+            {% if form_config.get('defect_show', true) or form_config.get('correct_show', true) %}
+                <div class="h5 d-flex justify-content-between w-100 mt-2 pb-1 border-top border-dark-subtle">
+                    <div class="{{ 'd-none' if not form_config.get('defect_show', true) }}">
+                        {{ trans('Defective products') }}: <span id="defect_count">0</span>
+                    </div>
+                    <div class="{{ 'd-none' if not form_config.get('correct_show', true) }}">
+                        {{ trans('Corr.') }}: <span id="correct_count">0</span>
+                    </div>
+                </div>
+            {% endif %}
         </div>
     {% endif %}
 
-    {% if true %}
+    {% if form_config.get('defect_show', true) %}
         <!-- Defect keyboard -->
         <div class="border border-danger-subtle rounded my-2 p-2">
             <div class="col-12 mb-3">
@@ -90,7 +96,7 @@
         </div>
     {% endif %}
 
-    {% if true %}
+    {% if form_config.get('correct_show', true) %}
         <!-- Correct keyboard -->
         <div class="border border-warning-subtle rounded my-2 p-2">
             <div class="col-12 mb-3">
@@ -163,15 +169,26 @@
         </div>
     {% endif %}
 
-    {% if custom_fields is not none and custom_fields|length > 0 %}
+    {% if form_config.get('custom_fields', {}) %}
         <div>
-            {% for field in custom_fields %}
+            {% for field in form_config.get('custom_fields', {}) %}
                 <div class="mb-3">
                     {% if field.label or field.name %}
                         <label for="{{ field.name }}" class="form-label">{{ field.label or field.name }}</label>
                     {% endif %}
-                    <input type="{{ field.type }}" value="{{ field.value|e }}" name="{{ field.name }}" id="{{ field.name }}"
-                           class="form-control custom_field">
+                    {% if field.type == 'text' or field.type == 'number' or field.type == 'date' or field.type == 'datetime' %}
+                        <input type="{{ field.type }}" value="{{ field.value|e }}" name="{{ field.name }}" id="{{ field.name }}"
+                               class="form-control custom_field">
+                    {% elif field.type == 'textarea' %}
+                        <textarea name="{{ field.name }}" id="{{ field.name }}"
+                                  class="form-control custom_field">{{ field.value|e }}</textarea>
+                    {% elif field.type == 'select' %}
+                        <select name="{{ field.name }}" id="{{ field.name }}" class="form-select custom_field">
+                            {% for value in field.values %}
+                                <option value="{{ value }}">{{ value }}</option>
+                            {% endfor %}
+                        </select>
+                    {% endif %}
                 </div>
             {% endfor %}
         </div>

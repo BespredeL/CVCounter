@@ -123,5 +123,9 @@
     "Defect": "Брак",
     "Correct": "Корректировка",
     "Created": "Создан",
-    "Updated": "Обновлен"
+    "Updated": "Обновлен",
+    "Form": "Форма",
+    "Defect Show": "Брак",
+    "Correct Show": "Корректировка",
+    "Custom Fields": "Пользовательские поля"
 }

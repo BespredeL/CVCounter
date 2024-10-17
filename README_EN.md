@@ -52,18 +52,17 @@ You can run the browser in kiosk mode to prevent exiting it (for example, for Go
     "admin": "scrypt:32768:8:1$rsdPYhqaQqpXQQ0o$aa3359c86228b4cee5fe8c4ed694db4b371fa7fab5100fa7b446db7e1ed8077e3bb63228d4a1899aeeef9b8d15f8e8bdbcc3457f020bcb3ec320332c76b5896b" // login:password
   },
   "db": "sqlite:///system/database.db", // database connections
-  "custom_fields": [ // custom fields configuration
-    {
-      "name": "field_one", // field name
-      "label": "Field One", // field signature
-      "type": "text" // field type
-    },
-    {
-      "name": "field_two", // field name
-      "label": "Field Two", // field signature
-      "type": "text" // field type
-    }
-  ],
+  "form": { // form configuration
+    "defect_show": true, // show defect form
+    "correct_show": true, // show correction form
+    "custom_fields": [ // custom fields configuration
+      {
+        "name": "field_one", // field name
+        "label": "Field One", // field signature
+        "type": "text" // field type
+      }
+    ]
+  },
   "detection_default": { // default detection config
     "video_path": "", // path to video file or camera src
     "video_show_scale": 50, // scale of video preview

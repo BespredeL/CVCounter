@@ -6,8 +6,8 @@
 # Updated: 21.07.2024
 # Website: https://bespredel.name
 
-import json
 import ast
+import json
 
 
 class ConfigManager:

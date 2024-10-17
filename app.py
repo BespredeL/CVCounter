@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 # ! python3
-import json
+
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 15.10.2024
+# Updated: 17.10.2024
 # Website: https://bespredel.name
 
+import json
 import os
 import re
 from threading import Lock, Thread
@@ -153,18 +154,20 @@ def counter(location=None):
             threading_detectors[location] = Thread(target=object_counters[location].run_frames)
             threading_detectors[location].start()
 
-    custom_fields = config.get('custom_fields', {})
+    form_config = config.get('form', {})
     current_count = object_counters[location].get_current_count()
-    if current_count is not None:
-        for field in custom_fields:
+    for field in form_config.get('custom_fields', {}):
+        if current_count and current_count['custom_fields']:
             field['value'] = current_count['custom_fields'].get(field['name'], "")
+        else:
+            field['value'] = form_config['default_value'] if 'default_value' in form_config else ""
 
     return render_template(
         'counter.html',
         title=locations_dict.get(location, ),
         location=location,
         is_paused=object_counters[location].is_pause(),
-        custom_fields=custom_fields,
+        form_config=form_config,
         counter_on_sidebar=True
     )
 
@@ -193,18 +196,20 @@ def counter_t(location=None):
             threading_detectors[location] = Thread(target=object_counters[location].count_run)
             threading_detectors[location].start()
 
-    custom_fields = config.get('custom_fields', {})
+    form_config = config.get('form', {})
     current_count = object_counters[location].get_current_count()
-    if current_count is not None:
-        for field in custom_fields:
+    for field in form_config.get('custom_fields', {}):
+        if current_count and current_count['custom_fields']:
             field['value'] = current_count['custom_fields'].get(field['name'], "")
+        else:
+            field['value'] = form_config['default_value'] if 'default_value' in form_config else ""
 
     return render_template(
         'counter_text.html',
         title=locations_dict.get(location, ),
         location=location,
         is_paused=object_counters[location].is_pause(),
-        custom_fields=custom_fields,
+        form_config=form_config,
         # counter_on_sidebar=False
     )
 
@@ -253,7 +258,7 @@ def save_count(location=None):
 
     correct_count = request.form['correct_count']
     defect_count = request.form['defect_count']
-    custom_fields = request.form['custom_fields']
+    custom_fields = request.form['custom_fields'] if 'custom_fields' in request.form else ""
     result = object_counters[location].save_count(
         location=location,
         correct_count=correct_count,

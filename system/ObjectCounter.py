@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 # ! python3
-import json
+
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 15.10.2024
+# Updated: 17.10.2024
 # Website: https://bespredel.name
 
+import json
 import os
 import random
 import re
@@ -442,14 +443,20 @@ class ObjectCounter:
         total_count = int(self.total_count)
         defect_count = int(defect_count)
         correct_count = int(correct_count)
-        current_total_count = str(total_count - defect_count + correct_count)
+        # current_total_count = str(total_count - defect_count + correct_count)
+
+        # self.total_count = self.total_count - defect_count + correct_count
+        self.defect_count += defect_count
+        self.correct_count += correct_count
+        self.current_count = self.current_count - defect_count + correct_count
+        current_total_count = str(total_count - self.defect_count + self.correct_count)
 
         result = self.db_manager.save_result(
             location=location,
             total_count=current_total_count,
             source_count=total_count,
-            correct_count=correct_count,
-            defects_count=defect_count,
+            correct_count=self.correct_count,
+            defects_count=self.defect_count,
             custom_fields=custom_fields,
             active=active
         )

@@ -3,15 +3,15 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 15.10.2024
+# Updated: 17.10.2024
 # Website: https://bespredel.name
 
 import json
 from datetime import datetime
 
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Boolean
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text, create_engine
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 from system.Logger import Logger
 
@@ -80,15 +80,17 @@ class DatabaseManager:
         try:
             result = session.query(CVCounter).filter_by(location=location, active=True).first()
 
-            # Обновляем существующие custom_fields
-            existing_custom_fields = json.loads(result.custom_fields) if result.custom_fields else {}
-            new_custom_fields = json.loads(custom_fields)
-            if new_custom_fields:
-                # Объединение нового и существующего словаря
-                existing_custom_fields.update(new_custom_fields)
-                custom_fields = json.dumps(existing_custom_fields)
-            else:
-                custom_fields = '{}'
+            new_custom_fields = {}
+            if custom_fields:
+                new_custom_fields = json.loads(custom_fields if custom_fields else '{}')
+
+            if result:
+                # Обновляем существующие custom_fields
+                existing_custom_fields = json.loads(result.custom_fields if result.custom_fields else '{}')
+                if new_custom_fields:
+                    # Объединение нового и существующего словаря
+                    existing_custom_fields.update(new_custom_fields)
+                    custom_fields = json.dumps(existing_custom_fields)
 
             if result:
                 # Обновляем существующую запись

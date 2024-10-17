@@ -123,5 +123,9 @@
     "Defect": "Defect",
     "Correct": "Correct",
     "Created": "Created",
-    "Updated": "Updated"
+    "Updated": "Updated",
+    "Form": "Form",
+    "Defect Show": "Defect",
+    "Correct Show": "Correct",
+    "Custom Fields": "Custom Fields"
 }
