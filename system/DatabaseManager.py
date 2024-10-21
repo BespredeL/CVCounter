@@ -210,6 +210,27 @@ class DatabaseManager:
             session.close()
 
     """
+    Returns the count for the given id.
+
+    Args:
+        rec_id (int): The record id.
+
+    Returns:
+        CVCounter: The count.
+    """
+
+    def get_count(self, rec_id):
+        session = self.create_session()
+        try:
+            result = session.query(CVCounter).filter_by(id=rec_id).first()
+            return result if result else None
+        except SQLAlchemyError as error:
+            self.__logger.log_error(str(error))
+            return None
+        finally:
+            session.close()
+
+    """
     Returns all counters for the given key.
 
     Args:

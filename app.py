@@ -382,7 +382,7 @@ def reports():
 
 
 @app.route('/reports/<string:location>')
-def report_view(location):
+def report_list(location):
     r_page = request.args.get('page', 1, type=int)
     per_page = 10
 
@@ -403,6 +403,21 @@ def report_view(location):
         location=location,
         current_page=current_page,
         total_pages=total_pages,
+        json=json
+    )
+
+
+@app.route('/reports/<string:location>/<int:id>')
+def report_show(location, id):
+    counter = db_manager.get_count(id)
+
+    if counter is None:
+        abort(404, trans('Page not found'))
+
+    return render_template(
+        'reports_show.html',
+        location=location,
+        counter=counter,
         json=json
     )
 

@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <a href="{{ url_for('index') }}" class="text-decoration-none text-body">
+        <h1 class="border-bottom pb-1">{% block title %}CVCounter - {{ trans('Reports') }}{% endblock %}</h1>
+    </a>
+{% endblock %}
+
+{% block content %}
+    <div class="row py-3">
+        <div class="col-12">
+            <div class="h3">{{ trans('Primary information') }}:</div>
+            <dl class="row">
+                <dt class="col-md-2">{{ trans('Location') }}</dt>
+                <dd class="col-md-10">{{ counter.location|striptags|title }}</dd>
+
+                <dt class="col-md-2">{{ trans('Source') }}</dt>
+                <dd class="col-md-10">{{ counter.source_count }}</dd>
+
+                <dt class="col-md-2">{{ trans('Defect') }}</dt>
+                <dd class="col-md-10">{{ counter.defects_count }}</dd>
+
+                <dt class="col-md-2">{{ trans('Correct') }}</dt>
+                <dd class="col-md-10">{{ counter.correct_count }}</dd>
+
+                <dt class="col-md-2 text-truncate">{{ trans('Total') }}</dt>
+                <dd class="col-md-10">{{ counter.total_count }}</dd>
+
+                <dt class="col-md-2">{{ trans('Created') }}</dt>
+                <dd class="col-md-10">{{ counter.created_at.strftime('%d.%m.%Y %H:%M:%S') }}</dd>
+
+                <dt class="col-md-2">{{ trans('Updated') }}</dt>
+                <dd class="col-md-10">{{ counter.updated_at.strftime('%d.%m.%Y %H:%M:%S') }}</dd>
+            </dl>
+
+            {% if counter.custom_fields %}
+                <div class="h3">{{ trans('Secondary information') }}:</div>
+                <dl class="row">
+                    {% set custom_fields = json.loads(counter.custom_fields) %}
+                    {% for field in config.get('form.custom_fields', []) %}
+                        <dt class="col-md-2">{{ trans(field.label) }}</dt>
+                        <dd class="col-md-10">{{ custom_fields[field.name] | striptags }}</dd>
+                    {% endfor %}
+                </dl>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

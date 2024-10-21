@@ -127,5 +127,7 @@
     "Form": "Форма",
     "Defect Show": "Брак",
     "Correct Show": "Корректировка",
-    "Custom Fields": "Пользовательские поля"
+    "Custom Fields": "Пользовательские поля",
+    "Primary information": "Основное",
+    "Secondary information": "Дополнительно"
 }

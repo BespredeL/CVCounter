@@ -170,9 +170,9 @@
     {% endif %}
 
     {% if form_config.get('custom_fields', {}) %}
-        <div>
+        <div class="border border-secondary-subtle rounded my-2 p-2">
             {% for field in form_config.get('custom_fields', {}) %}
-                <div class="mb-3">
+                <div class="{{ 'mb-3' if not loop.last }}">
                     {% if field.label or field.name %}
                         <label for="{{ field.name }}" class="form-label">{{ field.label or field.name }}</label>
                     {% endif %}

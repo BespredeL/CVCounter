@@ -21,7 +21,7 @@
                     <tr>
                         <th scope="row">{{ loop.index }}</th>
                         <td>
-                            <a href="{{ url_for('report_view', location=k) }}">
+                            <a href="{{ url_for('report_list', location=k) }}">
                                 {{ object_counters[k]|striptags|title }}
                             </a>
                         </td>
