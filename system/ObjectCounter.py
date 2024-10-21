@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 17.10.2024
+# Updated: 21.10.2024
 # Website: https://bespredel.name
 
 import json
@@ -11,12 +11,10 @@ import os
 import random
 import re
 import time
-
 import cv2
 import numpy as np
 from shapely.geometry import Point, Polygon
 from ultralytics import YOLO, settings
-
 from system.Logger import Logger
 from system.NotificationManager import NotificationManager
 from system.VideoStreamManager import VideoStreamManager
@@ -261,7 +259,7 @@ class ObjectCounter:
                     continue
                 frame = self.vsm.resize_frame(frame, int(self.video_scale))
                 frame = self.vsm.encoding_frame(frame, int(self.video_quality), 'jpg')
-                yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + frame.tobytes() + b'\r\n')
+                yield b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + frame.tobytes() + b'\r\n'
             except Exception as e:
                 print(e)
 

@@ -3,11 +3,10 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 26.03.2024
-# Updated: 14.10.2024
+# Updated: 21.10.2024
 # Website: https://bespredel.name
 
 import time
-
 import cv2
 from imutils.video import VideoStream
 
