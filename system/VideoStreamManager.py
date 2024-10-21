@@ -151,18 +151,36 @@ class VideoStreamManager:
         return self.__fps
 
     """
-    A method to encode the frame.
+    Reconnects to the video stream
     
+    Parameters:
+        None
+    
+    Returns:
+        None
+    """
+
+    def reconnect(self):
+        self.stop()
+        time.sleep(5)
+        print("Reconnecting to video stream...")
+        self.start()
+        print("Reconnected to video stream")
+
+    """
+    A method to encode the frame.
+
     Parameters:
         frame: The frame to encode
         quality: The quality of the encoded frame
         ext: The extension of the encoded frame
-    
+
     Returns:
         frame_encoded: The encoded frame
     """
 
-    def encoding_frame(self, frame, quality=95, ext="jpg"):
+    @staticmethod
+    def encoding_frame(frame, quality=95, ext="jpg"):
         ext = ext if ext.startswith(".") else "." + ext
         ret, frame_encoded = cv2.imencode(ext, frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
         return frame_encoded
@@ -179,24 +197,8 @@ class VideoStreamManager:
         frame: The resized frame
     """
 
-    def resize_frame(self, frame, scale_percent=70):
+    @staticmethod
+    def resize_frame(frame, scale_percent=70):
         width = int(frame.shape[1] * scale_percent / 100)
         height = int(frame.shape[0] * scale_percent / 100)
         return cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
-
-    """
-    Reconnects to the video stream
-    
-    Parameters:
-        None
-    
-    Returns:
-        None
-    """
-
-    def reconnect(self):
-        self.stop()
-        time.sleep(5)
-        print("Reconnecting to video stream...")
-        self.start()
-        print("Reconnected to video stream")
