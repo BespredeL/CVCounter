@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 26.03.2024
-# Updated: 21.10.2024
+# Updated: 23.10.2024
 # Website: https://bespredel.name
 
 import time
@@ -164,7 +164,10 @@ class VideoStreamManager:
         time.sleep(5)
         print("Reconnecting to video stream...")
         self.start()
-        print("Reconnected to video stream")
+        if self.__cap is not None:
+            print("Reconnected to video stream successfully.")
+        else:
+            print("Failed to reconnect to video stream.")
 
     """
     A method to encode the frame.

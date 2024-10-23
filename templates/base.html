@@ -7,6 +7,7 @@
      -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
     <title>{% if url_for(request.endpoint, **request.view_args) != "/" %}CVCounter - {% endif %}{% block title %}{% endblock %}</title>
     <!-- Styles -->
     <link rel="shortcut icon" href="{{ url_for('static', filename='icons/favicon.ico') }}">
