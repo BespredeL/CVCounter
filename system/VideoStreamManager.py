@@ -19,6 +19,7 @@ class VideoStreamManager:
         self.__video_stream = video_stream
         self.__cap = None
         self.__fps = 30
+        self.__frame_interval = 1 / self.__fps  # Interval between frames based on FPS
 
     """
     Get the video stream source.
@@ -65,16 +66,16 @@ class VideoStreamManager:
                 if self.__cap is not None:
                     self.__cap.stop()
                 self.__cap = VideoStream(self.__video_stream).start()
-                self.__fps = 30
+                self.__fps = 60
             else:
                 self.__cap = cv2.VideoCapture(self.__video_stream)
                 if not self.__cap.isOpened():
                     raise ValueError(f"Cannot open video stream: {self.__video_stream}")
 
                 # Getting the frame rate (FPS) for video files
-                self.__fps = self.__cap.get(cv2.CAP_PROP_FPS)
-                if self.__fps == 0:
-                    self.__fps = 30
+                self.__fps = self.__cap.get(cv2.CAP_PROP_FPS) or 30
+
+            self.__frame_interval = 1 / self.__fps
         except Exception as e:
             print(f"An error occurred while starting the video stream: {e}")
 
@@ -112,8 +113,8 @@ class VideoStreamManager:
     """
 
     def is_stream(self):
-        return (isinstance(self.__video_stream, str)
-                and self.__video_stream.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://', 'tcp://')))
+        return (isinstance(self.__video_stream, str) and self.__video_stream.lower().startswith(
+            ('rtsp://', 'rtmp://', 'http://', 'https://', 'tcp://')))
 
     """
     A method to retrieve a frame using the 'cap' attribute.
@@ -134,6 +135,15 @@ class VideoStreamManager:
                 ret, frame = self.__cap.read()
                 if not ret:
                     print("Failed to grab frame")
+
+            # If no frame was retrieved, reconnect
+            if frame is None:
+                print("Frame is None, attempting to reconnect...")
+                self.reconnect()
+            else:
+                # Add delay based on FPS to reduce load
+                time.sleep(self.__frame_interval)
+
         return frame
 
     """

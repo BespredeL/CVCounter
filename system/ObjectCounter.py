@@ -109,6 +109,7 @@ class ObjectCounter:
         config_manager.read_config()
         detector_config = config_manager.get(f"detections.{location}")
 
+        self.debug = kwargs.get('debug', config_manager.get('debug', False))
         self.location = location
         self.weights = kwargs.get('weights', detector_config.get('weights_path'))
         self.device = kwargs.get('device', detector_config.get('device', 'cpu'))
@@ -192,9 +193,10 @@ class ObjectCounter:
             self._save_dataset_image(frame_copy)
 
         # FPS counter on the frame
-        fps = int(1 / (time.time() - start_time))
-        cv2.putText(frame, f'FPS: {fps}',
-                    self.FPS_POSITION, cv2.FONT_HERSHEY_SIMPLEX, self.FPS_FONT_SCALE, self.FPS_COLOR, self.FPS_THICKNESS)
+        if self.debug:
+            fps = int(1 / (time.time() - start_time))
+            cv2.putText(frame, f'FPS: {fps}',
+                        self.FPS_POSITION, cv2.FONT_HERSHEY_SIMPLEX, self.FPS_FONT_SCALE, self.FPS_COLOR, self.FPS_THICKNESS)
 
         return frame
 
@@ -233,8 +235,7 @@ class ObjectCounter:
             try:
                 frame = self.vsm.get_frame()
                 if frame is None:
-                    self._reconnect()
-                    continue
+                    continue  # Skip the iteration if the frame is not received
                 self.frame = self._process_frame(frame)
             except Exception as e:
                 print(e)
@@ -254,31 +255,15 @@ class ObjectCounter:
         self.frame_lost = 0
         while self.running:
             try:
-                frame = self.frame if self.frame is not None else self._reconnect_and_get_frame()
+                frame = self.vsm.get_frame()
                 if frame is None:
                     continue
+                frame = self._process_frame(frame)
                 frame = self.vsm.resize_frame(frame, int(self.video_scale))
                 frame = self.vsm.encoding_frame(frame, int(self.video_quality), 'jpg')
                 yield b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + frame.tobytes() + b'\r\n'
             except Exception as e:
                 print(e)
-
-    """
-    Retrieves a frame from the video stream manager (vsm) and processes it.
-
-    This function first calls the `get_frame()` method of the `vsm` object to retrieve a frame. 
-    If the frame is `None`, it calls the `reconnect()` method to reconnect to the video stream. 
-    Finally, it calls the `process_frame()` method to process the frame and returns the processed frame.
-
-    Returns:
-        The processed frame obtained from the video stream.
-    """
-
-    def _reconnect_and_get_frame(self):
-        frame = self.vsm.get_frame()
-        if frame is None:
-            self._reconnect()
-        return self._process_frame(frame)
 
     """
     Counts the number of runs in the video stream.
