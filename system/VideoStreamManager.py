@@ -66,14 +66,14 @@ class VideoStreamManager:
                 if self.__cap is not None:
                     self.__cap.stop()
                 self.__cap = VideoStream(self.__video_stream).start()
-                self.__fps = 30
+                self.__fps = 60
             else:
                 self.__cap = cv2.VideoCapture(self.__video_stream)
                 if not self.__cap.isOpened():
                     raise ValueError(f"Cannot open video stream: {self.__video_stream}")
 
                 # Getting the frame rate (FPS) for video files
-                self.__fps = self.__cap.get(cv2.CAP_PROP_FPS) or 30
+                self.__fps = self.__cap.get(cv2.CAP_PROP_FPS) or 60
 
             self.__frame_interval = 1 / self.__fps
         except Exception as e:
