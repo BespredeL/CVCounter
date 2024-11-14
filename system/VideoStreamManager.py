@@ -66,7 +66,7 @@ class VideoStreamManager:
                 if self.__cap is not None:
                     self.__cap.stop()
                 self.__cap = VideoStream(self.__video_stream).start()
-                self.__fps = 60
+                self.__fps = 30
             else:
                 self.__cap = cv2.VideoCapture(self.__video_stream)
                 if not self.__cap.isOpened():
