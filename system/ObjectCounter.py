@@ -38,6 +38,7 @@ class ObjectCounter:
         self.correct_count = 0
         self.frame = None
         self.frame_lost = 0
+        self.get_frames_running = None
         self.running = True
         self.paused = False
 
@@ -86,6 +87,7 @@ class ObjectCounter:
         - self.device (str): The device to use for inference ('cpu' by default).
         - self.confidence (float): The confidence threshold for object detection.
         - self.iou (float): The IoU threshold for object detection.
+        - self.video_fps (int): The frame rate of the video.
         - self.counting_area (list): The coordinates of the counting area.
         - self.counting_area_color (tuple): The color of the counting area.
         - self.video_scale (int): The scale of the video.
@@ -133,139 +135,6 @@ class ObjectCounter:
             self.total_objects = set(range(-start_count, 0))
             config_manager.set(f"detections.{self.location}.start_total_count", 0)
             config_manager.save_config()
-
-    """
-    Process the frame.
-
-    Parameters:
-        frame (numpy.ndarray): The frame to process.
-
-    Returns:
-        numpy.ndarray: The processed frame.
-    """
-
-    def _process_frame(self, frame):
-        start_time = time.time()
-        frame_copy = frame.copy()
-        last_total_count = self.total_count
-
-        boxes = self._detect(frame)
-        frame = self._draw_counting_area(frame)
-        frame = self._detect_count(frame, boxes)
-        self.frame_lost = 0
-
-        # Save images from training dataset
-        if self.dataset.get('enable') and last_total_count != self.total_count and random.random() < float(self.dataset['probability']):
-            self._save_dataset_image(frame_copy)
-
-        # FPS counter on the frame
-        if self.debug:
-            fps = int(1 / (time.time() - start_time))
-            cv2.putText(frame, f'FPS: {fps}',
-                        self.FPS_POSITION, cv2.FONT_HERSHEY_SIMPLEX, self.FPS_FONT_SCALE, self.FPS_COLOR, self.FPS_THICKNESS)
-
-        return frame
-
-    """
-    Saves an image to the dataset path if it exists.
-
-    Parameters:
-        frame (numpy.ndarray): The image frame to be saved.
-
-    Returns:
-        None
-    """
-
-    def _save_dataset_image(self, frame):
-        dataset_path = self.dataset.get('path')
-        if not os.path.exists(dataset_path):
-            os.makedirs(dataset_path)
-        location_clean = re.sub('[^A-Za-z0-9-_]+', '', self.location)
-        create_time = int(time.time())
-        cv2.imwrite(f'{dataset_path}/{location_clean}_{create_time}.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 100])
-
-    """
-    Run the generation of frames.
-
-    Parameters:
-        None
-
-    Returns:
-        None
-    """
-
-    def run_frames(self):
-        self.notif_manager.event('counter_status', {'status': 'started', 'location': self.location})
-
-        while self.running:
-            try:
-                frame = self.vsm.get_frame()
-                if frame is None:
-                    self.frame_lost += 1
-                    self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
-                    continue  # Skip the iteration if the frame is not received
-
-                if self.frame_lost > 0:
-                    self.frame_lost = 0
-                    self.notif_manager.notify(trans('Connection to camera restored!'), 'success')
-
-                self.frame = self._process_frame(frame)
-            except Exception as e:
-                print(e)
-                self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
-
-    """
-    Generator that yields frames in the form of JPEG images.
-
-    Parameters:
-        None
-
-    Returns:
-        A generator that yields frames in the form of JPEG images.
-    """
-
-    def get_frames(self):
-        while self.running:
-            try:
-                if self.frame is not None:
-                    encoded_frame = self.vsm.resize_frame(self.frame, int(self.video_scale))
-                    encoded_frame = self.vsm.encoding_frame(encoded_frame, int(self.video_quality), 'jpg')
-                    yield b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + encoded_frame.tobytes() + b'\r\n'
-                else:
-                    time.sleep(0.01)  # Wait for a short pause if there is no frame yet
-            except Exception as e:
-                print(e)
-
-    """
-    Counts the number of runs in the video stream.
-
-    Parameters:
-        None
-
-    Returns:
-        None
-    """
-
-    def count_run(self):
-        self.notif_manager.event('counter_status', {'status': 'started', 'location': self.location})
-        self.frame_lost = 0
-        while self.running:
-            try:
-                self.frame = self.vsm.get_frame()
-                if self.frame is None:
-                    self.frame_lost += 1
-                    self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
-                    continue
-
-                if self.frame_lost > 0:
-                    self.frame_lost = 0
-                    self.notif_manager.notify(trans('Connection to camera restored!'), 'success')
-
-                boxes = self._detect(self.frame)
-                self._detect_count(self.frame, boxes)
-            except Exception as e:
-                print(e)
-                self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
 
     """
     Detects objects in an image using a pre-trained model.
@@ -356,6 +225,112 @@ class ObjectCounter:
         })
 
         return image
+
+    """
+    Process the frame.
+
+    Parameters:
+        frame (numpy.ndarray): The frame to process.
+
+    Returns:
+        numpy.ndarray: The processed frame.
+    """
+
+    def _process_frame(self, frame):
+        start_time = time.time()
+        frame_copy = frame.copy()
+        last_total_count = self.total_count
+
+        boxes = self._detect(frame)
+        if self.get_frames_running:
+            frame = self._draw_counting_area(frame)
+        frame = self._detect_count(frame, boxes)
+        self.frame_lost = 0
+
+        # Save images from training dataset
+        if self.dataset.get('enable') and last_total_count != self.total_count and random.random() < float(self.dataset['probability']):
+            self._save_dataset_image(frame_copy)
+
+        # FPS counter on the frame
+        if self.debug:
+            fps = int(1 / (time.time() - start_time))
+            cv2.putText(frame, f'FPS: {fps}',
+                        self.FPS_POSITION, cv2.FONT_HERSHEY_SIMPLEX, self.FPS_FONT_SCALE, self.FPS_COLOR, self.FPS_THICKNESS)
+
+        return frame
+
+    """
+    Saves an image to the dataset path if it exists.
+
+    Parameters:
+        frame (numpy.ndarray): The image frame to be saved.
+
+    Returns:
+        None
+    """
+
+    def _save_dataset_image(self, frame):
+        dataset_path = self.dataset.get('path')
+        if not os.path.exists(dataset_path):
+            os.makedirs(dataset_path)
+        location_clean = re.sub('[^A-Za-z0-9-_]+', '', self.location)
+        create_time = int(time.time())
+        cv2.imwrite(f'{dataset_path}/{location_clean}_{create_time}.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 100])
+
+    """
+    Run the generation of frames.
+
+    Parameters:
+        None
+
+    Returns:
+        None
+    """
+
+    def run_frames(self):
+        self.notif_manager.event('counter_status', {'status': 'started', 'location': self.location})
+
+        while self.running:
+            try:
+                frame = self.vsm.get_frame()
+                if frame is None:
+                    self.frame_lost += 1
+                    self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
+                    continue  # Skip the iteration if the frame is not received
+
+                if self.frame_lost > 0:
+                    self.frame_lost = 0
+                    self.notif_manager.notify(trans('Connection to camera restored!'), 'success')
+
+                self.frame = self._process_frame(frame)
+            except Exception as e:
+                print(e)
+                self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
+
+    """
+    Generator that yields frames in the form of JPEG images.
+
+    Parameters:
+        None
+
+    Returns:
+        A generator that yields frames in the form of JPEG images.
+    """
+
+    def get_frames(self):
+        self.get_frames_running = True
+        try:
+            while self.running:
+                if self.frame is not None:
+                    encoded_frame = self.vsm.resize_frame(self.frame, int(self.video_scale))
+                    encoded_frame = self.vsm.encoding_frame(encoded_frame, int(self.video_quality), 'jpg')
+                    yield b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + encoded_frame.tobytes() + b'\r\n'
+                else:
+                    time.sleep(0.01)  # Wait for a short pause if there is no frame yet
+        except Exception as e:
+            print(e)
+        finally:
+            self.get_frames_running = False
 
     """
     Get current count.

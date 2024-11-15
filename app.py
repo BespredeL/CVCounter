@@ -193,7 +193,7 @@ def counter_t(location=None):
     object_detector_init(location)
     with lock:
         if location not in threading_detectors and location in object_counters:
-            threading_detectors[location] = Thread(target=object_counters[location].count_run)
+            threading_detectors[location] = Thread(target=object_counters[location].run_frames)
             threading_detectors[location].start()
 
     form_config = config.get('form', {})
@@ -225,14 +225,14 @@ def counter_t_multi(location_first, location_second):
     object_detector_init(location_first)
     with lock:
         if location_first not in threading_detectors and location_first in object_counters:
-            threading_detectors[location_first] = Thread(target=object_counters[location_first].count_run)
+            threading_detectors[location_first] = Thread(target=object_counters[location_first].run_frames)
             threading_detectors[location_first].start()
 
     # Init objects and threads for second location
     object_detector_init(location_second)
     with lock:
         if location_second not in threading_detectors and location_second in object_counters:
-            threading_detectors[location_second] = Thread(target=object_counters[location_second].count_run)
+            threading_detectors[location_second] = Thread(target=object_counters[location_second].run_frames)
             threading_detectors[location_second].start()
 
     # Page title

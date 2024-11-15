@@ -8,6 +8,7 @@
 
 import time
 import cv2
+from imutils.video import VideoStream
 
 
 class VideoStreamManager:
@@ -18,8 +19,8 @@ class VideoStreamManager:
         self.__video_stream = video_stream
         self.__cap = None
         self.__fps = video_fps  # Default FPS
-        self.__last_frame_time = time.time()  # Time of the last frame capture
         self.__actual_fps = 0  # Calculated FPS based on frame intervals
+        self.__last_frame_time = time.time()  # Time of the last frame capture
         self.__frame_interval = 1 / self.__fps if video_fps > 0 else 0  # Interval between frames based on FPS
 
     """
@@ -62,9 +63,18 @@ class VideoStreamManager:
 
     def start(self):
         try:
-            self.__cap = cv2.VideoCapture(self.__video_stream)
-            if not self.__cap.isOpened():
-                raise ValueError(f"Cannot open video stream: {self.__video_stream}")
+            # Check if the source is a streaming URL or a local video/camera
+            if self.is_stream():
+                if self.__cap is not None:
+                    self.__cap.stop()
+                self.__cap = VideoStream(self.__video_stream).start()
+                if self.__cap is None:
+                    raise ValueError(f"Cannot open video stream: {self.__video_stream}")
+            else:
+                self.__cap = cv2.VideoCapture(self.__video_stream)
+                #self.__cap.set(cv2.CAP_PROP_FPS, self.__fps)
+                if not self.__cap.isOpened():
+                    raise ValueError(f"Cannot open video stream: {self.__video_stream}")
         except Exception as e:
             print(f"An error occurred while starting the video stream: {e}")
 
@@ -81,27 +91,15 @@ class VideoStreamManager:
     def stop(self):
         try:
             if self.__cap is not None:
-                self.__cap.release()
+                if self.is_stream():
+                    self.__cap.stop()
+                else:
+                    self.__cap.release()
                 self.__cap = None
             else:
                 print("Stream is not active.")
         except Exception as e:
             print(f"An error occurred while stopping the video stream: {e}")
-
-    """
-    Check if the video stream is a valid stream by verifying if it starts with common protocols.
-    
-    Parameters:
-        None
-    
-    Returns:
-        bool: True if the video stream is a valid stream, False otherwise
-    """
-
-    def is_stream(self):
-        return isinstance(self.__video_stream, str) and self.__video_stream.lower().startswith(
-            ('rtsp://', 'rtmp://', 'http://', 'https://', 'tcp://')
-        )
 
     """
     A method to retrieve a frame using the 'cap' attribute.
@@ -116,17 +114,60 @@ class VideoStreamManager:
     def get_frame(self):
         frame = None
         if self.__cap is not None:
-            ret, frame = self.__cap.read()
-            if not ret or frame is None:
+            if self.is_stream():
+                frame = self.__cap.read()
+            else:
+                ret, frame = self.__cap.read()
+                if not ret:
+                    print("Failed to grab frame")
+
+            if frame is None:
                 print("Failed to grab frame or frame is None.")
                 self.reconnect()
-            else:
-                self.calculate_fps()
+
+            self.calculate_fps()  # Calculate actual FPS
 
             if self.__frame_interval > 0:
                 time.sleep(self.__frame_interval)  # Add delay to control FPS
 
         return frame
+
+    """
+    Reconnects to the video stream
+
+    Parameters:
+        None
+
+    Returns:
+        None
+    """
+
+    def reconnect(self):
+        print("Attempting to reconnect to video stream...")
+        if self.is_stream():
+            self.__cap.stop()
+        else:
+            self.__cap.release()
+        time.sleep(3)
+        self.start()
+        if (not self.is_stream() and self.__cap.isOpened()) or (self.is_stream() and self.__cap is not None):
+            print("Reconnected to video stream successfully.")
+        else:
+            print("Failed to reconnect to video stream.")
+
+    """
+    Check if the video stream is a valid stream by verifying if it starts with common protocols.
+
+    Parameters:
+        None
+
+    Returns:
+        bool: True if the video stream is a valid stream, False otherwise
+    """
+
+    def is_stream(self):
+        return isinstance(self.__video_stream, str) and self.__video_stream.lower().startswith(
+            ('rtsp://', 'rtmp://', 'http://', 'https://', 'tcp://'))
 
     """
     A method to get the actual calculated FPS.
@@ -169,26 +210,6 @@ class VideoStreamManager:
         time_difference = current_time - self.__last_frame_time
         self.__actual_fps = 1 / time_difference if time_difference > 0 else 0
         self.__last_frame_time = current_time
-
-    """
-    Reconnects to the video stream
-    
-    Parameters:
-        None
-    
-    Returns:
-        None
-    """
-
-    def reconnect(self):
-        print("Attempting to reconnect to video stream...")
-        self.stop()
-        time.sleep(5)
-        self.start()
-        if self.__cap is not None and self.__cap.isOpened():
-            print("Reconnected to video stream successfully.")
-        else:
-            print("Failed to reconnect to video stream.")
 
     """
     A method to encode the frame.
