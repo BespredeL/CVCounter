@@ -151,7 +151,6 @@ class VideoStreamManager:
             self.__cap.release()
 
         time.sleep(3)
-
         self.start()
         if (not self.is_stream() and self.__cap.isOpened()) or (self.is_stream() and self.__cap is not None):
             print("Reconnected to video stream successfully.")
