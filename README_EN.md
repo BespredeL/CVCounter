@@ -67,6 +67,7 @@ You can run the browser in kiosk mode to prevent exiting it (for example, for Go
     "video_path": "", // path to video file or camera src
     "video_show_scale": 50, // scale of video preview
     "video_show_quality": 50, // quality of video preview
+    "video_fps": false, // manual FPS setting
     "weights_path": "yolo_cfg/models/yolov8n.pt", // path to model Yolov8
     "counting_area": [[0, 0], [100, 0], [100, 100], [0, 100]], // counting area polygon
     "confidence": 0.7, // confidence threshold
@@ -84,6 +85,7 @@ You can run the browser in kiosk mode to prevent exiting it (for example, for Go
       "video_path": "", // path to video file or camera src
       "video_show_scale": 70, // scale of video preview
       "video_show_quality": 30, // quality of video preview
+      "video_fps": false, // manual FPS setting (optional)
       "weights_path": "yolo_cfg/models/yolov8n.pt", // path to model Yolov8
       "counting_area": [[0, 0], [100, 0], [100, 100], [0, 100]], // counting area polygon
       "confidence": 0.7, // confidence threshold
