@@ -72,7 +72,8 @@ class VideoStreamManager:
                     raise ValueError(f"Cannot open video stream: {self.__video_stream}")
             else:
                 self.__cap = cv2.VideoCapture(self.__video_stream)
-                #self.__cap.set(cv2.CAP_PROP_FPS, self.__fps)
+                if self.__fps > 0:
+                    self.__cap.set(cv2.CAP_PROP_FPS, self.__fps)
                 if not self.__cap.isOpened():
                     raise ValueError(f"Cannot open video stream: {self.__video_stream}")
         except Exception as e:
@@ -148,7 +149,9 @@ class VideoStreamManager:
             self.__cap.stop()
         else:
             self.__cap.release()
+
         time.sleep(3)
+
         self.start()
         if (not self.is_stream() and self.__cap.isOpened()) or (self.is_stream() and self.__cap is not None):
             print("Reconnected to video stream successfully.")
