@@ -1,6 +1,7 @@
 {
     "Detection config not found!": "Detection config not found!",
     "Lost connection to camera!": "Lost connection to camera!",
+    "Connection to camera restored!": "Connection to camera restored!",
     "Error reconnect: {video_path}": "Error reconnect: {video_path}",
     "Error reconnect": "Error reconnect",
     "Impossible to save! There is no connection to the database.": "Impossible to save! There is no connection to the database.",

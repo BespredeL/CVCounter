@@ -3,23 +3,24 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 26.03.2024
-# Updated: 23.10.2024
+# Updated: 15.11.2024
 # Website: https://bespredel.name
 
 import time
 import cv2
-from imutils.video import VideoStream
 
 
 class VideoStreamManager:
-    def __init__(self, video_stream):
+    def __init__(self, video_stream, video_fps):
         if not video_stream:
             raise ValueError("A video stream source is required")
 
         self.__video_stream = video_stream
         self.__cap = None
-        self.__fps = 30
-        self.__frame_interval = 1 / self.__fps  # Interval between frames based on FPS
+        self.__fps = video_fps  # Default FPS
+        self.__last_frame_time = time.time()  # Time of the last frame capture
+        self.__actual_fps = 0  # Calculated FPS based on frame intervals
+        self.__frame_interval = 1 / self.__fps if video_fps > 0 else 0  # Interval between frames based on FPS
 
     """
     Get the video stream source.
@@ -61,21 +62,9 @@ class VideoStreamManager:
 
     def start(self):
         try:
-            # Check if the source is a streaming URL or a local video/camera
-            if self.is_stream():
-                if self.__cap is not None:
-                    self.__cap.stop()
-                self.__cap = VideoStream(self.__video_stream).start()
-                self.__fps = 60
-            else:
-                self.__cap = cv2.VideoCapture(self.__video_stream)
-                if not self.__cap.isOpened():
-                    raise ValueError(f"Cannot open video stream: {self.__video_stream}")
-
-                # Getting the frame rate (FPS) for video files
-                self.__fps = self.__cap.get(cv2.CAP_PROP_FPS) or 60
-
-            self.__frame_interval = 1 / self.__fps
+            self.__cap = cv2.VideoCapture(self.__video_stream)
+            if not self.__cap.isOpened():
+                raise ValueError(f"Cannot open video stream: {self.__video_stream}")
         except Exception as e:
             print(f"An error occurred while starting the video stream: {e}")
 
@@ -92,10 +81,7 @@ class VideoStreamManager:
     def stop(self):
         try:
             if self.__cap is not None:
-                if self.is_stream():
-                    self.__cap.stop()
-                else:
-                    self.__cap.release()
+                self.__cap.release()
                 self.__cap = None
             else:
                 print("Stream is not active.")
@@ -113,8 +99,9 @@ class VideoStreamManager:
     """
 
     def is_stream(self):
-        return (isinstance(self.__video_stream, str) and self.__video_stream.lower().startswith(
-            ('rtsp://', 'rtmp://', 'http://', 'https://', 'tcp://')))
+        return isinstance(self.__video_stream, str) and self.__video_stream.lower().startswith(
+            ('rtsp://', 'rtmp://', 'http://', 'https://', 'tcp://')
+        )
 
     """
     A method to retrieve a frame using the 'cap' attribute.
@@ -129,22 +116,30 @@ class VideoStreamManager:
     def get_frame(self):
         frame = None
         if self.__cap is not None:
-            if self.is_stream():
-                frame = self.__cap.read()
-            else:
-                ret, frame = self.__cap.read()
-                if not ret:
-                    print("Failed to grab frame")
-
-            # If no frame was retrieved, reconnect
-            if frame is None:
-                print("Frame is None, attempting to reconnect...")
+            ret, frame = self.__cap.read()
+            if not ret or frame is None:
+                print("Failed to grab frame or frame is None.")
                 self.reconnect()
             else:
-                # Add delay based on FPS to reduce load
-                time.sleep(self.__frame_interval)
+                self.calculate_fps()
+
+            if self.__frame_interval > 0:
+                time.sleep(self.__frame_interval)  # Add delay to control FPS
 
         return frame
+
+    """
+    A method to get the actual calculated FPS.
+    
+    Parameters:
+        None
+    
+    Returns:
+        float: The actual calculated FPS
+    """
+
+    def get_actual_fps(self):
+        return self.__actual_fps
 
     """
     A method to get the FPS of the video stream.
@@ -160,6 +155,22 @@ class VideoStreamManager:
         return self.__fps
 
     """
+    A method to calculate the actual FPS based on time intervals between frames.
+    
+    Parameters:
+        None
+    
+    Returns:
+        None
+    """
+
+    def calculate_fps(self):
+        current_time = time.time()
+        time_difference = current_time - self.__last_frame_time
+        self.__actual_fps = 1 / time_difference if time_difference > 0 else 0
+        self.__last_frame_time = current_time
+
+    """
     Reconnects to the video stream
     
     Parameters:
@@ -170,11 +181,11 @@ class VideoStreamManager:
     """
 
     def reconnect(self):
+        print("Attempting to reconnect to video stream...")
         self.stop()
         time.sleep(5)
-        print("Reconnecting to video stream...")
         self.start()
-        if self.__cap is not None:
+        if self.__cap is not None and self.__cap.isOpened():
             print("Reconnected to video stream successfully.")
         else:
             print("Failed to reconnect to video stream.")
@@ -195,6 +206,8 @@ class VideoStreamManager:
     def encoding_frame(frame, quality=95, ext="jpg"):
         ext = ext if ext.startswith(".") else "." + ext
         ret, frame_encoded = cv2.imencode(ext, frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
+        if not ret:
+            raise ValueError("Failed to encode frame")
         return frame_encoded
 
     """

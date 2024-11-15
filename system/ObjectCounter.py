@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 21.10.2024
+# Updated: 15.11.2024
 # Website: https://bespredel.name
 
 import json
@@ -23,9 +23,6 @@ from system.sort import Sort
 
 
 class ObjectCounter:
-    FRAME_LOST_THRESHOLD = 10
-    RECONNECT_DELAY = 5  # seconds
-    MAX_RECONNECT_DELAY = 60  # seconds
     FPS_POSITION = (20, 70)
     FPS_FONT_SCALE = 1.5
     FPS_COLOR = (0, 0, 255)
@@ -54,7 +51,7 @@ class ObjectCounter:
         self.notif_manager = NotificationManager(socketio=socketio, location=location)
 
         # Initialize video stream manager
-        self.vsm = VideoStreamManager(self.video_path)
+        self.vsm = VideoStreamManager(self.video_path, self.video_fps)
         self.vsm.start()
 
         # Disable analytics and crash reporting
@@ -118,6 +115,7 @@ class ObjectCounter:
         self.iou = kwargs.get('iou', detector_config.get('iou', config_manager.get('detection_default.iou', 0.7)))
         self.counting_area = kwargs.get('counting_area', detector_config.get('counting_area'))
         self.counting_area_color = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
+        self.video_fps = detector_config.get('video_fps', config_manager.get("detection_default.video_fps"))
         self.video_scale = detector_config.get('video_show_scale', config_manager.get("detection_default.video_show_scale", 50))
         self.video_quality = detector_config.get('video_show_quality', config_manager.get("detection_default.video_show_quality", 50))
         self.indicator_size = detector_config.get('indicator_size', config_manager.get("detection_default.indicator_size", 10))
@@ -135,38 +133,6 @@ class ObjectCounter:
             self.total_objects = set(range(-start_count, 0))
             config_manager.set(f"detections.{self.location}.start_total_count", 0)
             config_manager.save_config()
-
-    """
-    Reconnects to the video stream if the connection has been lost for more than N frames.
-
-    Parameters:
-        None
-
-    Returns:
-        None
-    """
-
-    def _reconnect(self):
-        self.frame = None
-        self.frame_lost += 1
-        if self.frame_lost > self.FRAME_LOST_THRESHOLD:
-            self.frame_lost = 0
-            # self.logger.log_error('Reconnect ' + self.location + '...')
-            print(trans('Reconnect {location}...', location=self.location))
-            self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
-
-            try:
-                self.vsm.reconnect()
-            except Exception as e:
-                # print(e)
-                print(trans('Error reconnect: {location}', location=self.location))
-
-            # Sleep for N seconds before reconnecting
-            print(trans('Sleeping for {delay} seconds before next reconnect attempt.', delay=self.RECONNECT_DELAY))
-            time.sleep(self.RECONNECT_DELAY)
-
-            # Increase the delay for the next attempt (exponential growth)
-            self.RECONNECT_DELAY = min(self.RECONNECT_DELAY * 2, self.MAX_RECONNECT_DELAY)
 
     """
     Process the frame.
@@ -235,11 +201,18 @@ class ObjectCounter:
             try:
                 frame = self.vsm.get_frame()
                 if frame is None:
+                    self.frame_lost += 1
+                    self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
                     continue  # Skip the iteration if the frame is not received
+
+                if self.frame_lost > 0:
+                    self.frame_lost = 0
+                    self.notif_manager.notify(trans('Connection to camera restored!'), 'success')
+
                 self.frame = self._process_frame(frame)
             except Exception as e:
                 print(e)
-                self._reconnect()
+                self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
 
     """
     Generator that yields frames in the form of JPEG images.
@@ -252,16 +225,14 @@ class ObjectCounter:
     """
 
     def get_frames(self):
-        self.frame_lost = 0
         while self.running:
             try:
-                frame = self.vsm.get_frame()
-                if frame is None:
-                    continue
-                frame = self._process_frame(frame)
-                frame = self.vsm.resize_frame(frame, int(self.video_scale))
-                frame = self.vsm.encoding_frame(frame, int(self.video_quality), 'jpg')
-                yield b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + frame.tobytes() + b'\r\n'
+                if self.frame is not None:
+                    encoded_frame = self.vsm.resize_frame(self.frame, int(self.video_scale))
+                    encoded_frame = self.vsm.encoding_frame(encoded_frame, int(self.video_quality), 'jpg')
+                    yield b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + encoded_frame.tobytes() + b'\r\n'
+                else:
+                    time.sleep(0.01)  # Wait for a short pause if there is no frame yet
             except Exception as e:
                 print(e)
 
@@ -277,18 +248,24 @@ class ObjectCounter:
 
     def count_run(self):
         self.notif_manager.event('counter_status', {'status': 'started', 'location': self.location})
-
+        self.frame_lost = 0
         while self.running:
             try:
-                frame = self.vsm.get_frame()
-                if frame is None:
-                    self._reconnect()
+                self.frame = self.vsm.get_frame()
+                if self.frame is None:
+                    self.frame_lost += 1
+                    self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
                     continue
-                boxes = self._detect(frame)
-                self._detect_count(frame, boxes)
+
+                if self.frame_lost > 0:
+                    self.frame_lost = 0
+                    self.notif_manager.notify(trans('Connection to camera restored!'), 'success')
+
+                boxes = self._detect(self.frame)
+                self._detect_count(self.frame, boxes)
             except Exception as e:
                 print(e)
-                self._reconnect()
+                self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
 
     """
     Detects objects in an image using a pre-trained model.

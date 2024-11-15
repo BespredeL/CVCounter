@@ -1,6 +1,7 @@
 {
     "Detection config not found!": "Конфигурация обнаружения не найдена!",
     "Lost connection to camera!": "Потеряно соединение с камерой!",
+    "Connection to camera restored!": "Подключение к камере восстановлено!",
     "Error reconnect: {video_path}": "Ошибка переподключения: {video_path}",
     "Error reconnect": "Ошибка переподключения",
     "Impossible to save! There is no connection to the database.": "Невозможно сохранить! Соединение с базой данных отсутствует.",
