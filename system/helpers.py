@@ -86,3 +86,104 @@ def slug(s):
     s = re.sub(r'[\s_-]+', '-', s)
     s = re.sub(r'^-+|-+$', '', s)
     return s
+
+
+"""
+Print with color
+
+Parameters:
+    text (str): The text to be printed.
+    color (str): The color to print the text in.
+
+Returns:
+    None
+"""
+
+
+def pr_color(text, color):
+    colors = {
+        'red': "\033[91m",
+        'green': "\033[92m",
+        'yellow': "\033[93m",
+        'cyan': "\033[96m",
+        'light_gray': "\033[97m",
+        'black': "\033[98m"
+    }
+    color_code = colors.get(color, "\033[97m")  # Default to light gray if color not found
+    print("{} {}\033[00m".format(color_code, text))
+
+
+"""
+Colored text
+
+Parameters:
+    text (str): The text to be printed.
+    color (str): The color to print the text in.
+
+Returns:
+    str: Colored text
+"""
+
+
+def colored_text(text, color):
+    colors = {
+        'red': "\033[91m",
+        'green': "\033[92m",
+        'yellow': "\033[93m",
+        'cyan': "\033[96m",
+        'light_gray': "\033[97m",
+        'black': "\033[98m"
+    }
+    color_code = colors.get(color, "\033[97m")  # Default to light gray if color not found
+    return "{}{}\033[00m".format(color_code, text)
+
+
+"""
+System check
+
+Parameters:
+    None
+
+Returns:
+    None
+"""
+
+
+def system_check():
+    import subprocess
+    import torch
+    import re
+
+    # Execute nvidia-smi in the console and capture the output
+    result = subprocess.run(['nvidia-smi'], capture_output=True, text=True)
+    output = result.stdout
+
+    # Extract NVIDIA-SMI, Driver Version, and CUDA Version
+    nvidia_smi_version = re.search(r'NVIDIA-SMI (\d+\.\d+)', output)
+    driver_version = re.search(r'Driver Version: (\d+\.\d+)', output)
+    cuda_version = re.search(r'CUDA Version: (\d+\.\d+)', output)
+
+    def colored_value(value):
+        if value == "N/A":
+            return colored_text(value, 'red')
+        else:
+            return colored_text(value, 'green')
+
+    # Print the extracted values
+    pr_color(f'* NVIDIA-SMI Version: {colored_value(nvidia_smi_version.group(1) if nvidia_smi_version else "N/A")}', 'yellow')
+    pr_color(f'* Driver Version: {colored_value(driver_version.group(1) if driver_version else "N/A")}', 'yellow')
+    pr_color(f'* CUDA Version: {colored_value(cuda_version.group(1) if cuda_version else "N/A")}', 'yellow')
+
+    # Check CUDA availability using PyTorch
+    cuda_available = torch.cuda.is_available()
+    pr_color(f'* PyTorch CUDA Available: {colored_value("Yes" if cuda_available else "N/A")}', 'yellow')
+    pr_color(f'* PyTorch CUDA Version: {colored_value(torch.version.cuda or "N/A")}', 'yellow')
+
+    # Check PyTorch version
+    pr_color(f'* PyTorch Version: {colored_value(torch.__version__ or "N/A")}', 'yellow')
+
+    # Result of system check
+    if not cuda_available or not nvidia_smi_version or not driver_version or not cuda_version or not torch.__version__:
+        print(f'{colored_text(" * System Check Result:", "yellow")} {colored_text("FAILED", "red")}')
+    else:
+        print(f'{colored_text(" * System Check Result:", "yellow")} {colored_text("PASSED", "green")}')
