@@ -8,11 +8,9 @@
 
 import json
 from datetime import datetime
-
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text, create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import declarative_base, sessionmaker
-
 from system.Logger import Logger
 
 Base = declarative_base()
@@ -39,17 +37,17 @@ class DatabaseManager:
     Database manager using SQLAlchemy.
 
     Args:
-        db_url (str): Database connection URL.
+        uri (str): Database connection URL.
         prefix (str, optional): Table prefix. Defaults to ''.
     """
 
-    def __init__(self, db_url, prefix=''):
+    def __init__(self, uri, prefix=''):
         self.__logger = Logger("errors.log")
-        self.__engine = create_engine(db_url)
+        self.__engine = create_engine(uri)
         self.__prefix = prefix
         self.__sessionmaker = sessionmaker(bind=self.__engine)
 
-        # Создаем таблицы, если их еще нет
+        # Create tables if they don't exist yet
         Base.metadata.create_all(self.__engine)
 
     """

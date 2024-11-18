@@ -50,7 +50,8 @@ app.config["TEMPLATES_AUTO_RELOAD"] = True
 socketio = SocketIO(app)
 
 # Start DB
-db_manager = DatabaseManager(config.get("db", "sqlite:///:memory:"))
+db_manager = DatabaseManager(uri=config.get("db.uri", "sqlite:///:memory:"),
+                             prefix=config.get("db.prefix"))
 
 # Init objects
 object_counters = {}
