@@ -51,7 +51,10 @@
     // логин:пароль по умолчанию admin:admin
     "admin": "scrypt:32768:8:1$rsdPYhqaQqpXQQ0o$aa3359c86228b4cee5fe8c4ed694db4b371fa7fab5100fa7b446db7e1ed8077e3bb63228d4a1899aeeef9b8d15f8e8bdbcc3457f020bcb3ec320332c76b5896b" // логин:пароль
   },
-  "db": "sqlite:///system/database.db", // подключения к базе данных
+  "db": {
+    "uri": "sqlite:///system/database.db", // подключение к базе данных
+    "prefix": "" // префикс таблиц
+  }, 
   "form": { // конфигурация форм
     "defect_show": true, // показать форму брака
     "correct_show": true, // показать форму коррекции
