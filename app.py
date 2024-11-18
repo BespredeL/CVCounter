@@ -20,11 +20,14 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from system.ConfigManager import ConfigManager
 from system.DatabaseManager import DatabaseManager
 from system.ObjectCounter import ObjectCounter
-from system.helpers import slug, trans as translate
+from system.helpers import slug, trans as translate, system_check
 
 # --------------------------------------------------------------------------------
 # Init
 # --------------------------------------------------------------------------------
+
+# System check
+system_check()
 
 # Read config
 config = ConfigManager("config.json")
@@ -53,7 +56,6 @@ db_manager = DatabaseManager(config.get("db", "sqlite:///:memory:"))
 object_counters = {}
 threading_detectors = {}
 lock = Lock()
-
 
 # --------------------------------------------------------------------------------
 # Helpers
