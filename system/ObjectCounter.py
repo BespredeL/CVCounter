@@ -38,7 +38,7 @@ class ObjectCounter:
         self.correct_count = 0
         self.frame = None
         self.frame_lost = 0
-        self.get_frames_running = None
+        self.get_frames_running = False
         self.running = True
         self.paused = False
 
@@ -155,9 +155,8 @@ class ObjectCounter:
             iou=self.iou,
             device=self.device,
             vid_stride=self.vid_stride,
-            classes=classes_list
-            # stream_buffer=False,
-            # stream=True
+            classes=classes_list,
+            # stream_buffer=True,
         )
 
         xyxy = results[0].boxes.xyxy.cpu().numpy()
@@ -241,10 +240,17 @@ class ObjectCounter:
         frame_copy = frame.copy()
         last_total_count = self.total_count
 
+        # Detect objects
         boxes = self._detect(frame)
+
+        # Draw counting area
         if self.get_frames_running:
             frame = self._draw_counting_area(frame)
+
+        # Detect counting
         frame = self._detect_count(frame, boxes)
+
+        # Reset the frame_lost counter
         self.frame_lost = 0
 
         # Save images from training dataset
@@ -322,8 +328,14 @@ class ObjectCounter:
         try:
             while self.running:
                 if self.frame is not None:
-                    encoded_frame = self.vsm.resize_frame(self.frame, int(self.video_scale))
-                    encoded_frame = self.vsm.encoding_frame(encoded_frame, int(self.video_quality), 'jpg')
+                    encoded_frame = self.frame
+
+                    if self.video_scale > 0:
+                        encoded_frame = self.vsm.resize_frame(encoded_frame, int(self.video_scale))
+
+                    if self.video_quality > 0:
+                        encoded_frame = self.vsm.encoding_frame(encoded_frame, int(self.video_quality), 'jpg')
+
                     yield b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + encoded_frame.tobytes() + b'\r\n'
                 else:
                     time.sleep(0.01)  # Wait for a short pause if there is no frame yet
@@ -378,9 +390,7 @@ class ObjectCounter:
         total_count = int(self.total_count)
         defect_count = int(defect_count)
         correct_count = int(correct_count)
-        # current_total_count = str(total_count - defect_count + correct_count)
 
-        # self.total_count = self.total_count - defect_count + correct_count
         self.defect_count += defect_count
         self.correct_count += correct_count
         self.current_count = self.current_count - defect_count + correct_count
