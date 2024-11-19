@@ -1,5 +1,5 @@
 #
-# pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+# pip3 install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu118
 # pip3 install "C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT\v8.6.1.6\graphsurgeon\graphsurgeon-0.4.6-py2.py3-none-any.whl"
 # pip3 install "C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT\v8.6.1.6\uff\uff-0.6.9-py2.py3-none-any.whl"
 # pip3 install "C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT\v8.6.1.6\onnx_graphsurgeon\onnx_graphsurgeon-0.3.12-py2.py3-none-any.whl"
@@ -19,7 +19,7 @@ scikit-image~=0.22
 shapely~=2.0.2
 SQLAlchemy~=2.0.35
 #mysqlclient==2.1.1
-torch>=2.2.2+cu118,<=2.3.1+cu118
+torch>=2.3.1+cu118
 ultralytics>=8.3
 Werkzeug~=3.0
 
