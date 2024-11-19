@@ -3,24 +3,23 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 23.10.2024
+# Updated: 19.11.2024
 # Website: https://bespredel.name
 
 import json
 import os
 import re
 from threading import Lock, Thread
-
 from flask import Flask, Response, abort, flash, redirect, render_template, request, url_for
 from flask_httpauth import HTTPBasicAuth
 from flask_socketio import SocketIO
 from markupsafe import escape
 from werkzeug.security import check_password_hash, generate_password_hash
-
 from system.ConfigManager import ConfigManager
 from system.DatabaseManager import DatabaseManager
 from system.ObjectCounter import ObjectCounter
-from system.helpers import slug, trans as translate, system_check
+from system.helpers import slug, system_check, trans as translate
+from config import config
 
 # --------------------------------------------------------------------------------
 # Init
@@ -29,11 +28,7 @@ from system.helpers import slug, trans as translate, system_check
 # System check
 system_check()
 
-# Read config
-config = ConfigManager("config.json")
-config.read_config()
-
-# Default settings
+# General settings
 debug = config.get("debug", False)
 locations = list(config.get("detections", {}).keys())
 locations_dict = dict([(k, v['label']) for k, v in config.get("detections", {}).items()])
@@ -50,13 +45,13 @@ app.config["TEMPLATES_AUTO_RELOAD"] = True
 socketio = SocketIO(app)
 
 # Start DB
-db_manager = DatabaseManager(uri=config.get("db.uri", "sqlite:///:memory:"),
-                             prefix=config.get("db.prefix"))
+db_manager = DatabaseManager(uri=config.get("db.uri", "sqlite:///:memory:"), prefix=config.get("db.prefix"))
 
 # Init objects
 object_counters = {}
 threading_detectors = {}
 lock = Lock()
+
 
 # --------------------------------------------------------------------------------
 # Helpers
@@ -147,7 +142,7 @@ def index():
 
 @app.route('/counter/<string:location>')
 def counter(location=None):
-    location = escape(location)
+    location = str(escape(location))
     if location not in locations:
         abort(400, trans('Detection config not found'))
 
@@ -177,7 +172,7 @@ def counter(location=None):
 
 @app.route('/get_frames/<string:location>')
 def get_frames(location=None):
-    location = escape(location)
+    location = str(escape(location))
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
 
@@ -189,7 +184,7 @@ def get_frames(location=None):
 
 @app.route('/counter_t/<string:location>')
 def counter_t(location=None):
-    location = escape(location)
+    location = str(escape(location))
     if location not in locations:
         abort(400, trans('Detection config not found'))
 
@@ -255,7 +250,7 @@ def counter_t_multi(location_first, location_second):
 
 @app.route('/save_count/<string:location>', methods=['POST'])
 def save_count(location=None):
-    location = escape(location)
+    location = str(escape(location))
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
 
@@ -280,7 +275,7 @@ def save_count(location=None):
 
 @app.route('/reset_count/<string:location>')
 def reset_count(location=None):
-    location = escape(location)
+    location = str(escape(location))
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
 
@@ -291,7 +286,7 @@ def reset_count(location=None):
 
 @app.route('/reset_count_current/<string:location>', methods=['POST'])
 def reset_count_current(location=None):
-    location = escape(location)
+    location = str(escape(location))
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
 
@@ -310,7 +305,7 @@ def reset_count_current(location=None):
 
 @app.route('/start_count/<string:location>')
 def start_count(location=None):
-    location = escape(location)
+    location = str(escape(location))
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
 
@@ -323,7 +318,7 @@ def start_count(location=None):
 
 @app.route('/pause_count/<string:location>')
 def pause_count(location=None):
-    location = escape(location)
+    location = str(escape(location))
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
 
@@ -336,7 +331,7 @@ def pause_count(location=None):
 
 @app.route('/stop_count/<string:location>')
 def stop_count(location=None):
-    location = escape(location)
+    location = str(escape(location))
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
 
