@@ -3,22 +3,32 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 21.10.2024
+# Updated: 19.11.2024
 # Website: https://bespredel.name
 
 import json
 from datetime import datetime
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text, create_engine
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declared_attr, sessionmaker
+from config import config
 from system.Logger import Logger
 
-Base = declarative_base()
+
+class TablePrefixBase:
+    __table_prefix__ = config.get('db.prefix', '')
+
+    @declared_attr
+    def __tablename__(cls):
+        return cls.__table_prefix__ + cls.__name__.lower()
+
+
+# Defining the base class
+Base = declarative_base(cls=TablePrefixBase)
 
 
 class CVCounter(Base):
-    __tablename__ = 'cvcounter'
-
     id = Column(Integer, primary_key=True, autoincrement=True)
     active = Column(Boolean, default=True)
     location = Column(String(255), nullable=False)
@@ -42,7 +52,7 @@ class DatabaseManager:
     """
 
     def __init__(self, uri, prefix=''):
-        self.__logger = Logger("errors.log")
+        self.__logger = Logger(config.get('general.log_file', 'errors.log'))
         self.__engine = create_engine(uri)
         self.__prefix = prefix
         self.__sessionmaker = sessionmaker(bind=self.__engine)
