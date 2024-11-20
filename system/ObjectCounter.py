@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 15.11.2024
+# Updated: 20.11.2024
 # Website: https://bespredel.name
 
 import json
@@ -11,10 +11,12 @@ import os
 import random
 import re
 import time
+
 import cv2
 import numpy as np
 from shapely.geometry import Point, Polygon
 from ultralytics import YOLO, settings
+
 from system.Logger import Logger
 from system.NotificationManager import NotificationManager
 from system.VideoStreamManager import VideoStreamManager
@@ -46,7 +48,7 @@ class ObjectCounter:
         self._initialize_config(location, config_manager, kwargs)
 
         # Init logger
-        self.logger = Logger(f'error_{self.location}.log' if self.location else config_manager.get("general.log_path"))
+        self.logger = Logger()
 
         # Init notification manager
         self.notif_manager = NotificationManager(socketio=socketio, location=location)
@@ -465,6 +467,7 @@ class ObjectCounter:
             )
         except Exception as e:
             print(e)
+            self.logger.error(e)
 
         self.current_count = 0
         self.defect_count += defect_count
