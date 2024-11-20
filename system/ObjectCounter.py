@@ -329,6 +329,8 @@ class ObjectCounter:
         self.get_frames_running = True
         try:
             while self.running:
+                self.get_frames_running = True
+
                 if self.frame is not None:
                     encoded_frame = self.frame
 
