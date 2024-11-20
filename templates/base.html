@@ -46,7 +46,7 @@
 </div>
 
 <!-- START: Footer links -->
-<div class="footer-links bg-body">
+<div class="footer-links bg-body border-top">
     <div class="px-3 py-2 d-flex flex-wrap align-items-stretch justify-content-between">
         <div class="d-flex justify-content-start">
             {% if config.get('general.button_change_theme') %}
@@ -96,7 +96,7 @@
 
         <div class="translate-middle-x d-none d-md-block"></div>
 
-        <div class="d-flex align-items-center justify-content-end mt-auto">
+        <div class="d-flex align-items-center justify-content-end">
             {% if url_for(request.endpoint, **request.view_args) == "/" %}
                 <a href="https://createdby.ru" class="d-none d-sm-block text-body-secondary text-decoration-none font-monospace lh-1 small"
                    data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"

@@ -9,7 +9,7 @@
             <div id="current_count" class="display-1 pt-3">0</div>
 
             {% if form_config.get('defect_show', true) or form_config.get('correct_show', true) %}
-                <div class="h5 d-flex justify-content-between w-100 mt-2 pb-1 border-top border-dark-subtle">
+                <div class="h5 d-flex justify-content-between w-100 mt-2 pb-1 border-top border-dark">
                     <div class="{{ 'd-none' if not form_config.get('defect_show', true) }}">
                         {{ trans('Defective products') }}: <span id="defect_count">0</span>
                     </div>
