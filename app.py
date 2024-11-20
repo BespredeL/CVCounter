@@ -3,18 +3,20 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 19.11.2024
+# Updated: 20.11.2024
 # Website: https://bespredel.name
 
 import json
 import os
 import re
 from threading import Lock, Thread
+
 from flask import Flask, Response, abort, flash, redirect, render_template, request, url_for
 from flask_httpauth import HTTPBasicAuth
 from flask_socketio import SocketIO
 from markupsafe import escape
 from werkzeug.security import check_password_hash, generate_password_hash
+
 from system.ConfigManager import ConfigManager
 from system.DatabaseManager import DatabaseManager
 from system.ObjectCounter import ObjectCounter

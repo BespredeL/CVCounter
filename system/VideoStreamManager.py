@@ -3,17 +3,22 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 26.03.2024
-# Updated: 15.11.2024
+# Updated: 20.11.2024
 # Website: https://bespredel.name
 
 import time
 import cv2
 from imutils.video import VideoStream
+from system.Logger import Logger
 
 
 class VideoStreamManager:
     def __init__(self, video_stream, video_fps):
+        # Init logger
+        self.__logger = Logger()
+
         if not video_stream:
+            self.__logger.error("A video stream source is required")
             raise ValueError("A video stream source is required")
 
         self.__video_stream = video_stream
@@ -69,15 +74,17 @@ class VideoStreamManager:
                     self.__cap.stop()
                 self.__cap = VideoStream(self.__video_stream).start()
                 if self.__cap is None:
+                    self.__logger.error(f"Cannot open video stream: {self.__video_stream}")
                     raise ValueError(f"Cannot open video stream: {self.__video_stream}")
             else:
                 self.__cap = cv2.VideoCapture(self.__video_stream)
                 if self.__fps > 0:
                     self.__cap.set(cv2.CAP_PROP_FPS, self.__fps)
                 if not self.__cap.isOpened():
+                    self.__logger.error(f"Cannot open video stream: {self.__video_stream}")
                     raise ValueError(f"Cannot open video stream: {self.__video_stream}")
         except Exception as e:
-            print(f"An error occurred while starting the video stream: {e}")
+            self.__logger.error(e)
 
     """
     A method to stop the video capture, if it's currently active.
@@ -100,7 +107,7 @@ class VideoStreamManager:
             else:
                 print("Stream is not active.")
         except Exception as e:
-            print(f"An error occurred while stopping the video stream: {e}")
+            self.__logger.error(f"An error occurred while stopping the video stream: {e}")
 
     """
     A method to retrieve a frame using the 'cap' attribute.
@@ -120,10 +127,10 @@ class VideoStreamManager:
             else:
                 ret, frame = self.__cap.read()
                 if not ret:
-                    print("Failed to grab frame")
+                    self.__logger.error("Failed to grab frame")
 
             if frame is None:
-                print("Failed to grab frame or frame is None.")
+                self.__logger.error("Failed to grab frame or frame is None")
                 self.reconnect()
 
             self.calculate_fps()  # Calculate actual FPS
@@ -144,7 +151,7 @@ class VideoStreamManager:
     """
 
     def reconnect(self):
-        print("Attempting to reconnect to video stream...")
+        self.__logger.error("Attempting to reconnect to video stream...")
         if self.is_stream():
             self.__cap.stop()
         else:
@@ -153,9 +160,9 @@ class VideoStreamManager:
         time.sleep(3)
         self.start()
         if (not self.is_stream() and self.__cap.isOpened()) or (self.is_stream() and self.__cap is not None):
-            print("Reconnected to video stream successfully.")
+            self.__logger.info("Reconnected to video stream successfully")
         else:
-            print("Failed to reconnect to video stream.")
+            self.__logger.error("Failed to reconnect to video stream")
 
     """
     Check if the video stream is a valid stream by verifying if it starts with common protocols.
@@ -230,6 +237,7 @@ class VideoStreamManager:
         ext = ext if ext.startswith(".") else "." + ext
         ret, frame_encoded = cv2.imencode(ext, frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
         if not ret:
+            print("Failed to encode frame")
             raise ValueError("Failed to encode frame")
         return frame_encoded
 

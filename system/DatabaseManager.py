@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 19.11.2024
+# Updated: 20.11.2024
 # Website: https://bespredel.name
 
 import json
@@ -52,7 +52,7 @@ class DatabaseManager:
     """
 
     def __init__(self, uri, prefix=''):
-        self.__logger = Logger(config.get('general.log_file', 'errors.log'))
+        self.__logger = Logger()
         self.__engine = create_engine(uri)
         self.__prefix = prefix
         self.__sessionmaker = sessionmaker(bind=self.__engine)
@@ -127,7 +127,7 @@ class DatabaseManager:
             return True
         except SQLAlchemyError as error:
             session.rollback()
-            self.__logger.log_error(str(error))
+            self.__logger.error(str(error))
             self.__logger.log_exception()
             return False
         finally:
@@ -166,7 +166,7 @@ class DatabaseManager:
             return False
         except SQLAlchemyError as error:
             session.rollback()
-            self.__logger.log_error(str(error))
+            self.__logger.error(str(error))
             self.__logger.log_exception()
             return False
         finally:
@@ -191,7 +191,7 @@ class DatabaseManager:
             return False
         except SQLAlchemyError as error:
             session.rollback()
-            self.__logger.log_error(str(error))
+            self.__logger.error(str(error))
             return False
         finally:
             session.close()
@@ -212,7 +212,7 @@ class DatabaseManager:
             result = session.query(CVCounter).filter_by(active=True, location=key).first()
             return result if result else None
         except SQLAlchemyError as error:
-            self.__logger.log_error(str(error))
+            self.__logger.error(str(error))
             return None
         finally:
             session.close()
@@ -233,7 +233,7 @@ class DatabaseManager:
             result = session.query(CVCounter).filter_by(id=rec_id).first()
             return result if result else None
         except SQLAlchemyError as error:
-            self.__logger.log_error(str(error))
+            self.__logger.error(str(error))
             return None
         finally:
             session.close()
@@ -264,7 +264,7 @@ class DatabaseManager:
                 'has_prev': page > 1  # Checking if there is a previous page
             }
         except SQLAlchemyError as error:
-            self.__logger.log_error(f"Error retrieving counters for key '{key}': {str(error)}")
+            self.__logger.error(f"Error retrieving counters for key '{key}': {str(error)}")
             return None  # Return None on error
         finally:
             session.close()

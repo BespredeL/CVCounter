@@ -3,68 +3,119 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 05.09.2024
+# Updated: 20.11.2024
 # Website: https://bespredel.name
 
+import logging
 import traceback
-from datetime import datetime
+from config import config
 
 
 class Logger:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._initialize()
+        return cls._instance
+
     """
     Initializes a new instance of the class.
 
-    Parameters:
-        file_name (str): The name of the file.
-
     Returns:
         None
     """
 
-    def __init__(self, file_name):
-        self._file_name = file_name
+    def _initialize(self):
+        self._logger = logging.getLogger(__name__)
+        self._logger.setLevel(logging.DEBUG)
+
+        # Creating a handler for writing to a file
+        file_handler = logging.FileHandler(config.get('general.log_path', 'errors.log'), encoding='utf-8')
+        file_handler.setLevel(logging.DEBUG)
+
+        # Creating a handler for console output
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.DEBUG)
+
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        file_handler.setFormatter(formatter)
+        console_handler.setFormatter(formatter)
+
+        # Adding handlers to the logger
+        self._logger.addHandler(file_handler)
+        self._logger.addHandler(console_handler)
+
+        self.print_logs = True
 
     """
-    Writes a log entry to the log file.
-
-    Parameters:
-        log_entry (str): The log entry to be written.
-    """
-
-    def _write_log(self, log_entry):
-        with open(self._file_name, 'a') as file:
-            file.write(log_entry)
-
-    """
-    Logs a message with the current timestamp to a file.
-
-    Parameters:
-        message_type (str): The type of the message (e.g., 'Error', 'Info', 'Warning').
-        message (str): The message to be logged.
-    """
-
-    def log(self, message_type, message):
-        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        log_entry = f"[{current_time}] {message_type}: {message}\n"
-        self._write_log(log_entry)
-
-    """
-    Logs an error message with the current timestamp to a file.
+    Logs a message with the specified level.
     
     Parameters:
-        error_message (str): The error message to be logged.
-        
-    Raises:
-        Exception: If there is an error while writing to the file.
-        
+        level (int): The logging level.
+        msg (str): The message to log.
+        *args: Variable length argument list.
+        **kwargs: Arbitrary keyword arguments.
+    
     Returns:
         None
     """
 
-    def log_error(self, error_message):
-        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        log_entry = f"[{current_time}] Error: {error_message}\n"
-        self._write_log(log_entry)
+    def log(self, level, msg, *args, **kwargs):
+        self._logger.log(level, msg, *args, **kwargs)
+
+    """
+    Logs an error message.
+    
+    Parameters:
+        msg (str): The error message to log.
+    
+    Returns:
+        None
+    """
+
+    def error(self, msg):
+        self._logger.error(msg)
+
+    """
+    Logs a warning message.
+    
+    Parameters:
+        msg (str): The warning message to log.
+    
+    Returns:
+        None
+    """
+
+    def warning(self, msg):
+        self._logger.warning(msg)
+
+    """
+    Logs an info message.
+    
+    Parameters:
+        msg (str): The info message to log.
+    
+    Returns:
+        None
+    """
+
+    def info(self, msg):
+        self._logger.info(msg)
+
+    """
+    Logs a debug message.
+    
+    Parameters:
+        msg (str): The debug message to log.
+    
+    Returns:
+        None
+    """
+
+    def debug(self, msg):
+        self._logger.debug(msg)
 
     """
     Logs the exception that occurred during the execution of the program.
@@ -78,7 +129,5 @@ class Logger:
     """
 
     def log_exception(self):
-        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         exception_info = traceback.format_exc()
-        log_entry = f"[{current_time}] Exception:\n{exception_info}\n"
-        self._write_log(log_entry)
+        self._logger.error("Exception occurred:\n%s", exception_info)
