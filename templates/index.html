@@ -277,7 +277,7 @@
         <div class="col-12">
             <h4>{{ trans('Text double') }}:</h4>
             <div class="d-flex justify-content-start flex-wrap ms-0 ms-md-3" id="counterTextMulti">
-                <div class="mb-3 me-3 pe-3 border-end">
+                <div class="m-2 pe-3 border-end">
                     <div class="mb-1 fw-bold">{{ trans('Counter on the left:') }}</div>
                     {% for k in object_counters %}
                         <div class="form-check">
@@ -290,7 +290,7 @@
                     {% endfor %}
                 </div>
 
-                <div class="mb-3 me-3">
+                <div class="m-2">
                     <div class="mb-1 fw-bold">{{ trans('Counter on the right:') }}</div>
                     {% for k in object_counters %}
                         <div class="form-check">
@@ -303,7 +303,7 @@
                     {% endfor %}
                 </div>
 
-                <div class="col-12">
+                <div class="col-12 mt-2">
                     <button class="btn btn-primary" id="counterTextMultiStart">{{ trans('Start counting') }}</button>
                 </div>
             </div>
