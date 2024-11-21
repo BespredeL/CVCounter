@@ -341,10 +341,12 @@ class ObjectCounter:
                 if self.frame is not None:
                     encoded_frame = self.frame
 
+                    # Scale the frame
                     if self.video_scale > 0:
                         encoded_frame = self.vsm.resize_frame(encoded_frame, int(self.video_scale))
 
-                    encoded_frame = self.vsm.encoding_frame(encoded_frame, int(self.video_quality), 'jpg')
+                    # Encode the frame
+                    encoded_frame = self.vsm.encoding_frame(encoded_frame, int(self.video_quality), 'jpeg')
 
                     yield b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + encoded_frame.tobytes() + b'\r\n'
                 else:
