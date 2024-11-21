@@ -256,8 +256,8 @@ def save_count(location=None):
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
 
-    correct_count = request.form['correct_count']
-    defect_count = request.form['defect_count']
+    correct_count = int(escape(request.form['correct_count']))
+    defect_count = int(escape(request.form['defect_count']))
     custom_fields = request.form['custom_fields'] if 'custom_fields' in request.form else ""
     result = object_counters[location].save_count(
         location=location,
@@ -292,8 +292,8 @@ def reset_count_current(location=None):
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
 
-    correct_count = request.form['correct_count']
-    defect_count = request.form['defect_count']
+    correct_count = int(escape(request.form['correct_count']))
+    defect_count = int(escape(request.form['defect_count']))
     object_counters[location].reset_count_current(
         location=location,
         correct_count=correct_count,
