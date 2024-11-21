@@ -239,7 +239,7 @@ class ObjectCounter:
 
     def _process_frame(self, frame):
         start_time = time.time()
-        frame_copy = frame.copy()
+        frame_copy = frame.copy() if self.dataset.get('enable') else None
         last_total_count = self.total_count
 
         # Detect objects
@@ -278,6 +278,9 @@ class ObjectCounter:
     """
 
     def _save_dataset_image(self, frame):
+        if frame is None:
+            return
+
         dataset_path = self.dataset.get('path')
         if not os.path.exists(dataset_path):
             os.makedirs(dataset_path)
@@ -310,7 +313,11 @@ class ObjectCounter:
                     self.frame_lost = 0
                     self.notif_manager.notify(trans('Connection to camera restored!'), 'success')
 
-                self.frame = self._process_frame(frame)
+                if self.get_frames_running:
+                    self.frame = self._process_frame(frame)
+                else:
+                    self.frame = None
+                    self._process_frame(frame)
             except Exception as e:
                 print(e)
                 self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
@@ -334,11 +341,12 @@ class ObjectCounter:
                 if self.frame is not None:
                     encoded_frame = self.frame
 
+                    # Scale the frame
                     if self.video_scale > 0:
                         encoded_frame = self.vsm.resize_frame(encoded_frame, int(self.video_scale))
 
-                    if self.video_quality > 0:
-                        encoded_frame = self.vsm.encoding_frame(encoded_frame, int(self.video_quality), 'jpg')
+                    # Encode the frame
+                    encoded_frame = self.vsm.encoding_frame(encoded_frame, int(self.video_quality), 'jpeg')
 
                     yield b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + encoded_frame.tobytes() + b'\r\n'
                 else:

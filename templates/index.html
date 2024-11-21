@@ -11,6 +11,16 @@
              * Handler for receiving counter statuses
              */
             socket.on('counter_status_event', function (data) {
+
+                /**
+                 * Update classes for buttons
+                 *
+                 * @param {string} baseId
+                 * @param {string} remove
+                 * @param {string} add
+                 *
+                 * @return {void}
+                 */
                 function updateClasses(baseId, remove, add) {
                     const baseSelector = '#' + baseId + '_' + data.data.location;
                     const btnSelector = baseSelector + ' a.btn, ' + baseSelector + ' button.dropdown-toggle';
@@ -25,20 +35,14 @@
                         $(btnCounterStop).removeClass('disabled');
                         $(btnCounterStart).addClass('disabled');
                         $(btnCounterPause).removeClass('disabled');
-
-                        showToast('{{ trans("Counting has started!") }}', 'success');
                     } else if (add === 'btn-warning') {
                         $(btnCounterStart).removeClass('disabled');
                         $(btnCounterPause).addClass('disabled');
-
-                        showToast('{{ trans("Counting has paused!") }}', 'warning');
                     } else if (add === 'btn-secondary') {
                         $(btnCounterRun).removeClass('disabled');
                         $(btnCounterStop).addClass('disabled');
                         $(btnCounterStart).addClass('disabled');
                         $(btnCounterPause).addClass('disabled');
-
-                        showToast('{{ trans("Counting has stopped!") }}', 'secondary');
                     }
                 }
 
@@ -46,14 +50,17 @@
                     case 'started':
                         updateClasses('counter_video', 'btn-secondary btn-warning', 'btn-success');
                         updateClasses('counter_text', 'btn-secondary btn-warning', 'btn-success');
+                        showToast('{{ trans("Counting has started!") }}', 'success');
                         break;
                     case 'stopped':
                         updateClasses('counter_video', 'btn-success btn-warning', 'btn-secondary');
                         updateClasses('counter_text', 'btn-success btn-warning', 'btn-secondary');
+                        showToast('{{ trans("Counting has stopped!") }}', 'secondary');
                         break;
                     case 'paused':
                         updateClasses('counter_video', 'btn-success', 'btn-warning');
                         updateClasses('counter_text', 'btn-success', 'btn-warning');
+                        showToast('{{ trans("Counting has paused!") }}', 'warning');
                         break;
                 }
             });
@@ -69,10 +76,10 @@
                     url: href,
                     method: 'GET',
                     success: function (response) {
-                        //console.log('Успешно!', response);
+                        //console.log('Success!', response);
                     },
                     error: function (xhr, status, error) {
-                        //console.error('Произошла ошибка', error);
+                        //console.error('Error!', error);
                     }
                 });
             });
@@ -142,8 +149,8 @@
                                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
                                              fill="currentColor"
                                              class="bi bi-power" viewBox="0 0 18 18">
-                                            <path d="M7.5 1v7h1V1z"/>
-                                            <path d="M3 8.812a5 5 0 0 1 2.578-4.375l-.485-.874A6 6 0 1 0 11 3.616l-.501.865A5 5 0 1 1 3 8.812"/>
+                                            <path d="M7.5 1v7h1V1z"></path>
+                                            <path d="M3 8.812a5 5 0 0 1 2.578-4.375l-.485-.874A6 6 0 1 0 11 3.616l-.501.865A5 5 0 1 1 3 8.812"></path>
                                         </svg>
                                         {{ trans('Run') }}
                                     </a>
@@ -154,7 +161,7 @@
                                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
                                              fill="currentColor"
                                              class="bi bi-stop-fill" viewBox="0 0 18 18">
-                                            <path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5"/>
+                                            <path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5"></path>
                                         </svg>
                                         {{ trans('Stop') }}
                                     </a>
@@ -168,7 +175,7 @@
                                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
                                              fill="currentColor"
                                              class="bi bi-play-fill" viewBox="0 0 18 18">
-                                            <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/>
+                                            <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"></path>
                                         </svg>
                                         {{ trans('Start') }}
                                     </a>
@@ -179,7 +186,7 @@
                                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
                                              fill="currentColor"
                                              class="bi bi-pause-fill" viewBox="0 0 18 18">
-                                            <path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"/>
+                                            <path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"></path>
                                         </svg>
                                         {{ trans('Pause') }}
                                     </a>
@@ -215,8 +222,8 @@
                                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
                                              fill="currentColor"
                                              class="bi bi-power" viewBox="0 0 18 18">
-                                            <path d="M7.5 1v7h1V1z"/>
-                                            <path d="M3 8.812a5 5 0 0 1 2.578-4.375l-.485-.874A6 6 0 1 0 11 3.616l-.501.865A5 5 0 1 1 3 8.812"/>
+                                            <path d="M7.5 1v7h1V1z"></path>
+                                            <path d="M3 8.812a5 5 0 0 1 2.578-4.375l-.485-.874A6 6 0 1 0 11 3.616l-.501.865A5 5 0 1 1 3 8.812"></path>
                                         </svg>
                                         {{ trans('Run') }}
                                     </a>
@@ -227,7 +234,7 @@
                                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
                                              fill="currentColor"
                                              class="bi bi-stop-fill" viewBox="0 0 18 18">
-                                            <path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5"/>
+                                            <path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5"></path>
                                         </svg>
                                         {{ trans('Stop') }}
                                     </a>
@@ -241,7 +248,7 @@
                                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
                                              fill="currentColor"
                                              class="bi bi-play-fill" viewBox="0 0 18 18">
-                                            <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/>
+                                            <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"></path>
                                         </svg>
                                         {{ trans('Start') }}
                                     </a>
@@ -252,7 +259,7 @@
                                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
                                              fill="currentColor"
                                              class="bi bi-pause-fill" viewBox="0 0 18 18">
-                                            <path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"/>
+                                            <path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"></path>
                                         </svg>
                                         {{ trans('Pause') }}
                                     </a>
@@ -270,7 +277,7 @@
         <div class="col-12">
             <h4>{{ trans('Text double') }}:</h4>
             <div class="d-flex justify-content-start flex-wrap ms-0 ms-md-3" id="counterTextMulti">
-                <div class="mb-3 me-3 pe-3 border-end">
+                <div class="m-2 pe-3 border-end">
                     <div class="mb-1 fw-bold">{{ trans('Counter on the left:') }}</div>
                     {% for k in object_counters %}
                         <div class="form-check">
@@ -283,7 +290,7 @@
                     {% endfor %}
                 </div>
 
-                <div class="mb-3 me-3">
+                <div class="m-2">
                     <div class="mb-1 fw-bold">{{ trans('Counter on the right:') }}</div>
                     {% for k in object_counters %}
                         <div class="form-check">
@@ -296,7 +303,7 @@
                     {% endfor %}
                 </div>
 
-                <div class="col-12">
+                <div class="col-12 mt-2">
                     <button class="btn btn-primary" id="counterTextMultiStart">{{ trans('Start counting') }}</button>
                 </div>
             </div>

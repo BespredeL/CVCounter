@@ -53,12 +53,16 @@ class DatabaseManager:
 
     def __init__(self, uri, prefix=''):
         self.__logger = Logger()
-        self.__engine = create_engine(uri)
-        self.__prefix = prefix
-        self.__sessionmaker = sessionmaker(bind=self.__engine)
+        try:
+            self.__engine = create_engine(uri)
+            self.__prefix = prefix
+            self.__sessionmaker = sessionmaker(bind=self.__engine)
 
-        # Create tables if they don't exist yet
-        Base.metadata.create_all(self.__engine)
+            # Create tables if they don't exist yet
+            Base.metadata.create_all(self.__engine)
+        except SQLAlchemyError as error:
+            self.__logger.error(str(error))
+            self.__logger.log_exception()
 
     """
     Creates and returns a new session.
@@ -149,7 +153,7 @@ class DatabaseManager:
         try:
             result = session.query(CVCounter).filter_by(location=location, active=True).first()
             if result:
-                # Обновляем поле parts
+                # Update the parts field
                 parts = json.loads(result.parts) if result.parts else []
                 parts.append({
                     'current': current_count,

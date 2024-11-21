@@ -22,9 +22,9 @@ All main settings are located in the config.json file (rename config.example.jso
 You can run the browser in kiosk mode to prevent exiting it (for example, for Google Chrome, you can specify "--kiosk --start-fullscreen" at startup)
 
 **P.S.:** 
-- Friends, if you don't mind, please don't remove my copyright at the bottom of the page. It's not a requirement, but if you leave it, I'll be very grateful to you!
+- Friends, if you don't mind, please don't remove my copyright at the bottom of the page. It doesn't cost you anything, but I'm pleased.
 - All of this was implemented without any specifications and nobody believed in success, so there is currently some chaos, but I will try to redo everything more correctly =)
-- If this solution helped you, you can sponsor me by sending the word "Thanks". Contact details are below =))
+- If this solution helped you, you can sponsor me by sending the word "Thanks". Contact details are below =)
 - If you need help with the implementation, we can discuss it =).
 
 ## Config
