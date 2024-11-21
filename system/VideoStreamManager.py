@@ -237,7 +237,6 @@ class VideoStreamManager:
         ext = ext if ext.startswith(".") else "." + ext
         ret, frame_encoded = cv2.imencode(ext, frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
         if not ret:
-            print("Failed to encode frame")
             raise ValueError("Failed to encode frame")
         return frame_encoded
 
@@ -246,8 +245,7 @@ class VideoStreamManager:
     
     Parameters:
         frame: The frame to resize
-        width: The width of the resized frame
-        height: The height of the resized frame
+        scale_percent: The scale percentage of the resized frame
     
     Returns:
         frame: The resized frame
