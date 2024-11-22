@@ -307,6 +307,7 @@ class ObjectCounter:
                 if frame is None:
                     self.frame_lost += 1
                     self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
+                    time.sleep(0.01)
                     continue  # Skip the iteration if the frame is not received
 
                 if self.frame_lost > 0:
@@ -318,6 +319,8 @@ class ObjectCounter:
                 else:
                     self.frame = None
                     self._process_frame(frame)
+
+                time.sleep(0.01)
             except Exception as e:
                 print(e)
                 self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
