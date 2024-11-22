@@ -1,14 +1,25 @@
 #
-# pip3 install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu118
-# pip3 install "C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT\v8.6.1.6\graphsurgeon\graphsurgeon-0.4.6-py2.py3-none-any.whl"
-# pip3 install "C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT\v8.6.1.6\uff\uff-0.6.9-py2.py3-none-any.whl"
-# pip3 install "C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT\v8.6.1.6\onnx_graphsurgeon\onnx_graphsurgeon-0.3.12-py2.py3-none-any.whl"
-# pip3 install "C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT\v8.6.1.6\python\tensorrt-8.6.1-cp311-none-win_amd64.whl"
+# To install requirements run:
+#   pip install -r requirements.txt
 #
+# To manually install requirements with CUDA 11.8 run:
+#   pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu118
+#
+# To manually install requirements with TensorRT 8.6.1.6 run:
+#   !!! Replace ${TENSORRT_PATH} with the path to TensorRT on your system,
+#       for example: C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT\v8.6.1.6
+#       or set the environment variable TENSORRT_PATH
+#   pip install "${TENSORRT_PATH}\graphsurgeon\graphsurgeon-0.4.6-py2.py3-none-any.whl"
+#   pip install "${TENSORRT_PATH}\TensorRT\v8.6.1.6\uff\uff-0.6.9-py2.py3-none-any.whl"
+#   pip install "${TENSORRT_PATH}\TensorRT\v8.6.1.6\onnx_graphsurgeon\onnx_graphsurgeon-0.3.12-py2.py3-none-any.whl"
+#   pip install "${TENSORRT_PATH}\TensorRT\v8.6.1.6\python\tensorrt-8.6.1-cp311-none-win_amd64.whl"
+#
+
+# General -------------------------------------
 filterpy~=1.4.5
 Flask-HTTPAuth~=4.8
 Flask-SocketIO~=5.4
-Flask~=3.0
+Flask~=3.1
 imutils~=0.5.4
 MarkupSafe~=2.1.3
 matplotlib~=3.8
@@ -18,10 +29,29 @@ pyodbc~=5.1
 scikit-image~=0.22
 shapely~=2.0.2
 SQLAlchemy~=2.0.35
-#mysqlclient==2.1.1
-torch>=2.3.1+cu118
+#mysqlclient==2.1.1 # To work with MySQL
 ultralytics>=8.3
 Werkzeug~=3.0
+
+# PyTorch dependencies with CUDA 11.8
+-f https://download.pytorch.org/whl/cu118
+torch==2.3.1+cu118
+torchvision==0.18.1
+torchaudio==2.3.1
+
+# TensorRT dependencies (local .whl files)
+#   Copy the following TensorRT `.whl` files to the `deps/tensorrt` directory:
+#   For example:C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT\v8.6.1.6
+#     graphsurgeon\graphsurgeon-0.4.6-py2.py3-none-any.whl
+#     uff\uff-0.6.9-py2.py3-none-any.whl
+#     onnx_graphsurgeon\onnx_graphsurgeon-0.3.12-py2.py3-none-any.whl
+#     python\tensorrt-8.6.1-cp311-none-win_amd64.whl
+# If the files are located elsewhere, move them to `deps` or use their current paths in `requirements.txt`.
+#
+deps/tensorrt/graphsurgeon-0.4.6-py2.py3-none-any.whl
+deps/tensorrt/uff-0.6.9-py2.py3-none-any.whl
+deps/tensorrt/onnx_graphsurgeon-0.3.12-py2.py3-none-any.whl
+deps/tensorrt/tensorrt-8.6.1-cp311-none-win_amd64.whl
 
 # Export --------------------------------------
 # coremltools>=7.0  # CoreML export

@@ -27,7 +27,7 @@ You can run the browser in kiosk mode to prevent exiting it (for example, for Go
 - If this solution helped you, you can sponsor me by sending the word "Thanks". Contact details are below =)
 - If you need help with the implementation, we can discuss it =).
 
-## Config
+## <div align="center">Configuration</div>
 ```json5
 {
   "general": {

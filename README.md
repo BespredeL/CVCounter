@@ -27,7 +27,7 @@
 - Если вам помогло это решение, вы можете проспонсировать меня отправив слово "Спасибо". Ссылки на контакты ниже =)
 - Если нужна помощь с внедрением, можем обсудить =).
 
-## Config
+## <div align="center">Конфигурация</div>
 ```json5
 {
   "general": {
@@ -108,7 +108,7 @@
 }
 ```
 
-## <div align="center">Screenshots</div>
+## <div align="center">Скриншоты</div>
 <img src="https://github.com/BespredeL/BespredeL/blob/9b1aa0d2a841c04fce5a0cf58453f6cd5c831a88/VideoView.gif" alt="">
 <img src="https://github.com/BespredeL/BespredeL/blob/da1fce84f2e64f149142a7302a98a7e5e06f62fa/IndexPage.png" alt="">
 <img src="https://github.com/BespredeL/BespredeL/blob/da1fce84f2e64f149142a7302a98a7e5e06f62fa/VideoView.png" alt="">
@@ -116,7 +116,7 @@
 <img src="https://github.com/BespredeL/BespredeL/blob/da1fce84f2e64f149142a7302a98a7e5e06f62fa/MultiTextView.png" alt="">
 P.S.: Не лучший пример на скриншотах. Не нашел ничего лучше, чем камера в открытом доступе (((
 
-## <div align="center">Author</div>
+## <div align="center">Автор</div>
 
 Александр Киреев
 
@@ -124,9 +124,8 @@ Website: [https://bespredel.name](https://bespredel.name)<br>
 E-mail: [hello@bespredel.name](mailto:hello@bespredel.name)<br>
 Telegram: [https://t.me/BespredeL_name](https://t.me/BespredeL_name)
 
-## <div align="center">References</div>
+## <div align="center">Ссылки</div>
 Ultralytics: [https://github.com/ultralytics](https://github.com/ultralytics)
 
-## <div align="center">License</div>
-**AGPL-3.0 License**: This [OSI-approved](https://opensource.org/licenses/) open-source license is ideal for students and enthusiasts,
-  promoting open collaboration and knowledge sharing.
+## <div align="center">Лицензия</div>
+**AGPL-3.0 License**: Эта [OSI-approved](https://opensource.org/licenses/) лицензия с открытым исходным кодом идеально подходит для студентов и энтузиастов, способствуя открытому сотрудничеству и обмену знаниями.
