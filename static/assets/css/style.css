@@ -26,6 +26,9 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
     bottom: 0;
     width: 100%;
     z-index: 3;
+    backdrop-filter: blur(7px);
+    -webkit-backdrop-filter: blur(7px);
+    background-color: rgba(var(--bs-body-bg-rgb), 0.3) !important;
 }
 
 @media (min-width: 1200px) {
