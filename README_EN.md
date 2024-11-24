@@ -27,7 +27,10 @@ CVCounter is an object counting application using computer vision, implemented i
    mv config.example.json config.json
    ```
 
-5. **Run the application:**
+5. **Change the parameters in the configuration file, add your YOLO model.**
+
+
+6. **Run the application:**
    ```bash
    python app.py
    ```
