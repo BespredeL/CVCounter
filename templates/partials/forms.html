@@ -45,7 +45,7 @@
         {% if label or name %}
             <label for="{{ name }}" class="form-label">{{ label or name }}</label>
         {% endif %}
-        <input type="{{ type }}" value="{{ value|e }}" name="{{ name }}" id="{{ name }}" class="form-control">
+        <input type="{{ type }}" class="form-control" id="{{ name }}" name="{{ name }}" value="{{ value|e }}">
     </div>
 {%- endmacro %}
 
@@ -60,6 +60,6 @@
 {%- endmacro %}
 
 {# Button #}
-{%- macro button(label, type='submit', color='primary') -%}
-    <button {% if type %}type="{{ type }}"{% endif %} class="btn btn-{{ color }}">{{ label }}</button>
+{%- macro button(text, type='submit', color='primary') -%}
+    <button type="{{ type }}" class="btn btn-{{ color }}">{{ text }}</button>
 {%- endmacro %}

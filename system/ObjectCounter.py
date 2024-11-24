@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 20.11.2024
+# Updated: 24.11.2024
 # Website: https://bespredel.name
 
 import json
@@ -11,6 +11,7 @@ import os
 import random
 import re
 import time
+from typing import Generator
 
 import cv2
 import numpy as np
@@ -25,130 +26,134 @@ from system.sort import Sort
 
 
 class ObjectCounter:
-    FPS_POSITION = (20, 70)
-    FPS_FONT_SCALE = 1.5
-    FPS_COLOR = (0, 0, 255)
-    FPS_THICKNESS = 2
-    POLYGON_ALPHA = 0.4
+    FPS_POSITION: tuple = (20, 70)
+    FPS_FONT_SCALE: float = 1.5
+    FPS_COLOR: tuple = (0, 0, 255)
+    FPS_THICKNESS: int = 2
+    POLYGON_ALPHA: float = 0.4
 
-    def __init__(self, location, config_manager, socketio, **kwargs):
+    def __init__(self, location: str, config_manager: any, socketio: any, **kwargs: dict) -> None:
         # Init variables
-        self.total_objects = set()
-        self.total_count = 0
-        self.current_count = 0
-        self.defect_count = 0
-        self.correct_count = 0
-        self.frame = None
-        self.frame_lost = 0
-        self.get_frames_running = False
-        self.running = True
+        self.total_objects: set = set()
+        self.total_count: int = 0
+        self.current_count: int = 0
+        self.defect_count: int = 0
+        self.correct_count: int = 0
+        self.frame: np.ndarray = None
+        self.frame_lost: int = 0
+        self.get_frames_running: bool = False
+        self.running: bool = True
         self.paused = False
 
         # Load and initialize config
         self._initialize_config(location, config_manager, kwargs)
 
         # Init logger
-        self.logger = Logger()
+        self.logger: Logger = Logger()
 
         # Init notification manager
-        self.notif_manager = NotificationManager(socketio=socketio, location=location)
+        self.notif_manager: NotificationManager = NotificationManager(socketio=socketio, location=location)
 
         # Initialize video stream manager
-        self.vsm = VideoStreamManager(self.video_path, self.video_fps)
+        self.vsm: VideoStreamManager = VideoStreamManager(self.video_path, self.video_fps)
         self.vsm.start()
 
         # Disable analytics and crash reporting
         settings.update({'sync': False})
 
         # Model
-        self.model = YOLO(self.weights)
-        self.tracker = Sort(max_age=30, min_hits=3, iou_threshold=0.3)
+        self.model: YOLO = YOLO(self.weights)
+        self.tracker: Sort = Sort(max_age=30, min_hits=3, iou_threshold=0.3)
 
         # Init Database manager
-        self.db_manager = kwargs.get('db_manager', None)
+        self.db_manager: any = kwargs.get('db_manager', None)
 
         # Set polygon
-        self.polygon = Polygon(self.counting_area)
+        self.polygon: Polygon = Polygon(self.counting_area)
 
-    """
-    Initializes the configuration for the object counter.
+    def _initialize_config(self, location: str, config_manager: any, kwargs: dict) -> None:
+        """
+        Initializes the configuration for the object counter.
 
-    Parameters:
-        location (str): The location of the object counter.
-        socketio (SocketIO): The SocketIO instance.
-        config_manager (ConfigManager): The configuration object.
-        kwargs (dict): Additional keyword arguments.
+        Args:
+            location (str): The location of the object counter.
+            config_manager (ConfigManager): The configuration object.
+            kwargs (dict): Additional keyword arguments.
 
-    Returns:
-        None
+        Returns:
+            None
 
-    Initializes the following attributes:
-        - self.location (str): The location of the object counter.
-        - self.config_manager (ConfigManager): The ConfigManager instance.
-        - self.weights (str): The path to the weights file.
-        - self.device (str): The device to use for inference ('cpu' by default).
-        - self.confidence (float): The confidence threshold for object detection.
-        - self.iou (float): The IoU threshold for object detection.
-        - self.video_fps (int): The frame rate of the video.
-        - self.counting_area (list): The coordinates of the counting area.
-        - self.counting_area_color (tuple): The color of the counting area.
-        - self.video_scale (int): The scale of the video.
-        - self.video_quality (int): The quality of the video.
-        - self.indicator_size (int): The size of the indicator.
-        - self.vid_stride (int): The stride for video processing.
-        - self.classes (dict): The classes for object detection.
-        - self.dataset (dict): The dataset for creating the object counter.
-        - self.video_path (str): The path to the video.
-        - self.total_count (int): The total count of objects.
-        - self.total_objects (set): The set of total objects.
+        Initializes the following attributes:
+            - self.location (str): The location of the object counter.
+            - self.config_manager (ConfigManager): The ConfigManager instance.
+            - self.weights (str): The path to the weights file.
+            - self.device (str): The device to use for inference ('cpu' by default).
+            - self.confidence (float): The confidence threshold for object detection.
+            - self.iou (float): The IoU threshold for object detection.
+            - self.video_fps (int): The frame rate of the video.
+            - self.counting_area (list): The coordinates of the counting area.
+            - self.counting_area_color (tuple): The color of the counting area.
+            - self.video_scale (int): The scale of the video.
+            - self.video_quality (int): The quality of the video.
+            - self.indicator_size (int): The size of the indicator.
+            - self.vid_stride (int): The stride for video processing.
+            - self.classes (dict): The classes for object detection.
+            - self.dataset (dict): The dataset for creating the object counter.
+            - self.video_path (str): The path to the video.
+            - self.total_count (int): The total count of objects.
+            - self.total_objects (set): The set of total objects.
 
-    If the 'start_total_count' key in the detector_config is greater than 0, 
-    sets the total_count and total_objects attributes and updates the configuration file.
-    """
+        If the 'start_total_count' key in the detector_config is greater than 0,
+        sets the total_count and total_objects attributes and updates the configuration file.
+        """
 
-    def _initialize_config(self, location, config_manager, kwargs):
         config_manager.read_config()
         detector_config = config_manager.get(f"detections.{location}")
 
-        self.debug = kwargs.get('debug', config_manager.get('debug', False))
-        self.location = location
-        self.weights = kwargs.get('weights', detector_config.get('weights_path'))
-        self.device = kwargs.get('device', detector_config.get('device', 'cpu'))
-        self.confidence = kwargs.get('confidence',
-                                     detector_config.get('confidence', config_manager.get('detection_default.confidence', 0.5)))
-        self.iou = kwargs.get('iou', detector_config.get('iou', config_manager.get('detection_default.iou', 0.7)))
-        self.counting_area = kwargs.get('counting_area', detector_config.get('counting_area'))
-        self.counting_area_color = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
-        self.video_fps = detector_config.get('video_fps', config_manager.get("detection_default.video_fps"))
-        self.video_scale = detector_config.get('video_show_scale', config_manager.get("detection_default.video_show_scale", 50))
-        self.video_quality = detector_config.get('video_show_quality', config_manager.get("detection_default.video_show_quality", 50))
-        self.indicator_size = detector_config.get('indicator_size', config_manager.get("detection_default.indicator_size", 10))
-        self.vid_stride = detector_config.get('vid_stride', config_manager.get("detection_default.vid_stride", 1))
-        self.classes = detector_config.get('classes', {})
-        self.dataset = detector_config.get('dataset_create', {})
+        self.debug: bool = kwargs.get('debug', config_manager.get('debug', False))
+        self.location: str = location
+        self.weights: str = kwargs.get('weights', detector_config.get('weights_path'))
+        self.device: str = kwargs.get('device', detector_config.get('device', 'cpu'))
+        self.confidence: float = kwargs.get('confidence',
+                                            detector_config.get('confidence',
+                                                                config_manager.get('detection_default.confidence',
+                                                                                   0.5)))
+        self.iou: float = kwargs.get('iou',
+                                     detector_config.get('iou', config_manager.get('detection_default.iou', 0.7)))
+        self.counting_area: list = kwargs.get('counting_area', detector_config.get('counting_area'))
+        self.counting_area_color: tuple = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
+        self.video_fps: int = detector_config.get('video_fps', config_manager.get("detection_default.video_fps"))
+        self.video_scale: int = detector_config.get('video_show_scale',
+                                                    config_manager.get("detection_default.video_show_scale", 50))
+        self.video_quality: int = detector_config.get('video_show_quality',
+                                                      config_manager.get("detection_default.video_show_quality", 50))
+        self.indicator_size: int = detector_config.get('indicator_size',
+                                                       config_manager.get("detection_default.indicator_size", 10))
+        self.vid_stride: int = detector_config.get('vid_stride', config_manager.get("detection_default.vid_stride", 1))
+        self.classes: dict = detector_config.get('classes', {})
+        self.dataset: dict = detector_config.get('dataset_create', {})
 
         # Video
-        self.video_path = kwargs.get('video_path', detector_config['video_path'])
+        self.video_path: str = kwargs.get('video_path', detector_config['video_path'])
 
         # Started counter value from config
-        start_count = int(detector_config.get('start_total_count', 0))
+        start_count: int = int(detector_config.get('start_total_count', 0))
         if start_count > 0:
-            self.total_count = start_count
-            self.total_objects = set(range(-start_count, 0))
+            self.total_count: int = start_count
+            self.total_objects: set = set(range(-start_count, 0))
             config_manager.set(f"detections.{self.location}.start_total_count", 0)
             config_manager.save_config()
 
-    """
-    Detects objects in an image using a pre-trained model.
+    def _detect(self, image: np.ndarray) -> np.ndarray:
+        """
+        Detects objects in an image using a pre-trained model.
 
-    Parameters:
-        image (ndarray): The input image as a numpy array.
+        Args:
+            image (ndarray): The input image as a numpy array.
 
-    Returns:
-        ndarray: An array of updated results after tracking the detected objects.
-    """
-
-    def _detect(self, image):
+        Returns:
+            ndarray: An array of updated results after tracking the detected objects.
+        """
         classes_list = list(map(int, self.classes.keys())) if self.classes else None
 
         results = self.model.predict(
@@ -166,17 +171,16 @@ class ObjectCounter:
         detections = np.concatenate((xyxy, conf.reshape(-1, 1)), axis=1)
         return self.tracker.update(detections)
 
-    """
-    Draws a counting area on the given image.
+    def _draw_counting_area(self, image: np.ndarray) -> np.ndarray:
+        """
+        Draws a counting area on the given image.
 
-    Parameters:
-        image (numpy.ndarray): The image on which the counting area should be drawn.
+        Args:
+            image (numpy.ndarray): The image on which the counting area should be drawn.
 
-    Returns:
-        numpy.ndarray: The image with the counting area drawn on it.
-    """
-
-    def _draw_counting_area(self, image):
+        Returns:
+            numpy.ndarray: The image with the counting area drawn on it.
+        """
         overlay = image.copy()
 
         # Polygon corner points coordinates
@@ -185,20 +189,19 @@ class ObjectCounter:
 
         return cv2.addWeighted(overlay, self.POLYGON_ALPHA, image, 1 - self.POLYGON_ALPHA, 0)
 
-    """
-    Draws boxes on an image and returns the modified image.
+    def _detect_count(self, image: np.ndarray, boxes: list) -> np.ndarray:
+        """
+        Draws boxes on an image and returns the modified image.
 
-    Parameters:
-        image (numpy.ndarray): The image on which the boxes will be drawn.
-        boxes (List[Tuple[int]]): A list of boxes, where each box is represented by a tuple of (x1, y1, x2, y2, rid),
-                                  where x1, y1 are the top-left coordinates, x2, y2 are the bottom-right coordinates,
-                                  and rid is the ID of the box.
+        Args:
+            image (numpy.ndarray): The image on which the boxes will be drawn.
+            boxes (List[Tuple[int]]): A list of boxes, where each box is represented by a tuple of (x1, y1, x2, y2, rid),
+                                      where x1, y1 are the top-left coordinates, x2, y2 are the bottom-right coordinates,
+                                      and rid is the ID of the box.
 
-    Returns:
-        numpy.ndarray: The modified image with the boxes drawn on it.
-    """
-
-    def _detect_count(self, image, boxes):
+        Returns:
+            numpy.ndarray: The modified image with the boxes drawn on it.
+        """
         if self.paused:
             return image
 
@@ -227,17 +230,16 @@ class ObjectCounter:
 
         return image
 
-    """
-    Process the frame.
+    def _process_frame(self, frame: np.ndarray) -> np.ndarray:
+        """
+        Process the frame.
 
-    Parameters:
-        frame (numpy.ndarray): The frame to process.
+        Args:
+            frame (numpy.ndarray): The frame to process.
 
-    Returns:
-        numpy.ndarray: The processed frame.
-    """
-
-    def _process_frame(self, frame):
+        Returns:
+            numpy.ndarray: The processed frame.
+        """
         start_time = time.time()
         frame_copy = frame.copy() if self.dataset.get('enable') else None
         last_total_count = self.total_count
@@ -256,28 +258,29 @@ class ObjectCounter:
         self.frame_lost = 0
 
         # Save images from training dataset
-        if self.dataset.get('enable') and last_total_count != self.total_count and random.random() < float(self.dataset['probability']):
+        if self.dataset.get('enable') and last_total_count != self.total_count and random.random() < float(
+                self.dataset['probability']):
             self._save_dataset_image(frame_copy)
 
         # FPS counter on the frame
         if self.debug:
             fps = int(1 / (time.time() - start_time))
             cv2.putText(frame, f'FPS: {fps}',
-                        self.FPS_POSITION, cv2.FONT_HERSHEY_SIMPLEX, self.FPS_FONT_SCALE, self.FPS_COLOR, self.FPS_THICKNESS)
+                        self.FPS_POSITION, cv2.FONT_HERSHEY_SIMPLEX, self.FPS_FONT_SCALE, self.FPS_COLOR,
+                        self.FPS_THICKNESS)
 
         return frame
 
-    """
-    Saves an image to the dataset path if it exists.
+    def _save_dataset_image(self, frame: np.ndarray) -> None:
+        """
+        Saves an image to the dataset path if it exists.
 
-    Parameters:
-        frame (numpy.ndarray): The image frame to be saved.
+        Args:
+            frame (numpy.ndarray): The image frame to be saved.
 
-    Returns:
-        None
-    """
-
-    def _save_dataset_image(self, frame):
+        Returns:
+            None
+        """
         if frame is None:
             return
 
@@ -288,17 +291,13 @@ class ObjectCounter:
         create_time = int(time.time())
         cv2.imwrite(f'{dataset_path}/{location_clean}_{create_time}.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 100])
 
-    """
-    Run the generation of frames.
+    def run_frames(self) -> None:
+        """
+        Run the generation of frames.
 
-    Parameters:
-        None
-
-    Returns:
-        None
-    """
-
-    def run_frames(self):
+        Returns:
+            None
+        """
         self.notif_manager.event('counter_status', {'status': 'started', 'location': self.location})
 
         while self.running:
@@ -325,17 +324,13 @@ class ObjectCounter:
                 print(e)
                 self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
 
-    """
-    Generator that yields frames in the form of JPEG images.
+    def get_frames(self) -> Generator:
+        """
+        Generator that yields frames in the form of JPEG images.
 
-    Parameters:
-        None
-
-    Returns:
-        A generator that yields frames in the form of JPEG images.
-    """
-
-    def get_frames(self):
+        Returns:
+            A generator that yields frames in the form of JPEG images.
+        """
         self.get_frames_running = True
         try:
             while self.running:
@@ -359,17 +354,13 @@ class ObjectCounter:
         finally:
             self.get_frames_running = False
 
-    """
-    Get current count.
+    def get_current_count(self) -> dict:
+        """
+        Get current count.
 
-    Parameters:
-        None
-
-    Returns:
-        dict: The current count.
-    """
-
-    def get_current_count(self):
+        Returns:
+            dict: The current count.
+        """
         result = self.db_manager.get_current_count(self.location)
         if result is None:
             return {}
@@ -387,21 +378,21 @@ class ObjectCounter:
             'updated_at': result.updated_at.strftime("%Y-%m-%d %H:%M:%S") if result.updated_at else None
         }
 
-    """
-    Save count.
+    def save_count(self, location: str, correct_count: int, defect_count: int, custom_fields: str,
+                   active: int = 1) -> dict:
+        """
+        Save count.
 
-    Parameters:
-        location (str): The location of the object.
-        name (str): The name of the object.
-        correct_count (int): The correct count.
-        defect_count (int): The defect count.
-        active (int): The active status.
+        Args:
+            location (str): The location of the object.
+            correct_count (int): The correct count.
+            defect_count (int): The defect count.
+            custom_fields (str): The custom fields.
+            active (int): The active status.
 
-    Returns:
-        dict: The total count.
-    """
-
-    def save_count(self, location, correct_count, defect_count, custom_fields, active=1):
+        Returns:
+            dict: The total count.
+        """
         total_count = int(self.total_count)
         defect_count = int(defect_count)
         correct_count = int(correct_count)
@@ -431,17 +422,16 @@ class ObjectCounter:
 
         return dict(total=total_count, defect=defect_count, correct=correct_count)
 
-    """
-    Resets the count of total objects and total count.
+    def reset_count(self, location: str) -> None:
+        """
+        Resets the count of total objects and total count.
 
-    Parameters:
-        location (str): The location of the object.
+        Args:
+            location (str): The location of the object.
 
-    Returns:
-        None
-    """
-
-    def reset_count(self, location):
+        Returns:
+            None
+        """
         self.total_objects.clear()
         self.total_count = 0
         self.current_count = 0
@@ -452,20 +442,18 @@ class ObjectCounter:
 
         self.notif_manager.notify(trans('Counting completed successfully!'), 'primary')
 
-    """
-    Reset the current count.
+    def reset_count_current(self, location: str, correct_count: int, defect_count: int) -> None:
+        """
+        Reset the current count.
 
-    Parameters:
-        location (str): The location of the object.
-        name (str): The name of the object.
-        correct_count (int): The correct count.
-        defect_count (int): The defect count.
+        Args:
+            location (str): The location of the object.
+            correct_count (int): The correct count.
+            defect_count (int): The defect count.
 
-    Returns:
-        None
-    """
-
-    def reset_count_current(self, location, correct_count, defect_count):
+        Returns:
+            None
+        """
         current_count = int(self.current_count)
         total_count = int(self.total_count)
         defect_count = int(defect_count)
@@ -489,64 +477,48 @@ class ObjectCounter:
         self.notif_manager.emit(f'{location}_count', {'total': total_count, 'current': 0})
         self.notif_manager.notify(trans('The counter has been reset!'), 'primary')
 
-    """
-    Start counting.
+    def start(self) -> None:
+        """
+        Start counting.
 
-    Parameters:
-        None
-
-    Returns:
-        None
-    """
-
-    def start(self):
+        Returns:
+            None
+        """
         # self.running = True
         if self.paused:
             self.notif_manager.notify(trans('Counting has started!'), 'success')
             self.notif_manager.event('counter_status', {'status': 'started', 'location': self.location})
         self.paused = False
 
-    """
-    Stop counting.
+    def stop(self) -> None:
+        """
+        Stop counting.
 
-    Parameters:
-        None
-
-    Returns:
-        None
-    """
-
-    def stop(self):
+        Returns:
+            None
+        """
         if self.running:
             self.notif_manager.notify(trans('Counting has stopped!'), 'primary')
             self.notif_manager.event('counter_status', {'status': 'stopped', 'location': self.location})
         self.running = False
 
-    """
-    Pause counting.
+    def pause(self) -> None:
+        """
+        Pause counting.
 
-    Parameters:
-        None
-
-    Returns:
-        None
-    """
-
-    def pause(self):
+        Returns:
+            None
+        """
         if not self.paused:
             self.notif_manager.notify(trans('Counting has paused!'), 'warning')
             self.notif_manager.event('counter_status', {'status': 'paused', 'location': self.location})
         self.paused = True
 
-    """
-    Check if the counting is paused.
+    def is_pause(self) -> bool:
+        """
+        Check if the counting is paused.
 
-    Parameters:
-        None
-
-    Returns:
-        None
-    """
-
-    def is_pause(self):
+        Returns:
+            None
+        """
         return self.paused
