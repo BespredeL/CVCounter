@@ -26,18 +26,38 @@
     "form": {
         "defect_show": true,
         "correct_show": true,
-        "custom_fields": [
-            {
+        "custom_fields": {
+            "field_one": {
                 "name": "field_one",
-                "label": "Field One",
+                "label": "Field One Text",
                 "type": "text"
             },
-            {
+            "field_two": {
                 "name": "field_two",
-                "label": "Field Two",
-                "type": "text"
+                "label": "Field Two Date",
+                "type": "date"
+            },
+            "field_three": {
+                "name": "field_three",
+                "label": "Field Three Datetime",
+                "type": "datetime-local"
+            },
+            "field_four": {
+                "name": "field_two",
+                "label": "Field Two Textarea",
+                "type": "textarea"
+            },
+            "field_five": {
+                "name": "field_five",
+                "label": "Field Five Select",
+                "type": "select",
+                "options": [
+                    "Option One",
+                    "Option Two",
+                    "Option Three"
+                ]
             }
-        ]
+        }
     },
     "detection_default": {
         "video_path": "",

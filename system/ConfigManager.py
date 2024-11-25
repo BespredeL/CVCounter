@@ -137,7 +137,7 @@ class ConfigManager:
                         def verify_list_integrity(lst):
                             return all(
                                 verify_list_integrity(item) if isinstance(item, list)
-                                else isinstance(item, int)
+                                else isinstance(item, (int, float, str))
                                 for item in lst
                             )
 
