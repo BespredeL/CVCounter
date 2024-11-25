@@ -37,7 +37,7 @@
                 <div class="h3">{{ trans('Secondary information') }}:</div>
                 <dl class="row">
                     {% set custom_fields = json.loads(counter.custom_fields) %}
-                    {% for field in config.get('form.custom_fields', []) %}
+                    {% for field in config.get('form.custom_fields', []).values() %}
                         <dt class="col-md-2">{{ trans(field.label) }}</dt>
                         <dd class="col-md-10">{{ custom_fields[field.name] | striptags }}</dd>
                     {% endfor %}

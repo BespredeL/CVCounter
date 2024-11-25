@@ -1,4 +1,5 @@
 {
+    "JavaScript is required for full functionality of this site. Please enable JavaScript in your browser.": "Для работы системы требуется JavaScript. Пожалуйста, включите JavaScript в вашем браузере.",
     "Detection config not found!": "Конфигурация обнаружения не найдена!",
     "Lost connection to camera!": "Потеряно соединение с камерой!",
     "Connection to camera restored!": "Подключение к камере восстановлено!",
@@ -130,6 +131,5 @@
     "Correct Show": "Корректировка",
     "Custom Fields": "Пользовательские поля",
     "Primary information": "Основное",
-    "Secondary information": "Дополнительно",
-    "JavaScript is required for full functionality of this site. Please enable JavaScript in your browser.": "Для работы системы требуется JavaScript. Пожалуйста, включите JavaScript в вашем браузере."
+    "Secondary information": "Дополнительно"
 }

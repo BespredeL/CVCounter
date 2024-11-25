@@ -1,4 +1,5 @@
 {
+    "JavaScript is required for full functionality of this site. Please enable JavaScript in your browser.": "JavaScript is required for full functionality of this site. Please enable JavaScript in your browser.",
     "Detection config not found!": "Detection config not found!",
     "Lost connection to camera!": "Lost connection to camera!",
     "Connection to camera restored!": "Connection to camera restored!",
@@ -130,6 +131,5 @@
     "Correct Show": "Correct",
     "Custom Fields": "Custom Fields",
     "Primary information": "Primary information",
-    "Secondary information": "Secondary information",
-    "JavaScript is required for full functionality of this site. Please enable JavaScript in your browser.": "JavaScript is required for full functionality of this site. Please enable JavaScript in your browser."
+    "Secondary information": "Secondary information"
 }

@@ -1,7 +1,7 @@
 {% import 'partials/forms.html' as forms %}
 
 <!-- START: Right block -->
-<div class="col-12 col-lg-3">
+<div class="col-12 col-lg-4 col-xl-3 sidebar-right">
     {% if counter_on_sidebar is not none and counter_on_sidebar %}
         <!-- Counter block -->
         <div class="bg-warning text-dark rounded position-relative my-2 px-2">
@@ -174,7 +174,7 @@
             {% for field in custom_fields %}
                 <div class="{{ 'mb-3' if not loop.last }}">
                     {% if field.label or field.name %}
-                        <label for="{{ field.name }}" class="form-label">{{ field.label or field.name }}</label>
+                        <label for="{{ field.name }}" class="form-label">{{ trans(field.label or field.name) }}</label>
                     {% endif %}
                     {% if field.type in ['text', 'number', 'date', 'datetime-local'] %}
                         <input type="{{ field.type }}" value="{{ field.value|e }}" name="{{ field.name }}" id="{{ field.name }}"

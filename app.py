@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 24.11.2024
+# Updated: 25.11.2024
 # Website: https://bespredel.name
 
 import json
@@ -17,7 +17,7 @@ from flask_httpauth import HTTPBasicAuth
 from flask_socketio import SocketIO
 from markupsafe import escape
 from werkzeug.security import check_password_hash, generate_password_hash
-
+# from werkzeug.middleware.proxy_fix import ProxyFix  # For NGINX
 from config import config
 from system.DatabaseManager import DatabaseManager
 from system.ObjectCounter import ObjectCounter
@@ -38,11 +38,19 @@ locations_dict = dict([(k, v['label']) for k, v in config.get("detections", {}).
 # Start Flask
 app = Flask(__name__)
 
+# Fix for NGINX
+# app.wsgi_app = ProxyFix(app.wsgi_app)  # For NGINX
+
 # Auth
 auth = HTTPBasicAuth()
 users = config.get("users", {})
 
-app.config['SECRET_KEY'] = config.get("server.secret_key", False)
+secret_key = config.get("server.secret_key", False)
+if not secret_key:
+    secret_key = os.urandom(40)
+    config.save_config()
+
+app.config['SECRET_KEY'] = secret_key
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 socketio = SocketIO(app)
 
@@ -143,7 +151,8 @@ def index() -> str:
 
 
 @app.route('/counter/<string:location>')
-def counter(location: str = None) -> str:
+@app.route('/counter/<string:location>/video')
+def counter_video(location: str = None) -> str:
     location = str(escape(location))
     if location not in locations:
         abort(400, trans('Detection config not found'))
@@ -179,8 +188,8 @@ def counter(location: str = None) -> str:
     )
 
 
-@app.route('/get_frames/<string:location>')
-def get_frames(location: str = None) -> Response:
+@app.route('/counter_get_frames/<string:location>')
+def counter_get_frames(location: str = None) -> Response:
     location = str(escape(location))
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
@@ -191,8 +200,8 @@ def get_frames(location: str = None) -> Response:
     )
 
 
-@app.route('/counter_t/<string:location>')
-def counter_t(location: str = None) -> str:
+@app.route('/counter/<string:location>/text')
+def counter_text(location: str = None) -> str:
     location = str(escape(location))
     if location not in locations:
         abort(400, trans('Detection config not found'))
@@ -228,8 +237,9 @@ def counter_t(location: str = None) -> str:
     )
 
 
-@app.route('/counter_t_multi/<string:location_first>/<string:location_second>')
-def counter_t_multi(location_first: str, location_second: str) -> str:
+@app.route('/counter_dual/<string:location_first>/<string:location_second>')
+@app.route('/counter_dual/text/<string:location_first>/<string:location_second>')
+def counter_dual_text(location_first: str, location_second: str) -> str:
     location_first = str(escape(location_first))
     location_second = str(escape(location_second))
     if location_first not in locations or location_second not in locations:
@@ -388,6 +398,8 @@ def settings_save() -> str or Response:
     return redirect(url_for('settings'))
 
 
+# --------------------------------------------------------------------------------
+
 @app.route('/reports')
 def reports() -> str:
     return render_template(
@@ -439,6 +451,8 @@ def report_show(location: str, id: int) -> str:
         json=json
     )
 
+
+# --------------------------------------------------------------------------------
 
 @app.route('/page/<string:name>')
 def page(name: str = None) -> str:

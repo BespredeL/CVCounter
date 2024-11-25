@@ -5,16 +5,16 @@
 {% block content %}
     <div class="row mb-3">
         <!-- START: Left block -->
-        <div class="col-12 col-lg-9 d-flex justify-content-center position-relative my-2">
+        <div class="col-12 col-lg-8 col-xl-9 d-flex justify-content-center position-relative my-2">
             <div class="img-container">
-                <img id="video_feed" class="text-center rounded" src="{{ url_for('get_frames', location=location) }}" alt=""/>
+                <img id="video_feed" class="text-center rounded" src="{{ url_for('counter_get_frames', location=location) }}" alt=""/>
             </div>
 
             <div class="{{ 'd-flex' if is_paused else 'd-none' }} justify-content-center align-items-center rounded-end-3 pause_display"
                  id="pause_display">
                 <svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" fill="currentColor" class="bi bi-pause"
                      viewBox="0 0 16 16">
-                    <path d="M6 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5m4 0a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5"/>
+                    <path d="M6 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5m4 0a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5"></path>
                 </svg>
             </div>
         </div>

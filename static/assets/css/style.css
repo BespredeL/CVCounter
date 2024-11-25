@@ -20,6 +20,15 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
     border-radius: 5px !important;
 }
 
+@media (min-width: 992px) {
+    .sidebar-right {
+        overflow-y: auto;
+        height: calc(100vh - 2.7rem);
+        position: sticky;
+        top: 0;
+    }
+}
+
 .footer-links {
     position: relative;
     left: 0;
@@ -31,7 +40,7 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
     background-color: rgba(var(--bs-body-bg-rgb), 0.3) !important;
 }
 
-@media (min-width: 1200px) {
+@media (min-width: 992px) {
     .footer-links {
         position: fixed;
     }
