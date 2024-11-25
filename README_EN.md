@@ -29,7 +29,6 @@ CVCounter is an object counting application using computer vision, implemented i
 
 5. **Change the parameters in the configuration file, add your YOLO model.**
 
-
 6. **Run the application:**
    ```bash
    python app.py
@@ -88,13 +87,13 @@ You can run the browser in kiosk mode to prevent exiting it (for example, for Go
   "form": { // form configuration
     "defect_show": true, // show defect form
     "correct_show": true, // show correction form
-    "custom_fields": [ // custom fields configuration
-      {
+    "custom_fields": { // custom fields configuration
+      "field_one": {
         "name": "field_one", // field name
         "label": "Field One", // field signature
         "type": "text" // field type
       }
-    ]
+    }
   },
   "detection_default": { // default detection config
     "video_path": "", // path to video file or camera src
