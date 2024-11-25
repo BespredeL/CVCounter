@@ -4,44 +4,62 @@
     <a href="{{ url_for('index') }}" class="text-decoration-none text-body">
         <h1 class="border-bottom pb-1">{% block title %}CVCounter - {{ trans('Reports') }}{% endblock %}</h1>
     </a>
+    <nav class="col-12" aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('index') }}">{{ trans('Home') }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('reports') }}">{{ trans('Reports') }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('report_list', location=location) }}">{{ trans('Report list') }} {{ location|striptags|title }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ trans('Report show') }} {{ location|striptags|title }} #{{ counter.id }}</li>
+        </ol>
+    </nav>
 {% endblock %}
 
 {% block content %}
     <div class="row py-3">
         <div class="col-12">
             <div class="h3">{{ trans('Primary information') }}:</div>
-            <dl class="row">
-                <dt class="col-md-2">{{ trans('Location') }}</dt>
-                <dd class="col-md-10">{{ counter.location|striptags|title }}</dd>
-
-                <dt class="col-md-2">{{ trans('Source') }}</dt>
-                <dd class="col-md-10">{{ counter.source_count }}</dd>
-
-                <dt class="col-md-2">{{ trans('Defect') }}</dt>
-                <dd class="col-md-10">{{ counter.defects_count }}</dd>
-
-                <dt class="col-md-2">{{ trans('Correct') }}</dt>
-                <dd class="col-md-10">{{ counter.correct_count }}</dd>
-
-                <dt class="col-md-2 text-truncate">{{ trans('Total') }}</dt>
-                <dd class="col-md-10">{{ counter.total_count }}</dd>
-
-                <dt class="col-md-2">{{ trans('Created') }}</dt>
-                <dd class="col-md-10">{{ counter.created_at.strftime('%d.%m.%Y %H:%M:%S') }}</dd>
-
-                <dt class="col-md-2">{{ trans('Updated') }}</dt>
-                <dd class="col-md-10">{{ counter.updated_at.strftime('%d.%m.%Y %H:%M:%S') }}</dd>
-            </dl>
+            <table class="table table-sm table-hover mb-3">
+                <tr>
+                    <td class="col-md-2">{{ trans('Location') }}</td>
+                    <td class="col-md-10">{{ counter.location|striptags|title }}</td>
+                </tr>
+                <tr>
+                    <td class="col-md-2">{{ trans('Source') }}</td>
+                    <td class="col-md-10">{{ counter.source_count }}</td>
+                </tr>
+                <tr>
+                    <td class="col-md-2">{{ trans('Defect') }}</td>
+                    <td class="col-md-10">{{ counter.defects_count }}</td>
+                </tr>
+                <tr>
+                    <td class="col-md-2">{{ trans('Correct') }}</td>
+                    <td class="col-md-10">{{ counter.correct_count }}</td>
+                </tr>
+                <tr>
+                    <td class="col-md-2 text-truncate">{{ trans('Total') }}</td>
+                    <td class="col-md-10">{{ counter.total_count }}</td>
+                </tr>
+                <tr>
+                    <td class="col-md-2">{{ trans('Created') }}</td>
+                    <td class="col-md-10">{{ counter.created_at.strftime('%d.%m.%Y %H:%M:%S') }}</td>
+                </tr>
+                <tr>
+                    <td class="col-md-2">{{ trans('Updated') }}</td>
+                    <td class="col-md-10">{{ counter.updated_at.strftime('%d.%m.%Y %H:%M:%S') }}</td>
+                </tr>
+            </table>
 
             {% if counter.custom_fields %}
                 <div class="h3">{{ trans('Secondary information') }}:</div>
-                <dl class="row">
+                <table class="table table-sm table-hover mb-3">
                     {% set custom_fields = json.loads(counter.custom_fields) %}
                     {% for field in config.get('form.custom_fields', []).values() %}
-                        <dt class="col-md-2">{{ trans(field.label) }}</dt>
-                        <dd class="col-md-10">{{ custom_fields[field.name] | striptags }}</dd>
+                        <tr>
+                            <td class="col-md-2">{{ trans(field.label) }}</td>
+                            <td class="col-md-10">{{ custom_fields[field.name] | striptags }}</td>
+                        </tr>
                     {% endfor %}
-                </dl>
+                </table>
             {% endif %}
         </div>
     </div>
