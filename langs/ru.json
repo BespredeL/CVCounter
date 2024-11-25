@@ -72,6 +72,7 @@
     "Video Path": "Путь к видео",
     "Video Show Scale": "Масштаб отображения видео",
     "Video Show Quality": "Качество отображения видео",
+    "Video Fps": "FPS видео",
     "Weights Path": "Путь к весам",
     "Confidence": "Порог доверия",
     "Iou": "Порог IoU",
