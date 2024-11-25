@@ -4,6 +4,12 @@
     <a href="{{ url_for('index') }}" class="text-decoration-none text-body">
         <h1 class="border-bottom pb-1">{% block title %}CVCounter - {{ trans('Reports') }}{% endblock %}</h1>
     </a>
+    <nav class="col-12" aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('index') }}">{{ trans('Home') }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ trans('Reports') }}</li>
+        </ol>
+    </nav>
 {% endblock %}
 
 {% block content %}

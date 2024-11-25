@@ -4,12 +4,18 @@
     <a href="{{ url_for('index') }}" class="text-decoration-none text-body">
         <h1 class="border-bottom pb-1">CVCounter - {% block title %}{{ trans('Settings') }}{% endblock %}</h1>
     </a>
+    <nav class="col-12" aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('index') }}">{{ trans('Home') }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ trans('Settings') }}</li>
+        </ol>
+    </nav>
 {% endblock %}
 
 {% import 'partials/forms.html' as forms %}
 
 {% block content %}
-    <div class="col-12 col-md-8 mx-auto">
+    <div class="col-12">
         <div class="row">
             <div class="col-md-4 mb-3 mt-3">
                 <div class="list-group mb-3 py-3 sticky-top" id="pills-tab" role="tablist">

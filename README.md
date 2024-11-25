@@ -11,25 +11,28 @@ CVCounter - это приложение для подсчета объектов
    ```bash
    git clone https://github.com/BespredeL/CVCounter.git
    ```
-
 2. **Перейдите в директорию проекта:**
    ```bash
    cd CVCounter
    ```
-
-3. **Установите зависимости:**
+3. **Установите virtual environment:**
    ```bash
-   pip install -r requirements.txt
+   python3 -m venv venv
    ```
-
-4. **Переименуйте файл конфигурации:**
+4. **Активируйте virtual environment:**
+   ```bash
+   source venv/bin/activate
+   ```
+5. **Установите зависимости:**
+   ```bash
+   pip3 install -r requirements.txt
+   ```
+6. **Переименуйте файл конфигурации:**
    ```bash
    mv config.example.json config.json
    ```
-
-5. **Измените параметры в файле конфигурации, добавьте свою модель YOLO.**
-
-6. **Запустите приложение:**
+7. **Измените параметры в файле конфигурации, добавьте свою модель YOLO.**
+8. **Запустите приложение:**
    ```bash
    python app.py
    ```

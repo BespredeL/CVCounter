@@ -11,25 +11,28 @@ CVCounter is an object counting application using computer vision, implemented i
    ```bash
    git clone https://github.com/BespredeL/CVCounter.git
    ```
-
 2. **Navigate to the project directory:**
    ```bash
    cd CVCounter
    ```
-
-3. **Install dependencies:**
+3. **Install virtual environment:**
    ```bash
-   pip install -r requirements.txt
+   python3 -m venv venv
    ```
-
-4. **Rename the configuration file:**
+4. **Activate virtual environment:**
+   ```bash
+   source venv/bin/activate
+   ```
+5. **Install dependencies:**
+   ```bash
+   pip3 install -r requirements.txt
+   ```
+6. **Rename the configuration file:**
    ```bash
    mv config.example.json config.json
    ```
-
-5. **Change the parameters in the configuration file, add your YOLO model.**
-
-6. **Run the application:**
+7. **Change the parameters in the configuration file, add your YOLO model.**
+8. **Run the application:**
    ```bash
    python app.py
    ```
