@@ -176,7 +176,7 @@
                     {% if field.label or field.name %}
                         <label for="{{ field.name }}" class="form-label">{{ field.label or field.name }}</label>
                     {% endif %}
-                    {% if field.type == 'text' or field.type == 'number' or field.type == 'date' or field.type == 'datetime' %}
+                    {% if field.type in ['text', 'number', 'date', 'datetime-local'] %}
                         <input type="{{ field.type }}" value="{{ field.value|e }}" name="{{ field.name }}" id="{{ field.name }}"
                                class="form-control custom_field">
                     {% elif field.type == 'textarea' %}
@@ -184,8 +184,8 @@
                                   class="form-control custom_field">{{ field.value|e }}</textarea>
                     {% elif field.type == 'select' %}
                         <select name="{{ field.name }}" id="{{ field.name }}" class="form-select custom_field">
-                            {% for value in field.values %}
-                                <option value="{{ value }}">{{ value }}</option>
+                            {% for value in field['options'] %}
+                                <option value="{{ value }}" {% if value == field.value %}selected{% endif %}>{{ value }}</option>
                             {% endfor %}
                         </select>
                     {% endif %}
