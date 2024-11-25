@@ -23,7 +23,7 @@
 
     {% if form_config.get('defect_show', true) %}
         <!-- Defect keyboard -->
-        <div class="border border-danger-subtle rounded my-2 p-2">
+        <div class="border border-danger-subtle border-2 rounded my-2 p-2">
             <div class="col-12 mb-3">
                 <label for="defect_keyboard" class="form-label h4">{{ trans('Defective products') }}</label>
                 <button class="btn btn-outline-info float-end" data-bs-toggle="collapse" data-bs-target="#collapseDefect"
@@ -98,7 +98,7 @@
 
     {% if form_config.get('correct_show', true) %}
         <!-- Correct keyboard -->
-        <div class="border border-warning-subtle rounded my-2 p-2">
+        <div class="border border-warning-subtle border-2 rounded my-2 p-2">
             <div class="col-12 mb-3">
                 <label for="correct_keyboard" class="form-label h4">{{ trans('Correct count') }}</label>
                 <button class="btn btn-outline-info float-end" data-bs-toggle="collapse" data-bs-target="#collapseСorrect"
@@ -170,7 +170,7 @@
     {% endif %}
 
     {% if custom_fields %}
-        <div class="border border-secondary-subtle rounded my-2 p-2">
+        <div class="border border-secondary-subtle border-2 rounded my-2 p-2">
             {% for field in custom_fields %}
                 <div class="{{ 'mb-3' if not loop.last }}">
                     {% if field.label or field.name %}
