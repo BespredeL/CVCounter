@@ -3,25 +3,25 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 20.11.2024
+# Updated: 25.11.2024
 # Website: https://bespredel.name
 
 import json
 import os
 import re
 from threading import Lock, Thread
+from typing import Any
 
 from flask import Flask, Response, abort, flash, redirect, render_template, request, url_for
 from flask_httpauth import HTTPBasicAuth
 from flask_socketio import SocketIO
 from markupsafe import escape
 from werkzeug.security import check_password_hash, generate_password_hash
-
-from system.ConfigManager import ConfigManager
+# from werkzeug.middleware.proxy_fix import ProxyFix  # For NGINX
+from config import config
 from system.DatabaseManager import DatabaseManager
 from system.ObjectCounter import ObjectCounter
 from system.helpers import slug, system_check, trans as translate
-from config import config
 
 # --------------------------------------------------------------------------------
 # Init
@@ -38,11 +38,19 @@ locations_dict = dict([(k, v['label']) for k, v in config.get("detections", {}).
 # Start Flask
 app = Flask(__name__)
 
+# Fix for NGINX
+# app.wsgi_app = ProxyFix(app.wsgi_app)  # For NGINX
+
 # Auth
 auth = HTTPBasicAuth()
 users = config.get("users", {})
 
-app.config['SECRET_KEY'] = config.get("server.secret_key", False)
+secret_key = config.get("server.secret_key", False)
+if not secret_key:
+    secret_key = os.urandom(40)
+    config.save_config()
+
+app.config['SECRET_KEY'] = secret_key
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 socketio = SocketIO(app)
 
@@ -50,9 +58,9 @@ socketio = SocketIO(app)
 db_manager = DatabaseManager(uri=config.get("db.uri", "sqlite:///:memory:"), prefix=config.get("db.prefix"))
 
 # Init objects
-object_counters = {}
-threading_detectors = {}
-lock = Lock()
+object_counters: dict[str, ObjectCounter] = {}
+threading_detectors: dict[str, Thread] = {}
+lock: Lock = Lock()
 
 
 # --------------------------------------------------------------------------------
@@ -61,19 +69,19 @@ lock = Lock()
 
 # Template filter
 @app.template_filter('slug')
-def _slug(string):
+def _slug(string: str) -> str:
     if not string:
         return ""
     return slug(string)
 
 
 @app.template_global()
-def trans(string):
+def trans(string: str) -> str:
     return translate(string)
 
 
 @app.template_global()
-def counter_status(key):
+def counter_status(key: str) -> str:
     if key not in threading_detectors:
         return 'stopped'
     if object_counters[key].is_pause():
@@ -82,7 +90,7 @@ def counter_status(key):
 
 
 @app.template_global()
-def counter_status_class(key):
+def counter_status_class(key: str) -> str:
     if key not in threading_detectors:
         return 'secondary'
     if object_counters[key].is_pause():
@@ -92,13 +100,13 @@ def counter_status_class(key):
 
 # Context processor
 @app.context_processor
-def utility_processor():
+def utility_processor() -> dict:
     return dict(config=config)
 
 
 # Auth handlers
 @auth.verify_password
-def verify_password(username, password):
+def verify_password(username: str, password: str) -> str | None:
     if username in users and check_password_hash(users.get(username), password):
         return username
     return None
@@ -108,8 +116,8 @@ def verify_password(username, password):
 # Functions
 # --------------------------------------------------------------------------------
 
-def object_detector_init(location):
-    global object_counters, config, db_manager, socketio
+def object_detector_init(location: str) -> dict[Any, Any]:
+    global object_counters, db_manager, socketio
     with lock:
         if location not in object_counters:
             detector_config = config.get("detections." + location)
@@ -126,7 +134,7 @@ def object_detector_init(location):
     return object_counters
 
 
-def is_ajax():
+def is_ajax() -> bool:
     return str(request.headers.get('X-Requested-With')).lower() == 'XMLHttpRequest'.lower()
 
 
@@ -135,7 +143,7 @@ def is_ajax():
 # --------------------------------------------------------------------------------
 
 @app.route('/')
-def index():
+def index() -> str:
     return render_template(
         'index.html',
         object_counters=locations_dict,
@@ -143,7 +151,8 @@ def index():
 
 
 @app.route('/counter/<string:location>')
-def counter(location=None):
+@app.route('/counter/<string:location>/video')
+def counter_video(location: str = None) -> str:
     location = str(escape(location))
     if location not in locations:
         abort(400, trans('Detection config not found'))
@@ -154,13 +163,19 @@ def counter(location=None):
             threading_detectors[location] = Thread(target=object_counters[location].run_frames)
             threading_detectors[location].start()
 
+    # Get form config
     form_config = config.get('form', {})
+
+    # Process custom fields
+    custom_fields = []
     current_count = object_counters[location].get_current_count()
-    for field in form_config.get('custom_fields', {}):
+    for field in form_config.get('custom_fields', {}).values():
+        field_copy = field.copy()
         if current_count and current_count['custom_fields']:
-            field['value'] = current_count['custom_fields'].get(field['name'], "")
+            field_copy['value'] = current_count['custom_fields'].get(field['name'], "")
         else:
-            field['value'] = form_config['default_value'] if 'default_value' in form_config else ""
+            field_copy['value'] = form_config['default_value'] if 'default_value' in form_config else ""
+        custom_fields.append(field_copy)
 
     return render_template(
         'counter.html',
@@ -168,12 +183,13 @@ def counter(location=None):
         location=location,
         is_paused=object_counters[location].is_pause(),
         form_config=form_config,
+        custom_fields=custom_fields,
         counter_on_sidebar=True
     )
 
 
-@app.route('/get_frames/<string:location>')
-def get_frames(location=None):
+@app.route('/counter_get_frames/<string:location>')
+def counter_get_frames(location: str = None) -> Response:
     location = str(escape(location))
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
@@ -184,8 +200,8 @@ def get_frames(location=None):
     )
 
 
-@app.route('/counter_t/<string:location>')
-def counter_t(location=None):
+@app.route('/counter/<string:location>/text')
+def counter_text(location: str = None) -> str:
     location = str(escape(location))
     if location not in locations:
         abort(400, trans('Detection config not found'))
@@ -196,13 +212,19 @@ def counter_t(location=None):
             threading_detectors[location] = Thread(target=object_counters[location].run_frames)
             threading_detectors[location].start()
 
+    # Get form config
     form_config = config.get('form', {})
+
+    # Process custom fields
+    custom_fields = []
     current_count = object_counters[location].get_current_count()
-    for field in form_config.get('custom_fields', {}):
+    for field in form_config.get('custom_fields', {}).values():
+        field_copy = field.copy()
         if current_count and current_count['custom_fields']:
-            field['value'] = current_count['custom_fields'].get(field['name'], "")
+            field_copy['value'] = current_count['custom_fields'].get(field['name'], "")
         else:
-            field['value'] = form_config['default_value'] if 'default_value' in form_config else ""
+            field_copy['value'] = form_config['default_value'] if 'default_value' in form_config else ""
+        custom_fields.append(field_copy)
 
     return render_template(
         'counter_text.html',
@@ -210,14 +232,16 @@ def counter_t(location=None):
         location=location,
         is_paused=object_counters[location].is_pause(),
         form_config=form_config,
+        custom_fields=custom_fields,
         # counter_on_sidebar=False
     )
 
 
-@app.route('/counter_t_multi/<string:location_first>/<string:location_second>')
-def counter_t_multi(location_first, location_second):
-    location_first = escape(location_first)
-    location_second = escape(location_second)
+@app.route('/counter_dual/<string:location_first>/<string:location_second>')
+@app.route('/counter_dual/text/<string:location_first>/<string:location_second>')
+def counter_dual_text(location_first: str, location_second: str) -> str:
+    location_first = str(escape(location_first))
+    location_second = str(escape(location_second))
     if location_first not in locations or location_second not in locations:
         abort(400, trans('Detection config not found'))
 
@@ -251,7 +275,7 @@ def counter_t_multi(location_first, location_second):
 # --------------------------------------------------------------------------------
 
 @app.route('/save_count/<string:location>', methods=['POST'])
-def save_count(location=None):
+def save_count(location: str = None) -> dict:
     location = str(escape(location))
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
@@ -276,7 +300,7 @@ def save_count(location=None):
 
 
 @app.route('/reset_count/<string:location>')
-def reset_count(location=None):
+def reset_count(location: str = None) -> dict:
     location = str(escape(location))
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
@@ -287,7 +311,7 @@ def reset_count(location=None):
 
 
 @app.route('/reset_count_current/<string:location>', methods=['POST'])
-def reset_count_current(location=None):
+def reset_count_current(location: str = None) -> dict:
     location = str(escape(location))
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
@@ -306,7 +330,7 @@ def reset_count_current(location=None):
 # --------------------------------------------------------------------------------
 
 @app.route('/start_count/<string:location>')
-def start_count(location=None):
+def start_count(location: str = None) -> dict or str:
     location = str(escape(location))
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
@@ -319,7 +343,7 @@ def start_count(location=None):
 
 
 @app.route('/pause_count/<string:location>')
-def pause_count(location=None):
+def pause_count(location: str = None) -> dict or str:
     location = str(escape(location))
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
@@ -332,7 +356,7 @@ def pause_count(location=None):
 
 
 @app.route('/stop_count/<string:location>')
-def stop_count(location=None):
+def stop_count(location: str = None) -> dict or str:
     location = str(escape(location))
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
@@ -350,31 +374,34 @@ def stop_count(location=None):
 
 @app.route('/settings')
 @auth.login_required
-def settings():
-    _config = ConfigManager("config.json")
-    return render_template('settings.html', _config=_config.read_config())
+def settings() -> str:
+    return render_template('settings.html', _config=config.read_config())
 
 
 @app.route('/settings_save', methods=['POST'])
 @auth.login_required
-def settings_save():
+def settings_save() -> str or Response:
     form_data = request.form.to_dict()
 
     # Retrieving users from a form and encrypting passwords
     for key, value in form_data.items():
         if key.startswith('users-'):
-            form_data[key] = generate_password_hash(value)
+            if value == '':
+                form_data[key] = config.get('users.' + key.replace('users-', ''))
+            else:
+                form_data[key] = generate_password_hash(value)
 
     # Saving updated form data to a configuration file
-    _config = ConfigManager("config.json")
-    _config.save_from_request(form_data)
+    config.save_from_request(form_data)
 
     flash(trans('Settings saved'))
     return redirect(url_for('settings'))
 
 
+# --------------------------------------------------------------------------------
+
 @app.route('/reports')
-def reports():
+def reports() -> str:
     return render_template(
         'reports.html',
         object_counters=locations_dict
@@ -382,9 +409,12 @@ def reports():
 
 
 @app.route('/reports/<string:location>')
-def report_list(location):
+def report_list(location: str = None) -> str:
     r_page = request.args.get('page', 1, type=int)
     per_page = 10
+
+    if location is None:
+        abort(404, trans('Page not found'))
 
     pagination = db_manager.get_paginated(location, r_page, per_page)
 
@@ -408,7 +438,7 @@ def report_list(location):
 
 
 @app.route('/reports/<string:location>/<int:id>')
-def report_show(location, id):
+def report_show(location: str, id: int) -> str:
     counter = db_manager.get_count(id)
 
     if counter is None:
@@ -422,9 +452,11 @@ def report_show(location, id):
     )
 
 
+# --------------------------------------------------------------------------------
+
 @app.route('/page/<string:name>')
-def page(name):
-    page_name = escape(name)
+def page(name: str = None) -> str:
+    page_name = str(escape(name))
     page_name = re.sub('[^A-Za-z0-9-_]+', '', page_name)
 
     if page_name == '':

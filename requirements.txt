@@ -33,11 +33,11 @@ SQLAlchemy~=2.0.35
 ultralytics>=8.3
 Werkzeug~=3.0
 
-# PyTorch dependencies with CUDA 11.8
--f https://download.pytorch.org/whl/cu118
-torch==2.3.1+cu118
-torchvision==0.18.1
-torchaudio==2.3.1
+# PyTorch dependencies with CUDA 11.8 (uncomment or use manual installation)
+#-f https://download.pytorch.org/whl/cu118
+#torch==torch>=2.2.2+cu118,<=2.3.1+cu118
+#torchvision==0.18.1
+#torchaudio==2.3.1
 
 # TensorRT dependencies (local .whl files)
 #   Copy the following TensorRT `.whl` files to the `deps/tensorrt` directory:
@@ -48,10 +48,10 @@ torchaudio==2.3.1
 #     python\tensorrt-8.6.1-cp311-none-win_amd64.whl
 # If the files are located elsewhere, move them to `deps` or use their current paths in `requirements.txt`.
 #
-deps/tensorrt/graphsurgeon-0.4.6-py2.py3-none-any.whl
-deps/tensorrt/uff-0.6.9-py2.py3-none-any.whl
-deps/tensorrt/onnx_graphsurgeon-0.3.12-py2.py3-none-any.whl
-deps/tensorrt/tensorrt-8.6.1-cp311-none-win_amd64.whl
+#deps/tensorrt/graphsurgeon-0.4.6-py2.py3-none-any.whl
+#deps/tensorrt/uff-0.6.9-py2.py3-none-any.whl
+#deps/tensorrt/onnx_graphsurgeon-0.3.12-py2.py3-none-any.whl
+#deps/tensorrt/tensorrt-8.6.1-cp311-none-win_amd64.whl
 
 # Export --------------------------------------
 # coremltools>=7.0  # CoreML export

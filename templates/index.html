@@ -87,16 +87,16 @@
             /**
              * On click the start button redirect to the counter
              */
-            $('#counterTextMultiStart').on('click', function () {
-                let counterTextMultiIn = $('#counterTextMulti input[name="counter_in"]:checked').val();
-                let counterTextMultiOut = $('#counterTextMulti input[name="counter_out"]:checked').val();
-                if (!counterTextMultiIn || !counterTextMultiOut) {
+            $('#counterDualTextStart').on('click', function () {
+                let counterDualTextIn = $('#counterDualText input[name="counter_in"]:checked').val();
+                let counterDualTextOut = $('#counterDualText input[name="counter_out"]:checked').val();
+                if (!counterDualTextIn || !counterDualTextOut) {
                     alert('{{ trans('Please select 2 counters') }}');
                     return false;
                 }
 
-                let baseUrl = '{{ url_for('counter_t_multi', location_first='', location_second='') }}'.replace(/\/+$/, '');
-                let fullUrl = baseUrl + '/' + counterTextMultiIn + '/' + counterTextMultiOut;
+                let baseUrl = '{{ url_for('counter_dual_text', location_first='', location_second='') }}'.replace(/\/+$/, '');
+                let fullUrl = baseUrl + '/' + counterDualTextIn + '/' + counterDualTextOut;
                 window.open(fullUrl);
             });
 
@@ -104,10 +104,10 @@
              * On change the radio buttons disable
              * the other radio buttons with the same name
              */
-            $('#counterTextMulti').on('change', function (e) {
+            $('#counterDualText').on('change', function (e) {
                 let opposite = e.target.name === 'counter_in' ? 'counter_out' : 'counter_in';
                 let selectedValue = e.target.value;
-                $('#counterTextMulti input[name="' + opposite + '"]').each(function () {
+                $('#counterDualText input[name="' + opposite + '"]').each(function () {
                     this.disabled = this.value === selectedValue;
                 });
             });
@@ -135,7 +135,7 @@
             <div class="d-grid gap-2 d-md-block ms-0 ms-md-3" id="counter_video">
                 {% for k in object_counters %}
                     <div class="btn-group m-2" role="group" aria-label="" id="counter_video_{{ k }}">
-                        <a href="{{ url_for('counter', location=k) }}"
+                        <a href="{{ url_for('counter_video', location=k) }}"
                            class="btn btn-{{ counter_status_class(k) }}">
                             {{ object_counters[k]|striptags|title }}
                         </a>
@@ -145,7 +145,7 @@
                             <ul class="dropdown-menu">
                                 <li>
                                     <a class="dropdown-item counter_run {% if counter_status(k) == 'running' %}disabled{% endif %}"
-                                       href="{{ url_for('counter', location=k) }}" target="_blank">
+                                       href="{{ url_for('counter_video', location=k) }}" target="_blank">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
                                              fill="currentColor"
                                              class="bi bi-power" viewBox="0 0 18 18">
@@ -206,7 +206,7 @@
             <div class="d-grid gap-1 d-md-block ms-0 ms-md-3" id="counter_text">
                 {% for k in object_counters %}
                     <div class="btn-group m-2" role="group" aria-label="" id="counter_text_{{ k }}">
-                        <a href="{{ url_for('counter_t', location=k) }}"
+                        <a href="{{ url_for('counter_text', location=k) }}"
                            class="btn btn-{{ counter_status_class(k) }}">
                             {{ object_counters[k]|striptags|title }}
                         </a>
@@ -217,7 +217,7 @@
                             <ul class="dropdown-menu">
                                 <li>
                                     <a class="dropdown-item counter_run {% if counter_status(k) == 'running' %}disabled{% endif %}"
-                                       href="{{ url_for('counter_t', location=k) }}"
+                                       href="{{ url_for('counter_text', location=k) }}"
                                        target="_blank">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
                                              fill="currentColor"
@@ -276,7 +276,7 @@
     <div class="row border-bottom py-3">
         <div class="col-12">
             <h4>{{ trans('Text double') }}:</h4>
-            <div class="d-flex justify-content-start flex-wrap ms-0 ms-md-3" id="counterTextMulti">
+            <div class="d-flex justify-content-start flex-wrap ms-0 ms-md-3" id="counterDualText">
                 <div class="m-2 pe-3 border-end">
                     <div class="mb-1 fw-bold">{{ trans('Counter on the left:') }}</div>
                     {% for k in object_counters %}
@@ -304,7 +304,7 @@
                 </div>
 
                 <div class="col-12 mt-2">
-                    <button class="btn btn-primary" id="counterTextMultiStart">{{ trans('Start counting') }}</button>
+                    <button class="btn btn-primary" id="counterDualTextStart">{{ trans('Start counting') }}</button>
                 </div>
             </div>
         </div>

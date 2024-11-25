@@ -1,4 +1,5 @@
 {
+    "JavaScript is required for full functionality of this site. Please enable JavaScript in your browser.": "Для работы системы требуется JavaScript. Пожалуйста, включите JavaScript в вашем браузере.",
     "Detection config not found!": "Конфигурация обнаружения не найдена!",
     "Lost connection to camera!": "Потеряно соединение с камерой!",
     "Connection to camera restored!": "Подключение к камере восстановлено!",
@@ -71,6 +72,7 @@
     "Video Path": "Путь к видео",
     "Video Show Scale": "Масштаб отображения видео",
     "Video Show Quality": "Качество отображения видео",
+    "Video Fps": "FPS видео",
     "Weights Path": "Путь к весам",
     "Confidence": "Порог доверия",
     "Iou": "Порог IoU",

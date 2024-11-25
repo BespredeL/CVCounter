@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 20.11.2024
+# Updated: 24.11.2024
 # Website: https://bespredel.name
 
 import logging
@@ -12,34 +12,35 @@ from config import config
 
 
 class Logger:
-    _instance = None
+    _instance: 'Logger' = None
 
-    def __new__(cls):
+    def __new__(cls) -> 'Logger':
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._initialize()
         return cls._instance
 
-    """
-    Initializes a new instance of the class.
+    def _initialize(self) -> None:
+        """
+        Initializes a new instance of the class.
 
-    Returns:
-        None
-    """
+        Returns:
+            None
+        """
 
-    def _initialize(self):
-        self._logger = logging.getLogger(__name__)
+        self._logger: logging.Logger = logging.getLogger(__name__)
         self._logger.setLevel(logging.DEBUG)
 
         # Creating a handler for writing to a file
-        file_handler = logging.FileHandler(config.get('general.log_path', 'errors.log'), encoding='utf-8')
+        file_handler: logging.FileHandler = logging.FileHandler(config.get('general.log_path', 'errors.log'),
+                                                                encoding='utf-8')
         file_handler.setLevel(logging.DEBUG)
 
         # Creating a handler for console output
-        console_handler = logging.StreamHandler()
+        console_handler: logging.StreamHandler = logging.StreamHandler()
         console_handler.setLevel(logging.DEBUG)
 
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        formatter: logging.Formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
         file_handler.setFormatter(formatter)
         console_handler.setFormatter(formatter)
 
@@ -47,87 +48,78 @@ class Logger:
         self._logger.addHandler(file_handler)
         self._logger.addHandler(console_handler)
 
-        self.print_logs = True
+        self.print_logs: bool = True
 
-    """
-    Logs a message with the specified level.
-    
-    Parameters:
-        level (int): The logging level.
-        msg (str): The message to log.
-        *args: Variable length argument list.
-        **kwargs: Arbitrary keyword arguments.
-    
-    Returns:
-        None
-    """
+    def log(self, level: int, msg: str, *args, **kwargs) -> None:
+        """
+        Logs a message with the specified level.
 
-    def log(self, level, msg, *args, **kwargs):
+        Args:
+            level (int): The logging level.
+            msg (str): The message to log.
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+            None
+        """
         self._logger.log(level, msg, *args, **kwargs)
 
-    """
-    Logs an error message.
-    
-    Parameters:
-        msg (str): The error message to log.
-    
-    Returns:
-        None
-    """
+    def error(self, msg: str) -> None:
+        """
+        Logs an error message.
 
-    def error(self, msg):
+        Args:
+            msg (str): The error message to log.
+
+        Returns:
+            None
+        """
         self._logger.error(msg)
 
-    """
-    Logs a warning message.
-    
-    Parameters:
-        msg (str): The warning message to log.
-    
-    Returns:
-        None
-    """
+    def warning(self, msg: str) -> None:
+        """
+        Logs a warning message.
 
-    def warning(self, msg):
+        Args:
+            msg (str): The warning message to log.
+
+        Returns:
+            None
+        """
         self._logger.warning(msg)
 
-    """
-    Logs an info message.
-    
-    Parameters:
-        msg (str): The info message to log.
-    
-    Returns:
-        None
-    """
+    def info(self, msg: str) -> None:
+        """
+        Logs an info message.
 
-    def info(self, msg):
+        Args:
+            msg (str): The info message to log.
+
+        Returns:
+            None
+        """
         self._logger.info(msg)
 
-    """
-    Logs a debug message.
-    
-    Parameters:
-        msg (str): The debug message to log.
-    
-    Returns:
-        None
-    """
+    def debug(self, msg: str) -> None:
+        """
+        Logs a debug message.
 
-    def debug(self, msg):
+        Args:
+            msg (str): The debug message to log.
+
+        Returns:
+            None
+        """
         self._logger.debug(msg)
 
-    """
-    Logs the exception that occurred during the execution of the program.
-    This function takes no parameters.
-    
-    Parameters:
-        None
-    
-    Returns:
-        None
-    """
+    def log_exception(self) -> None:
+        """
+        Logs the exception that occurred during the execution of the program.
+        This function takes no parameters.
 
-    def log_exception(self):
-        exception_info = traceback.format_exc()
+        Returns:
+            None
+        """
+        exception_info: str = traceback.format_exc()
         self._logger.error("Exception occurred:\n%s", exception_info)

@@ -106,10 +106,10 @@ $(function () {
     const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
     const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
 
-    // Соединение с сервером
+    // Connection to the server socket IO
     window.socket = io();
 
-    // Успешное переподключение к серверу
+    // Successful reconnection to the server socket IO
     socket.io.on("reconnect", (attempt) => {
         const alertContainer = $('#alert-container');
         const alertHtml = `
@@ -130,7 +130,7 @@ $(function () {
         }, 1000 * 60 * 15);
     });
 
-    // Ошибка соединения с сервером
+    // Error connecting to server socket IO
     window.socket.io.on("error", (error) => {
         const alertContainer = $('#alert-container');
         const alertHtml = `
@@ -151,7 +151,7 @@ $(function () {
         }, 1000 * 60 * 15);*/
     });
 
-    // Всплывающие уведомления
+    // Toast notifications
     window.showToast = function (message, type = 'primary') {
         const toastContainer = document.getElementById('toast-container');
         if (!toastContainer) return;
@@ -177,21 +177,18 @@ $(function () {
         });
     }
 
-    // Установка начальной темы при загрузке страницы
+    // Setting the initial theme on page load
     $(document).ready(function () {
         let theme = getCookie('theme') || 'dark';
         setTheme(theme);
     });
 
-    // Смена темы при клике на переключатель
+    // Change theme by clicking on the switch
     $('#theme-switch').on('click', function () {
         let currentTheme = $('html').attr('data-bs-theme');
         let newTheme = currentTheme === 'light' ? 'dark' : 'light';
         setTheme(newTheme);
     });
-
-    // Bootstrap Select
-    //$('.selectpicker').selectpicker();
 
     // Switching full screen mode
     $('#toggle-fullscreen').on('click', function () {

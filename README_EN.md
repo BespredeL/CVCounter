@@ -1,28 +1,57 @@
 ## <div align="center">CVCounter</div>
-This solution is far from ideal, probably just a piece of ..., but it works =)<br> 
-This is my first experience working with Python, so it turned out the way it did.
+CVCounter is an object counting application using computer vision, implemented in Python with Flask. The project provides three modes of data display: main view with video, text view, and text view with two counters.
 
+### Key Technologies:
+- Python
+- Flask
+- OpenCV
 
+## Installation
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/BespredeL/CVCounter.git
+   ```
+
+2. **Navigate to the project directory:**
+   ```bash
+   cd CVCounter
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Rename the configuration file:**
+   ```bash
+   mv config.example.json config.json
+   ```
+
+5. **Change the parameters in the configuration file, add your YOLO model.**
+
+6. **Run the application:**
+   ```bash
+   python app.py
+   ```
+
+## Usage
 **This solution implements 3 types of views:**
 1. **Main view** - a page displaying the counter values and a video with recognition results
 2. **Text view** - a page displaying only the counter values
-3. **Text view with two counters** - a page on which the value of 2 counters is displayed (for example, at the input and output)
+3. **Text view with two counters** - a page displaying the values of 2 counters (e.g., at the input and output)
 
-After several options, I decided to implement it with Flask, i.e. as a mini website solution, 
-as it allows to avoid installing any additional software on the clients. 
-Moreover, this solution is not resource-intensive for clients (except for the main view with video)
+After several options, I decided to implement it with Flask, i.e., as a mini website solution, as it allows avoiding the installation of any additional software on clients. Moreover, this solution is not resource-intensive for clients (except for the main view with video).
 
-I managed to run 5 simultaneous counts (without video output), and 4 counts with video output.
+I managed to run 6 simultaneous counts (without video output), and 5 counts with video output.
 
 Server specifications:
 - AMD Ryzen 5 3600
 - GeForce GTX 1050 Ti (4GB)
 
-All main settings are located in the config.json file (rename config.example.json to config.json)
-You can run the browser in kiosk mode to prevent exiting it (for example, for Google Chrome, you can specify "--kiosk --start-fullscreen" at startup)
+You can run the browser in kiosk mode to prevent exiting it (for example, for Google Chrome, you can specify "--kiosk --start-fullscreen" at startup).
 
 **P.S.:** 
-- Friends, if you don't mind, please don't remove my copyright at the bottom of the page. It doesn't cost you anything, but I'm pleased.
+- Friends, if you don't mind, please don't remove my copyright at the bottom of the page. It doesn't cost you anything, but it makes me happy.
 - All of this was implemented without any specifications and nobody believed in success, so there is currently some chaos, but I will try to redo everything more correctly =)
 - If this solution helped you, you can sponsor me by sending the word "Thanks". Contact details are below =)
 - If you need help with the implementation, we can discuss it =).
@@ -58,13 +87,13 @@ You can run the browser in kiosk mode to prevent exiting it (for example, for Go
   "form": { // form configuration
     "defect_show": true, // show defect form
     "correct_show": true, // show correction form
-    "custom_fields": [ // custom fields configuration
-      {
+    "custom_fields": { // custom fields configuration
+      "field_one": {
         "name": "field_one", // field name
         "label": "Field One", // field signature
         "type": "text" // field type
       }
-    ]
+    }
   },
   "detection_default": { // default detection config
     "video_path": "", // path to video file or camera src
@@ -99,9 +128,9 @@ You can run the browser in kiosk mode to prevent exiting it (for example, for Go
       "counting_area_color": [255, 64, 0], // color of counting area
       "classes": {}, // classes to detect (leave empty for all classes)
       "dataset_create": { // automatic dataset creation
-        "enable": true, // enable dataset create
-        "probability": 0.05, // probability of creating an image of a dataset (a number from 0.01 to 1, where 0.01 is 1% and 1 is 100%)
-        "path": "yolo_cfg/saved_images/ExampleCam" // path to save dataset
+        "enable": true, // enable dataset creation
+        "probability": 0.05, // probability of creating a dataset image (number from 0.01 to 1, where 0.01 is 1% and 1 is 100%)
+        "path": "yolo_cfg/saved_images/ExampleCam" // path for saving dataset
       }
     },
   }
@@ -114,7 +143,7 @@ You can run the browser in kiosk mode to prevent exiting it (for example, for Go
 <img src="https://github.com/BespredeL/BespredeL/blob/da1fce84f2e64f149142a7302a98a7e5e06f62fa/VideoView.png" alt="">
 <img src="https://github.com/BespredeL/BespredeL/blob/da1fce84f2e64f149142a7302a98a7e5e06f62fa/TextView.png" alt="">
 <img src="https://github.com/BespredeL/BespredeL/blob/da1fce84f2e64f149142a7302a98a7e5e06f62fa/MultiTextView.png" alt="">
-P.S.: Not the best example in the screenshots. I didn’t find anything better than a camera in the public domain (((
+P.S.: Not the best example in the screenshots. Couldn't find anything better than an open-access camera (((
 
 ## <div align="center">Author</div>
 
@@ -124,9 +153,8 @@ Website: [https://bespredel.name](https://bespredel.name)<br>
 E-mail: [hello@bespredel.name](mailto:hello@bespredel.name)<br>
 Telegram: [https://t.me/BespredeL_name](https://t.me/BespredeL_name)
 
-## <div align="center">References</div>
+## <div align="center">Links</div>
 Ultralytics: [https://github.com/ultralytics](https://github.com/ultralytics)
 
 ## <div align="center">License</div>
-**AGPL-3.0 License**: This [OSI-approved](https://opensource.org/licenses/) open-source license is ideal for students and enthusiasts,
-  promoting open collaboration and knowledge sharing.
+**AGPL-3.0 License**: This [OSI-approved](https://opensource.org/licenses/) open-source license is ideal for students and enthusiasts, promoting open collaboration and knowledge sharing.

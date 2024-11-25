@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 26.03.2024
-# Updated: 20.11.2024
+# Updated: 24.11.2024
 # Website: https://bespredel.name
 
 import time
@@ -13,60 +13,48 @@ from system.Logger import Logger
 
 
 class VideoStreamManager:
-    def __init__(self, video_stream, video_fps):
+    def __init__(self, video_stream: str, video_fps: float) -> None:
         # Init logger
-        self.__logger = Logger()
+        self.__logger: Logger = Logger()
 
         if not video_stream:
             self.__logger.error("A video stream source is required")
             raise ValueError("A video stream source is required")
 
-        self.__video_stream = video_stream
-        self.__cap = None
-        self.__fps = video_fps  # Default FPS
-        self.__actual_fps = 0  # Calculated FPS based on frame intervals
-        self.__last_frame_time = time.time()  # Time of the last frame capture
-        self.__frame_interval = 1 / self.__fps if video_fps > 0 else 0  # Interval between frames based on FPS
-
-    """
-    Get the video stream source.
-    
-    Parameters:
-        None
-    
-    Returns:
-        str: The video stream source
-    """
+        self.__video_stream: str = video_stream
+        self.__cap: cv2.VideoCapture | VideoStream = None
+        self.__fps: float = video_fps  # Default FPS
+        self.__actual_fps: float = 0  # Calculated FPS based on frame intervals
+        self.__last_frame_time: float = time.time()  # Time of the last frame capture
+        self.__frame_interval: float = 1 / self.__fps if video_fps > 0 else 0  # Interval between frames based on FPS
 
     @property
-    def video_stream(self):
+    def video_stream(self) -> str:
+        """
+        Get the video stream source.
+
+        Returns:
+            str: The video stream source
+        """
         return self.__video_stream
 
-    """
-    Get the video capture object.
-    
-    Parameters:
-        None
-    
-    Returns:
-        cv2.VideoCapture: The video capture object
-    """
-
     @property
-    def cap(self):
+    def cap(self) -> cv2.VideoCapture:
+        """
+        Get the video capture object.
+
+        Returns:
+            cv2.VideoCapture: The video capture object
+        """
         return self.__cap
 
-    """
-    Starts the video stream.
+    def start(self) -> None:
+        """
+        Starts the video stream.
 
-    Parameters:
-        None
-        
-    Returns:
-        None
-    """
-
-    def start(self):
+        Returns:
+            None
+        """
         try:
             # Check if the source is a streaming URL or a local video/camera
             if self.is_stream():
@@ -86,17 +74,13 @@ class VideoStreamManager:
         except Exception as e:
             self.__logger.error(e)
 
-    """
-    A method to stop the video capture, if it's currently active.
-    
-    Parameters:
-        None
-    
-    Returns:
-        None
-    """
+    def stop(self) -> None:
+        """
+        A method to stop the video capture, if it's currently active.
 
-    def stop(self):
+        Returns:
+            None
+        """
         try:
             if self.__cap is not None:
                 if self.is_stream():
@@ -109,17 +93,13 @@ class VideoStreamManager:
         except Exception as e:
             self.__logger.error(f"An error occurred while stopping the video stream: {e}")
 
-    """
-    A method to retrieve a frame using the 'cap' attribute.
-    
-    Parameters:
-        None
-    
-    Returns:
-        frame: A frame from the video stream
-    """
+    def get_frame(self) -> cv2.Mat:
+        """
+        A method to retrieve a frame using the 'cap' attribute.
 
-    def get_frame(self):
+        Returns:
+            frame: A frame from the video stream
+        """
         frame = None
         if self.__cap is not None:
             if self.is_stream():
@@ -140,17 +120,13 @@ class VideoStreamManager:
 
         return frame
 
-    """
-    Reconnects to the video stream
+    def reconnect(self) -> None:
+        """
+        Reconnects to the video stream
 
-    Parameters:
-        None
-
-    Returns:
-        None
-    """
-
-    def reconnect(self):
+        Returns:
+            None
+        """
         self.__logger.error("Attempting to reconnect to video stream...")
         if self.is_stream():
             self.__cap.stop()
@@ -164,95 +140,77 @@ class VideoStreamManager:
         else:
             self.__logger.error("Failed to reconnect to video stream")
 
-    """
-    Check if the video stream is a valid stream by verifying if it starts with common protocols.
+    def is_stream(self) -> bool:
+        """
+        Check if the video stream is a valid stream by verifying if it starts with common protocols.
 
-    Parameters:
-        None
-
-    Returns:
-        bool: True if the video stream is a valid stream, False otherwise
-    """
-
-    def is_stream(self):
+        Returns:
+            bool: True if the video stream is a valid stream, False otherwise
+        """
         return isinstance(self.__video_stream, str) and self.__video_stream.lower().startswith(
             ('rtsp://', 'rtmp://', 'http://', 'https://', 'tcp://'))
 
-    """
-    A method to get the actual calculated FPS.
-    
-    Parameters:
-        None
-    
-    Returns:
-        float: The actual calculated FPS
-    """
+    def get_actual_fps(self) -> float:
+        """
+        A method to get the actual calculated FPS.
 
-    def get_actual_fps(self):
+        Returns:
+            float: The actual calculated FPS
+        """
         return self.__actual_fps
 
-    """
-    A method to get the FPS of the video stream.
-    
-    Parameters:
-        None
-    
-    Returns:
-        int: The FPS of the video stream
-    """
+    def get_fps(self) -> float:
+        """
+        A method to get the FPS of the video stream.
 
-    def get_fps(self):
+        Returns:
+            float: The FPS of the video stream
+        """
         return self.__fps
 
-    """
-    A method to calculate the actual FPS based on time intervals between frames.
-    
-    Parameters:
-        None
-    
-    Returns:
-        None
-    """
+    def calculate_fps(self) -> None:
+        """
+        A method to calculate the actual FPS based on time intervals between frames.
 
-    def calculate_fps(self):
+        Returns:
+            None
+        """
         current_time = time.time()
         time_difference = current_time - self.__last_frame_time
         self.__actual_fps = 1 / time_difference if time_difference > 0 else 0
         self.__last_frame_time = current_time
 
-    """
-    A method to encode the frame.
-
-    Parameters:
-        frame: The frame to encode
-        quality: The quality of the encoded frame
-        ext: The extension of the encoded frame
-
-    Returns:
-        frame_encoded: The encoded frame
-    """
-
     @staticmethod
-    def encoding_frame(frame, quality=95, ext="jpg"):
+    def encoding_frame(frame: cv2.Mat, quality: int = 95, ext: str = "jpg") -> bytes:
+        """
+        A method to encode the frame.
+
+        Args:
+            frame: The frame to encode
+            quality: The quality of the encoded frame
+            ext: The extension of the encoded frame
+
+        Returns:
+            frame_encoded: The encoded frame
+        """
         ext = ext if ext.startswith(".") else "." + ext
         ret, frame_encoded = cv2.imencode(ext, frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
         if not ret:
             raise ValueError("Failed to encode frame")
         return frame_encoded
 
-    """
-    Resizes the frame.
-    
-    Parameters:
-        frame: The frame to resize
-        scale_percent: The scale percentage of the resized frame
-    
-    Returns:
-        frame: The resized frame
-    """
-
     @staticmethod
-    def resize_frame(frame, scale_percent=70):
+    def resize_frame(frame: cv2.Mat, scale_percent: int = 70) -> cv2.Mat:
+        """
+        Resizes the frame.
+
+        Args:
+            frame: The frame to resize
+            scale_percent: The scale percentage of the resized frame
+
+        Returns:
+            frame: The resized frame
+        """
         width = int(frame.shape[1] * scale_percent / 100)
         height = int(frame.shape[0] * scale_percent / 100)
         return cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)

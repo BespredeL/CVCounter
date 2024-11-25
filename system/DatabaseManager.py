@@ -17,10 +17,10 @@ from system.Logger import Logger
 
 
 class TablePrefixBase:
-    __table_prefix__ = config.get('db.prefix', '')
+    __table_prefix__: str = config.get('db.prefix', '')
 
     @declared_attr
-    def __tablename__(cls):
+    def __tablename__(cls) -> str:
         return cls.__table_prefix__ + cls.__name__.lower()
 
 
@@ -43,20 +43,20 @@ class CVCounter(Base):
 
 
 class DatabaseManager:
-    """
-    Database manager using SQLAlchemy.
 
-    Args:
-        uri (str): Database connection URL.
-        prefix (str, optional): Table prefix. Defaults to ''.
-    """
+    def __init__(self, uri: str, prefix: str = ''):
+        """
+        Database manager using SQLAlchemy.
 
-    def __init__(self, uri, prefix=''):
-        self.__logger = Logger()
+        Args:
+            uri (str): Database connection URL.
+            prefix (str, optional): Table prefix. Defaults to ''.
+        """
+        self.__logger: Logger = Logger()
         try:
-            self.__engine = create_engine(uri)
-            self.__prefix = prefix
-            self.__sessionmaker = sessionmaker(bind=self.__engine)
+            self.__engine: any = create_engine(uri)
+            self.__prefix: str = prefix
+            self.__sessionmaker: any = sessionmaker(bind=self.__engine)
 
             # Create tables if they don't exist yet
             Base.metadata.create_all(self.__engine)
@@ -64,30 +64,32 @@ class DatabaseManager:
             self.__logger.error(str(error))
             self.__logger.log_exception()
 
-    """
-    Creates and returns a new session.
-    
-    Returns:
-        Session: A new session.
-    """
+    def create_session(self) -> any:
+        """
+        Creates and returns a new session.
 
-    def create_session(self):
+        Returns:
+            Session: A new session.
+        """
         return self.__sessionmaker()
 
-    """
-    Saves a result to the database.
-    
-    Args:
-        location (str): The location of the result.
-        total_count (int, optional): The total count. Defaults to 0.
-        source_count (int, optional): The source count. Defaults to 0.
-        defects_count (int, optional): The defects count. Defaults to 0.
-        correct_count (int, optional): The correct count. Defaults to 0.
-        custom_fields (str, optional): The custom fields. Defaults to ''.
-        active (bool, optional): The active status. Defaults to True.
-    """
+    def save_result(self, location: str, total_count: int = 0, source_count: int = 0, defects_count: int = 0,
+                    correct_count: int = 0, custom_fields: str = '', active: bool = True) -> bool:
+        """
+        Saves a result to the database.
 
-    def save_result(self, location, total_count=0, source_count=0, defects_count=0, correct_count=0, custom_fields='', active=True):
+        Args:
+            location (str): The location of the result.
+            total_count (int, optional): The total count. Defaults to 0.
+            source_count (int, optional): The source count. Defaults to 0.
+            defects_count (int, optional): The defects count. Defaults to 0.
+            correct_count (int, optional): The correct count. Defaults to 0.
+            custom_fields (str, optional): The custom fields. Defaults to ''.
+            active (bool, optional): The active status. Defaults to True.
+
+        Returns:
+            bool: True if the result was saved successfully, False otherwise.
+        """
         session = self.create_session()
         try:
             result = session.query(CVCounter).filter_by(location=location, active=True).first()
@@ -137,18 +139,21 @@ class DatabaseManager:
         finally:
             session.close()
 
-    """
-    Saves a part result to the database.
-    
-    Args:
-        location (str): The location of the result.
-        current_count (int, optional): The current count. Defaults to 0.
-        total_count (int, optional): The total count. Defaults to 0.
-        defects_count (int, optional): The defects count. Defaults to 0.
-        correct_count (int, optional): The correct count. Defaults to 0.
-    """
+    def save_part_result(self, location: str, current_count: int = 0, total_count: int = 0, defects_count: int = 0,
+                         correct_count: int = 0) -> bool:
+        """
+        Saves a part result to the database.
 
-    def save_part_result(self, location, current_count=0, total_count=0, defects_count=0, correct_count=0):
+        Args:
+            location (str): The location of the result.
+            current_count (int, optional): The current count. Defaults to 0.
+            total_count (int, optional): The total count. Defaults to 0.
+            defects_count (int, optional): The defects count. Defaults to 0.
+            correct_count (int, optional): The correct count. Defaults to 0.
+
+        Returns:
+            bool: True if the result was saved successfully, False otherwise.
+        """
         session = self.create_session()
         try:
             result = session.query(CVCounter).filter_by(location=location, active=True).first()
@@ -176,14 +181,16 @@ class DatabaseManager:
         finally:
             session.close()
 
-    """
-    Closes the current counter for the specified location.
-    
-    Args:
-        location (str): The location of the counter to close.
-    """
+    def close_current_count(self, location: str) -> bool:
+        """
+        Closes the current counter for the specified location.
 
-    def close_current_count(self, location):
+        Args:
+            location (str): The location of the counter to close.
+
+        Returns:
+            bool: True if the counter was closed successfully, False otherwise.
+        """
         session = self.create_session()
         try:
             result = session.query(CVCounter).filter_by(location=location, active=True).first()
@@ -200,17 +207,16 @@ class DatabaseManager:
         finally:
             session.close()
 
-    """
-    Returns the current counter for the given key.
+    def get_current_count(self, key: str = '') -> CVCounter | None:
+        """
+        Returns the current counter for the given key.
 
-    Args:
-        key (str, optional): The key. Defaults to ''.
+        Args:
+            key (str, optional): The key. Defaults to ''.
 
-    Returns:
-        CVCounter: The current counter.
-    """
-
-    def get_current_count(self, key=''):
+        Returns:
+            CVCounter: The current counter.
+        """
         session = self.create_session()
         try:
             result = session.query(CVCounter).filter_by(active=True, location=key).first()
@@ -221,17 +227,16 @@ class DatabaseManager:
         finally:
             session.close()
 
-    """
-    Returns the count for the given id.
+    def get_count(self, rec_id: int) -> CVCounter | None:
+        """
+        Returns the count for the given id.
 
-    Args:
-        rec_id (int): The record id.
+        Args:
+            rec_id (int): The record id.
 
-    Returns:
-        CVCounter: The count.
-    """
-
-    def get_count(self, rec_id):
+        Returns:
+            CVCounter: The count.
+        """
         session = self.create_session()
         try:
             result = session.query(CVCounter).filter_by(id=rec_id).first()
@@ -242,17 +247,18 @@ class DatabaseManager:
         finally:
             session.close()
 
-    """
-    Returns all counters for the given key.
+    def get_paginated(self, key: str = '', page: int = 1, per_page: int = 10) -> dict:
+        """
+        Returns all counters for the given key.
 
-    Args:
-        key (str, optional): The key. Defaults to ''.
+        Args:
+            key (str, optional): The key. Defaults to ''.
+            page (int, optional): The page number. Defaults to 1.
+            per_page (int, optional): The number of records per page. Defaults to 10.
 
-    Returns:
-        list: A list of counters.
-    """
-
-    def get_paginated(self, key: str = '', page: int = 1, per_page: int = 10):
+        Returns:
+            list: A list of counters.
+        """
         session = self.create_session()
         try:
             query = session.query(CVCounter).filter_by(location=key)

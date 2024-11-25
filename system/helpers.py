@@ -3,36 +3,35 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 22.03.2024
-# Updated: 03.09.2024
+# Updated: 24.11.2024
 # Website: https://bespredel.name
 
 import json
 import re
 
-"""
-Translates the given text to the specified language using the provided translations.
 
-Parameters:
-    text (str): The text to be translated.
-    lang (str, optional): The language code to translate the text to. Defaults to 'ru'.
-    **kwargs: Additional keyword arguments to be used for placeholder replacement in the translated text.
+def trans(text: str, lang: str = 'ru', **kwargs: dict) -> str:
+    """
+    Translates the given text to the specified language using the provided translations.
 
-Returns:
-    str: The translated text with any placeholder replacements made.
+    Args:
+        text (str): The text to be translated.
+        lang (str, optional): The language code to translate the text to. Defaults to 'ru'.
+        **kwargs: Additional keyword arguments to be used for placeholder replacement in the translated text.
 
-Raises:
-    None
+    Returns:
+        str: The translated text with any placeholder replacements made.
 
-Examples:
-    >>> trans('Hello', lang='ru')
-    'Привет'
+    Raises:
+        None
 
-    >>> trans('The weather is {weather}', lang='ru', weather='sunny')
-    'Погода солнечная'
-"""
+    Examples:
+        >>> trans('Hello', lang='ru')
+        'Привет'
 
-
-def trans(text, lang='ru', **kwargs):
+        >>> trans('The weather is {weather}', lang='ru', weather='sunny')
+        'Погода солнечная'
+    """
     lang_list = load_translations(lang)
 
     if text in lang_list:
@@ -45,21 +44,19 @@ def trans(text, lang='ru', **kwargs):
     return text
 
 
-"""
-Load translations
+def load_translations(language_code: str) -> dict:
+    """
+    Load translations
 
-Parameters:
-    language_code (str): The language code to load translations for.
+    Args:
+        language_code (str): The language code to load translations for.
 
-Returns:
-    dict: A dictionary of translations for the specified language code.
+    Returns:
+        dict: A dictionary of translations for the specified language code.
 
-Raises:
-    None
-"""
-
-
-def load_translations(language_code):
+    Raises:
+        None
+    """
     try:
         file_path = f"langs/{language_code}.json"
         with open(file_path, "r", encoding="utf-8") as file:
@@ -69,18 +66,16 @@ def load_translations(language_code):
         return {}
 
 
-"""
-Create slug
+def slug(s: str) -> str:
+    """
+    Create slug
 
-Parameters:
-    s (str): The text to be slug.
+    Args:
+        s (str): The text to be slugged.
 
-Returns:
-    str: Slug string
-"""
-
-
-def slug(s):
+    Returns:
+        str: Slug string
+    """
     s = s.lower().strip()
     s = re.sub(r'[^\w\s-]', '', s)
     s = re.sub(r'[\s_-]+', '-', s)
@@ -88,19 +83,17 @@ def slug(s):
     return s
 
 
-"""
-Print with color
+def pr_color(text: str, color: str) -> None:
+    """
+    Print with color
 
-Parameters:
-    text (str): The text to be printed.
-    color (str): The color to print the text in.
+    Args:
+        text (str): The text to be printed.
+        color (str): The color to print the text in.
 
-Returns:
-    None
-"""
-
-
-def pr_color(text, color):
+    Returns:
+        None
+    """
     colors = {
         'red': "\033[91m",
         'green': "\033[92m",
@@ -109,23 +102,23 @@ def pr_color(text, color):
         'light_gray': "\033[97m",
         'black': "\033[98m"
     }
-    color_code = colors.get(color, "\033[97m")  # Default to light gray if color not found
-    print("{} {}\033[00m".format(color_code, text))
+    if color not in colors:
+        raise ValueError(f"Invalid color '{color}'. Valid options are: {', '.join(colors.keys())}")
+    color_code = colors[color]
+    print(f"{color_code}{text}\033[00m")
 
 
-"""
-Colored text
+def colored_text(text: str, color: str) -> str:
+    """
+    Colored text
 
-Parameters:
-    text (str): The text to be printed.
-    color (str): The color to print the text in.
+    Args:
+        text (str): The text to be printed.
+        color (str): The color to print the text in.
 
-Returns:
-    str: Colored text
-"""
-
-
-def colored_text(text, color):
+    Returns:
+        str: Colored text
+    """
     colors = {
         'red': "\033[91m",
         'green': "\033[92m",
@@ -134,22 +127,19 @@ def colored_text(text, color):
         'light_gray': "\033[97m",
         'black': "\033[98m"
     }
+    if color not in colors:
+        raise ValueError(f"Invalid color '{color}'. Valid options are: {', '.join(colors.keys())}")
     color_code = colors.get(color, "\033[97m")  # Default to light gray if color not found
     return "{}{}\033[00m".format(color_code, text)
 
 
-"""
-System check
+def system_check() -> None:
+    """
+    System check
 
-Parameters:
-    None
-
-Returns:
-    None
-"""
-
-
-def system_check():
+    Returns:
+        None
+    """
     import subprocess
     import torch
     import re
@@ -170,7 +160,8 @@ def system_check():
             return colored_text(value, 'green')
 
     # Print the extracted values
-    pr_color(f'* NVIDIA-SMI Version: {colored_value(nvidia_smi_version.group(1) if nvidia_smi_version else "N/A")}', 'yellow')
+    pr_color(f'* NVIDIA-SMI Version: {colored_value(nvidia_smi_version.group(1) if nvidia_smi_version else "N/A")}',
+             'yellow')
     pr_color(f'* Driver Version: {colored_value(driver_version.group(1) if driver_version else "N/A")}', 'yellow')
     pr_color(f'* CUDA Version: {colored_value(cuda_version.group(1) if cuda_version else "N/A")}', 'yellow')
 
