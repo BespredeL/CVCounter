@@ -5,11 +5,11 @@
     {% if counter_on_sidebar is not none and counter_on_sidebar %}
         <!-- Counter block -->
         <div class="bg-warning text-dark rounded position-relative my-2 px-2">
-            <div class="h4 position-absolute">{{ trans('Quantity:') }} <span id="total_count">0</span></div>
-            <div id="current_count" class="display-1 pt-3">0</div>
+            <div class="h4 mb-0">{{ trans('Quantity:') }} <span id="total_count">0</span></div>
+            <div id="current_count" class="display-1 lh-1">0</div>
 
             {% if form_config.get('defect_show', true) or form_config.get('correct_show', true) %}
-                <div class="h5 d-flex justify-content-between w-100 mt-2 pb-1 border-top border-dark">
+                <div class="h5 d-flex flex-wrap justify-content-between w-100 mt-2 pb-1 border-top border-dark">
                     <div class="{{ 'd-none' if not form_config.get('defect_show', true) }}">
                         {{ trans('Defective products') }}: <span id="defect_count">0</span>
                     </div>
