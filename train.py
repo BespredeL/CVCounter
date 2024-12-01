@@ -10,43 +10,67 @@ import os
 import torch
 from ultralytics import YOLO
 
-default_model_name = 'yolov8n.pt'
-model_name = 'yolov8_custom'
-model_task = 'detect'
-mode = 'train'  # 'export' or 'train'
-export_format = 'engine'  # 'engine', 'onnx', etc...
+# Configurations
+DEFAULT_MODEL_NAME = 'yolo11n.pt'
+MODEL_NAME = 'yolo11_cvcounter'
+MODEL_TASK = 'detect'
+MODE = 'train'  # 'train' or 'export'
+EXPORT_FORMAT = 'engine'  # 'engine', 'onnx', etc.
+IMG_SIZE = 640  # Image size for training
+EPOCHS = 100  # Number of training epochs
+CFG_DIR = 'yolo_cfg'
 
-# Specify the save directory for training runs
-cfg_dir = 'yolo_cfg'
-os.makedirs(cfg_dir, exist_ok=True)
-os.makedirs(f'{cfg_dir}/cfg', exist_ok=True)
-os.makedirs(f'{cfg_dir}/datasets', exist_ok=True)
-os.makedirs(f'{cfg_dir}/models', exist_ok=True)
 
-# Load a pretrained model (recommended for training)
-model = YOLO(f'{cfg_dir}/models/{default_model_name}')
+# Check exists directories
+def setup_directories():
+    os.makedirs(CFG_DIR, exist_ok=True)
+    os.makedirs(f'{CFG_DIR}/cfg', exist_ok=True)
+    os.makedirs(f'{CFG_DIR}/datasets', exist_ok=True)
+    os.makedirs(f'{CFG_DIR}/models', exist_ok=True)
 
-# Training
+
+# Load model
+def load_model(model_path):
+    try:
+        return YOLO(model_path)
+    except Exception as e:
+        print(f"Error loading model: {e}")
+        exit(1)
+
+
+# Train the model
+def train_model(model):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model.train(
+        data=f'{CFG_DIR}/cfg/{MODEL_NAME}.yaml',
+        imgsz=IMG_SIZE,
+        epochs=EPOCHS,
+        batch=-1,
+        name=MODEL_NAME,
+        device=device,
+        save_dir=CFG_DIR,
+        project=f'{CFG_DIR}/runs/{MODEL_TASK}',
+    )
+
+    if EXPORT_FORMAT:
+        model.export(format=EXPORT_FORMAT, device=0, simplify=True)
+
+
+# Export the trained model
+def export_model(model):
+    model_path = f'{CFG_DIR}/runs/{MODEL_TASK}/{MODEL_NAME}/weights/best.pt'
+    model = load_model(model_path)
+    model.export(format=EXPORT_FORMAT, device=0, simplify=True)
+
+
+# Main
 if __name__ == '__main__':
-    if mode == 'train':
-        model.train(
-            data=f'{cfg_dir}/cfg/{model_name}.yaml',
-            imgsz=640,  # (640, 480)
-            epochs=300,
-            # pretrained=True,
-            batch=-1,
-            name=f'{model_name}',
-            device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
-            save_dir=cfg_dir,
-            project=f'{cfg_dir}/runs/{model_task}',
-        )
+    setup_directories()
+    model = load_model(f'{CFG_DIR}/models/{DEFAULT_MODEL_NAME}')
 
-        if export_format != '':
-            model.export(format=export_format, device=0, simplify=True)
-
-    if mode == 'export':
-        # Load a custom trained model
-        model = YOLO(f'{cfg_dir}/runs/{model_task}/{model_name}/weights/best.pt')
-
-        # Export the model
-        model.export(format=export_format, device=0, simplify=True)
+    if MODE == 'train':
+        train_model(model)
+    elif MODE == 'export':
+        export_model(model)
+    else:
+        print("Invalid mode. Use 'train' or 'export'.")

@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 25.11.2024
+# Updated: 01.12.2024
 # Website: https://bespredel.name
 
 import json
@@ -477,10 +477,10 @@ if __name__ == '__main__':
     socketio.run(
         app,
         host=config.get('server.host'),
-        port=config.get('server.port'),
-        debug=config.get('general.debug'),
-        # threaded=config.get('server.threaded'),
-        log_output=config.get('server.log_output'),
-        use_reloader=config.get('server.use_reloader'),
-        allow_unsafe_werkzeug=config.get('general.allow_unsafe_werkzeug', config.get('general.debug'))
+        port=config.get('server.port', 80),
+        debug=config.get('general.debug', False),
+        threaded=config.get('server.threaded', False),
+        log_output=config.get('server.log_output', True),
+        use_reloader=config.get('server.use_reloader', False),
+        allow_unsafe_werkzeug=config.get('general.allow_unsafe_werkzeug', config.get('general.debug', False))
     )
