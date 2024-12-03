@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 01.12.2024
+# Updated: 03.12.2024
 # Website: https://bespredel.name
 
 import json
@@ -11,11 +11,11 @@ import os
 import re
 from threading import Lock, Thread
 from typing import Any
-
 from flask import Flask, Response, abort, flash, redirect, render_template, request, url_for
 from flask_httpauth import HTTPBasicAuth
 from flask_socketio import SocketIO
 from markupsafe import escape
+from werkzeug import Response
 from werkzeug.security import check_password_hash, generate_password_hash
 # from werkzeug.middleware.proxy_fix import ProxyFix  # For NGINX
 from config import config
@@ -330,7 +330,7 @@ def reset_count_current(location: str = None) -> dict:
 # --------------------------------------------------------------------------------
 
 @app.route('/start_count/<string:location>')
-def start_count(location: str = None) -> dict or str:
+def start_count(location: str = None) -> dict[str, str] | Response:
     location = str(escape(location))
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
@@ -343,7 +343,7 @@ def start_count(location: str = None) -> dict or str:
 
 
 @app.route('/pause_count/<string:location>')
-def pause_count(location: str = None) -> dict or str:
+def pause_count(location: str = None) -> dict[str, str] | Response:
     location = str(escape(location))
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
@@ -356,7 +356,7 @@ def pause_count(location: str = None) -> dict or str:
 
 
 @app.route('/stop_count/<string:location>')
-def stop_count(location: str = None) -> dict or str:
+def stop_count(location: str = None) -> dict[str, str] | Response:
     location = str(escape(location))
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
