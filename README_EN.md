@@ -5,6 +5,7 @@ CVCounter is an object counting application using computer vision, implemented i
 - Python
 - Flask
 - OpenCV
+- Ultralytics YOLO
 
 ## Installation
 1. **Clone the repository:**
