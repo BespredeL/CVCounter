@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 03.07.2024
+# Updated: 03.12.2024
 # Website: https://bespredel.name
 
 import os
@@ -57,7 +57,7 @@ def train_model(model):
 
 
 # Export the trained model
-def export_model(model):
+def export_model():
     model_path = f'{CFG_DIR}/runs/{MODEL_TASK}/{MODEL_NAME}/weights/best.pt'
     model = load_model(model_path)
     model.export(format=EXPORT_FORMAT, device=0, simplify=True)
@@ -71,6 +71,6 @@ if __name__ == '__main__':
     if MODE == 'train':
         train_model(model)
     elif MODE == 'export':
-        export_model(model)
+        export_model()
     else:
         print("Invalid mode. Use 'train' or 'export'.")
