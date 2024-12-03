@@ -11,7 +11,7 @@
     "server": {
         "host": "0.0.0.0",
         "port": 80,
-        "threaded": true,
+        "threaded": false,
         "use_reloader": false,
         "log_output": false,
         "secret_key": ""

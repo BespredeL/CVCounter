@@ -241,7 +241,7 @@ class ObjectCounter:
             numpy.ndarray: The processed frame.
         """
         start_time = time.time()
-        frame_copy = frame.copy() if self.dataset.get('enable') else None
+        frame_copy = frame.copy() if self.dataset.get('enable', False) else None
         last_total_count = self.total_count
 
         # Detect objects
@@ -258,7 +258,7 @@ class ObjectCounter:
         self.frame_lost = 0
 
         # Save images from training dataset
-        if self.dataset.get('enable') and last_total_count != self.total_count and random.random() < float(
+        if self.dataset.get('enable', False) and last_total_count != self.total_count and random.random() < float(
                 self.dataset['probability']):
             self._save_dataset_image(frame_copy)
 
