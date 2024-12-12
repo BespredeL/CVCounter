@@ -5,6 +5,7 @@ CVCounter - это приложение для подсчета объектов
 - Python
 - Flask
 - OpenCV
+- Ultralytics YOLO
 
 ## Установка
 1. **Клонируйте репозиторий:**

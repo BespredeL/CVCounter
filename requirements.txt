@@ -10,9 +10,9 @@
 #       for example: C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT\v8.6.1.6
 #       or set the environment variable TENSORRT_PATH
 #   pip install "${TENSORRT_PATH}\graphsurgeon\graphsurgeon-0.4.6-py2.py3-none-any.whl"
-#   pip install "${TENSORRT_PATH}\TensorRT\v8.6.1.6\uff\uff-0.6.9-py2.py3-none-any.whl"
-#   pip install "${TENSORRT_PATH}\TensorRT\v8.6.1.6\onnx_graphsurgeon\onnx_graphsurgeon-0.3.12-py2.py3-none-any.whl"
-#   pip install "${TENSORRT_PATH}\TensorRT\v8.6.1.6\python\tensorrt-8.6.1-cp311-none-win_amd64.whl"
+#   pip install "${TENSORRT_PATH}\uff\uff-0.6.9-py2.py3-none-any.whl"
+#   pip install "${TENSORRT_PATH}\onnx_graphsurgeon\onnx_graphsurgeon-0.3.12-py2.py3-none-any.whl"
+#   pip install "${TENSORRT_PATH}\python\tensorrt-8.6.1-cp311-none-win_amd64.whl"
 #
 
 # General -------------------------------------

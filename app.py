@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 25.11.2024
+# Updated: 03.12.2024
 # Website: https://bespredel.name
 
 import json
@@ -11,11 +11,11 @@ import os
 import re
 from threading import Lock, Thread
 from typing import Any
-
 from flask import Flask, Response, abort, flash, redirect, render_template, request, url_for
 from flask_httpauth import HTTPBasicAuth
 from flask_socketio import SocketIO
 from markupsafe import escape
+from werkzeug import Response
 from werkzeug.security import check_password_hash, generate_password_hash
 # from werkzeug.middleware.proxy_fix import ProxyFix  # For NGINX
 from config import config
@@ -330,7 +330,7 @@ def reset_count_current(location: str = None) -> dict:
 # --------------------------------------------------------------------------------
 
 @app.route('/start_count/<string:location>')
-def start_count(location: str = None) -> dict or str:
+def start_count(location: str = None) -> dict[str, str] | Response:
     location = str(escape(location))
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
@@ -343,7 +343,7 @@ def start_count(location: str = None) -> dict or str:
 
 
 @app.route('/pause_count/<string:location>')
-def pause_count(location: str = None) -> dict or str:
+def pause_count(location: str = None) -> dict[str, str] | Response:
     location = str(escape(location))
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
@@ -356,7 +356,7 @@ def pause_count(location: str = None) -> dict or str:
 
 
 @app.route('/stop_count/<string:location>')
-def stop_count(location: str = None) -> dict or str:
+def stop_count(location: str = None) -> dict[str, str] | Response:
     location = str(escape(location))
     if location not in object_counters:
         abort(400, trans('Detection config not found'))
@@ -477,10 +477,10 @@ if __name__ == '__main__':
     socketio.run(
         app,
         host=config.get('server.host'),
-        port=config.get('server.port'),
-        debug=config.get('general.debug'),
-        # threaded=config.get('server.threaded'),
-        log_output=config.get('server.log_output'),
-        use_reloader=config.get('server.use_reloader'),
-        allow_unsafe_werkzeug=config.get('general.allow_unsafe_werkzeug', config.get('general.debug'))
+        port=config.get('server.port', 80),
+        debug=config.get('general.debug', False),
+        threaded=config.get('server.threaded', False),
+        log_output=config.get('server.log_output', True),
+        use_reloader=config.get('server.use_reloader', False),
+        allow_unsafe_werkzeug=config.get('general.allow_unsafe_werkzeug', config.get('general.debug', False))
     )
