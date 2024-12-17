@@ -97,7 +97,7 @@
 
                 let baseUrl = '{{ url_for('counter_dual_text', location_first='', location_second='') }}'.replace(/\/+$/, '');
                 let fullUrl = baseUrl + '/' + counterDualTextIn + '/' + counterDualTextOut;
-                window.open(fullUrl);
+                window.open(fullUrl, '_self');
             });
 
             /**

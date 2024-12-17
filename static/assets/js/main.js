@@ -160,7 +160,7 @@ $(function () {
         toast.className = `toast align-items-center text-bg-${type} border-0`;
         toast.innerHTML = `
             <div class="d-flex">
-                <div class="toast-body">${message}</div>
+                <div class="toast-body user-select-none">${message}</div>
                 <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>`;
         toast.setAttribute("role", "alert");
