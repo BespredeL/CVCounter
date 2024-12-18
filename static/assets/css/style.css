@@ -15,6 +15,18 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
     }
 }
 
+.spinner-btn-dropdown {
+    --bs-spinner-width: 1.3rem;
+    --bs-spinner-height: 1.3rem;
+    position: absolute;
+    top: 7px;
+    left: 5px;
+}
+
+.dropdown-toggle:has(span.spinner-btn-dropdown)::after {
+    margin-left: 0;
+}
+
 .img-container {
     max-height: calc(100vh - 65px);
     width: auto;

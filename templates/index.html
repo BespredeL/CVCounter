@@ -71,16 +71,22 @@
             $('.dropdown-item').on('click', function (e) {
                 e.preventDefault();
 
-                let href = $(this).attr('href');
-                $.ajax({
-                    url: href,
-                    method: 'GET',
-                    success: function (response) {
-                        //console.log('Success!', response);
-                    },
-                    error: function (xhr, status, error) {
-                        //console.error('Error!', error);
-                    }
+                let element = $(this);
+                let href = element.attr('href');
+                let parent = element.parent().parent().parent().find('.btn.dropdown-toggle');
+
+                let spinnerTimer = setTimeout(() => {
+                    parent.append('<span class="spinner-border spinner-border-sm spinner-btn-dropdown" role="status" aria-hidden="true"></span>');
+                }, 300);
+
+                $.get(href).done(() => {
+                    spinnerTimer && clearTimeout(spinnerTimer);
+                    parent.find('.spinner-border').remove();
+                }).fail(() => {
+                    showToast('{{ trans("Something went wrong") }}', 'success');
+                }).always(() => {
+                    spinnerTimer && clearTimeout(spinnerTimer);
+                    parent.find('.spinner-border').remove();
                 });
             });
 
