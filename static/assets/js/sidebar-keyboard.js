@@ -1,38 +1,32 @@
 /**
  * Developed by: Aleksandr Kireev
  * Created: 04.09.2024
- * Updated: 04.09.2024
+ * Updated: 18.12.2024
  * Website: https://bespredel.name
  */
+
 $(function () {
 
-    // Обработчик для изменения значения инпута
+    // Handler for changing the input value
     function changeInputValue(selector, increment) {
         $(selector).on('click', function () {
-            const $input = $(this).parent().find('input');
-            const value = parseInt($input.val(), 10);
-            const max = $input.attr('max');
-            const min = $input.attr('min');
-            let validateValue = true;
+            const $input = $(this).siblings('input');
+            let value = parseInt($input.val(), 10) || 0;
+            const max = parseInt($input.attr('max'), 10);
+            const min = parseInt($input.attr('min'), 10);
 
-            if (max !== undefined) {
-                validateValue = increment ? value < parseInt(max, 10) : value <= parseInt(max, 10);
-            }
-            if (min !== undefined) {
-                validateValue = increment ? value >= parseInt(min, 10) : value > parseInt(min, 10);
-            }
-
-            if (!isNaN(value) && validateValue) {
-                $input.val(value + (increment ? 1 : -1));
+            if ((increment && (isNaN(max) || value < max)) || (!increment && (isNaN(min) || value > min))) {
+                value += increment ? 1 : -1;
+                if (!isNaN(max) && value > max) value = max;
+                if (!isNaN(min) && value < min) value = min;
+                $input.val(value);
             }
         });
     }
 
-    // Обработчики для кнопок плюс и минус
     changeInputValue('.input-plus', true);
     changeInputValue('.input-minus', false);
 
-    // Обработчик для сброса значений инпутов
     $('#correct_clear').on('click', function () {
         $('#correct_keyboard input').val(0);
     });
@@ -41,30 +35,49 @@ $(function () {
         $('#defect_keyboard input').val(0);
     });
 
-    // Обработчик для кнопок клавиатуры
     $('.keyboard button').on('click', function () {
-        let $this = $(this);
-        let $input = $('#' + $this.parent().parent().data('input-id') + ' input');
-        let value = $this.data('value');
-        let input_val = $input.val();
-        input_val = input_val.replace(/[^0-9\-]/g, '');
+        let $button = $(this);
+        let $input = $('#' + $button.parent().parent().data('input-id') + ' input');
+        let value = $button.data('value');
+        let inputValue = parseInt($input.val().replace(/[^0-9\-]/g, ''), 10) || 0;
+        const max = parseInt($input.attr('max'), 10);
+        const min = parseInt($input.attr('min'), 10);
 
-        if ($this.hasClass('reset')) {
+        if ($button.hasClass('reset')) {
             $input.val(0);
             return;
         }
 
         if (value === '-') {
-            input_val = -(input_val);
+            inputValue = -inputValue;
         } else {
-            input_val = input_val + value;
+            inputValue = inputValue * 10 + parseInt(value, 10);
         }
 
-        if (input_val > 999999 || input_val < -999999) {
-            return;
-        }
+        if (!isNaN(max) && inputValue > max) inputValue = max;
+        if (!isNaN(min) && inputValue < min) inputValue = min;
 
-        $input.val(parseInt(input_val));
+
+        if (inputValue >= min && inputValue <= max) {
+            $input.val(inputValue);
+        }
     });
 
+    $('input.valid_min_max').on('input', function () {
+        const $input = $(this);
+        let value = $input.val().replace(/[^0-9\-]/g, '');
+
+        if (value.includes('-') && value.indexOf('-') !== 0) {
+            value = '-' + value.replace(/-/g, '');
+        }
+
+        let numericValue = parseInt(value, 10) || 0;
+        const max = parseInt($input.attr('max'), 10);
+        const min = parseInt($input.attr('min'), 10);
+
+        if (!isNaN(max) && numericValue > max) numericValue = max;
+        if (!isNaN(min) && numericValue < min) numericValue = min;
+
+        $input.val(numericValue);
+    });
 });

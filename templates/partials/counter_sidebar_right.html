@@ -4,7 +4,7 @@
 <div class="col-12 col-lg-4 col-xl-3 sidebar-right">
     {% if counter_on_sidebar is not none and counter_on_sidebar %}
         <!-- Counter block -->
-        <div class="bg-warning text-dark rounded position-relative my-2 px-2">
+        <div class="bg-warning text-dark rounded position-relative my-2 px-2 user-select-none">
             <div class="h4 mb-0">{{ trans('Quantity:') }} <span id="total_count">0</span></div>
             <div id="current_count" class="display-1 lh-1">0</div>
 
@@ -25,7 +25,7 @@
         <!-- Defect keyboard -->
         <div class="border border-danger-subtle border-2 rounded my-2 p-2">
             <div class="col-12 mb-3">
-                <label for="defect_keyboard" class="form-label h4">{{ trans('Defective products') }}</label>
+                <label for="defect_keyboard" class="form-label h4 user-select-none">{{ trans('Defective products') }}</label>
                 <button class="btn btn-outline-info float-end" data-bs-toggle="collapse" data-bs-target="#collapseDefect"
                         aria-expanded="false"
                         aria-controls="collapseDefect"
@@ -53,9 +53,8 @@
                                   d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"></path>
                         </svg>
                     </button>
-                    <input type="number" class="form-control form-control-lg" aria-label="" name="defect_count" value="0" min="0"
-                           max="999999"
-                           maxlength="9">
+                    <input type="number" class="form-control form-control-lg valid_min_max" aria-label="" name="defect_count" value="0"
+                           min="0" max="9999999">
                     <button class="btn btn-sm btn-secondary input-minus">
                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-dash-lg"
                              viewBox="0 0 16 16">
@@ -100,7 +99,7 @@
         <!-- Correct keyboard -->
         <div class="border border-warning-subtle border-2 rounded my-2 p-2">
             <div class="col-12 mb-3">
-                <label for="correct_keyboard" class="form-label h4">{{ trans('Correct count') }}</label>
+                <label for="correct_keyboard" class="form-label h4 user-select-none">{{ trans('Correct count') }}</label>
                 <button class="btn btn-outline-info float-end" data-bs-toggle="collapse" data-bs-target="#collapseСorrect"
                         aria-expanded="false"
                         aria-controls="collapseСorrect"
@@ -127,7 +126,8 @@
                                   d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"></path>
                         </svg>
                     </button>
-                    <input type="number" class="form-control form-control-lg" aria-label="" name="correct_count" value="0" maxlength="9">
+                    <input type="number" class="form-control form-control-lg valid_min_max" aria-label="" name="correct_count" value="0"
+                           min="-9999999" max="9999999">
                     <button class="btn btn-sm btn-secondary input-minus">
                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-dash-lg"
                              viewBox="0 0 16 16">
@@ -172,9 +172,9 @@
     {% if custom_fields %}
         <div class="border border-secondary-subtle border-2 rounded my-2 p-2">
             {% for field in custom_fields %}
-                <div class="{{ 'mb-3' if not loop.last }}">
+                <div class="{{ 'mb-2' if not loop.last }}">
                     {% if field.label or field.name %}
-                        <label for="{{ field.name }}" class="form-label">{{ trans(field.label or field.name) }}</label>
+                        <label for="{{ field.name }}" class="form-label user-select-none">{{ trans(field.label or field.name) }}</label>
                     {% endif %}
                     {% if field.type in ['text', 'number', 'date', 'datetime-local'] %}
                         <input type="{{ field.type }}" value="{{ field.value|e }}" name="{{ field.name }}" id="{{ field.name }}"

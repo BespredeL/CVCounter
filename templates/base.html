@@ -67,7 +67,7 @@
 
 <!-- START: Footer links -->
 <div class="footer-links bg-body border-top">
-    <div class="px-3 py-2 d-flex flex-wrap align-items-stretch justify-content-between">
+    <div class="px-3 py-2 d-flex flex-wrap align-items-stretch justify-content-between user-select-none">
         <div class="d-flex justify-content-start">
             {% if config.get('general.button_change_theme') %}
                 <button type="button" class="btn btn-sm d-flex align-items-center" id="theme-switch"
@@ -145,16 +145,14 @@
 <script>
     // Simple function for line translation
     window.trans = (str) => {
-        let app_lang = {};
-        app_lang['Connection to server successful'] = "{{ trans('Connection to server successful') }}";
-        app_lang['Error connecting to the server. Contact the IT department.'] = "{{ trans('Error connecting to the server. Contact the IT department.') }}";
-        app_lang['Reload page'] = "{{ trans('Reload page') }}";
+        const appLang = {
+            'Connection to server successful': "{{ trans('Connection to server successful') }}",
+            'Error connecting to the server. Contact the IT department.': "{{ trans('Error connecting to the server. Contact the IT department.') }}",
+            'Reload page': "{{ trans('Reload page') }}",
+        };
 
-        if (!app_lang[str] || typeof app_lang[str] === 'undefined' || typeof app_lang[str] !== 'string')
-            return str;
-
-        return app_lang[str];
-    }
+        return typeof appLang[str] === 'string' && appLang[str] ? appLang[str] : str;
+    };
 </script>
 <script src="{{ url_for('static', filename='assets/bootstrap5/js/bootstrap.bundle.min.js') }}"></script>
 <script src="{{ url_for('static', filename='assets/js/main.js') }}"></script>
@@ -165,9 +163,8 @@
     {% if messages %}
         <div class="toast-container position-fixed bottom-0 end-0 p-3">
             {% for message in messages %}
-                <div class="toast align-items-center text-bg-primary border-0 toast-show" role="alert"
-                     aria-live="assertive"
-                     aria-atomic="true">
+                <div class="toast align-items-center text-bg-primary border-0 toast-show user-select-none" role="alert"
+                     aria-live="assertive" aria-atomic="true">
                     <div class="d-flex">
                         <div class="toast-body">
                             {{ message }}
