@@ -145,16 +145,14 @@
 <script>
     // Simple function for line translation
     window.trans = (str) => {
-        let app_lang = {};
-        app_lang['Connection to server successful'] = "{{ trans('Connection to server successful') }}";
-        app_lang['Error connecting to the server. Contact the IT department.'] = "{{ trans('Error connecting to the server. Contact the IT department.') }}";
-        app_lang['Reload page'] = "{{ trans('Reload page') }}";
+        const appLang = {
+            'Connection to server successful': "{{ trans('Connection to server successful') }}",
+            'Error connecting to the server. Contact the IT department.': "{{ trans('Error connecting to the server. Contact the IT department.') }}",
+            'Reload page': "{{ trans('Reload page') }}",
+        };
 
-        if (!app_lang[str] || typeof app_lang[str] === 'undefined' || typeof app_lang[str] !== 'string')
-            return str;
-
-        return app_lang[str];
-    }
+        return typeof appLang[str] === 'string' && appLang[str] ? appLang[str] : str;
+    };
 </script>
 <script src="{{ url_for('static', filename='assets/bootstrap5/js/bootstrap.bundle.min.js') }}"></script>
 <script src="{{ url_for('static', filename='assets/js/main.js') }}"></script>

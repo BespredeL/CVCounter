@@ -53,9 +53,8 @@
                                   d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"></path>
                         </svg>
                     </button>
-                    <input type="number" class="form-control form-control-lg" aria-label="" name="defect_count" value="0" min="0"
-                           max="999999"
-                           maxlength="9">
+                    <input type="number" class="form-control form-control-lg valid_min_max" aria-label="" name="defect_count" value="0"
+                           min="0" max="9999999">
                     <button class="btn btn-sm btn-secondary input-minus">
                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-dash-lg"
                              viewBox="0 0 16 16">
@@ -127,7 +126,8 @@
                                   d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"></path>
                         </svg>
                     </button>
-                    <input type="number" class="form-control form-control-lg" aria-label="" name="correct_count" value="0" maxlength="9">
+                    <input type="number" class="form-control form-control-lg valid_min_max" aria-label="" name="correct_count" value="0"
+                           min="-9999999" max="9999999">
                     <button class="btn btn-sm btn-secondary input-minus">
                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-dash-lg"
                              viewBox="0 0 16 16">
