@@ -9,15 +9,6 @@ data display: main view with video, text view, and text view with two counters.
 
 ---
 
-## Key Technologies:
-
-- Python
-- Flask
-- OpenCV
-- Ultralytics YOLO
-
----
-
 ## Installation
 
 1. **Clone the repository:**
@@ -109,8 +100,6 @@ startup).
         // server host
         "port": 80,
         // server port
-        "threaded": true,
-        // enable threaded mode
         "use_reloader": false,
         // enable reloader mode
         "log_output": true,
