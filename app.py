@@ -380,7 +380,7 @@ def settings() -> str:
 
 @app.route('/settings_save', methods=['POST'])
 @auth.login_required
-def settings_save() -> str or Response:
+def settings_save() -> Response:
     form_data = request.form.to_dict()
 
     # Retrieving users from a form and encrypting passwords

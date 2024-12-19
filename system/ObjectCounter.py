@@ -240,36 +240,40 @@ class ObjectCounter:
         Returns:
             numpy.ndarray: The processed frame.
         """
-        start_time = time.time()
-        frame_copy = frame.copy() if self.dataset.get('enable', False) else None
-        last_total_count = self.total_count
+        try:
+            start_time = time.time()
+            frame_copy = frame.copy() if self.dataset.get('enable', False) else None
+            last_total_count = self.total_count
 
-        # Detect objects
-        boxes = self._detect(frame)
+            # Detect objects
+            boxes = self._detect(frame)
 
-        # Draw counting area
-        if self.get_frames_running:
-            frame = self._draw_counting_area(frame)
+            # Draw counting area
+            if self.get_frames_running:
+                frame = self._draw_counting_area(frame)
 
-        # Detect counting
-        frame = self._detect_count(frame, boxes)
+            # Detect counting
+            frame = self._detect_count(frame, boxes)
 
-        # Reset the frame_lost counter
-        self.frame_lost = 0
+            # Reset the frame_lost counter
+            self.frame_lost = 0
 
-        # Save images from training dataset
-        if self.dataset.get('enable', False) and last_total_count != self.total_count and random.random() < float(
-                self.dataset['probability']):
-            self._save_dataset_image(frame_copy)
+            # Save images from training dataset
+            if self.dataset.get('enable', False) and last_total_count != self.total_count and random.random() < float(
+                    self.dataset['probability']):
+                self._save_dataset_image(frame_copy)
 
-        # FPS counter on the frame
-        if self.debug:
-            fps = int(1 / (time.time() - start_time))
-            cv2.putText(frame, f'FPS: {fps}',
-                        self.FPS_POSITION, cv2.FONT_HERSHEY_SIMPLEX, self.FPS_FONT_SCALE, self.FPS_COLOR,
-                        self.FPS_THICKNESS)
+            # FPS counter on the frame
+            if self.debug:
+                fps = int(1 / (time.time() - start_time))
+                cv2.putText(frame, f'FPS: {fps}',
+                            self.FPS_POSITION, cv2.FONT_HERSHEY_SIMPLEX, self.FPS_FONT_SCALE, self.FPS_COLOR,
+                            self.FPS_THICKNESS)
 
-        return frame
+            return frame
+        except Exception as e:
+            self.logger.error(f'Error processing frame: {e}')
+            raise
 
     def _save_dataset_image(self, frame: np.ndarray) -> None:
         """
