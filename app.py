@@ -479,7 +479,6 @@ if __name__ == '__main__':
         host=config.get('server.host'),
         port=config.get('server.port', 80),
         debug=config.get('general.debug', False),
-        # threaded=config.get('server.threaded', False),
         log_output=config.get('server.log_output', True),
         use_reloader=config.get('server.use_reloader', False),
         allow_unsafe_werkzeug=config.get('general.allow_unsafe_werkzeug', config.get('general.debug', False))
