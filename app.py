@@ -8,7 +8,9 @@
 
 import json
 import os
+import platform
 import re
+import psutil
 from threading import Lock, Thread
 from typing import Any
 from flask import Flask, Response, abort, flash, redirect, render_template, request, url_for
@@ -17,11 +19,12 @@ from flask_socketio import SocketIO
 from markupsafe import escape
 from werkzeug import Response
 from werkzeug.security import check_password_hash, generate_password_hash
+
 # from werkzeug.middleware.proxy_fix import ProxyFix  # For NGINX
 from config import config
 from system.DatabaseManager import DatabaseManager
 from system.ObjectCounter import ObjectCounter
-from system.helpers import slug, system_check, trans as translate
+from system.helpers import format_bytes, slug, system_check, trans as translate
 
 # --------------------------------------------------------------------------------
 # Init
@@ -450,6 +453,40 @@ def report_show(location: str, id: int) -> str:
         counter=counter,
         json=json
     )
+
+
+# --------------------------------------------------------------------------------
+
+@app.route('/system_info')
+def system_info() -> str:
+    virtual_memory = psutil.virtual_memory()._asdict()
+    swap_memory = psutil.swap_memory()._asdict()
+
+    sys_info = {
+        "python_version": platform.python_version(),
+        "platform": platform.platform(),
+        "system": platform.system(),
+        "release": platform.release(),
+        "machine": platform.machine(),
+        "processor": platform.processor(),
+        "cpu_count": psutil.cpu_count(logical=False),
+        "cpu_percent": f"{psutil.cpu_percent(interval=1)} %",
+        "virtual_memory": {
+            "total": format_bytes(virtual_memory['total']),
+            "available": format_bytes(virtual_memory['available']),
+            "percent": f"{virtual_memory['percent']} %",
+            "used": format_bytes(virtual_memory['used']),
+            "free": format_bytes(virtual_memory['free'])
+        },
+        "swap_memory": {
+            "total": format_bytes(swap_memory['total']),
+            "used": format_bytes(swap_memory['used']),
+            "free": format_bytes(swap_memory['free']),
+            "percent": f"{swap_memory['percent']} %"
+        },
+    }
+
+    return render_template('system_info.html', sys_info=sys_info)
 
 
 # --------------------------------------------------------------------------------
