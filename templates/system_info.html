@@ -18,7 +18,6 @@
             <table class="table">
                 <thead>
                 <tr>
-                    <th scope="col">#</th>
                     <th scope="col">Key</th>
                     <th scope="col">Value</th>
                 </tr>
@@ -26,13 +25,12 @@
                 <tbody>
                 {% for k, v in sys_info.items() %}
                     <tr>
-                        <th scope="row">{{ loop.index }}</th>
-                        <td>{{ k }}</td>
+                        <th scope="row">{{ trans(k) }}</th>
                         <td>
                             {% if v is mapping %}
-                                <ul>
+                                <ul class="list-unstyled">
                                     {% for sub_key, sub_value in v.items() %}
-                                        <li>{{ sub_key }}: {{ sub_value }}</li>
+                                        <li>{{ trans(sub_key) }}: {{ sub_value }}</li>
                                     {% endfor %}
                                 </ul>
                             {% else %}

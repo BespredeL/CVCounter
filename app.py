@@ -10,6 +10,8 @@ import json
 import os
 import platform
 import re
+from shutil import disk_usage
+
 import psutil
 from threading import Lock, Thread
 from typing import Any
@@ -458,9 +460,11 @@ def report_show(location: str, id: int) -> str:
 # --------------------------------------------------------------------------------
 
 @app.route('/system_info')
+# @auth.login_required
 def system_info() -> str:
     virtual_memory = psutil.virtual_memory()._asdict()
     swap_memory = psutil.swap_memory()._asdict()
+    disk_usages = disk_usage('/')._asdict()
 
     sys_info = {
         "python_version": platform.python_version(),
@@ -484,6 +488,11 @@ def system_info() -> str:
             "free": format_bytes(swap_memory['free']),
             "percent": f"{swap_memory['percent']} %"
         },
+        "disk_usage": {
+            "total": format_bytes(disk_usages['total']),
+            "used": format_bytes(disk_usages['used']),
+            "free": format_bytes(disk_usages['free'])
+        }
     }
 
     return render_template('system_info.html', sys_info=sys_info)
