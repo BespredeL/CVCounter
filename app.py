@@ -460,7 +460,7 @@ def report_show(location: str, id: int) -> str:
 # --------------------------------------------------------------------------------
 
 @app.route('/system_info')
-# @auth.login_required
+@auth.login_required
 def system_info() -> str:
     virtual_memory = psutil.virtual_memory()._asdict()
     swap_memory = psutil.swap_memory()._asdict()
@@ -478,9 +478,9 @@ def system_info() -> str:
         "virtual_memory": {
             "total": format_bytes(virtual_memory['total']),
             "available": format_bytes(virtual_memory['available']),
-            "percent": f"{virtual_memory['percent']} %",
             "used": format_bytes(virtual_memory['used']),
-            "free": format_bytes(virtual_memory['free'])
+            "free": format_bytes(virtual_memory['free']),
+            "percent": f"{virtual_memory['percent']} %"
         },
         "swap_memory": {
             "total": format_bytes(swap_memory['total']),
