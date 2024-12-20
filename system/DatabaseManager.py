@@ -8,10 +8,12 @@
 
 import json
 from datetime import datetime
+
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text, create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import declared_attr, sessionmaker
+
 from config import config
 from system.Logger import Logger
 

@@ -6,12 +6,12 @@
 # Updated: 25.11.2024
 # Website: https://bespredel.name
 
-from typing import Any, Dict, Union, Optional
 import ast
 import json
 import logging
 import os
 from pathlib import Path
+from typing import Any, Dict, Optional, Union
 
 
 class ConfigManager:
