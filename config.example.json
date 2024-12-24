@@ -6,7 +6,8 @@
         "allow_unsafe_werkzeug": false,
         "button_change_theme": true,
         "button_fullscreen": true,
-        "button_backward": false
+        "button_backward": false,
+        "collapsed_keyboard": true
     },
     "server": {
         "host": "0.0.0.0",

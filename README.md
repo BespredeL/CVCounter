@@ -92,8 +92,10 @@ CVCounter - это приложение для подсчета объектов
         // показать кнопку изменения темы
         "button_fullscreen": true,
         // показать кнопку перехода в полноэкранный режим
-        "button_backward": false
+        "button_backward": false,
         // показать кнопку назад
+        "collapsed_keyboard": true
+        // показать клавиатуры свернутыми
     },
     "server": {
         "host": "0.0.0.0",
