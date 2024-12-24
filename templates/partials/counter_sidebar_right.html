@@ -64,7 +64,8 @@
                 </div>
             </div>
 
-            <div class="col-12 keyboard keyboard-defect px-2 collapse" data-input-id="defect_keyboard" id="collapseDefect">
+            <div class="col-12 keyboard keyboard-defect px-2 collapse {{ "show" if not config.get('general.collapsed_keyboard', true) }}"
+                 data-input-id="defect_keyboard" id="collapseDefect">
                 <div class="row">
                     <button class="btn btn-secondary col m-1 fs-5" data-value="1">1</button>
                     <button class="btn btn-secondary col m-1 fs-5" data-value="2">2</button>
@@ -137,7 +138,8 @@
                 </div>
             </div>
 
-            <div class="col-12 keyboard keyboard-correct px-2 collapse" data-input-id="correct_keyboard" id="collapseСorrect">
+            <div class="col-12 keyboard keyboard-correct px-2 collapse {{ "show" if not config.get('general.collapsed_keyboard', true) }}"
+                 data-input-id="correct_keyboard" id="collapseСorrect">
                 <div class="row">
                     <button class="btn btn-secondary col m-1 fs-5" data-value="1">1</button>
                     <button class="btn btn-secondary col m-1 fs-5" data-value="2">2</button>

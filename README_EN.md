@@ -92,8 +92,10 @@ startup).
         // show button changing theme
         "button_fullscreen": true,
         // show button fullscreen
-        "button_backward": false
+        "button_backward": false,
         // show back button
+        "collapsed_keyboard": true
+        // show collapsed keyboard
     },
     "server": {
         "host": "0.0.0.0",
