@@ -26,6 +26,7 @@ matplotlib~=3.8
 numpy~=1.26
 opencv-python~=4.10
 pyodbc~=5.1
+psutil~=6.1.1
 scikit-image~=0.22
 shapely~=2.0.2
 SQLAlchemy~=2.0.35

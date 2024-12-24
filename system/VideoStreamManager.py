@@ -7,8 +7,10 @@
 # Website: https://bespredel.name
 
 import time
+
 import cv2
 from imutils.video import VideoStream
+
 from system.Logger import Logger
 
 

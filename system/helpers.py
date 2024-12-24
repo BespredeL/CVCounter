@@ -160,21 +160,38 @@ def system_check() -> None:
             return colored_text(value, 'green')
 
     # Print the extracted values
-    pr_color(f'* NVIDIA-SMI Version: {colored_value(nvidia_smi_version.group(1) if nvidia_smi_version else "N/A")}',
+    pr_color(f' * NVIDIA-SMI Version: {colored_value(nvidia_smi_version.group(1) if nvidia_smi_version else "N/A")}',
              'yellow')
-    pr_color(f'* Driver Version: {colored_value(driver_version.group(1) if driver_version else "N/A")}', 'yellow')
-    pr_color(f'* CUDA Version: {colored_value(cuda_version.group(1) if cuda_version else "N/A")}', 'yellow')
+    pr_color(f' * Driver Version: {colored_value(driver_version.group(1) if driver_version else "N/A")}', 'yellow')
+    pr_color(f' * CUDA Version: {colored_value(cuda_version.group(1) if cuda_version else "N/A")}', 'yellow')
 
     # Check CUDA availability using PyTorch
     cuda_available = torch.cuda.is_available()
-    pr_color(f'* PyTorch CUDA Available: {colored_value("Yes" if cuda_available else "N/A")}', 'yellow')
-    pr_color(f'* PyTorch CUDA Version: {colored_value(torch.version.cuda or "N/A")}', 'yellow')
+    pr_color(f' * PyTorch CUDA Available: {colored_value("Yes" if cuda_available else "N/A")}', 'yellow')
+    pr_color(f' * PyTorch CUDA Version: {colored_value(torch.version.cuda or "N/A")}', 'yellow')
 
     # Check PyTorch version
-    pr_color(f'* PyTorch Version: {colored_value(torch.__version__ or "N/A")}', 'yellow')
+    pr_color(f' * PyTorch Version: {colored_value(torch.__version__ or "N/A")}', 'yellow')
 
     # Result of system check
     if not cuda_available or not nvidia_smi_version or not driver_version or not cuda_version or not torch.__version__:
         print(f'{colored_text(" * System Check Result:", "yellow")} {colored_text("FAILED", "red")}')
     else:
         print(f'{colored_text(" * System Check Result:", "yellow")} {colored_text("PASSED", "green")}')
+
+
+def format_bytes(size: int) -> str:
+    """
+    Format bytes to a human-readable size
+
+    Args:
+        size (int): The size to be formatted.
+
+    Returns:
+        str: The formatted size.
+    """
+    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+        if size < 1024:
+            return f"{size:.2f} {unit}"
+        size /= 1024
+    return f"{size:.2f} PB"

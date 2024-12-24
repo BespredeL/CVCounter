@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <a href="{{ url_for('index') }}" class="text-decoration-none text-body">
+        <h1 class="border-bottom pb-1">{% block title %}CVCounter - {{ trans('System info') }}{% endblock %}</h1>
+    </a>
+    <nav class="col-12" aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('index') }}">{{ trans('Home') }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ trans('System info') }}</li>
+        </ol>
+    </nav>
+{% endblock %}
+
+{% block content %}
+    <div class="row py-3">
+        <div class="col-12">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th scope="col">Key</th>
+                    <th scope="col">Value</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for k, v in sys_info.items() %}
+                    <tr>
+                        <th scope="row">{{ trans(k) }}</th>
+                        <td>
+                            {% if v is mapping %}
+                                <ul class="list-unstyled">
+                                    {% for sub_key, sub_value in v.items() %}
+                                        <li>{{ trans(sub_key) }}: {{ sub_value }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                {{ v }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
