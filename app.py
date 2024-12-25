@@ -11,10 +11,10 @@ import os
 import platform
 import re
 from shutil import disk_usage
-
-import psutil
 from threading import Lock, Thread
 from typing import Any
+
+import psutil
 from flask import Flask, Response, abort, flash, redirect, render_template, request, url_for
 from flask_httpauth import HTTPBasicAuth
 from flask_socketio import SocketIO
@@ -29,7 +29,7 @@ from system.ObjectCounter import ObjectCounter
 from system.helpers import format_bytes, slug, system_check, trans as translate
 
 # --------------------------------------------------------------------------------
-# Init
+# Initialization and Configuration
 # --------------------------------------------------------------------------------
 
 # System check
