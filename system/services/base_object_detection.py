@@ -16,7 +16,7 @@ class BaseObjectDetectionService:
         Detects objects in an image using a pre-trained model.
 
         Args:
-            image (ndarray): The input image as a numpy array.
+            image: The input image as a numpy array.
             **kwargs: Additional keyword arguments.
 
         Returns:
