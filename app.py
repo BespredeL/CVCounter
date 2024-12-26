@@ -24,9 +24,9 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 # from werkzeug.middleware.proxy_fix import ProxyFix  # For NGINX
 from config import config
-from system.DatabaseManager import DatabaseManager
-from system.ObjectCounter import ObjectCounter
-from system.helpers import format_bytes, slug, system_check, trans as translate
+from system.database_manager import DatabaseManager
+from system.object_counter import ObjectCounter
+from system.utils import is_ajax, format_bytes, slug, system_check, trans as translate
 
 # --------------------------------------------------------------------------------
 # Initialization and Configuration
@@ -50,12 +50,7 @@ app = Flask(__name__)
 auth = HTTPBasicAuth()
 users = config.get("users", {})
 
-secret_key = config.get("server.secret_key", False)
-if not secret_key:
-    secret_key = os.urandom(40)
-    config.save_config()
-
-app.config['SECRET_KEY'] = secret_key
+app.config['SECRET_KEY'] = config.get("server.secret_key", os.urandom(40))
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 socketio = SocketIO(app)
 
@@ -137,10 +132,6 @@ def object_detector_init(location: str) -> dict[Any, Any]:
                 counting_area_color=tuple(detector_config['counting_area_color'])
             )
     return object_counters
-
-
-def is_ajax() -> bool:
-    return str(request.headers.get('X-Requested-With')).lower() == 'XMLHttpRequest'.lower()
 
 
 # --------------------------------------------------------------------------------

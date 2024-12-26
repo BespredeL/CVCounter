@@ -6,7 +6,7 @@
 # Updated: 19.11.2024
 # Website: https://bespredel.name
 
-from system.ConfigManager import ConfigManager
+from system.config_manager import ConfigManager
 
 config = ConfigManager("config.json")
 config.read_config()

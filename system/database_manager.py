@@ -15,7 +15,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import declared_attr, sessionmaker
 
 from config import config
-from system.Logger import Logger
+from system.logger import Logger
 
 
 class TablePrefixBase:

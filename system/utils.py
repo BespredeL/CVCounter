@@ -9,6 +9,13 @@
 import json
 import re
 
+from flask import request
+
+
+def is_ajax() -> bool:
+    """Check if the request is an AJAX request."""
+    return str(request.headers.get('X-Requested-With')).lower() == 'XMLHttpRequest'.lower()
+
 
 def trans(text: str, lang: str = 'ru', **kwargs: dict) -> str:
     """

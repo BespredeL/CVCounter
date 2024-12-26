@@ -18,10 +18,12 @@ import numpy as np
 from shapely.geometry import Point, Polygon
 from ultralytics import YOLO, settings
 
-from system.Logger import Logger
-from system.NotificationManager import NotificationManager
-from system.VideoStreamManager import VideoStreamManager
-from system.helpers import trans
+from system.logger import Logger
+from system.notification_manager import NotificationManager
+from system.services.base_object_detection import BaseObjectDetectionService
+from system.services.object_detection import ObjectDetection
+from system.video_stream_manager import VideoStreamManager
+from system.utils import trans
 from system.sort import Sort
 
 
@@ -61,8 +63,12 @@ class ObjectCounter:
         # Disable analytics and crash reporting
         settings.update({'sync': False})
 
-        # Model
-        self.model: YOLO = YOLO(self.weights)
+        # Init model
+        # self.model: YOLO = YOLO(self.weights)
+        self.model: BaseObjectDetectionService = ObjectDetection()
+        self.model.load_model(weights=self.weights)
+
+        # Init tracker
         self.tracker: Sort = Sort(max_age=30, min_hits=3, iou_threshold=0.3)
 
         # Init Database manager
@@ -156,13 +162,23 @@ class ObjectCounter:
         """
         classes_list = list(map(int, self.classes.keys())) if self.classes else None
 
-        results = self.model.predict(
-            image,
-            conf=self.confidence,
+        # results = self.model.predict(
+        #     image,
+        #     conf=self.confidence,
+        #     iou=self.iou,
+        #     device=self.device,
+        #     vid_stride=self.vid_stride,
+        #     classes=classes_list,
+        #     # stream_buffer=True,
+        # )
+
+        results = self.model.detect(
+            image=image,
+            confidence=self.confidence,
             iou=self.iou,
             device=self.device,
             vid_stride=self.vid_stride,
-            classes=classes_list,
+            classes_list=classes_list,
             # stream_buffer=True,
         )
 

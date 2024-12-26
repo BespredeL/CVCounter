@@ -52,6 +52,7 @@
     "General": "General",
     "Debug": "Debug",
     "Log Path": "Log Path",
+    "Allow Unsafe Werkzeug": "Allow Unsafe Werkzeug",
     "Default Language": "Default Language",
     "Server": "Server",
     "Host": "Host",
