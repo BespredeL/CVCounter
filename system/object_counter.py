@@ -16,15 +16,15 @@ from typing import Generator
 import cv2
 import numpy as np
 from shapely.geometry import Point, Polygon
-from ultralytics import YOLO, settings
+from ultralytics import settings
 
 from system.logger import Logger
 from system.notification_manager import NotificationManager
 from system.services.base_object_detection import BaseObjectDetectionService
 from system.services.object_detection import ObjectDetection
-from system.video_stream_manager import VideoStreamManager
-from system.utils import trans
 from system.sort import Sort
+from system.utils import trans
+from system.video_stream_manager import VideoStreamManager
 
 
 class ObjectCounter:
@@ -59,9 +59,6 @@ class ObjectCounter:
         # Initialize video stream manager
         self.vsm: VideoStreamManager = VideoStreamManager(self.video_path, self.video_fps)
         self.vsm.start()
-
-        # Disable analytics and crash reporting
-        settings.update({'sync': False})
 
         # Init model
         # self.model: YOLO = YOLO(self.weights)

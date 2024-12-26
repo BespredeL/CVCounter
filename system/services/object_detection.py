@@ -7,7 +7,7 @@
 # Website: https://bespredel.name
 
 import numpy as np
-from ultralytics import YOLO
+from ultralytics import YOLO, settings
 
 from system.exceptions import ModelLoadingError, ModelNotFoundError
 from system.services.base_object_detection import BaseObjectDetectionService
@@ -17,6 +17,9 @@ class ObjectDetection(BaseObjectDetectionService):
     def __init__(self) -> None:
         super().__init__()
         self.model = None
+
+        # Disable analytics and crash reporting
+        settings.update({'sync': False})
 
     def detect(self, image: np.ndarray, confidence: float, iou: float, device: str, vid_stride: int, classes_list: list):
         if self.model is None:
