@@ -40,7 +40,7 @@ class ObjectCounter:
         self.current_count: int = 0
         self.defect_count: int = 0
         self.correct_count: int = 0
-        self.frame: np.ndarray = None
+        self.frame: np.ndarray | None = None
         self.frame_lost: int = 0
         self.get_frames_running: bool = False
         self.running: bool = True
@@ -381,8 +381,7 @@ class ObjectCounter:
             'updated_at': result.updated_at.strftime("%Y-%m-%d %H:%M:%S") if result.updated_at else None
         }
 
-    def save_count(self, location: str, correct_count: int, defect_count: int, custom_fields: str,
-                   active: int = 1) -> dict:
+    def save_count(self, location: str, correct_count: int, defect_count: int, custom_fields: str, active: int = 1) -> dict:
         """
         Save count.
 
