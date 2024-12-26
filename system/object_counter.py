@@ -16,12 +16,11 @@ from typing import Generator
 import cv2
 import numpy as np
 from shapely.geometry import Point, Polygon
-from ultralytics import settings
 
+from system.base_object_detection import BaseObjectDetectionService
 from system.logger import Logger
 from system.notification_manager import NotificationManager
-from system.services.base_object_detection import BaseObjectDetectionService
-from system.services.object_detection import ObjectDetection
+from system.object_detection import ObjectDetection
 from system.sort import Sort
 from system.utils import trans
 from system.video_stream_manager import VideoStreamManager
@@ -61,7 +60,6 @@ class ObjectCounter:
         self.vsm.start()
 
         # Init model
-        # self.model: YOLO = YOLO(self.weights)
         self.model: BaseObjectDetectionService = ObjectDetection()
         self.model.load_model(weights=self.weights)
 
@@ -159,17 +157,7 @@ class ObjectCounter:
         """
         classes_list = list(map(int, self.classes.keys())) if self.classes else None
 
-        # results = self.model.predict(
-        #     image,
-        #     conf=self.confidence,
-        #     iou=self.iou,
-        #     device=self.device,
-        #     vid_stride=self.vid_stride,
-        #     classes=classes_list,
-        #     # stream_buffer=True,
-        # )
-
-        results = self.model.detect(
+        xyxy, conf = self.model.detect(
             image=image,
             confidence=self.confidence,
             iou=self.iou,
@@ -179,8 +167,6 @@ class ObjectCounter:
             # stream_buffer=True,
         )
 
-        xyxy = results[0].boxes.xyxy.cpu().numpy()
-        conf = results[0].boxes.conf.cpu().numpy()
         detections = np.concatenate((xyxy, conf.reshape(-1, 1)), axis=1)
         return self.tracker.update(detections)
 

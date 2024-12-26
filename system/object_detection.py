@@ -9,8 +9,8 @@
 import numpy as np
 from ultralytics import YOLO, settings
 
-from system.exceptions import ModelLoadingError, ModelNotFoundError
-from system.services.base_object_detection import BaseObjectDetectionService
+from system.exception_handler import ModelLoadingError, ModelNotFoundError
+from system.base_object_detection import BaseObjectDetectionService
 
 
 class ObjectDetection(BaseObjectDetectionService):
@@ -25,7 +25,7 @@ class ObjectDetection(BaseObjectDetectionService):
         if self.model is None:
             raise ModelNotFoundError('Model is not loaded')
 
-        return self.model.predict(
+        results = self.model.predict(
             image,
             conf=confidence,
             iou=iou,
@@ -33,6 +33,8 @@ class ObjectDetection(BaseObjectDetectionService):
             vid_stride=vid_stride,
             classes=classes_list
         )
+
+        return results[0].boxes.xyxy.cpu().numpy(), results[0].boxes.conf.cpu().numpy()
 
     def load_model(self, weights: str):
         if not weights:

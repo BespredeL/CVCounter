@@ -6,7 +6,7 @@
 # Updated: 26.12.2024
 # Website: https://bespredel.name
 
-from system.exceptions import InvalidLocationError, MissingSocketInstanceError, NotificationError
+from system.exception_handler import InvalidLocationError, MissingSocketInstanceError, NotificationError
 
 
 class NotificationManager:

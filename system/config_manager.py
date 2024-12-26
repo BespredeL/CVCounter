@@ -13,7 +13,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
-from system.exceptions import ConfigError, ConfigNotFoundError, InvalidConfigError
+from system.exception_handler import ConfigError, ConfigNotFoundError, InvalidConfigError
 
 
 class ConfigManager:
