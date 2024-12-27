@@ -9,39 +9,13 @@
 import json
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text, create_engine
+from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import declared_attr, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
-from config import config
 from system.logger import Logger
-
-
-class TablePrefixBase:
-    __table_prefix__: str = config.get('db.prefix', '')
-
-    @declared_attr
-    def __tablename__(cls) -> str:
-        return cls.__table_prefix__ + cls.__name__.lower()
-
-
-# Defining the base class
-Base = declarative_base(cls=TablePrefixBase)
-
-
-class CVCounter(Base):
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    active = Column(Boolean, default=True)
-    location = Column(String(255), nullable=False)
-    total_count = Column(Integer, default=0)
-    source_count = Column(Integer, default=0)
-    defects_count = Column(Integer, default=0)
-    correct_count = Column(Integer, default=0)
-    parts = Column(Text, nullable=True)
-    custom_fields = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.now)
-    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+from system.models.base_model import Base
+from system.models.cvcounter import CVCounter
 
 
 class DatabaseManager:

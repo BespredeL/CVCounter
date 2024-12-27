@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 26.03.2024
-# Updated: 24.11.2024
+# Updated: 26.12.2024
 # Website: https://bespredel.name
 
 import time

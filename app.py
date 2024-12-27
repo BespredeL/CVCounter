@@ -76,8 +76,8 @@ def _slug(string: str) -> str:
 
 
 @app.template_global()
-def trans(string: str) -> str:
-    return translate(string)
+def trans(string: str, **kwargs: dict) -> str:
+    return translate(string, **kwargs)
 
 
 @app.template_global()
