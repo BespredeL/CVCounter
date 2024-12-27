@@ -139,5 +139,6 @@
     "Report list": "Список отчетов",
     "Report show": "Просмотр отчета",
     "System info": "Информация о системе",
-    "Parts information": "Информация о партиях"
+    "Parts information": "Информация о партиях",
+    "Part {index}": "Партия {index}"
 }
