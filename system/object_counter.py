@@ -41,7 +41,6 @@ class ObjectCounter:
         self.defect_count: int = 0
         self.correct_count: int = 0
         self.frame: np.ndarray | None = None
-        self.frame_lost: int = 0
         self.get_frames_running: bool = False
         self.running: bool = True
         self.paused = False
@@ -188,13 +187,13 @@ class ObjectCounter:
 
         return cv2.addWeighted(overlay, self.POLYGON_ALPHA, image, 1 - self.POLYGON_ALPHA, 0)
 
-    def _detect_count(self, image: np.ndarray, boxes: list) -> np.ndarray:
+    def _detect_count(self, image: np.ndarray, boxes: list | np.ndarray) -> np.ndarray:
         """
         Draws boxes on an image and returns the modified image.
 
         Args:
             image (numpy.ndarray): The image on which the boxes will be drawn.
-            boxes (List[Tuple[int]]): A list of boxes, where each box is represented by a tuple of (x1, y1, x2, y2, rid),
+            boxes (List[Tuple[int]] | numpy.ndarray): A list of boxes, where each box is represented by a tuple of (x1, y1, x2, y2, rid),
                                       where x1, y1 are the top-left coordinates, x2, y2 are the bottom-right coordinates,
                                       and rid is the ID of the box.
 
@@ -254,9 +253,6 @@ class ObjectCounter:
             # Detect counting
             frame = self._detect_count(frame, boxes)
 
-            # Reset the frame_lost counter
-            self.frame_lost = 0
-
             # Save images from training dataset
             if self.dataset.get('enable', False) and last_total_count != self.total_count and random.random() < float(
                     self.dataset['probability']):
@@ -305,16 +301,18 @@ class ObjectCounter:
 
         while self.running:
             try:
+                reconnect_count = self.vsm.get_reconnect_count()
                 frame = self.vsm.get_frame()
                 if frame is None:
-                    self.frame_lost += 1
                     self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
+                    self.notif_manager.event('counter_status', {'status': 'error', 'location': self.location})
                     time.sleep(0.01)
                     continue  # Skip the iteration if the frame is not received
 
-                if self.frame_lost > 0:
-                    self.frame_lost = 0
+                if reconnect_count > 0:
+                    self.vsm.reset_reconnect_count()
                     self.notif_manager.notify(trans('Connection to camera restored!'), 'success')
+                    self.notif_manager.event('counter_status', {'status': 'started', 'location': self.location})
 
                 if self.get_frames_running:
                     self.frame = self._process_frame(frame)
@@ -326,6 +324,7 @@ class ObjectCounter:
             except Exception as e:
                 print(e)
                 self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
+                self.notif_manager.event('counter_status', {'status': 'error', 'location': self.location})
 
     def get_frames(self) -> Generator:
         """

@@ -30,6 +30,7 @@ class VideoStreamManager:
         self.__actual_fps: float = 0  # Calculated FPS based on frame intervals
         self.__last_frame_time: float = time.time()  # Time of the last frame capture
         self.__frame_interval: float = 1 / self.__fps if video_fps > 0 else 0  # Interval between frames based on FPS
+        self.__reconnect_count: int = 0  # Count of reconnect attempts
 
     @property
     def video_stream(self) -> str:
@@ -136,17 +137,25 @@ class VideoStreamManager:
             None
         """
         self.__logger.warning("Attempting to reconnect to video stream...")
+
         if self.is_stream():
             self.__cap.stop()
         else:
             self.__cap.release()
 
         time.sleep(3)
-        self.start()
-        if (not self.is_stream() and self.__cap.isOpened()) or (self.is_stream() and self.__cap is not None):
-            self.__logger.info("Reconnected to video stream successfully")
-        else:
-            self.__logger.error("Failed to reconnect to video stream")
+        self.__reconnect_count += 1
+
+        try:
+            self.start()
+
+            if (self.is_stream() and self.__cap is not None) or (not self.is_stream() and self.__cap.isOpened()):
+                self.__logger.info("Reconnected to video stream successfully")
+                # self.reset_reconnect_count()
+            else:
+                self.__logger.error("Failed to reconnect to video stream")
+        except Exception as e:
+            self.__logger.error(f"Error during reconnect attempt: {e}")
 
     def is_stream(self) -> bool:
         """
@@ -187,6 +196,18 @@ class VideoStreamManager:
         time_difference = current_time - self.__last_frame_time
         self.__actual_fps = 1 / time_difference if time_difference > 0 else 0
         self.__last_frame_time = current_time
+
+    def get_reconnect_count(self) -> int:
+        """
+        Returns the number of reconnect attempts.
+        """
+        return self.__reconnect_count
+
+    def reset_reconnect_count(self) -> None:
+        """
+        Resets the reconnect attempt count after a successful connection.
+        """
+        self.__reconnect_count = 0
 
     @staticmethod
     def encoding_frame(frame: cv2.Mat, quality: int = 95, ext: str = "jpg") -> bytes:
