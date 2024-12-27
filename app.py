@@ -77,6 +77,8 @@ def _slug(string: str) -> str:
 
 @app.template_global()
 def trans(string: str, **kwargs: dict) -> str:
+    if kwargs.get('lang') is None:
+        kwargs['lang'] = config.get('general.default_language', 'ru')
     return translate(string, **kwargs)
 
 
