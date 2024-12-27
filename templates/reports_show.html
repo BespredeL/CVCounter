@@ -73,12 +73,11 @@
                         <tr>
                             <td class="col-md-2">{{ trans('Part {index}', index=loop.index) }}:</td>
                             <td class="col-md-10">
-                                {% for field, value in part.items() %}
-                                    <ul class="list-unstyled">
-                                        <li class="list-inline-item">{{ trans(field) }}:</li>
-                                        <li class="list-inline-item">{{ value | striptags }}</li>
-                                    </ul>
-                                {% endfor %}
+                                <ul class="list-unstyled">
+                                    {% for field, value in part.items() %}
+                                        <li>{{ trans(field) }}: {{ value | striptags }}</li>
+                                    {% endfor %}
+                                </ul>
                             </td>
                         </tr>
                     {% endfor %}

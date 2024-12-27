@@ -27,6 +27,10 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
     margin-left: 0;
 }
 
+.alert {
+    z-index: 9999;
+}
+
 .img-container {
     max-height: calc(100vh - 65px);
     width: auto;

@@ -38,7 +38,7 @@
                         <th scope="row">
                             <a href="{{ url_for('report_show', location=v.location, id=v.id) }}" class="stretched-link">{{ v.id }}</a>
                         </th>
-                        <td>{{ v.location }}</td>
+                        <td>{{ object_counters[v.location] if v.location in object_counters else v.location|striptags|title }}</td>
                         <td>{{ v.total_count }}</td>
                         <td>{{ v.source_count }}</td>
                         <td>{{ v.defects_count }}</td>
