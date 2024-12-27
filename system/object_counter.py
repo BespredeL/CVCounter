@@ -20,7 +20,7 @@ from shapely.geometry import Point, Polygon
 from system.base_object_detection import BaseObjectDetectionService
 from system.logger import Logger
 from system.notification_manager import NotificationManager
-from system.object_detection import ObjectDetection
+from system.object_detection_yolo import ObjectDetectionYOLO
 from system.sort import Sort
 from system.utils import trans
 from system.video_stream_manager import VideoStreamManager
@@ -60,7 +60,7 @@ class ObjectCounter:
         self.vsm.start()
 
         # Init model
-        self.model: BaseObjectDetectionService = ObjectDetection()
+        self.model: BaseObjectDetectionService = ObjectDetectionYOLO()
         self.model.load_model(weights=self.weights)
 
         # Init tracker

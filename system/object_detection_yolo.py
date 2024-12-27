@@ -13,7 +13,7 @@ from system.exception_handler import ModelLoadingError, ModelNotFoundError
 from system.base_object_detection import BaseObjectDetectionService
 
 
-class ObjectDetection(BaseObjectDetectionService):
+class ObjectDetectionYOLO(BaseObjectDetectionService):
     def __init__(self) -> None:
         super().__init__()
         self.model = None
