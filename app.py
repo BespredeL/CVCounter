@@ -29,7 +29,7 @@ from system.object_counter import ObjectCounter
 from system.utils import is_ajax, format_bytes, slug, system_check, trans as translate
 
 # --------------------------------------------------------------------------------
-# Initialization and Configuration
+# Init and Config
 # --------------------------------------------------------------------------------
 
 # System check
@@ -45,14 +45,14 @@ app = Flask(__name__)
 
 # Fix for NGINX
 # app.wsgi_app = ProxyFix(app.wsgi_app)  # For NGINX
+# Config Flask
+app.config['SECRET_KEY'] = config.get("server.secret_key", os.urandom(40))
+app.config["TEMPLATES_AUTO_RELOAD"] = True
+socketio = SocketIO(app)
 
 # Auth
 auth = HTTPBasicAuth()
 users = config.get("users", {})
-
-app.config['SECRET_KEY'] = config.get("server.secret_key", os.urandom(40))
-app.config["TEMPLATES_AUTO_RELOAD"] = True
-socketio = SocketIO(app)
 
 # Start DB
 db_manager = DatabaseManager(uri=config.get("db.uri", "sqlite:///:memory:"), prefix=config.get("db.prefix"))
