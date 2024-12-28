@@ -176,7 +176,7 @@ def counter_video(location: str = None) -> str:
         custom_fields.append(field_copy)
 
     return render_template(
-        'counter.html',
+        'counters/show_video.html',
         title=locations_dict.get(location, ),
         location=location,
         is_paused=object_counters[location].is_pause(),
@@ -225,7 +225,7 @@ def counter_text(location: str = None) -> str:
         custom_fields.append(field_copy)
 
     return render_template(
-        'counter_text.html',
+        'counters/show_text.html',
         title=locations_dict.get(location, ),
         location=location,
         is_paused=object_counters[location].is_pause(),
@@ -261,7 +261,7 @@ def counter_dual_text(location_first: str, location_second: str) -> str:
     title = locations_dict.get(location_first, ) + ' - ' + locations_dict.get(location_second, )
 
     return render_template(
-        'counter_text_multi.html',
+        'counters/show_text_multi.html',
         title=title,
         location_in=location_first,
         location_out=location_second,
@@ -401,7 +401,7 @@ def settings_save() -> Response:
 @app.route('/reports')
 def reports() -> str:
     return render_template(
-        'reports.html',
+        'reports/index.html',
         object_counters=locations_dict
     )
 
@@ -425,7 +425,7 @@ def report_list(location: str = None) -> str:
     total_pages = (total_items + per_page - 1) // per_page
 
     return render_template(
-        'reports_list.html',
+        'reports/list.html',
         object_counters=locations_dict,
         items=items,
         location=location,
@@ -443,7 +443,7 @@ def report_show(location: str, id: int) -> str:
         abort(404, trans('Page not found'))
 
     return render_template(
-        'reports_show.html',
+        'reports/show.html',
         location=location,
         counter=counter,
         json=json
