@@ -280,15 +280,18 @@ class ObjectCounter:
         Returns:
             None
         """
-        if frame is None:
-            return
+        try:
+            if frame is None:
+                return
 
-        dataset_path = self.dataset.get('path')
-        if not os.path.exists(dataset_path):
-            os.makedirs(dataset_path)
-        location_clean = re.sub('[^A-Za-z0-9-_]+', '', self.location)
-        create_time = int(time.time())
-        cv2.imwrite(f'{dataset_path}/{location_clean}_{create_time}.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 100])
+            dataset_path = self.dataset.get('path')
+            if not os.path.exists(dataset_path):
+                os.makedirs(dataset_path)
+            location_clean = re.sub('[^A-Za-z0-9-_]+', '', self.location)
+            create_time = int(time.time())
+            cv2.imwrite(f'{dataset_path}/{location_clean}_{create_time}.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 100])
+        except Exception as e:
+            self.logger.error(f'Error saving dataset image: {e}')
 
     def run_frames(self) -> None:
         """
