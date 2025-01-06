@@ -141,5 +141,7 @@
     "Report show": "Report show",
     "System info": "System info",
     "Parts information": "Parts information",
-    "Part {index}": "Part {index}"
+    "Part {index}": "Part {index}",
+    "On": "On",
+    "Off": "Off"
 }

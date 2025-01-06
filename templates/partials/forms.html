@@ -24,11 +24,11 @@
                 <div>
                     <input type="radio" class="btn-check" value="on" name="{{ field_id }}" id="{{ field_id }}_yes" autocomplete="off"
                            {% if value == true %}checked{% endif %}>
-                    <label class="btn btn-sm btn-outline-success" for="{{ field_id }}_yes">Вкл</label>
+                    <label class="btn btn-sm btn-outline-success" for="{{ field_id }}_yes">{{ trans('On') }}</label>
 
                     <input type="radio" class="btn-check" value="off" name="{{ field_id }}" id="{{ field_id }}_no" autocomplete="off"
                            {% if value == false %}checked{% endif %}>
-                    <label class="btn btn-sm btn-outline-danger" for="{{ field_id }}_no">Выкл</label>
+                    <label class="btn btn-sm btn-outline-danger" for="{{ field_id }}_no">{{ trans('Off') }}</label>
                 </div>
             {% elif value is number %}
                 <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}" class="form-control" placeholder="">
