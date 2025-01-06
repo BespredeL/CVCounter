@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 19.12.2024
+# Updated: 26.12.2024
 # Website: https://bespredel.name
 
 import json
@@ -11,10 +11,10 @@ import os
 import platform
 import re
 from shutil import disk_usage
-
-import psutil
 from threading import Lock, Thread
 from typing import Any
+
+import psutil
 from flask import Flask, Response, abort, flash, redirect, render_template, request, url_for
 from flask_httpauth import HTTPBasicAuth
 from flask_socketio import SocketIO
@@ -24,12 +24,12 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 # from werkzeug.middleware.proxy_fix import ProxyFix  # For NGINX
 from config import config
-from system.DatabaseManager import DatabaseManager
-from system.ObjectCounter import ObjectCounter
-from system.helpers import format_bytes, slug, system_check, trans as translate
+from system.database_manager import DatabaseManager
+from system.object_counter import ObjectCounter
+from system.utils import is_ajax, format_bytes, slug, system_check, trans as translate
 
 # --------------------------------------------------------------------------------
-# Init
+# Init and Config
 # --------------------------------------------------------------------------------
 
 # System check
@@ -45,19 +45,14 @@ app = Flask(__name__)
 
 # Fix for NGINX
 # app.wsgi_app = ProxyFix(app.wsgi_app)  # For NGINX
+# Config Flask
+app.config['SECRET_KEY'] = config.get("server.secret_key", os.urandom(40))
+app.config["TEMPLATES_AUTO_RELOAD"] = True
+socketio = SocketIO(app)
 
 # Auth
 auth = HTTPBasicAuth()
 users = config.get("users", {})
-
-secret_key = config.get("server.secret_key", False)
-if not secret_key:
-    secret_key = os.urandom(40)
-    config.save_config()
-
-app.config['SECRET_KEY'] = secret_key
-app.config["TEMPLATES_AUTO_RELOAD"] = True
-socketio = SocketIO(app)
 
 # Start DB
 db_manager = DatabaseManager(uri=config.get("db.uri", "sqlite:///:memory:"), prefix=config.get("db.prefix"))
@@ -81,8 +76,10 @@ def _slug(string: str) -> str:
 
 
 @app.template_global()
-def trans(string: str) -> str:
-    return translate(string)
+def trans(string: str, **kwargs: dict) -> str:
+    if kwargs.get('lang') is None:
+        kwargs['lang'] = config.get('general.default_language', 'ru')
+    return translate(string, **kwargs)
 
 
 @app.template_global()
@@ -139,10 +136,6 @@ def object_detector_init(location: str) -> dict[Any, Any]:
     return object_counters
 
 
-def is_ajax() -> bool:
-    return str(request.headers.get('X-Requested-With')).lower() == 'XMLHttpRequest'.lower()
-
-
 # --------------------------------------------------------------------------------
 # Routes
 # --------------------------------------------------------------------------------
@@ -183,7 +176,7 @@ def counter_video(location: str = None) -> str:
         custom_fields.append(field_copy)
 
     return render_template(
-        'counter.html',
+        'counters/show_video.html',
         title=locations_dict.get(location, ),
         location=location,
         is_paused=object_counters[location].is_pause(),
@@ -232,7 +225,7 @@ def counter_text(location: str = None) -> str:
         custom_fields.append(field_copy)
 
     return render_template(
-        'counter_text.html',
+        'counters/show_text.html',
         title=locations_dict.get(location, ),
         location=location,
         is_paused=object_counters[location].is_pause(),
@@ -268,7 +261,7 @@ def counter_dual_text(location_first: str, location_second: str) -> str:
     title = locations_dict.get(location_first, ) + ' - ' + locations_dict.get(location_second, )
 
     return render_template(
-        'counter_text_multi.html',
+        'counters/show_text_multi.html',
         title=title,
         location_in=location_first,
         location_out=location_second,
@@ -408,7 +401,7 @@ def settings_save() -> Response:
 @app.route('/reports')
 def reports() -> str:
     return render_template(
-        'reports.html',
+        'reports/index.html',
         object_counters=locations_dict
     )
 
@@ -432,7 +425,7 @@ def report_list(location: str = None) -> str:
     total_pages = (total_items + per_page - 1) // per_page
 
     return render_template(
-        'reports_list.html',
+        'reports/list.html',
         object_counters=locations_dict,
         items=items,
         location=location,
@@ -450,7 +443,7 @@ def report_show(location: str, id: int) -> str:
         abort(404, trans('Page not found'))
 
     return render_template(
-        'reports_show.html',
+        'reports/show.html',
         location=location,
         counter=counter,
         json=json

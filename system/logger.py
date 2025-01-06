@@ -33,8 +33,7 @@ class Logger:
         self._logger.setLevel(logging.DEBUG)
 
         # Creating a handler for writing to a file
-        file_handler: logging.FileHandler = logging.FileHandler(config.get('general.log_path', 'errors.log'),
-                                                                encoding='utf-8')
+        file_handler: logging.FileHandler = logging.FileHandler(config.get('general.log_path', 'errors.log'), encoding='utf-8')
         file_handler.setLevel(logging.DEBUG)
 
         # Creating a handler for console output

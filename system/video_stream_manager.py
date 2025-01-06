@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 26.03.2024
-# Updated: 24.11.2024
+# Updated: 26.12.2024
 # Website: https://bespredel.name
 
 import time
@@ -11,7 +11,8 @@ import time
 import cv2
 from imutils.video import VideoStream
 
-from system.Logger import Logger
+from system.exception_handler import FrameEncodingError, StreamConnectionError, StreamSourceError
+from system.logger import Logger
 
 
 class VideoStreamManager:
@@ -21,7 +22,7 @@ class VideoStreamManager:
 
         if not video_stream:
             self.__logger.error("A video stream source is required")
-            raise ValueError("A video stream source is required")
+            raise StreamSourceError("A video stream source is required")
 
         self.__video_stream: str = video_stream
         self.__cap: cv2.VideoCapture | VideoStream = None
@@ -29,6 +30,7 @@ class VideoStreamManager:
         self.__actual_fps: float = 0  # Calculated FPS based on frame intervals
         self.__last_frame_time: float = time.time()  # Time of the last frame capture
         self.__frame_interval: float = 1 / self.__fps if video_fps > 0 else 0  # Interval between frames based on FPS
+        self.__reconnect_count: int = 0  # Count of reconnect attempts
 
     @property
     def video_stream(self) -> str:
@@ -65,16 +67,17 @@ class VideoStreamManager:
                 self.__cap = VideoStream(self.__video_stream).start()
                 if self.__cap is None:
                     self.__logger.error(f"Cannot open video stream: {self.__video_stream}")
-                    raise ValueError(f"Cannot open video stream: {self.__video_stream}")
+                    raise StreamConnectionError(f"Cannot open video stream: {self.__video_stream}")
             else:
                 self.__cap = cv2.VideoCapture(self.__video_stream)
                 if self.__fps > 0:
                     self.__cap.set(cv2.CAP_PROP_FPS, self.__fps)
                 if not self.__cap.isOpened():
                     self.__logger.error(f"Cannot open video stream: {self.__video_stream}")
-                    raise ValueError(f"Cannot open video stream: {self.__video_stream}")
+                    raise StreamConnectionError(f"Cannot open video stream: {self.__video_stream}")
         except Exception as e:
             self.__logger.error(e)
+            raise
 
     def stop(self) -> None:
         """
@@ -94,6 +97,7 @@ class VideoStreamManager:
                 print("Stream is not active.")
         except Exception as e:
             self.__logger.error(f"An error occurred while stopping the video stream: {e}")
+            raise
 
     def get_frame(self) -> cv2.Mat:
         """
@@ -102,6 +106,9 @@ class VideoStreamManager:
         Returns:
             frame: A frame from the video stream
         """
+        # if self.__cap is None:
+        #    raise StreamConnectionError("Video stream is not active. Start the stream first.")
+
         frame = None
         if self.__cap is not None:
             if self.is_stream():
@@ -129,18 +136,26 @@ class VideoStreamManager:
         Returns:
             None
         """
-        self.__logger.error("Attempting to reconnect to video stream...")
+        self.__logger.warning("Attempting to reconnect to video stream...")
+
         if self.is_stream():
             self.__cap.stop()
         else:
             self.__cap.release()
 
         time.sleep(3)
-        self.start()
-        if (not self.is_stream() and self.__cap.isOpened()) or (self.is_stream() and self.__cap is not None):
-            self.__logger.info("Reconnected to video stream successfully")
-        else:
-            self.__logger.error("Failed to reconnect to video stream")
+        self.__reconnect_count += 1
+
+        try:
+            self.start()
+
+            if (self.is_stream() and self.__cap is not None) or (not self.is_stream() and self.__cap.isOpened()):
+                self.__logger.info("Reconnected to video stream successfully")
+                # self.reset_reconnect_count()
+            else:
+                self.__logger.error("Failed to reconnect to video stream")
+        except Exception as e:
+            self.__logger.error(f"Error during reconnect attempt: {e}")
 
     def is_stream(self) -> bool:
         """
@@ -182,6 +197,18 @@ class VideoStreamManager:
         self.__actual_fps = 1 / time_difference if time_difference > 0 else 0
         self.__last_frame_time = current_time
 
+    def get_reconnect_count(self) -> int:
+        """
+        Returns the number of reconnect attempts.
+        """
+        return self.__reconnect_count
+
+    def reset_reconnect_count(self) -> None:
+        """
+        Resets the reconnect attempt count after a successful connection.
+        """
+        self.__reconnect_count = 0
+
     @staticmethod
     def encoding_frame(frame: cv2.Mat, quality: int = 95, ext: str = "jpg") -> bytes:
         """
@@ -198,7 +225,7 @@ class VideoStreamManager:
         ext = ext if ext.startswith(".") else "." + ext
         ret, frame_encoded = cv2.imencode(ext, frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
         if not ret:
-            raise ValueError("Failed to encode frame")
+            raise FrameEncodingError("Failed to encode frame")
         return frame_encoded
 
     @staticmethod

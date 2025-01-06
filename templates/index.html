@@ -48,19 +48,24 @@
 
                 switch (data.data.status) {
                     case 'started':
-                        updateClasses('counter_video', 'btn-secondary btn-warning', 'btn-success');
-                        updateClasses('counter_text', 'btn-secondary btn-warning', 'btn-success');
+                        updateClasses('counter_video', 'btn-secondary btn-warning btn-danger', 'btn-success');
+                        updateClasses('counter_text', 'btn-secondary btn-warning btn-danger', 'btn-success');
                         showToast('{{ trans("Counting has started!") }}', 'success');
                         break;
                     case 'stopped':
-                        updateClasses('counter_video', 'btn-success btn-warning', 'btn-secondary');
-                        updateClasses('counter_text', 'btn-success btn-warning', 'btn-secondary');
+                        updateClasses('counter_video', 'btn-success btn-warning btn-danger', 'btn-secondary');
+                        updateClasses('counter_text', 'btn-success btn-warning btn-danger', 'btn-secondary');
                         showToast('{{ trans("Counting has stopped!") }}', 'secondary');
                         break;
                     case 'paused':
-                        updateClasses('counter_video', 'btn-success', 'btn-warning');
-                        updateClasses('counter_text', 'btn-success', 'btn-warning');
+                        updateClasses('counter_video', 'btn-success btn-danger', 'btn-warning');
+                        updateClasses('counter_text', 'btn-success btn-danger', 'btn-warning');
                         showToast('{{ trans("Counting has paused!") }}', 'warning');
+                        break;
+                    case 'error':
+                        updateClasses('counter_video', 'btn-success btn-warning', 'btn-danger');
+                        updateClasses('counter_text', 'btn-success btn-warning', 'btn-danger');
+                        showToast('{{ trans("Counting has error!") }}', 'danger');
                         break;
                 }
             });

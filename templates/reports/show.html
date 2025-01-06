@@ -8,8 +8,11 @@
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ url_for('index') }}">{{ trans('Home') }}</a></li>
             <li class="breadcrumb-item"><a href="{{ url_for('reports') }}">{{ trans('Reports') }}</a></li>
-            <li class="breadcrumb-item"><a href="{{ url_for('report_list', location=location) }}">{{ trans('Report list') }} {{ location|striptags|title }}</a></li>
-            <li class="breadcrumb-item active" aria-current="page">{{ trans('Report show') }} {{ location|striptags|title }} #{{ counter.id }}</li>
+            <li class="breadcrumb-item"><a
+                    href="{{ url_for('report_list', location=location) }}">{{ trans('Report list') }} {{ location|striptags|title }}</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">{{ trans('Report show') }} {{ location|striptags|title }}
+                #{{ counter.id }}</li>
         </ol>
     </nav>
 {% endblock %}
@@ -57,6 +60,25 @@
                         <tr>
                             <td class="col-md-2">{{ trans(field.label) }}</td>
                             <td class="col-md-10">{{ custom_fields[field.name] | striptags }}</td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            {% endif %}
+
+            {% if counter.parts %}
+                <div class="h3">{{ trans('Parts information') }}:</div>
+                <table class="table table-sm table-hover mb-3">
+                    {% set parts = json.loads(counter.parts) %}
+                    {% for part in parts %}
+                        <tr>
+                            <td class="col-md-2">{{ trans('Part {index}', index=loop.index) }}:</td>
+                            <td class="col-md-10">
+                                <ul class="list-unstyled">
+                                    {% for field, value in part.items() %}
+                                        <li>{{ trans(field) }}: {{ value | striptags }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </td>
                         </tr>
                     {% endfor %}
                 </table>

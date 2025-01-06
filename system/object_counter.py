@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 24.11.2024
+# Updated: 27.12.2024
 # Website: https://bespredel.name
 
 import json
@@ -16,13 +16,14 @@ from typing import Generator
 import cv2
 import numpy as np
 from shapely.geometry import Point, Polygon
-from ultralytics import YOLO, settings
 
-from system.Logger import Logger
-from system.NotificationManager import NotificationManager
-from system.VideoStreamManager import VideoStreamManager
-from system.helpers import trans
+from system.object_detections.base_object_detection import BaseObjectDetectionService
+from system.logger import Logger
+from system.notification_manager import NotificationManager
+from system.object_detections.object_detection_yolo import ObjectDetectionYOLO
 from system.sort import Sort
+from system.utils import trans
+from system.video_stream_manager import VideoStreamManager
 
 
 class ObjectCounter:
@@ -39,8 +40,7 @@ class ObjectCounter:
         self.current_count: int = 0
         self.defect_count: int = 0
         self.correct_count: int = 0
-        self.frame: np.ndarray = None
-        self.frame_lost: int = 0
+        self.frame: np.ndarray | None = None
         self.get_frames_running: bool = False
         self.running: bool = True
         self.paused = False
@@ -58,11 +58,11 @@ class ObjectCounter:
         self.vsm: VideoStreamManager = VideoStreamManager(self.video_path, self.video_fps)
         self.vsm.start()
 
-        # Disable analytics and crash reporting
-        settings.update({'sync': False})
+        # Init model
+        self.model: BaseObjectDetectionService = ObjectDetectionYOLO()
+        self.model.load_model(weights=self.weights)
 
-        # Model
-        self.model: YOLO = YOLO(self.weights)
+        # Init tracker
         self.tracker: Sort = Sort(max_age=30, min_hits=3, iou_threshold=0.3)
 
         # Init Database manager
@@ -156,18 +156,16 @@ class ObjectCounter:
         """
         classes_list = list(map(int, self.classes.keys())) if self.classes else None
 
-        results = self.model.predict(
-            image,
-            conf=self.confidence,
+        xyxy, conf = self.model.detect(
+            image=image,
+            confidence=self.confidence,
             iou=self.iou,
             device=self.device,
             vid_stride=self.vid_stride,
-            classes=classes_list,
+            classes_list=classes_list,
             # stream_buffer=True,
         )
 
-        xyxy = results[0].boxes.xyxy.cpu().numpy()
-        conf = results[0].boxes.conf.cpu().numpy()
         detections = np.concatenate((xyxy, conf.reshape(-1, 1)), axis=1)
         return self.tracker.update(detections)
 
@@ -189,13 +187,13 @@ class ObjectCounter:
 
         return cv2.addWeighted(overlay, self.POLYGON_ALPHA, image, 1 - self.POLYGON_ALPHA, 0)
 
-    def _detect_count(self, image: np.ndarray, boxes: list) -> np.ndarray:
+    def _detect_count(self, image: np.ndarray, boxes: list | np.ndarray) -> np.ndarray:
         """
         Draws boxes on an image and returns the modified image.
 
         Args:
             image (numpy.ndarray): The image on which the boxes will be drawn.
-            boxes (List[Tuple[int]]): A list of boxes, where each box is represented by a tuple of (x1, y1, x2, y2, rid),
+            boxes (List[Tuple[int]] | numpy.ndarray): A list of boxes, where each box is represented by a tuple of (x1, y1, x2, y2, rid),
                                       where x1, y1 are the top-left coordinates, x2, y2 are the bottom-right coordinates,
                                       and rid is the ID of the box.
 
@@ -255,9 +253,6 @@ class ObjectCounter:
             # Detect counting
             frame = self._detect_count(frame, boxes)
 
-            # Reset the frame_lost counter
-            self.frame_lost = 0
-
             # Save images from training dataset
             if self.dataset.get('enable', False) and last_total_count != self.total_count and random.random() < float(
                     self.dataset['probability']):
@@ -285,15 +280,18 @@ class ObjectCounter:
         Returns:
             None
         """
-        if frame is None:
-            return
+        try:
+            if frame is None:
+                return
 
-        dataset_path = self.dataset.get('path')
-        if not os.path.exists(dataset_path):
-            os.makedirs(dataset_path)
-        location_clean = re.sub('[^A-Za-z0-9-_]+', '', self.location)
-        create_time = int(time.time())
-        cv2.imwrite(f'{dataset_path}/{location_clean}_{create_time}.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 100])
+            dataset_path = self.dataset.get('path')
+            if not os.path.exists(dataset_path):
+                os.makedirs(dataset_path)
+            location_clean = re.sub('[^A-Za-z0-9-_]+', '', self.location)
+            create_time = int(time.time())
+            cv2.imwrite(f'{dataset_path}/{location_clean}_{create_time}.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 100])
+        except Exception as e:
+            self.logger.error(f'Error saving dataset image: {e}')
 
     def run_frames(self) -> None:
         """
@@ -306,16 +304,18 @@ class ObjectCounter:
 
         while self.running:
             try:
+                reconnect_count = self.vsm.get_reconnect_count()
                 frame = self.vsm.get_frame()
                 if frame is None:
-                    self.frame_lost += 1
                     self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
+                    self.notif_manager.event('counter_status', {'status': 'error', 'location': self.location})
                     time.sleep(0.01)
                     continue  # Skip the iteration if the frame is not received
 
-                if self.frame_lost > 0:
-                    self.frame_lost = 0
+                if reconnect_count > 0:
+                    self.vsm.reset_reconnect_count()
                     self.notif_manager.notify(trans('Connection to camera restored!'), 'success')
+                    self.notif_manager.event('counter_status', {'status': 'started', 'location': self.location})
 
                 if self.get_frames_running:
                     self.frame = self._process_frame(frame)
@@ -327,6 +327,7 @@ class ObjectCounter:
             except Exception as e:
                 print(e)
                 self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
+                self.notif_manager.event('counter_status', {'status': 'error', 'location': self.location})
 
     def get_frames(self) -> Generator:
         """
@@ -382,8 +383,7 @@ class ObjectCounter:
             'updated_at': result.updated_at.strftime("%Y-%m-%d %H:%M:%S") if result.updated_at else None
         }
 
-    def save_count(self, location: str, correct_count: int, defect_count: int, custom_fields: str,
-                   active: int = 1) -> dict:
+    def save_count(self, location: str, correct_count: int, defect_count: int, custom_fields: str, active: int = 1) -> dict:
         """
         Save count.
 

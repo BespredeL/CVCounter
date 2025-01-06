@@ -10,7 +10,7 @@
                 <img id="video_feed" class="text-center rounded user-select-none" src="{{ url_for('counter_get_frames', location=location) }}" alt=""/>
             </div>
 
-            <div class="{{ 'd-flex' if is_paused else 'd-none' }} justify-content-center align-items-center rounded-end-3 pause_display"
+            <div class="{{ 'd-flex' if is_paused else 'd-none' }} justify-content-center align-items-center rounded-end-3 pause-display"
                  id="pause_display">
                 <svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" fill="currentColor" class="bi bi-pause"
                      viewBox="0 0 16 16">
