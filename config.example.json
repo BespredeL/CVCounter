@@ -7,6 +7,7 @@
         "button_change_theme": true,
         "button_fullscreen": true,
         "button_backward": false,
+        "button_save_capture": false,
         "collapsed_keyboard": true
     },
     "server": {
@@ -60,7 +61,6 @@
         }
     },
     "detection_default": {
-        "video_path": "",
         "video_show_scale": 50,
         "video_show_quality": 50,
         "video_fps": false,

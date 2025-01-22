@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <a href="{{ url_for('index') }}" class="text-decoration-none text-body">
+        <h1 class="border-bottom pb-1">{% block title %}CVCounter - {{ trans('Reports') }}{% endblock %}</h1>
+    </a>
+    <nav class="col-12" aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('index') }}">{{ trans('Home') }}</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('reports') }}">{{ trans('Reports') }}</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('report_list', location=location) }}">{{ trans('Report list') }} {{ location|striptags|title }}</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+                {{ trans('Report show') }} {{ location|striptags|title }} #{{ counter.id }}
+            </li>
+        </ol>
+    </nav>
+{% endblock %}
+
+{% block content %}
+    <div class="row py-3">
+        <div class="col-12">
+            <div class="h3">{{ trans('Primary information') }}:</div>
+            <div class="mb-3 px-3">
+                <div class="row border-bottom py-1">
+                    <div class="col col-md-2 fw-bold">{{ trans('Location') }}</div>
+                    <div class="col col-md-10">{{ counter.location|striptags|title }}</div>
+                </div>
+                <div class="row border-bottom py-1">
+                    <div class="col col-md-2 fw-bold">{{ trans('Source') }}</div>
+                    <div class="col col-md-10">{{ counter.source_count }}</div>
+                </div>
+                <div class="row border-bottom py-1">
+                    <div class="col col-md-2 fw-bold">{{ trans('Defect') }}</div>
+                    <div class="col col-md-10">{{ counter.defects_count }}</div>
+                </div>
+                <div class="row border-bottom py-1">
+                    <div class="col col-md-2 fw-bold">{{ trans('Correct') }}</div>
+                    <div class="col col-md-10">{{ counter.correct_count }}</div>
+                </div>
+                <div class="row border-bottom py-1">
+                    <div class="col col-md-2 fw-bold text-truncate">{{ trans('Total') }}</div>
+                    <div class="col col-md-10">{{ counter.total_count }}</div>
+                </div>
+                <div class="row border-bottom py-1">
+                    <div class="col col-md-2 fw-bold">{{ trans('Created') }}</div>
+                    <div class="col col-md-10">{{ counter.created_at.strftime('%d.%m.%Y %H:%M:%S') }}</div>
+                </div>
+                <div class="row py-1">
+                    <div class="col col-md-2 fw-bold">{{ trans('Updated') }}</div>
+                    <div class="col col-md-10">{{ counter.updated_at.strftime('%d.%m.%Y %H:%M:%S') }}</div>
+                </div>
+            </div>
+
+            {% if counter.custom_fields %}
+                <div class="h3">{{ trans('Secondary information') }}:</div>
+                <div class="mb-3 px-3">
+                    {% set custom_fields = json.loads(counter.custom_fields) %}
+                    {% for field in config.get('form.custom_fields', []).values() %}
+                        <div class="row border-bottom py-1">
+                            <div class="col col-md-2 fw-bold">{{ trans(field.label) }}</div>
+                            <div class="col col-md-10">{{ custom_fields[field.name] | striptags }}</div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% if counter.parts %}
+                <div class="h3">{{ trans('Parts information') }}:</div>
+                <div class="mb-3 px-3">
+                    {% set parts = json.loads(counter.parts) %}
+                    {% for part in parts %}
+                        <div class="row border-bottom py-1">
+                            <div class="col-12 col-md-2 fw-bold">{{ trans('Part {index}', index=loop.index) }}:</div>
+                            <div class="col-12 col-md-10">
+                                <ul class="list-unstyled mb-0">
+                                    {% for field, value in part.items() %}
+                                        <li><b>{{ trans(field) }}:</b> {{ value | striptags }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

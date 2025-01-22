@@ -94,6 +94,8 @@ startup).
         // show button fullscreen
         "button_backward": false,
         // show back button
+        "button_save_capture": false,
+        // show save capture button
         "collapsed_keyboard": true
         // show collapsed keyboard
     },
@@ -139,9 +141,6 @@ startup).
         }
     },
     "detection_default": {
-        // default detection config
-        "video_path": "",
-        // path to video file or camera src
         "video_show_scale": 50,
         // scale of video preview
         "video_show_quality": 50,

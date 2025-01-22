@@ -13,6 +13,7 @@
     "Counting has started!": "Подсчёт запущен!",
     "Counting has stopped!": "Подсчёт остановлен!",
     "Counting has paused!": "Подсчёт приостановлен!",
+    "Counting has error!": "Ошибка подсчёта!",
     "Total:": "Всего:",
     "Input": "Вход:",
     "Output": "Выход:",
@@ -51,7 +52,8 @@
     "Reset the count (with total)": "Сбросить подсчет (с общим)",
     "General": "Общие",
     "Debug": "Отладка",
-    "Log Path": "Путь к логам",
+    "Log Path": "Путь к лог файлу",
+    "Allow Unsafe Werkzeug": "Разрешить небезопасные Werkzeug",
     "Default Language": "Язык по умолчанию",
     "Server": "Сервер",
     "Host": "Хост",
@@ -137,5 +139,14 @@
     "Home": "Главная",
     "Report list": "Список отчетов",
     "Report show": "Просмотр отчета",
-    "System info": "Информация о системе"
+    "System info": "Информация о системе",
+    "Parts information": "Информация о партиях",
+    "Part {index}": "Партия {index}",
+    "On": "Вкл",
+    "Off": "Выкл",
+    "current": "Исходное кол-во",
+    "total": "Итоговое кол-во",
+    "defects": "Брак кол-во",
+    "correct": "Корректировка кол-во",
+    "created_at": "Дата создания"
 }

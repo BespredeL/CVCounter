@@ -5,16 +5,30 @@
 {% block content %}
     <div class="row mb-3">
         <!-- START: Left block -->
-        <div class="col-12 col-lg-8 col-xl-9 d-flex justify-content-center position-relative my-2">
-            <div class="img-container">
-                <img id="video_feed" class="text-center rounded user-select-none" src="{{ url_for('counter_get_frames', location=location) }}" alt=""/>
+        <div class="col-12 col-lg-8 col-xl-9 d-flex justify-content-center align-items-center position-relative">
+            <div class="text-center w-100 user-select-none">
+                <div id="current_count" class="display-1 current-count-txt">0</div>
+                <div class="border-top row">
+                    <div class="col">
+                        <div class="display-5 text-muted">{{ trans('Defective products') }}:</div>
+                        <div id="defect_count" class="display-1 total-count-txt text-muted">0</div>
+                    </div>
+                    <div class="col">
+                        <div class="display-5 text-muted">{{ trans('Total:') }}</div>
+                        <div id="total_count" class="display-1 total-count-txt text-muted">0</div>
+                    </div>
+                    <div class="col">
+                        <div class="display-5 text-muted">{{ trans('Corr.') }}:</div>
+                        <div id="correct_count" class="display-1 total-count-txt text-muted">0</div>
+                    </div>
+                </div>
             </div>
 
-            <div class="{{ 'd-flex' if is_paused else 'd-none' }} justify-content-center align-items-center rounded-end-3 pause_display"
+            <div class="{{ 'd-flex' if is_paused else 'd-none' }} justify-content-center align-items-center rounded-end-3 pause-display"
                  id="pause_display">
                 <svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" fill="currentColor" class="bi bi-pause"
                      viewBox="0 0 16 16">
-                    <path d="M6 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5m4 0a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5"></path>
+                    <path d="M6 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5m4 0a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5"/>
                 </svg>
             </div>
         </div>
@@ -22,6 +36,7 @@
 
         {% include 'partials/counter_sidebar_right.html' %}
     </div>
+    {#{% include 'partials/counter_bottom_help.html' %}#}
 {% endblock %}
 
 {% block footer %}
@@ -103,6 +118,13 @@
 
             $('#btn_pause').on('click', function () {
                 pauseCount("{{ url_for('pause_count', location=location) }}");
+            });
+
+            //---------------------------------------------------------------------------
+            // Dev buttons
+            //---------------------------------------------------------------------------
+            $('#save-capture').on('click', function () {
+                saveCapture("{{ url_for('save_capture', location=location) }}");
             });
         });
     </script>

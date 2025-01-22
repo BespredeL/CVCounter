@@ -27,6 +27,10 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
     margin-left: 0;
 }
 
+.alert {
+    z-index: 9999;
+}
+
 .img-container {
     max-height: calc(100vh - 65px);
     width: auto;
@@ -64,19 +68,19 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
     }
 }
 
-.total_count_txt {
+.total-count-txt {
     font-size: calc(7vw + 2px);
 }
 
-.current_count_txt {
+.current-count-txt {
     font-size: calc(19vw + 2px);
 }
 
-.current_count_txt_multi {
+.current-count-txt-multi {
     font-size: calc(15vw + 2px);
 }
 
-.pause_display {
+.pause-display {
     position: absolute;
     top: 0;
     left: 0;
@@ -89,4 +93,8 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
     -webkit-user-select: none !important;
     -moz-user-select: none !important;
     user-select: none !important;
+}
+
+.setting-content {
+    margin-top: -38px;
 }

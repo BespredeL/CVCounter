@@ -3,43 +3,53 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 22.03.2024
-# Updated: 24.11.2024
+# Updated: 27.12.2024
 # Website: https://bespredel.name
 
 import json
 import re
 
+from flask import request
 
-def trans(text: str, lang: str = 'ru', **kwargs: dict) -> str:
+
+def is_ajax() -> bool:
+    """Check if the request is an AJAX request."""
+    return str(request.headers.get('X-Requested-With')).lower() == 'XMLHttpRequest'.lower()
+
+
+def trans(text: str, **kwargs: dict) -> str:
     """
     Translates the given text to the specified language using the provided translations.
 
     Args:
         text (str): The text to be translated.
-        lang (str, optional): The language code to translate the text to. Defaults to 'ru'.
-        **kwargs: Additional keyword arguments to be used for placeholder replacement in the translated text.
+        kwargs (dict, optional): A dictionary of arguments including:
+            - 'lang': Language code for translation (default: 'ru').
+            - Other placeholder replacements.
 
     Returns:
         str: The translated text with any placeholder replacements made.
 
-    Raises:
-        None
-
     Examples:
-        >>> trans('Hello', lang='ru')
+        >>> trans('Hello')
         'Привет'
 
-        >>> trans('The weather is {weather}', lang='ru', weather='sunny')
+        >>> trans('The weather is {weather}', weather='sunny')
         'Погода солнечная'
     """
-    lang_list = load_translations(lang)
+    if kwargs is None:
+        kwargs = {}
 
+    # Extract the language or default to 'ru'
+    lang = kwargs.pop('lang', 'ru')
+
+    lang_list = load_translations(lang)
     if text in lang_list:
         text = lang_list[text]
 
-    if kwargs:
-        for key, value in kwargs.items():
-            text = text.replace('{' + key + '}', str(value))
+    # Replace placeholders in the text
+    for key, value in kwargs.items():
+        text = text.replace('{' + key + '}', str(value))
 
     return text
 
@@ -133,6 +143,23 @@ def colored_text(text: str, color: str) -> str:
     return "{}{}\033[00m".format(color_code, text)
 
 
+def format_bytes(size: int) -> str:
+    """
+    Format bytes to a human-readable size
+
+    Args:
+        size (int): The size to be formatted.
+
+    Returns:
+        str: The formatted size.
+    """
+    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+        if size < 1024:
+            return f"{size:.2f} {unit}"
+        size /= 1024
+    return f"{size:.2f} PB"
+
+
 def system_check() -> None:
     """
     System check
@@ -178,20 +205,3 @@ def system_check() -> None:
         print(f'{colored_text(" * System Check Result:", "yellow")} {colored_text("FAILED", "red")}')
     else:
         print(f'{colored_text(" * System Check Result:", "yellow")} {colored_text("PASSED", "green")}')
-
-
-def format_bytes(size: int) -> str:
-    """
-    Format bytes to a human-readable size
-
-    Args:
-        size (int): The size to be formatted.
-
-    Returns:
-        str: The formatted size.
-    """
-    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
-        if size < 1024:
-            return f"{size:.2f} {unit}"
-        size /= 1024
-    return f"{size:.2f} PB"
