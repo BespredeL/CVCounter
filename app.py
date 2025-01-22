@@ -368,6 +368,19 @@ def stop_count(location: str = None) -> dict[str, str] | Response:
     return redirect(url_for('index'))
 
 
+@app.route('/save_capture/<string:location>')
+def save_capture(location: str = None) -> dict[str, str] | Response:
+    location = str(escape(location))
+    if location not in object_counters:
+        abort(400, trans('Detection config not found'))
+
+    object_counters[location].save_capture()
+
+    if is_ajax() is True:
+        return {'status': 'saved'}
+    return redirect(url_for('index'))
+
+
 # --------------------------------------------------------------------------------
 
 @app.route('/settings')

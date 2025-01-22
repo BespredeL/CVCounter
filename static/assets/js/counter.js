@@ -96,3 +96,20 @@ function pauseCount(url) {
         $('#pause_display').removeClass('d-none').addClass('d-flex');
     });
 }
+
+
+/**
+ * Save capture
+ *
+ * @param {string} url - The endpoint to save capture.
+ */
+function saveCapture(url) {
+    $.get(url).done((data) => {
+        const statusClass = data.status === 'saved' ? 'btn-success' : 'btn-danger';
+        const btn = document.getElementById('save-capture');
+        btn.classList.add(statusClass);
+        setTimeout(() => {
+            btn.classList.remove(statusClass);
+        }, 500);
+    });
+}

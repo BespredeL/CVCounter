@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 27.12.2024
+# Updated: 22.01.2025
 # Website: https://bespredel.name
 
 import json
@@ -115,20 +115,14 @@ class ObjectCounter:
         self.weights: str = kwargs.get('weights', detector_config.get('weights_path'))
         self.device: str = kwargs.get('device', detector_config.get('device', 'cpu'))
         self.confidence: float = kwargs.get('confidence',
-                                            detector_config.get('confidence',
-                                                                config_manager.get('detection_default.confidence',
-                                                                                   0.5)))
-        self.iou: float = kwargs.get('iou',
-                                     detector_config.get('iou', config_manager.get('detection_default.iou', 0.7)))
+                                            detector_config.get('confidence', config_manager.get('detection_default.confidence', 0.5)))
+        self.iou: float = kwargs.get('iou', detector_config.get('iou', config_manager.get('detection_default.iou', 0.7)))
         self.counting_area: list = kwargs.get('counting_area', detector_config.get('counting_area'))
         self.counting_area_color: tuple = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
         self.video_fps: int = detector_config.get('video_fps', config_manager.get("detection_default.video_fps"))
-        self.video_scale: int = detector_config.get('video_show_scale',
-                                                    config_manager.get("detection_default.video_show_scale", 50))
-        self.video_quality: int = detector_config.get('video_show_quality',
-                                                      config_manager.get("detection_default.video_show_quality", 50))
-        self.indicator_size: int = detector_config.get('indicator_size',
-                                                       config_manager.get("detection_default.indicator_size", 10))
+        self.video_scale: int = detector_config.get('video_show_scale', config_manager.get("detection_default.video_show_scale", 50))
+        self.video_quality: int = detector_config.get('video_show_quality', config_manager.get("detection_default.video_show_quality", 50))
+        self.indicator_size: int = detector_config.get('indicator_size', config_manager.get("detection_default.indicator_size", 10))
         self.vid_stride: int = detector_config.get('vid_stride', config_manager.get("detection_default.vid_stride", 1))
         self.classes: dict = detector_config.get('classes', {})
         self.dataset: dict = detector_config.get('dataset_create', {})
@@ -526,3 +520,17 @@ class ObjectCounter:
             None
         """
         return self.paused
+
+    def save_capture(self) -> None:
+        """
+        Save a captured image.
+
+        Returns:
+            None
+        """
+
+        try:
+            frame = self.vsm.get_frame()
+            self._save_dataset_image(frame)
+        except Exception as e:
+            self.logger.error(f'Error saving captured image: {e}')

@@ -143,5 +143,10 @@
     "Parts information": "Parts information",
     "Part {index}": "Part {index}",
     "On": "On",
-    "Off": "Off"
+    "Off": "Off",
+    "current": "Source quantity",
+    "total": "Final quantity",
+    "defects": "Defect quantity",
+    "correct": "Correct quantity",
+    "created_at": "Date of creation"
 }
