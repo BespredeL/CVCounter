@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 26.12.2024
+# Updated: 22.01.2025
 # Website: https://bespredel.name
 
 import json
@@ -323,6 +323,19 @@ def reset_count_current(location: str = None) -> dict:
     )
 
     return {'current_count': 0}
+
+
+@app.route('/save_capture/<string:location>')
+def save_capture(location: str = None) -> dict[str, str] | Response:
+    location = str(escape(location))
+    if location not in object_counters:
+        abort(400, trans('Detection config not found'))
+
+    object_counters[location].save_capture()
+
+    if is_ajax() is True:
+        return {'status': 'saved'}
+    return redirect(url_for('index'))
 
 
 # --------------------------------------------------------------------------------

@@ -119,6 +119,13 @@
             $('#btn_pause').on('click', function () {
                 pauseCount("{{ url_for('pause_count', location=location) }}");
             });
+
+            //---------------------------------------------------------------------------
+            // Dev buttons
+            //---------------------------------------------------------------------------
+            $('#save-capture').on('click', function () {
+                saveCapture("{{ url_for('save_capture', location=location) }}");
+            });
         });
     </script>
 {% endblock %}

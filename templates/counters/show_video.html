@@ -7,7 +7,8 @@
         <!-- START: Left block -->
         <div class="col-12 col-lg-8 col-xl-9 d-flex justify-content-center position-relative my-2">
             <div class="img-container">
-                <img id="video_feed" class="text-center rounded user-select-none" src="{{ url_for('counter_get_frames', location=location) }}" alt=""/>
+                <img id="video_feed" class="text-center rounded user-select-none"
+                     src="{{ url_for('counter_get_frames', location=location) }}" alt=""/>
             </div>
 
             <div class="{{ 'd-flex' if is_paused else 'd-none' }} justify-content-center align-items-center rounded-end-3 pause-display"
@@ -26,7 +27,6 @@
 
 {% block footer %}
     <script src="{{ url_for('static', filename='assets/js/counter.js') }}"></script>
-
     <script>
         $(function () {
             $(document).on('contextmenu', function (e) {
@@ -103,6 +103,13 @@
 
             $('#btn_pause').on('click', function () {
                 pauseCount("{{ url_for('pause_count', location=location) }}");
+            });
+
+            //---------------------------------------------------------------------------
+            // Dev buttons
+            //---------------------------------------------------------------------------
+            $('#save-capture').on('click', function () {
+                saveCapture("{{ url_for('save_capture', location=location) }}");
             });
         });
     </script>
