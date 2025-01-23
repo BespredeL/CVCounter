@@ -22,7 +22,7 @@
     <script src="{{ url_for('static', filename='assets/socketio/socket.io.min.js') }}"></script>
     <script src="{{ url_for('static', filename='assets/js/jquery-3.7.1.min.js') }}"></script>
     <!-- START: Head block -->
-    {% block head %}{% endblock %}
+    {% block head_assets %}{% endblock %}
     <!-- END: Head block -->
 </head>
 <body class="d-flex flex-column h-100">
@@ -30,9 +30,16 @@
     <div class="toast-container position-fixed bottom-0 start-0 p-3" id="toast-container"></div>
     <!-- START: Header block -->
     <div class="row">
-        <div class="col-12">
-            {% block header %}{% endblock %}
-        </div>
+        {% if self.header() %}
+            <div class="col-12 border-bottom">
+                {% block header %}{% endblock %}
+            </div>
+        {% endif %}
+        {% if self.breadcrumb() %}
+            <div class="col-12 mt-2">
+                {% block breadcrumb %}{% endblock %}
+            </div>
+        {% endif %}
     </div>
     <!-- END: Header block -->
 
@@ -113,7 +120,7 @@
                 </a>
             {% endif %}
 
-            {% if config.get('general.button_save_capture') %}
+            {% if config.get('general.button_save_capture') and url_for(request.endpoint, **request.view_args).startswith('/counter') %}
                 <button type="button" class="btn btn-sm d-flex align-items-center" id="save-capture"
                         data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{ trans('Save capture to disk') }}">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-floppy"
@@ -196,7 +203,7 @@
 <!-- END: Toast content -->
 
 <!-- START: Footer block -->
-{% block footer %}{% endblock %}
+{% block footer_assets %}{% endblock %}
 <!-- END: Footer block -->
 </body>
 </html>

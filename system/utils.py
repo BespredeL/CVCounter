@@ -3,12 +3,18 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 22.03.2024
-# Updated: 27.12.2024
+# Updated: 23.01.2025
 # Website: https://bespredel.name
 
 import json
 import re
+import subprocess
+from shutil import disk_usage
+import platform
+from typing import Any, Dict
 
+import psutil
+import torch
 from flask import request
 
 
@@ -160,6 +166,66 @@ def format_bytes(size: int) -> str:
     return f"{size:.2f} PB"
 
 
+def get_system_info() -> dict[str | Any, str | int | Any]:
+    """
+    Get system information
+
+    Returns:
+        None
+    """
+
+    # Extract NVIDIA-SMI, Driver Version, and CUDA Version
+    result = subprocess.run(['nvidia-smi'], capture_output=True, text=True)
+    nvidia_smi_version = re.search(r'NVIDIA-SMI (\d+\.\d+)', result.stdout)
+    driver_version = re.search(r'Driver Version: (\d+\.\d+)', result.stdout)
+    cuda_version = re.search(r'CUDA Version: (\d+\.\d+)', result.stdout)
+    cuda_available = torch.cuda.is_available()
+
+    # Extract information from the output
+    virtual_memory = psutil.virtual_memory()._asdict()
+    swap_memory = psutil.swap_memory()._asdict()
+    disk_usages = disk_usage('/')._asdict()
+
+    sys_info = {
+        "python_version": platform.python_version(),
+        "platform": platform.platform(),
+        "system": platform.system(),
+        "release": platform.release(),
+        "machine": platform.machine(),
+        "processor": platform.processor(),
+        "cpu_count": psutil.cpu_count(logical=False),
+        "cpu_percent": f"{psutil.cpu_percent(interval=1)} %",
+
+        "nvidia_smi_version": nvidia_smi_version.group(1) if nvidia_smi_version else None,
+        "driver_version": driver_version.group(1) if driver_version else None,
+        "cuda_version": cuda_version.group(1) if cuda_version else None,
+        "py_torch_cuda_available": "Yes" if cuda_available else None,
+        "py_torch_cuda_version": torch.version.cuda or None,
+        "py_torch_version": torch.__version__,
+
+        "virtual_memory": {
+            "total": format_bytes(virtual_memory['total']),
+            "available": format_bytes(virtual_memory['available']),
+            "used": format_bytes(virtual_memory['used']),
+            "free": format_bytes(virtual_memory['free']),
+            "percent": f"{virtual_memory['percent']} %"
+        },
+        "swap_memory": {
+            "total": format_bytes(swap_memory['total']),
+            "used": format_bytes(swap_memory['used']),
+            "free": format_bytes(swap_memory['free']),
+            "percent": f"{swap_memory['percent']} %"
+        },
+        "disk_usage": {
+            "total": format_bytes(disk_usages['total']),
+            "used": format_bytes(disk_usages['used']),
+            "free": format_bytes(disk_usages['free'])
+        }
+    }
+
+    return sys_info
+
+
 def system_check() -> None:
     """
     System check
@@ -167,18 +233,9 @@ def system_check() -> None:
     Returns:
         None
     """
-    import subprocess
-    import torch
-    import re
 
     # Execute nvidia-smi in the console and capture the output
-    result = subprocess.run(['nvidia-smi'], capture_output=True, text=True)
-    output = result.stdout
-
-    # Extract NVIDIA-SMI, Driver Version, and CUDA Version
-    nvidia_smi_version = re.search(r'NVIDIA-SMI (\d+\.\d+)', output)
-    driver_version = re.search(r'Driver Version: (\d+\.\d+)', output)
-    cuda_version = re.search(r'CUDA Version: (\d+\.\d+)', output)
+    sys_info = get_system_info()
 
     def colored_value(value):
         if value == "N/A":
@@ -187,21 +244,21 @@ def system_check() -> None:
             return colored_text(value, 'green')
 
     # Print the extracted values
-    pr_color(f' * NVIDIA-SMI Version: {colored_value(nvidia_smi_version.group(1) if nvidia_smi_version else "N/A")}',
+    pr_color(f' * NVIDIA-SMI Version: {colored_value(sys_info["nvidia_smi_version"] or "N/A")}',
              'yellow')
-    pr_color(f' * Driver Version: {colored_value(driver_version.group(1) if driver_version else "N/A")}', 'yellow')
-    pr_color(f' * CUDA Version: {colored_value(cuda_version.group(1) if cuda_version else "N/A")}', 'yellow')
+    pr_color(f' * Driver Version: {colored_value(sys_info["driver_version"] or "N/A")}', 'yellow')
+    pr_color(f' * CUDA Version: {colored_value(sys_info["cuda_version"] or "N/A")}', 'yellow')
 
     # Check CUDA availability using PyTorch
-    cuda_available = torch.cuda.is_available()
-    pr_color(f' * PyTorch CUDA Available: {colored_value("Yes" if cuda_available else "N/A")}', 'yellow')
-    pr_color(f' * PyTorch CUDA Version: {colored_value(torch.version.cuda or "N/A")}', 'yellow')
+    pr_color(f' * PyTorch CUDA Available: {colored_value(sys_info["py_torch_cuda_available"] or "N/A")}', 'yellow')
+    pr_color(f' * PyTorch CUDA Version: {colored_value(sys_info["py_torch_cuda_version"] or "N/A")}', 'yellow')
 
     # Check PyTorch version
-    pr_color(f' * PyTorch Version: {colored_value(torch.__version__ or "N/A")}', 'yellow')
+    pr_color(f' * PyTorch Version: {colored_value(sys_info["py_torch_version"] or "N/A")}', 'yellow')
 
     # Result of system check
-    if not cuda_available or not nvidia_smi_version or not driver_version or not cuda_version or not torch.__version__:
+    if (not sys_info["py_torch_cuda_available"] or not sys_info["nvidia_smi_version"] or not sys_info["driver_version"]
+            or not sys_info["cuda_version"] or not sys_info["py_torch_version"]):
         print(f'{colored_text(" * System Check Result:", "yellow")} {colored_text("FAILED", "red")}')
     else:
         print(f'{colored_text(" * System Check Result:", "yellow")} {colored_text("PASSED", "green")}')

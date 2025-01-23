@@ -3,18 +3,15 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 22.01.2025
+# Updated: 23.01.2025
 # Website: https://bespredel.name
 
 import json
 import os
-import platform
 import re
-from shutil import disk_usage
 from threading import Lock, Thread
 from typing import Any
 
-import psutil
 from flask import Flask, Response, abort, flash, redirect, render_template, request, url_for
 from flask_httpauth import HTTPBasicAuth
 from flask_socketio import SocketIO
@@ -26,7 +23,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from config import config
 from system.database_manager import DatabaseManager
 from system.object_counter import ObjectCounter
-from system.utils import is_ajax, format_bytes, slug, system_check, trans as translate
+from system.utils import get_system_info, is_ajax, slug, system_check, trans as translate
 
 # --------------------------------------------------------------------------------
 # Init and Config
@@ -468,39 +465,7 @@ def report_show(location: str, id: int) -> str:
 @app.route('/system_info')
 @auth.login_required
 def system_info() -> str:
-    virtual_memory = psutil.virtual_memory()._asdict()
-    swap_memory = psutil.swap_memory()._asdict()
-    disk_usages = disk_usage('/')._asdict()
-
-    sys_info = {
-        "python_version": platform.python_version(),
-        "platform": platform.platform(),
-        "system": platform.system(),
-        "release": platform.release(),
-        "machine": platform.machine(),
-        "processor": platform.processor(),
-        "cpu_count": psutil.cpu_count(logical=False),
-        "cpu_percent": f"{psutil.cpu_percent(interval=1)} %",
-        "virtual_memory": {
-            "total": format_bytes(virtual_memory['total']),
-            "available": format_bytes(virtual_memory['available']),
-            "used": format_bytes(virtual_memory['used']),
-            "free": format_bytes(virtual_memory['free']),
-            "percent": f"{virtual_memory['percent']} %"
-        },
-        "swap_memory": {
-            "total": format_bytes(swap_memory['total']),
-            "used": format_bytes(swap_memory['used']),
-            "free": format_bytes(swap_memory['free']),
-            "percent": f"{swap_memory['percent']} %"
-        },
-        "disk_usage": {
-            "total": format_bytes(disk_usages['total']),
-            "used": format_bytes(disk_usages['used']),
-            "free": format_bytes(disk_usages['free'])
-        }
-    }
-
+    sys_info = get_system_info()
     return render_template('system_info.html', sys_info=sys_info)
 
 
