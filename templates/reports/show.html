@@ -2,22 +2,20 @@
 
 {% block header %}
     <a href="{{ url_for('index') }}" class="text-decoration-none text-body">
-        <h1 class="border-bottom pb-1">{% block title %}CVCounter - {{ trans('Reports') }}{% endblock %}</h1>
+        <h1>{% block title %}CVCounter - {{ trans('Reports') }}{% endblock %}</h1>
     </a>
+{% endblock %}
+
+{% block breadcrumb %}
     <nav class="col-12" aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item">
-                <a href="{{ url_for('index') }}">{{ trans('Home') }}</a>
-            </li>
-            <li class="breadcrumb-item">
-                <a href="{{ url_for('reports') }}">{{ trans('Reports') }}</a>
-            </li>
+            <li class="breadcrumb-item"><a href="{{ url_for('index') }}">{{ trans('Home') }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('reports') }}">{{ trans('Reports') }}</a></li>
             <li class="breadcrumb-item">
                 <a href="{{ url_for('report_list', location=location) }}">{{ trans('Report list') }} {{ location|striptags|title }}</a>
             </li>
-            <li class="breadcrumb-item active" aria-current="page">
-                {{ trans('Report show') }} {{ location|striptags|title }} #{{ counter.id }}
-            </li>
+            <li class="breadcrumb-item active"
+                aria-current="page">{{ trans('Report show') }} {{ location|striptags|title }} #{{ counter.id }}</li>
         </ol>
     </nav>
 {% endblock %}
