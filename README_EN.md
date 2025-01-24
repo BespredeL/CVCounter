@@ -274,8 +274,8 @@ P.S.: Not the best example in the screenshots. Couldn't find anything better tha
 Aleksandr Kireev
 
 Website: [https://bespredel.name](https://bespredel.name)<br>
-E-mail: [hello@bespredel.name](mailto:hello@bespredel.name)<br>
-Telegram: [https://t.me/BespredeL_name](https://t.me/BespredeL_name)
+E-mail:  [hello@bespredel.name](mailto:hello@bespredel.name)<br>
+GitHub:  [https://github.com/BespredeL](https://github.com/BespredeL)
 
 ---
 
