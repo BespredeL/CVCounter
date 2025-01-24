@@ -63,7 +63,7 @@
     "detection_default": {
         "video_show_scale": 50,
         "video_show_quality": 50,
-        "video_fps": false,
+        "video_fps": 0,
         "weights_path": "yolo_cfg/models/yolov8n.pt",
         "confidence": 0.7,
         "iou": 0.7,

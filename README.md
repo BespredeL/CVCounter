@@ -145,8 +145,8 @@ CVCounter - это приложение для подсчета объектов
         // масштаб вывода видео на странице
         "video_show_quality": 50,
         // качество вывода видео на странице
-        "video_fps": false,
-        // ручная установка FPS
+        "video_fps": 0,
+        // ручная установка FPS (0 - автоматическая установка)
         "weights_path": "yolo_cfg/models/yolov8n.pt",
         // путь к модели Yolov8
         "counting_area": [
