@@ -145,8 +145,8 @@ startup).
         // scale of video preview
         "video_show_quality": 50,
         // quality of video preview
-        "video_fps": false,
-        // manual FPS setting
+        "video_fps": 0,
+        // manual FPS setting (0 - automatic installation)
         "weights_path": "yolo_cfg/models/yolov8n.pt",
         // path to model Yolov8
         "counting_area": [
