@@ -17,10 +17,9 @@ import cv2
 import numpy as np
 from shapely.geometry import Point, Polygon
 
-from system.object_detections.base_object_detection import BaseObjectDetectionService
 from system.logger import Logger
 from system.notification_manager import NotificationManager
-from system.object_detections.object_detection_ssd import ObjectDetectionSSD
+from system.object_detections.base_object_detection import BaseObjectDetectionService
 from system.object_detections.object_detection_yolo import ObjectDetectionYOLO
 from system.sort import Sort
 from system.utils import trans
