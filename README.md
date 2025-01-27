@@ -147,6 +147,8 @@ CVCounter - это приложение для подсчета объектов
         // качество вывода видео на странице
         "video_fps": 0,
         // ручная установка FPS (0 - автоматическая установка)
+        "model_type": "yolo",
+        // тип модели (по умолчанию yolo)
         "weights_path": "yolo_cfg/models/yolov8n.pt",
         // путь к модели Yolov8
         "counting_area": [
@@ -203,6 +205,8 @@ CVCounter - это приложение для подсчета объектов
             // качество вывода видео на странице
             "video_fps": 30,
             // ручная установка FPS (необязательно)
+           "model_type": "yolo",
+            // тип модели (по умолчанию yolo)
             "weights_path": "yolo_cfg/models/yolov8n.pt",
             // путь к модели Yolov8
             "counting_area": [
