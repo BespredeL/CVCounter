@@ -20,6 +20,7 @@ from shapely.geometry import Point, Polygon
 from system.object_detections.base_object_detection import BaseObjectDetectionService
 from system.logger import Logger
 from system.notification_manager import NotificationManager
+from system.object_detections.object_detection_ssd import ObjectDetectionSSD
 from system.object_detections.object_detection_yolo import ObjectDetectionYOLO
 from system.sort import Sort
 from system.utils import trans
@@ -46,7 +47,7 @@ class ObjectCounter:
         self.paused = False
 
         # Load and initialize config
-        self._initialize_config(location, config_manager, kwargs)
+        self.__initialize_config(location, config_manager, kwargs)
 
         # Init logger
         self.logger: Logger = Logger()
@@ -59,8 +60,11 @@ class ObjectCounter:
         self.vsm.start()
 
         # Init model
-        self.model: BaseObjectDetectionService = ObjectDetectionYOLO()
-        self.model.load_model(weights=self.weights)
+        if self.model_type == 'yolo':
+            self.model: BaseObjectDetectionService = ObjectDetectionYOLO()
+            self.model.load_model(weights=self.weights)
+        else:
+            raise ValueError(f"Unsupported model type: {self.model_type}")
 
         # Init tracker
         self.tracker: Sort = Sort(max_age=30, min_hits=3, iou_threshold=0.3)
@@ -71,7 +75,7 @@ class ObjectCounter:
         # Set polygon
         self.polygon: Polygon = Polygon(self.counting_area)
 
-    def _initialize_config(self, location: str, config_manager: any, kwargs: dict) -> None:
+    def __initialize_config(self, location: str, config_manager: any, kwargs: dict) -> None:
         """
         Initializes the configuration for the object counter.
 
@@ -86,6 +90,7 @@ class ObjectCounter:
         Initializes the following attributes:
             - self.location (str): The location of the object counter.
             - self.config_manager (ConfigManager): The ConfigManager instance.
+            - self.model_type (str): The type of object detection model.
             - self.weights (str): The path to the weights file.
             - self.device (str): The device to use for inference ('cpu' by default).
             - self.confidence (float): The confidence threshold for object detection.
@@ -112,6 +117,7 @@ class ObjectCounter:
 
         self.debug: bool = kwargs.get('debug', config_manager.get('debug', False))
         self.location: str = location
+        self.model_type = kwargs.get('model_type', detector_config.get('model_type', 'yolo'))
         self.weights: str = kwargs.get('weights', detector_config.get('weights_path'))
         self.device: str = kwargs.get('device', detector_config.get('device', 'cpu'))
         self.confidence: float = kwargs.get('confidence',

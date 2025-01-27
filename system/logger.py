@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 24.11.2024
+# Updated: 27.01.2025
 # Website: https://bespredel.name
 
 import logging
@@ -56,7 +56,7 @@ class Logger:
 
         Args:
             level (int): The logging level.
-            msg (str): The message to log.
+            msg (str or Exception): The message to log.
             *args: Variable length argument list.
             **kwargs: Arbitrary keyword arguments.
 
@@ -65,7 +65,7 @@ class Logger:
         """
         self._logger.log(level, msg, *args, **kwargs)
 
-    def error(self, msg: str) -> None:
+    def error(self, msg: str | Exception) -> None:
         """
         Logs an error message.
 

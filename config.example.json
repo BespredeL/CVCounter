@@ -61,15 +61,16 @@
         }
     },
     "detection_default": {
-        "video_show_scale": 50,
-        "video_show_quality": 50,
-        "video_fps": 0,
+        "model_type": "yolo",
         "weights_path": "yolo_cfg/models/yolov8n.pt",
         "confidence": 0.7,
         "iou": 0.7,
         "device": 0,
         "vid_stride": 1,
         "indicator_size": 10,
+        "video_show_scale": 70,
+        "video_show_quality": 50,
+        "video_fps": 0,
         "counting_area": [
             [
                 0,
@@ -100,14 +101,16 @@
             "label": "Label ExampleCam",
             "start_total_count": 0,
             "video_path": "",
-            "video_show_scale": 70,
-            "video_show_quality": 30,
+            "model_type": "yolo",
             "weights_path": "yolo_cfg/models/yolov8n.pt",
             "confidence": 0.7,
             "iou": 0.7,
             "device": 0,
             "vid_stride": 1,
             "indicator_size": 10,
+            "video_show_scale": 70,
+            "video_show_quality": 30,
+            "video_fps": 0,
             "counting_area": [
                 [
                     0,
