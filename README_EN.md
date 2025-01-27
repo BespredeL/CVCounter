@@ -147,6 +147,8 @@ startup).
         // quality of video preview
         "video_fps": 0,
         // manual FPS setting (0 - automatic installation)
+        "model_type": "yolo",
+        // model type (default yolo)
         "weights_path": "yolo_cfg/models/yolov8n.pt",
         // path to model Yolov8
         "counting_area": [
@@ -203,6 +205,8 @@ startup).
             // quality of video preview
             "video_fps": false,
             // manual FPS setting (optional)
+            "model_type": "yolo",
+            // model type (default yolo)
             "weights_path": "yolo_cfg/models/yolov8n.pt",
             // path to model Yolov8
             "counting_area": [
