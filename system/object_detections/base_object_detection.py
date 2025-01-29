@@ -11,11 +11,12 @@ class BaseObjectDetectionService:
     def __init__(self) -> None:
         pass
 
-    def detect(self, **kwargs):
+    def detect(self, image, **kwargs):
         """
         Detects objects in an image using a pre-trained model.
 
         Args:
+            image: The input image.
             **kwargs: Additional keyword arguments.
 
         Returns:
@@ -24,11 +25,12 @@ class BaseObjectDetectionService:
 
         pass
 
-    def load_model(self, **kwargs):
+    def load_model(self, weights: str, **kwargs):
         """
         Loads a pre-trained model for object detection.
 
         Args:
+            weights: The path to the pre-trained model weights file.
             **kwargs: Additional keyword arguments.
 
         Returns:

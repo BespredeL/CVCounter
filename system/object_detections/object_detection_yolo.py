@@ -3,10 +3,9 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 26.12.2024
-# Updated: 27.12.2024
+# Updated: 29.01.2025
 # Website: https://bespredel.name
 
-import numpy as np
 from ultralytics import YOLO, settings
 
 from system.exception_handler import ModelLoadingError, ModelNotFoundError
@@ -17,21 +16,21 @@ class ObjectDetectionYOLO(BaseObjectDetectionService):
     def __init__(self) -> None:
         super().__init__()
         self.model = None
+        self.confidence = None
+        self.iou = None
+        self.device = None
+        self.vid_stride = None
+        self.classes_list = None
 
         # Disable analytics and crash reporting
         settings.update({'sync': False})
 
-    def detect(self, image: np.ndarray, confidence: float, iou: float, device: str, vid_stride: int, classes_list: list):
+    def detect(self, image, **kwargs):
         """
         Detects objects in an image using a pre-trained model.
 
         Args:
-            image (np.ndarray): The input image as a numpy array.
-            confidence (float): The confidence threshold for object detection.
-            iou (float): The IoU threshold for object detection.
-            device (str): The device to use for inference ('cpu' by default).
-            vid_stride (int): The stride for video processing.
-            classes_list (list): The classes for object detection.
+            image: The input image as a numpy array.
 
         Returns:
             ndarray: An array of updated results after tracking the detected objects.
@@ -42,11 +41,11 @@ class ObjectDetectionYOLO(BaseObjectDetectionService):
 
         results = self.model.predict(
             image,
-            conf=confidence,
-            iou=iou,
-            device=device,
-            vid_stride=vid_stride,
-            classes=classes_list
+            conf=self.confidence,
+            iou=self.iou,
+            device=self.device,
+            vid_stride=self.vid_stride,
+            classes=self.classes_list
         )
 
         boxes_xyxy = results[0].boxes.xyxy.cpu().numpy()
@@ -54,12 +53,13 @@ class ObjectDetectionYOLO(BaseObjectDetectionService):
 
         return boxes_xyxy, confidences
 
-    def load_model(self, weights: str):
+    def load_model(self, weights: str, **kwargs):
         """
         Loads a pre-trained model for object detection.
 
         Args:
             weights (str): The path to the pre-trained model weights file.
+            **kwargs: Additional keyword arguments.
 
         Returns:
             None
@@ -67,6 +67,13 @@ class ObjectDetectionYOLO(BaseObjectDetectionService):
 
         if not weights:
             raise ModelNotFoundError('Model is not found')
+
+        # Configuration model
+        self.confidence = kwargs.get('confidence', 0.7)
+        self.iou = kwargs.get('iou', 0.7)
+        self.device = kwargs.get('device', 'cpu')
+        self.vid_stride = kwargs.get('vid_stride', 1)
+        self.classes_list = kwargs.get('classes_list', None)
 
         try:
             self.model = YOLO(weights)

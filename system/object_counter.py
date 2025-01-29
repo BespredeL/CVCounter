@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 22.01.2025
+# Updated: 29.01.2025
 # Website: https://bespredel.name
 
 import json
@@ -59,9 +59,11 @@ class ObjectCounter:
         self.vsm.start()
 
         # Init model
+        classes_list = list(map(int, self.classes.keys())) if self.classes else None
         if self.model_type == 'yolo':
             self.model: BaseObjectDetectionService = ObjectDetectionYOLO()
-            self.model.load_model(weights=self.weights)
+            self.model.load_model(weights=self.weights, confidence=self.confidence, iou=self.iou, device=self.device,
+                                  vid_stride=self.vid_stride, classes_list=classes_list)
         else:
             raise ValueError(f"Unsupported model type: {self.model_type}")
 
@@ -153,19 +155,9 @@ class ObjectCounter:
         Returns:
             ndarray: An array of updated results after tracking the detected objects.
         """
-        classes_list = list(map(int, self.classes.keys())) if self.classes else None
-
-        xyxy, conf = self.model.detect(
-            image=image,
-            confidence=self.confidence,
-            iou=self.iou,
-            device=self.device,
-            vid_stride=self.vid_stride,
-            classes_list=classes_list,
-            # stream_buffer=True,
-        )
-
+        xyxy, conf = self.model.detect(image=image)
         detections = np.concatenate((xyxy, conf.reshape(-1, 1)), axis=1)
+
         return self.tracker.update(detections)
 
     def _draw_counting_area(self, image: np.ndarray) -> np.ndarray:
