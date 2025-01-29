@@ -91,6 +91,7 @@ class ObjectCounter:
 
         Initializes the following attributes:
             - self.location (str): The location of the object counter.
+            - self.debug (bool): The debug mode flag.
             - self.config_manager (ConfigManager): The ConfigManager instance.
             - self.model_type (str): The type of object detection model.
             - self.weights (str): The path to the weights file.
@@ -116,22 +117,22 @@ class ObjectCounter:
 
         config_manager.read_config()
         detector_config = config_manager.get(f"detections.{location}")
+        detection_default = config_manager.get("detection_default", {})
 
-        self.debug: bool = kwargs.get('debug', config_manager.get('debug', False))
         self.location: str = location
+        self.debug: bool = kwargs.get('debug', config_manager.get('debug', False))
         self.model_type = kwargs.get('model_type', detector_config.get('model_type', 'yolo'))
         self.weights: str = kwargs.get('weights', detector_config.get('weights_path'))
         self.device: str = kwargs.get('device', detector_config.get('device', 'cpu'))
-        self.confidence: float = kwargs.get('confidence',
-                                            detector_config.get('confidence', config_manager.get('detection_default.confidence', 0.5)))
-        self.iou: float = kwargs.get('iou', detector_config.get('iou', config_manager.get('detection_default.iou', 0.7)))
+        self.confidence: float = kwargs.get('confidence', detector_config.get('confidence', detection_default.get('confidence', 0.5)))
+        self.iou: float = kwargs.get('iou', detector_config.get('iou', detection_default.get('iou', 0.7)))
         self.counting_area: list = kwargs.get('counting_area', detector_config.get('counting_area'))
         self.counting_area_color: tuple = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
-        self.video_fps: int = detector_config.get('video_fps', config_manager.get("detection_default.video_fps"))
-        self.video_scale: int = detector_config.get('video_show_scale', config_manager.get("detection_default.video_show_scale", 50))
-        self.video_quality: int = detector_config.get('video_show_quality', config_manager.get("detection_default.video_show_quality", 50))
-        self.indicator_size: int = detector_config.get('indicator_size', config_manager.get("detection_default.indicator_size", 10))
-        self.vid_stride: int = detector_config.get('vid_stride', config_manager.get("detection_default.vid_stride", 1))
+        self.video_fps: int = detector_config.get('video_fps', detection_default.get("video_fps"))
+        self.video_scale: int = detector_config.get('video_show_scale', detection_default.get("video_show_scale", 50))
+        self.video_quality: int = detector_config.get('video_show_quality', detection_default.get("video_show_quality", 50))
+        self.indicator_size: int = detector_config.get('indicator_size', detection_default.get("indicator_size", 10))
+        self.vid_stride: int = detector_config.get('vid_stride', detection_default.get("vid_stride", 1))
         self.classes: dict = detector_config.get('classes', {})
         self.dataset: dict = detector_config.get('dataset_create', {})
 
