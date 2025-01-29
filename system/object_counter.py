@@ -255,8 +255,7 @@ class ObjectCounter:
             if self.debug:
                 fps = int(1 / (time.time() - start_time))
                 cv2.putText(frame, f'FPS: {fps}',
-                            self.FPS_POSITION, cv2.FONT_HERSHEY_SIMPLEX, self.FPS_FONT_SCALE, self.FPS_COLOR,
-                            self.FPS_THICKNESS)
+                            self.FPS_POSITION, cv2.FONT_HERSHEY_SIMPLEX, self.FPS_FONT_SCALE, self.FPS_COLOR, self.FPS_THICKNESS)
 
             return frame
         except Exception as e:
