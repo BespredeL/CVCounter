@@ -49,7 +49,10 @@ class ObjectDetectionYOLO(BaseObjectDetectionService):
             classes=classes_list
         )
 
-        return results[0].boxes.xyxy.cpu().numpy(), results[0].boxes.conf.cpu().numpy()
+        boxes_xyxy = results[0].boxes.xyxy.cpu().numpy()
+        confidences = results[0].boxes.conf.cpu().numpy()
+
+        return boxes_xyxy, confidences
 
     def load_model(self, weights: str):
         """
