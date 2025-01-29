@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 22.01.2025
+# Updated: 29.01.2025
 # Website: https://bespredel.name
 
 import json
@@ -17,6 +17,7 @@ import cv2
 import numpy as np
 from shapely.geometry import Point, Polygon
 
+from system.config_manager import ConfigManager
 from system.logger import Logger
 from system.notification_manager import NotificationManager
 from system.object_detections.base_object_detection import BaseObjectDetectionService
@@ -60,8 +61,10 @@ class ObjectCounter:
 
         # Init model
         if self.model_type == 'yolo':
+            classes_list = list(map(int, self.classes.keys())) if self.classes else None
             self.model: BaseObjectDetectionService = ObjectDetectionYOLO()
-            self.model.load_model(weights=self.weights)
+            self.model.load_model(weights=self.weights, confidence=self.confidence, iou=self.iou, device=self.device,
+                                  vid_stride=self.vid_stride, classes_list=classes_list)
         else:
             raise ValueError(f"Unsupported model type: {self.model_type}")
 
@@ -74,7 +77,7 @@ class ObjectCounter:
         # Set polygon
         self.polygon: Polygon = Polygon(self.counting_area)
 
-    def __initialize_config(self, location: str, config_manager: any, kwargs: dict) -> None:
+    def __initialize_config(self, location: str, config_manager: ConfigManager, kwargs: dict) -> None:
         """
         Initializes the configuration for the object counter.
 
@@ -153,19 +156,9 @@ class ObjectCounter:
         Returns:
             ndarray: An array of updated results after tracking the detected objects.
         """
-        classes_list = list(map(int, self.classes.keys())) if self.classes else None
-
-        xyxy, conf = self.model.detect(
-            image=image,
-            confidence=self.confidence,
-            iou=self.iou,
-            device=self.device,
-            vid_stride=self.vid_stride,
-            classes_list=classes_list,
-            # stream_buffer=True,
-        )
-
+        xyxy, conf = self.model.detect(image=image)
         detections = np.concatenate((xyxy, conf.reshape(-1, 1)), axis=1)
+
         return self.tracker.update(detections)
 
     def _draw_counting_area(self, image: np.ndarray) -> np.ndarray:
