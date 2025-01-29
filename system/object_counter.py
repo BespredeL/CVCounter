@@ -17,6 +17,7 @@ import cv2
 import numpy as np
 from shapely.geometry import Point, Polygon
 
+from system.config_manager import ConfigManager
 from system.logger import Logger
 from system.notification_manager import NotificationManager
 from system.object_detections.base_object_detection import BaseObjectDetectionService
@@ -59,8 +60,8 @@ class ObjectCounter:
         self.vsm.start()
 
         # Init model
-        classes_list = list(map(int, self.classes.keys())) if self.classes else None
         if self.model_type == 'yolo':
+            classes_list = list(map(int, self.classes.keys())) if self.classes else None
             self.model: BaseObjectDetectionService = ObjectDetectionYOLO()
             self.model.load_model(weights=self.weights, confidence=self.confidence, iou=self.iou, device=self.device,
                                   vid_stride=self.vid_stride, classes_list=classes_list)
@@ -76,7 +77,7 @@ class ObjectCounter:
         # Set polygon
         self.polygon: Polygon = Polygon(self.counting_area)
 
-    def __initialize_config(self, location: str, config_manager: any, kwargs: dict) -> None:
+    def __initialize_config(self, location: str, config_manager: ConfigManager, kwargs: dict) -> None:
         """
         Initializes the configuration for the object counter.
 

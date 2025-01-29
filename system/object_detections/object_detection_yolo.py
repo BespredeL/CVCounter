@@ -69,7 +69,7 @@ class ObjectDetectionYOLO(BaseObjectDetectionService):
             raise ModelNotFoundError('Model is not found')
 
         # Configuration model
-        self.confidence = kwargs.get('confidence', 0.7)
+        self.confidence = kwargs.get('confidence', 0.5)
         self.iou = kwargs.get('iou', 0.7)
         self.device = kwargs.get('device', 'cpu')
         self.vid_stride = kwargs.get('vid_stride', 1)
