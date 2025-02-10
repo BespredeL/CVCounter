@@ -15,6 +15,7 @@ from typing import Generator
 
 import cv2
 import numpy as np
+from flask_socketio import SocketIO
 from shapely.geometry import Point, Polygon
 
 from system.config_manager import ConfigManager
@@ -34,7 +35,7 @@ class ObjectCounter:
     FPS_THICKNESS: int = 2
     POLYGON_ALPHA: float = 0.4
 
-    def __init__(self, location: str, config_manager: any, socketio: any, **kwargs: any) -> None:
+    def __init__(self, location: str, config_manager: ConfigManager, socketio: SocketIO, **kwargs: any) -> None:
         # Init variables
         self.total_objects: set = set()
         self.total_count: int = 0
