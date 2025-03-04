@@ -181,9 +181,26 @@ class ObjectCounter:
 
         return cv2.addWeighted(overlay, self.POLYGON_ALPHA, image, 1 - self.POLYGON_ALPHA, 0)
 
+    def _draw_indicator(self, image: np.ndarray, center: tuple[int, int], rid: int) -> np.ndarray:
+        """
+        Draws an indicator on the given image.
+
+        Args:
+            image (numpy.ndarray): The image on which the indicator should be drawn.
+            center (tuple[int, int]): The center coordinates of the indicator.
+            rid (int): The ID of the indicator.
+
+        Returns:
+            numpy.ndarray: The image with the indicator drawn on it.
+        """
+        color = (0, 255, 0) if rid in self.total_objects else (255, 0, 255)
+        cv2.circle(image, center, self.indicator_size, color, cv2.FILLED)
+
+        return image
+
     def _detect_count(self, image: np.ndarray, boxes: list | np.ndarray) -> np.ndarray:
         """
-        Draws boxes on an image and returns the modified image.
+        Counts objects in the given image and draws indicators on the image.
 
         Args:
             image (numpy.ndarray): The image on which the boxes will be drawn.
@@ -197,13 +214,12 @@ class ObjectCounter:
         if self.paused:
             return image
 
-        indicator_size = int(self.indicator_size)
-
         for result in boxes:
             x1, y1, x2, y2, rid = map(int, result[:5])  # Unpack all values as integers
             cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
-            color = (0, 255, 0) if rid in self.total_objects else (255, 0, 255)
-            cv2.circle(image, (cx, cy), indicator_size, color, cv2.FILLED)
+
+            # Draw indicator on the image
+            image = self._draw_indicator(image, (cx, cy), rid)
 
             # Check if the object is within the counting area
             point = Point(cx, cy)
