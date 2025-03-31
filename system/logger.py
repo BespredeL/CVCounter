@@ -3,62 +3,64 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 27.01.2025
+# Updated: 31.03.2025
 # Website: https://bespredel.name
 
 import logging
 import traceback
+from typing import Optional
 
-from config import config
+from system.config import config
 
 
 class Logger:
-    _instance: 'Logger' = None
+    _instance: Optional['Logger'] = None
+    _initialized: bool = False
 
     def __new__(cls) -> 'Logger':
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance._initialize()
         return cls._instance
 
-    def _initialize(self) -> None:
+    def __init__(self) -> None:
         """
-        Initializes a new instance of the class.
-
-        Returns:
-            None
+        Initializes the logger.
         """
+        if not self._initialized:
+            self._logger: logging.Logger = logging.getLogger(__name__)
+            self._logger.setLevel(logging.DEBUG)
 
-        self._logger: logging.Logger = logging.getLogger(__name__)
-        self._logger.setLevel(logging.DEBUG)
+            # Create a handler for writing to file
+            file_handler: logging.FileHandler = logging.FileHandler(
+                config.get('general.log_path', 'errors.log') if config else 'errors.log',
+                encoding='utf-8'
+            )
+            file_handler.setLevel(logging.DEBUG)
 
-        # Creating a handler for writing to a file
-        file_handler: logging.FileHandler = logging.FileHandler(config.get('general.log_path', 'errors.log'), encoding='utf-8')
-        file_handler.setLevel(logging.DEBUG)
+            # Create a handler for console output
+            console_handler: logging.StreamHandler = logging.StreamHandler()
+            console_handler.setLevel(logging.DEBUG)
 
-        # Creating a handler for console output
-        console_handler: logging.StreamHandler = logging.StreamHandler()
-        console_handler.setLevel(logging.DEBUG)
+            formatter: logging.Formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+            file_handler.setFormatter(formatter)
+            console_handler.setFormatter(formatter)
 
-        formatter: logging.Formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        file_handler.setFormatter(formatter)
-        console_handler.setFormatter(formatter)
+            # Add handlers to the logger
+            self._logger.addHandler(file_handler)
+            self._logger.addHandler(console_handler)
 
-        # Adding handlers to the logger
-        self._logger.addHandler(file_handler)
-        self._logger.addHandler(console_handler)
-
-        self.print_logs: bool = True
+            self.print_logs: bool = True
+            self._initialized = True
 
     def log(self, level: int, msg: str, *args, **kwargs) -> None:
         """
         Logs a message with the specified level.
 
         Args:
-            level (int): The logging level.
-            msg (str or Exception): The message to log.
-            *args: Variable length argument list.
-            **kwargs: Arbitrary keyword arguments.
+            level (int): Logging level
+            msg (str or Exception): Message to log
+            *args: Variable number of positional arguments
+            **kwargs: Arbitrary keyword arguments
 
         Returns:
             None

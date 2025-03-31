@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 29.01.2025
+# Updated: 31.03.2025
 # Website: https://bespredel.name
 
 import json
@@ -11,11 +11,12 @@ import os
 import random
 import re
 import time
-from typing import Generator
+from typing import Generator, List, Optional, Tuple
 
 import cv2
 import numpy as np
 from flask_socketio import SocketIO
+from numpy import ndarray
 from shapely.geometry import Point, Polygon
 
 from system.config_manager import ConfigManager
@@ -24,16 +25,28 @@ from system.notification_manager import NotificationManager
 from system.object_detections.base_object_detection import BaseObjectDetectionService
 from system.object_detections.object_detection_yolo import ObjectDetectionYOLO
 from system.sort import Sort
+from system.timer import Timer
 from system.utils import trans
 from system.video_stream_manager import VideoStreamManager
 
 
 class ObjectCounter:
-    FPS_POSITION: tuple = (20, 70)
-    FPS_FONT_SCALE: float = 1.5
-    FPS_COLOR: tuple = (0, 0, 255)
-    FPS_THICKNESS: int = 2
-    POLYGON_ALPHA: float = 0.4
+    DEFAULT_FPS_POSITION: tuple = (20, 70)
+    DEFAULT_FPS_FONT_SCALE: float = 1.5
+    DEFAULT_FPS_COLOR: tuple = (0, 0, 255)
+    DEFAULT_FPS_THICKNESS: int = 2
+    DEFAULT_POLYGON_ALPHA: float = 0.4
+    DEFAULT_SLEEP_TIME: float = 0.01
+    DEFAULT_CONFIDENCE: float = 0.5
+    DEFAULT_IOU: float = 0.7
+    DEFAULT_VIDEO_QUALITY: int = 50
+    DEFAULT_VIDEO_SCALE: int = 50
+    DEFAULT_MAX_AGE: int = 30
+    DEFAULT_MIN_HITS: int = 3
+    DEFAULT_TRACKER_IOU: float = 0.3
+    DEFAULT_JPEG_QUALITY: int = 100
+    DEFAULT_INDICATOR_SIZE: int = 10
+    DEFAULT_VID_STRIDE: int = 1
 
     def __init__(self, location: str, config_manager: ConfigManager, socketio: SocketIO, **kwargs: any) -> None:
         # Init variables
@@ -42,7 +55,7 @@ class ObjectCounter:
         self.current_count: int = 0
         self.defect_count: int = 0
         self.correct_count: int = 0
-        self.frame: np.ndarray | None = None
+        self.frame: Optional[np.ndarray] = None
         self.get_frames_running: bool = False
         self.running: bool = True
         self.paused = False
@@ -70,7 +83,7 @@ class ObjectCounter:
             raise ValueError(f"Unsupported model type: {self.model_type}")
 
         # Init tracker
-        self.tracker: Sort = Sort(max_age=30, min_hits=3, iou_threshold=0.3)
+        self.tracker: Sort = Sort(max_age=self.DEFAULT_MAX_AGE, min_hits=self.DEFAULT_MIN_HITS, iou_threshold=self.DEFAULT_TRACKER_IOU)
 
         # Init Database manager
         self.db_manager: any = kwargs.get('db_manager', None)
@@ -125,15 +138,18 @@ class ObjectCounter:
         self.model_type = kwargs.get('model_type', detector_config.get('model_type', 'yolo'))
         self.weights: str = kwargs.get('weights', detector_config.get('weights_path'))
         self.device: str = kwargs.get('device', detector_config.get('device', 'cpu'))
-        self.confidence: float = kwargs.get('confidence', detector_config.get('confidence', detection_default.get('confidence', 0.5)))
-        self.iou: float = kwargs.get('iou', detector_config.get('iou', detection_default.get('iou', 0.7)))
-        self.counting_area: list = kwargs.get('counting_area', detector_config.get('counting_area'))
+        self.confidence: float = kwargs.get('confidence',
+                                            detector_config.get('confidence', detection_default.get('confidence', self.DEFAULT_CONFIDENCE)))
+        self.iou: float = kwargs.get('iou', detector_config.get('iou', detection_default.get('iou', self.DEFAULT_IOU)))
+        self.counting_area: List[Tuple[int, int]] = kwargs.get('counting_area', detector_config.get('counting_area'))
         self.counting_area_color: tuple = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
         self.video_fps: int = detector_config.get('video_fps', detection_default.get("video_fps"))
-        self.video_scale: int = detector_config.get('video_show_scale', detection_default.get("video_show_scale", 50))
-        self.video_quality: int = detector_config.get('video_show_quality', detection_default.get("video_show_quality", 50))
-        self.indicator_size: int = detector_config.get('indicator_size', detection_default.get("indicator_size", 10))
-        self.vid_stride: int = detector_config.get('vid_stride', detection_default.get("vid_stride", 1))
+        self.video_scale: int = detector_config.get('video_show_scale', detection_default.get("video_show_scale", self.DEFAULT_VIDEO_SCALE))
+        self.video_quality: int = detector_config.get('video_show_quality',
+                                                      detection_default.get("video_show_quality", self.DEFAULT_VIDEO_QUALITY))
+        self.indicator_size: int = detector_config.get('indicator_size',
+                                                       detection_default.get("indicator_size", self.DEFAULT_INDICATOR_SIZE))
+        self.vid_stride: int = detector_config.get('vid_stride', detection_default.get("vid_stride", self.DEFAULT_VID_STRIDE))
         self.classes: dict = detector_config.get('classes', {})
         self.dataset: dict = detector_config.get('dataset_create', {})
 
@@ -179,7 +195,7 @@ class ObjectCounter:
         pts = np.array(self.counting_area, np.int32).reshape((-1, 1, 2))
         cv2.fillPoly(overlay, [pts], self.counting_area_color)
 
-        return cv2.addWeighted(overlay, self.POLYGON_ALPHA, image, 1 - self.POLYGON_ALPHA, 0)
+        return cv2.addWeighted(overlay, self.DEFAULT_POLYGON_ALPHA, image, 1 - self.DEFAULT_POLYGON_ALPHA, 0)
 
     def _draw_indicator(self, image: np.ndarray, center: tuple[int, int], rid: int) -> np.ndarray:
         """
@@ -238,7 +254,7 @@ class ObjectCounter:
 
         return image
 
-    def _process_frame(self, frame: np.ndarray) -> np.ndarray:
+    def _process_frame(self, frame: np.ndarray) -> ndarray | None:
         """
         Process the frame.
 
@@ -248,36 +264,31 @@ class ObjectCounter:
         Returns:
             numpy.ndarray: The processed frame.
         """
-        try:
-            start_time = time.time()
+        if frame is None:
+            return None
+
+        with Timer() as timer:
             frame_copy = frame.copy() if self.dataset.get('enable', False) else None
             last_total_count = self.total_count
 
-            # Detect objects
             boxes = self._detect(frame)
 
-            # Draw counting area
             if self.get_frames_running:
                 frame = self._draw_counting_area(frame)
 
-            # Detect counting
             frame = self._detect_count(frame, boxes)
 
-            # Save images from training dataset
-            if self.dataset.get('enable', False) and last_total_count != self.total_count and random.random() < float(
-                    self.dataset['probability']):
-                self._save_dataset_image(frame_copy)
+            if self.dataset.get('enable', False) and last_total_count != self.total_count:
+                if random.random() < float(self.dataset['probability']):
+                    self._save_dataset_image(frame_copy)
 
-            # FPS counter on the frame
             if self.debug:
-                fps = int(1 / (time.time() - start_time))
+                fps = int(1 / timer.elapsed)
                 cv2.putText(frame, f'FPS: {fps}',
-                            self.FPS_POSITION, cv2.FONT_HERSHEY_SIMPLEX, self.FPS_FONT_SCALE, self.FPS_COLOR, self.FPS_THICKNESS)
+                            self.DEFAULT_FPS_POSITION, cv2.FONT_HERSHEY_SIMPLEX,
+                            self.DEFAULT_FPS_FONT_SCALE, self.DEFAULT_FPS_COLOR, self.DEFAULT_FPS_THICKNESS)
 
             return frame
-        except Exception as e:
-            self.logger.error(f'Error processing frame: {e}')
-            raise
 
     def _save_dataset_image(self, frame: np.ndarray) -> None:
         """
@@ -289,16 +300,26 @@ class ObjectCounter:
         Returns:
             None
         """
+        if frame is None:
+            return
+
         try:
-            if frame is None:
+            dataset_path = self.dataset.get('path')
+            if not dataset_path:
+                self.logger.warning('Dataset path is not configured')
                 return
 
-            dataset_path = self.dataset.get('path')
-            if not os.path.exists(dataset_path):
-                os.makedirs(dataset_path)
+            os.makedirs(dataset_path, exist_ok=True)
+
             location_clean = re.sub('[^A-Za-z0-9-_]+', '', self.location)
             create_time = int(time.time())
-            cv2.imwrite(f'{dataset_path}/{location_clean}_{create_time}.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 100])
+
+            image_path = f'{dataset_path}/{location_clean}_{create_time}.jpg'
+            success = cv2.imwrite(image_path, frame, [cv2.IMWRITE_JPEG_QUALITY, self.DEFAULT_JPEG_QUALITY])
+
+            if not success:
+                self.logger.error(f'Failed to save image to {image_path}')
+
         except Exception as e:
             self.logger.error(f'Error saving dataset image: {e}')
 
@@ -318,7 +339,7 @@ class ObjectCounter:
                 if frame is None:
                     self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
                     self.notif_manager.event('counter_status', {'status': 'error', 'location': self.location})
-                    time.sleep(0.01)
+                    time.sleep(self.DEFAULT_SLEEP_TIME)
                     continue  # Skip the iteration if the frame is not received
 
                 if reconnect_count > 0:
@@ -332,7 +353,7 @@ class ObjectCounter:
                     self.frame = None
                     self._process_frame(frame)
 
-                time.sleep(0.01)
+                time.sleep(self.DEFAULT_SLEEP_TIME)
             except Exception as e:
                 print(e)
                 self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
@@ -351,20 +372,20 @@ class ObjectCounter:
                 self.get_frames_running = True
 
                 if self.frame is not None:
-                    encoded_frame = self.frame
+                    frame = self.frame
 
                     # Scale the frame
                     if self.video_scale > 0:
-                        encoded_frame = self.vsm.resize_frame(encoded_frame, int(self.video_scale))
+                        frame = self.vsm.resize_frame(frame, int(self.video_scale))
 
                     # Encode the frame
-                    encoded_frame = self.vsm.encoding_frame(encoded_frame, int(self.video_quality), 'jpeg')
+                    encoded_frame = self.vsm.encoding_frame(frame, int(self.video_quality), 'jpeg')
 
                     yield b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + encoded_frame.tobytes() + b'\r\n'
                 else:
-                    time.sleep(0.01)  # Wait for a short pause if there is no frame yet
+                    time.sleep(self.DEFAULT_SLEEP_TIME)  # Wait for a short pause if there is no frame yet
         except Exception as e:
-            print(e)
+            self.logger.error(f'Error in get_frames: {e}')
         finally:
             self.get_frames_running = False
 
@@ -392,7 +413,7 @@ class ObjectCounter:
             'updated_at': result.updated_at.strftime("%Y-%m-%d %H:%M:%S") if result.updated_at else None
         }
 
-    def save_count(self, location: str, correct_count: int, defect_count: int, custom_fields: str, active: int = 1) -> dict:
+    def save_count(self, location: str, correct_count: int, defect_count: int, custom_fields: dict, active: int = 1) -> dict:
         """
         Save count.
 
@@ -400,7 +421,7 @@ class ObjectCounter:
             location (str): The location of the object.
             correct_count (int): The correct count.
             defect_count (int): The defect count.
-            custom_fields (str): The custom fields.
+            custom_fields (dict): The custom fields.
             active (int): The active status.
 
         Returns:
@@ -549,3 +570,15 @@ class ObjectCounter:
             self._save_dataset_image(frame)
         except Exception as e:
             self.logger.error(f'Error saving captured image: {e}')
+
+    def cleanup(self) -> None:
+        """
+        Cleaning resources
+        """
+        self.stop()
+        if hasattr(self, 'vsm'):
+            self.vsm.stop()
+        if hasattr(self, 'model'):
+            self.model.cleanup()
+        if hasattr(self, 'db_manager'):
+            self.db_manager.close()

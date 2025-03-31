@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 26.12.2024
-# Updated: 26.12.2024
+# Updated: 31.03.2025
 # Website: https://bespredel.name
 
 
@@ -32,6 +32,15 @@ class BaseObjectDetectionService:
         Args:
             weights: The path to the pre-trained model weights file.
             **kwargs: Additional keyword arguments.
+
+        Returns:
+            None
+        """
+        pass
+
+    def cleanup(self):
+        """
+        Cleaning resources
 
         Returns:
             None
