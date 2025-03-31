@@ -280,7 +280,7 @@ class ObjectCounter:
 
             if self.dataset.get('enable', False) and last_total_count != self.total_count:
                 if random.random() < float(self.dataset['probability']):
-                    self._save_dataset_image(frame_copy)
+                    self._save_dataset_image(frame_copy, boxes, self.dataset.get('classes', None))
 
             if self.debug:
                 fps = int(1 / timer.elapsed)
@@ -290,7 +290,7 @@ class ObjectCounter:
 
             return frame
 
-    def _save_dataset_image(self, frame: np.ndarray) -> None:
+    def _save_dataset_image(self, frame: np.ndarray, boxes: list, classes_to_save: dict = None) -> None:
         """
         Saves an image to the dataset path if it exists.
 
@@ -308,6 +308,13 @@ class ObjectCounter:
             if not dataset_path:
                 self.logger.warning('Dataset path is not configured')
                 return
+
+            # Check if the frame contains any of the specified classes
+            if classes_to_save is not None:
+                detected_classes = [int(result[-1]) for result in boxes]
+                if not any(str(cls) in classes_to_save for cls in detected_classes):
+                    print("No matching classes found. Skipping save.")
+                    return
 
             os.makedirs(dataset_path, exist_ok=True)
 
@@ -413,7 +420,7 @@ class ObjectCounter:
             'updated_at': result.updated_at.strftime("%Y-%m-%d %H:%M:%S") if result.updated_at else None
         }
 
-    def save_count(self, location: str, correct_count: int, defect_count: int, custom_fields: dict, active: int = 1) -> dict:
+    def save_count(self, location: str, correct_count: int, defect_count: int, custom_fields: str, active: int = 1) -> dict:
         """
         Save count.
 
@@ -421,7 +428,7 @@ class ObjectCounter:
             location (str): The location of the object.
             correct_count (int): The correct count.
             defect_count (int): The defect count.
-            custom_fields (dict): The custom fields.
+            custom_fields (str): The custom fields.
             active (int): The active status.
 
         Returns:
