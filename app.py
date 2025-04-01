@@ -32,7 +32,7 @@ from system.models.base_model import TablePrefixBase
 # Init and Config
 # --------------------------------------------------------------------------------
 
-# Инициализация конфигурации
+# Init config
 config = init_config()
 
 # System check
@@ -51,7 +51,9 @@ app = Flask(__name__)
 # Config Flask
 app.config['SECRET_KEY'] = config.get("server.secret_key", os.urandom(40))
 app.config["TEMPLATES_AUTO_RELOAD"] = True
-socketio = SocketIO(app)
+
+# Configure Socket.IO
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Auth
 auth = HTTPBasicAuth()

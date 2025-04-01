@@ -31,13 +31,13 @@ scikit-image~=0.22
 shapely~=2.0.2
 SQLAlchemy~=2.0.35
 #mysqlclient==2.1.1 # To work with MySQL
-ultralytics>=8.3
+ultralytics~=8.3
 Werkzeug~=3.0
 
 # Export --------------------------------------
 # coremltools>=7.0  # CoreML export
 onnx~=1.16  # ONNX export
-onnxsim>=0.4.1  # ONNX simplifier
+onnxsim~=0.4.1  # ONNX simplifier
 # nvidia-pyindex  # TensorRT export
 # nvidia-tensorrt  # TensorRT export
 # scikit-learn==0.19.2  # CoreML quantization

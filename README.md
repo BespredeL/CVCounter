@@ -11,6 +11,8 @@ CVCounter - это приложение для подсчета объектов
 
 ## Установка
 
+### Вариант 1: Ручная установка
+
 1. **Клонируйте репозиторий:**
    ```bash
    git clone https://github.com/BespredeL/CVCounter.git
@@ -19,14 +21,19 @@ CVCounter - это приложение для подсчета объектов
    ```bash
    cd CVCounter
    ```
-3. **Установите virtual environment:**
+3. **Установите виртуальное окружение:**
    ```bash
    python3 -m venv venv
    ```
-4. **Активируйте virtual environment:**
-   ```bash
-   source venv/bin/activate
-   ```
+4. **Активируйте виртуальное окружение:**
+   - В Windows:
+     ```bash
+     .\venv\Scripts\activate
+     ```
+   - В Linux/Mac:
+     ```bash
+     source venv/bin/activate
+     ```
 5. **Установите зависимости:**
    ```bash
    pip3 install -r requirements.txt
@@ -41,6 +48,20 @@ CVCounter - это приложение для подсчета объектов
    python app.py
    ```
 
+### Вариант 2: Установка через Docker
+
+1. **Клонируйте репозиторий:**
+   ```bash
+   git clone https://github.com/BespredeL/CVCounter.git
+   ```
+2. **Перейдите в директорию проекта:**
+   ```bash
+   cd CVCounter
+   ```
+3. **Соберите и запустите с помощью Docker Compose:**
+   ```bash
+   docker-compose up --build
+   ```
 ---
 
 ## Использование
@@ -205,7 +226,7 @@ CVCounter - это приложение для подсчета объектов
             // качество вывода видео на странице
             "video_fps": 30,
             // ручная установка FPS (необязательно)
-           "model_type": "yolo",
+            "model_type": "yolo",
             // тип модели (по умолчанию yolo)
             "weights_path": "yolo_cfg/models/yolov8n.pt",
             // путь к модели Yolov8

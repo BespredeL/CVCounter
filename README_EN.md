@@ -11,6 +11,8 @@ data display: main view with video, text view, and text view with two counters.
 
 ## Installation
 
+### Method 1: Manual Installation
+
 1. **Clone the repository:**
    ```bash
    git clone https://github.com/BespredeL/CVCounter.git
@@ -24,9 +26,14 @@ data display: main view with video, text view, and text view with two counters.
    python3 -m venv venv
    ```
 4. **Activate virtual environment:**
-   ```bash
-   source venv/bin/activate
-   ```
+   - On Windows:
+     ```bash
+     .\venv\Scripts\activate
+     ```
+   - On Linux/Mac:
+     ```bash
+     source venv/bin/activate
+     ```
 5. **Install dependencies:**
    ```bash
    pip3 install -r requirements.txt
@@ -41,6 +48,20 @@ data display: main view with video, text view, and text view with two counters.
    python app.py
    ```
 
+### Method 2: Docker Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/BespredeL/CVCounter.git
+   ```
+2. **Navigate to the project directory:**
+   ```bash
+   cd CVCounter
+   ```
+3. **Build and run using Docker Compose:**
+   ```bash
+   docker-compose up --build
+   ```
 ---
 
 ## Usage
