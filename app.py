@@ -38,6 +38,12 @@ config = init_config()
 # System check
 system_check()
 
+# Generate and save secret key if not set
+if not config.get("server.secret_key"):
+    secret_key = os.urandom(40).hex()
+    config.set("server.secret_key", secret_key)
+    config.save_config()
+
 # General settings
 debug = config.get("debug", False)
 locations = list(config.get("detections", {}).keys())
@@ -49,7 +55,7 @@ app = Flask(__name__)
 # Fix for NGINX
 # app.wsgi_app = ProxyFix(app.wsgi_app)  # For NGINX
 # Config Flask
-app.config['SECRET_KEY'] = config.get("server.secret_key", os.urandom(40))
+app.config['SECRET_KEY'] = config.get("server.secret_key")
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 
 # Configure Socket.IO
