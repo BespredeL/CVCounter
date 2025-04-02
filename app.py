@@ -746,7 +746,7 @@ if __name__ == '__main__':
     socketio.run(
         app,
         host=config.get('server.host'),
-        port=config.get('server.port', 80),
+        port=config.get('server.port', 8080),
         debug=config.get('general.debug', False),
         log_output=config.get('server.log_output', True),
         use_reloader=config.get('server.use_reloader', False),
