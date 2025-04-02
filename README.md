@@ -101,77 +101,86 @@ CVCounter - это приложение для подсчета объектов
 ```json5
 {
     "general": {
-        "debug": true,
         // включить режим отладки
-        "log_path": "errors.log",
+        "debug": true,
         // путь к файлу журнала
-        "default_language": "ru",
+        "log_path": "errors.log",
         // язык по умолчанию
-        "allow_unsafe_werkzeug": false,
+        "default_language": "ru",
         // разрешить небезопасные операции в werkzeug
-        "button_change_theme": true,
+        "allow_unsafe_werkzeug": false,
         // показать кнопку изменения темы
-        "button_fullscreen": true,
+        "button_change_theme": true,
         // показать кнопку перехода в полноэкранный режим
-        "button_backward": false,
+        "button_fullscreen": true,
         // показать кнопку назад
-        "button_save_capture": false,
+        "button_backward": false,
         // показать кнопку сохранения кадра
-        "collapsed_keyboard": true
+        "button_save_capture": false,
         // показать клавиатуры свернутыми
+        "collapsed_keyboard": true
     },
     "server": {
-        "host": "0.0.0.0",
         // адрес сервера
-        "port": 80,
+        "host": "0.0.0.0",
         // порт сервера
-        "use_reloader": false,
+        "port": 8080,
         // включить режим перезагрузки
-        "log_output": true,
+        "use_reloader": false,
         // включить вывод журнала
-        "socketio_key": ""
+        "log_output": true,
         // socketio ключ
+        "socketio_key": ""
     },
     "users": {
         // логин:пароль по умолчанию admin:admin
         "admin": "scrypt:32768:8:1$rsdPYhqaQqpXQQ0o$aa3359c86228b4cee5fe8c4ed694db4b371fa7fab5100fa7b446db7e1ed8077e3bb63228d4a1899aeeef9b8d15f8e8bdbcc3457f020bcb3ec320332c76b5896b"
-        // логин:пароль
     },
     "db": {
-        "uri": "sqlite:///system/database.db",
         // подключение к базе данных
-        "prefix": ""
+        "uri": "sqlite:///system/database.db",
         // префикс таблиц
+        "prefix": ""
     },
     "form": {
-        // конфигурация форм
-        "defect_show": true,
         // показать форму брака
-        "correct_show": true,
+        "defect_show": true,
         // показать форму коррекции
+        "correct_show": true,
         "custom_fields": {
             // конфигурация пользовательских полей
             "field_one": {
-                "name": "field_one",
                 // название поля
-                "label": "Field One",
+                "name": "field_one",
                 // подпись поля
-                "type": "text"
+                "label": "Field One",
                 // тип поля
+                "type": "text"
             }
         }
     },
     "detection_default": {
-        "video_show_scale": 50,
-        // масштаб вывода видео на странице
-        "video_show_quality": 50,
-        // качество вывода видео на странице
-        "video_fps": 0,
-        // ручная установка FPS (0 - автоматическая установка)
-        "model_type": "yolo",
         // тип модели (по умолчанию yolo)
-        "weights_path": "yolo_cfg/models/yolov8n.pt",
+        "model_type": "yolo",
         // путь к модели Yolov8
+        "weights_path": "yolo_cfg/models/yolov8n.pt",
+        // масштаб вывода видео на странице
+        "video_show_scale": 50,
+        // качество вывода видео на странице
+        "video_show_quality": 50,
+        // ручная установка FPS (0 - автоматическая установка)
+        "video_fps": 0,
+        // порог доверия
+        "confidence": 0.7,
+        // порог iou
+        "iou": 0.7,
+        // указывает вычислительное устройство(а) для обучения (смотрите документацию ultralytics)
+        "device": 0,
+        // шаг видеопотока
+        "vid_stride": 1,
+        // размер индикатора
+        "indicator_size": 10,
+        // площадь подсчета (многоугольник)
         "counting_area": [
             [
                 0,
@@ -190,46 +199,45 @@ CVCounter - это приложение для подсчета объектов
                 100
             ]
         ],
-        // площадь подсчета (многоугольник)
-        "confidence": 0.7,
-        // порог доверия
-        "iou": 0.7,
-        // порог iou
-        "device": 0,
-        // указывает вычислительное устройство(а) для обучения (смотрите документацию ultralytics)
-        "vid_stride": 1,
-        // шаг видеопотока
-        "indicator_size": 10,
-        // размер индикатора
+        // цвет зоны подсчета
         "counting_area_color": [
             67,
             211,
             255
         ],
-        // цвет зоны подсчета
-        "classes": {}
         // классы (объекты) для обнаружения (оставьте пустым для всех классов)
+        "classes": {}
     },
     "detections": {
         // конфигурации обнаружения
         "ExampleCam": {
-            // Наименование подсчета (используется в адресе страницы, должно быть на латинице)
+            // наименование подсчета (используется в адресе страницы, должно быть на латинице)
             "label": "Label ExampleCam",
-            // Наименование подсчета (используется для вывода на страницах)
+            // число с которого начинается подсчет (по умолчанию 0, но если необходимо начать с какого-то числа, то можно указать)
             "start_total_count": 0,
-            // Число с которого начинается подсчет (по умолчанию 0, но если необходимо начать с какого-то числа, то можно указать)
-            "video_path": "",
             // путь к видеофайлу или источнику камеры
-            "video_show_scale": 70,
+            "video_path": "",
             // масштаб вывода видео на странице
-            "video_show_quality": 30,
+            "video_show_scale": 70,
             // качество вывода видео на странице
-            "video_fps": 30,
+            "video_show_quality": 30,
             // ручная установка FPS (необязательно)
-            "model_type": "yolo",
+            "video_fps": 0,
             // тип модели (по умолчанию yolo)
+            "model_type": "yolo",
+            // путь к модели
             "weights_path": "yolo_cfg/models/yolov8n.pt",
-            // путь к модели Yolov8
+            // порог доверия
+            "confidence": 0.7,
+            // порог iou
+            "iou": 0.7,
+            // указывает вычислительное устройство(а) для обучения
+            "device": 0,
+            // шаг видеопотока
+            "vid_stride": 1,
+            // размер индикатора
+            "indicator_size": 10,
+            // площадь подсчета (многоугольник)
             "counting_area": [
                 [
                     0,
@@ -248,33 +256,22 @@ CVCounter - это приложение для подсчета объектов
                     100
                 ]
             ],
-            // площадь подсчета (многоугольник)
-            "confidence": 0.7,
-            // порог доверия
-            "iou": 0.7,
-            // порог iou
-            "device": 0,
-            // указывает вычислительное устройство(а) для обучения (смотрите документацию ultralytics)
-            "vid_stride": 1,
-            // шаг видеопотока
-            "indicator_size": 10,
-            // размер индикатора
+            // цвет зоны подсчета
             "counting_area_color": [
                 255,
                 64,
                 0
             ],
-            // цвет зоны подсчета
-            "classes": {},
             // классы (объекты) для обнаружения (оставьте пустым для всех классов)
+            "classes": {},
+            // автоматическое создание набора данных
             "dataset_create": {
-                // автоматическое создание набора данных
-                "enable": true,
                 // включить создание набора данных
-                "probability": 0.05,
+                "enable": true,
                 // вероятность создания изображения набора данных (число от 0.01 до 1, где 0.01 - 1% и 1 - 100%)
-                "path": "yolo_cfg/saved_images/ExampleCam"
+                "probability": 0.05,
                 // путь для сохранения набора данных
+                "path": "yolo_cfg/saved_images/ExampleCam"
             }
         },
     }

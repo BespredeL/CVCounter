@@ -38,8 +38,8 @@ Werkzeug~=3.0
 # coremltools>=7.0  # CoreML export
 onnx~=1.16  # ONNX export
 onnxsim~=0.4.1  # ONNX simplifier
-# nvidia-pyindex  # TensorRT export
-# nvidia-tensorrt  # TensorRT export
+nvidia-pyindex  # TensorRT export
+nvidia-tensorrt>=7.0.0,!=10.1.0  # TensorRT export
 # scikit-learn==0.19.2  # CoreML quantization
 # tensorflow>=2.4.1  # TF exports (-cpu, -aarch64, -macos)
 # tflite-support

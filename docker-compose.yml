@@ -17,5 +17,13 @@ services:
           devices:
             - driver: nvidia
               count: all
-              capabilities: [gpu]
-    restart: unless-stopped 
+              capabilities: [ gpu ]
+    networks:
+      - app_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+networks:
+  app_network:
+    driver: bridge 
