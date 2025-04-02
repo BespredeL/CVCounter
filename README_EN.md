@@ -11,6 +11,8 @@ data display: main view with video, text view, and text view with two counters.
 
 ## Installation
 
+### Method 1: Manual Installation
+
 1. **Clone the repository:**
    ```bash
    git clone https://github.com/BespredeL/CVCounter.git
@@ -24,9 +26,14 @@ data display: main view with video, text view, and text view with two counters.
    python3 -m venv venv
    ```
 4. **Activate virtual environment:**
-   ```bash
-   source venv/bin/activate
-   ```
+   - On Windows:
+     ```bash
+     .\venv\Scripts\activate
+     ```
+   - On Linux/Mac:
+     ```bash
+     source venv/bin/activate
+     ```
 5. **Install dependencies:**
    ```bash
    pip3 install -r requirements.txt
@@ -41,6 +48,20 @@ data display: main view with video, text view, and text view with two counters.
    python app.py
    ```
 
+### Method 2: Docker Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/BespredeL/CVCounter.git
+   ```
+2. **Navigate to the project directory:**
+   ```bash
+   cd CVCounter
+   ```
+3. **Build and run using Docker Compose:**
+   ```bash
+   docker-compose up --build
+   ```
 ---
 
 ## Usage
@@ -80,77 +101,86 @@ startup).
 ```json5
 {
     "general": {
-        "debug": true,
         // enable debug mode
-        "log_path": "errors.log",
+        "debug": true,
         // path to log file
-        "default_language": "ru",
+        "log_path": "errors.log",
         // default language
-        "allow_unsafe_werkzeug": false,
+        "default_language": "ru",
         // allow unsafe operations in werkzeug
-        "button_change_theme": true,
+        "allow_unsafe_werkzeug": false,
         // show button changing theme
-        "button_fullscreen": true,
+        "button_change_theme": true,
         // show button fullscreen
-        "button_backward": false,
+        "button_fullscreen": true,
         // show back button
-        "button_save_capture": false,
+        "button_backward": false,
         // show save capture button
-        "collapsed_keyboard": true
+        "button_save_capture": false,
         // show collapsed keyboard
+        "collapsed_keyboard": true
     },
     "server": {
-        "host": "0.0.0.0",
         // server host
-        "port": 80,
+        "host": "0.0.0.0",
         // server port
-        "use_reloader": false,
+        "port": 8080,
         // enable reloader mode
-        "log_output": true,
+        "use_reloader": false,
         // enable log output
-        "socketio_key": ""
+        "log_output": true,
         // socketio key
+        "socketio_key": ""
     },
     "users": {
         // login:password default admin:admin
         "admin": "scrypt:32768:8:1$rsdPYhqaQqpXQQ0o$aa3359c86228b4cee5fe8c4ed694db4b371fa7fab5100fa7b446db7e1ed8077e3bb63228d4a1899aeeef9b8d15f8e8bdbcc3457f020bcb3ec320332c76b5896b"
-        // login:password
     },
     "db": {
-        "uri": "sqlite:///system/database.db",
         // database connection
-        "prefix": ""
+        "uri": "sqlite:///system/database.db",
         // table prefix
+        "prefix": ""
     },
     "form": {
-        // form configuration
-        "defect_show": true,
         // show defect form
-        "correct_show": true,
+        "defect_show": true,
         // show correction form
+        "correct_show": true,
+        // custom fields configuration
         "custom_fields": {
-            // custom fields configuration
             "field_one": {
-                "name": "field_one",
                 // field name
-                "label": "Field One",
+                "name": "field_one",
                 // field signature
-                "type": "text"
+                "label": "Field One",
                 // field type
+                "type": "text"
             }
         }
     },
     "detection_default": {
-        "video_show_scale": 50,
-        // scale of video preview
-        "video_show_quality": 50,
-        // quality of video preview
-        "video_fps": 0,
-        // manual FPS setting (0 - automatic installation)
-        "model_type": "yolo",
         // model type (default yolo)
+        "model_type": "yolo",
+        // path to model
         "weights_path": "yolo_cfg/models/yolov8n.pt",
-        // path to model Yolov8
+        // scale of video preview
+        "video_show_scale": 50,
+        // quality of video preview
+        "video_show_quality": 50,
+        // manual FPS setting (0 - automatic installation)
+        "video_fps": 0,
+        // confidence threshold
+        "confidence": 0.7,
+        // iou threshold
+        "iou": 0.7,
+        // specifies the computing device(s) for training
+        "device": 0,
+        // video stream stride
+        "vid_stride": 1,
+        // size of indicator
+        "indicator_size": 10,
+        // counting area polygon
         "counting_area": [
             [
                 0,
@@ -169,25 +199,14 @@ startup).
                 100
             ]
         ],
-        // counting area polygon
-        "confidence": 0.7,
-        // confidence threshold
-        "iou": 0.7,
-        // iou threshold
-        "device": 0,
-        // specifies the computing device(s) for training (see ultralytics documentation)
-        "vid_stride": 1,
-        // video stream stride
-        "indicator_size": 10,
-        // size of indicator
+        // color of counting area
         "counting_area_color": [
             67,
             211,
             255
         ],
-        // color of counting area
-        "classes": {}
         // classes to detect (leave empty for all classes)
+        "classes": {}
     },
     "detections": {
         // detection configs
@@ -203,12 +222,22 @@ startup).
             // scale of video preview
             "video_show_quality": 30,
             // quality of video preview
-            "video_fps": false,
+            "video_fps": 0,
             // manual FPS setting (optional)
             "model_type": "yolo",
             // model type (default yolo)
             "weights_path": "yolo_cfg/models/yolov8n.pt",
             // path to model Yolov8
+            "confidence": 0.7,
+            // confidence threshold
+            "iou": 0.7,
+            // iou threshold
+            "device": 0,
+            // specifies the computing device(s) for training (see ultralytics documentation)
+            "vid_stride": 1,
+            // video stream stride
+            "indicator_size": 10,
+            // size of indicator
             "counting_area": [
                 [
                     0,
@@ -228,16 +257,6 @@ startup).
                 ]
             ],
             // counting area polygon
-            "confidence": 0.7,
-            // confidence threshold
-            "iou": 0.7,
-            // iou threshold
-            "device": 0,
-            // specifies the computing device(s) for training (see ultralytics documentation)
-            "vid_stride": 1,
-            // video stream stride
-            "indicator_size": 10,
-            // size of indicator
             "counting_area_color": [
                 255,
                 64,

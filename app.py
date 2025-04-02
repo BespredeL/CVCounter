@@ -32,11 +32,17 @@ from system.models.base_model import TablePrefixBase
 # Init and Config
 # --------------------------------------------------------------------------------
 
-# Инициализация конфигурации
+# Init config
 config = init_config()
 
 # System check
 system_check()
+
+# Generate and save secret key if not set
+if not config.get("server.secret_key"):
+    secret_key = os.urandom(40).hex()
+    config.set("server.secret_key", secret_key)
+    config.save_config()
 
 # General settings
 debug = config.get("debug", False)
@@ -49,9 +55,11 @@ app = Flask(__name__)
 # Fix for NGINX
 # app.wsgi_app = ProxyFix(app.wsgi_app)  # For NGINX
 # Config Flask
-app.config['SECRET_KEY'] = config.get("server.secret_key", os.urandom(40))
+app.config['SECRET_KEY'] = config.get("server.secret_key")
 app.config["TEMPLATES_AUTO_RELOAD"] = True
-socketio = SocketIO(app)
+
+# Configure Socket.IO
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Auth
 auth = HTTPBasicAuth()
@@ -744,7 +752,7 @@ if __name__ == '__main__':
     socketio.run(
         app,
         host=config.get('server.host'),
-        port=config.get('server.port', 80),
+        port=config.get('server.port', 8080),
         debug=config.get('general.debug', False),
         log_output=config.get('server.log_output', True),
         use_reloader=config.get('server.use_reloader', False),
