@@ -59,7 +59,7 @@ app.config['SECRET_KEY'] = config.get("server.secret_key")
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 
 # Configure Socket.IO
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, async_mode="threading", cors_allowed_origins="*")
 
 # Auth
 auth = HTTPBasicAuth()
@@ -69,7 +69,8 @@ users = config.get("users", {})
 TablePrefixBase.set_table_prefix(config.get("db.prefix", ""))
 
 # Start DB
-db_manager = DatabaseManager(uri=config.get("db.uri", "sqlite:///:memory:"), prefix=config.get("db.prefix"))
+db_uri = config.get("db.uri") or "sqlite:///:memory:"
+db_manager = DatabaseManager(uri=db_uri, prefix=config.get("db.prefix"))
 
 # Init objects
 object_counters: dict[str, ObjectCounter] = {}
