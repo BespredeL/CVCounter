@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 20.11.2024
+# Updated: 25.04.2025
 # Website: https://bespredel.name
 
 import json
@@ -223,7 +223,7 @@ class DatabaseManager:
         finally:
             session.close()
 
-    def get_paginated(self, key: str = '', page: int = 1, per_page: int = 10) -> dict:
+    def get_paginated(self, key: str = '', page: int = 1, per_page: int = 10) -> dict | None:
         """
         Returns all counters for the given key.
 
