@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 31.03.2025
+# Updated: 25.04.2025
 # Website: https://bespredel.name
 
 import json
@@ -290,7 +290,7 @@ class ObjectCounter:
 
             return frame
 
-    def _save_dataset_image(self, frame: np.ndarray, boxes: list, classes_to_save: dict = None) -> None:
+    def _save_dataset_image(self, frame: np.ndarray, boxes: list | np.ndarray = None, classes_to_save: dict = None) -> None:
         """
         Saves an image to the dataset path if it exists.
 
@@ -310,7 +310,7 @@ class ObjectCounter:
                 return
 
             # Check if the frame contains any of the specified classes
-            if classes_to_save is not None:
+            if classes_to_save is not None and boxes is not None:
                 detected_classes = [int(result[-1]) for result in boxes]
                 if not any(str(cls) in classes_to_save for cls in detected_classes):
                     print("No matching classes found. Skipping save.")
