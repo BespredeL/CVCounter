@@ -208,38 +208,3 @@ class VideoStreamManager:
         Resets the reconnect attempt count after a successful connection.
         """
         self.__reconnect_count = 0
-
-    @staticmethod
-    def encoding_frame(frame: cv2.Mat, quality: int = 95, ext: str = "jpg") -> bytes:
-        """
-        A method to encode the frame.
-
-        Args:
-            frame: The frame to encode
-            quality: The quality of the encoded frame
-            ext: The extension of the encoded frame
-
-        Returns:
-            frame_encoded: The encoded frame
-        """
-        ext = ext if ext.startswith(".") else "." + ext
-        ret, frame_encoded = cv2.imencode(ext, frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
-        if not ret:
-            raise FrameEncodingError("Failed to encode frame")
-        return frame_encoded
-
-    @staticmethod
-    def resize_frame(frame: cv2.Mat, scale_percent: int = 70) -> cv2.Mat:
-        """
-        Resizes the frame.
-
-        Args:
-            frame: The frame to resize
-            scale_percent: The scale percentage of the resized frame
-
-        Returns:
-            frame: The resized frame
-        """
-        width = int(frame.shape[1] * scale_percent / 100)
-        height = int(frame.shape[0] * scale_percent / 100)
-        return cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
