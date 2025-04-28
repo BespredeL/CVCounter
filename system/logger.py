@@ -10,7 +10,7 @@ import logging
 import traceback
 from typing import Optional
 
-from system.config import config
+from system.config_manager import config
 
 
 class Logger:

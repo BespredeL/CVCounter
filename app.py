@@ -21,7 +21,7 @@ from werkzeug import Response
 from werkzeug.security import check_password_hash, generate_password_hash
 
 # from werkzeug.middleware.proxy_fix import ProxyFix  # For NGINX
-from system.config import init_config
+from system.config_manager import init_config
 from system.database_manager import DatabaseManager
 from system.object_counter import ObjectCounter
 from system.thread_manager import ThreadManager
