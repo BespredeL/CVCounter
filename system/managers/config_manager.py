@@ -27,7 +27,7 @@ class ConfigManager:
         if cls._instance is None:
             cls._instance = super(ConfigManager, cls).__new__(cls)
             if not os.path.isabs(config_path):
-                project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
                 config_path = os.path.join(project_root, config_path)
             cls._instance._config_path = str(config_path)
             cls._instance._config = cls._instance.read_config()

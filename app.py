@@ -33,7 +33,7 @@ from system.db.models.base_model import TablePrefixBase
 # --------------------------------------------------------------------------------
 
 # Init config
-config = init_config(os.path.join(os.path.dirname(__file__), "config.json"))
+config = init_config()
 
 # System check
 system_check()
