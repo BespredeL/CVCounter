@@ -12,9 +12,9 @@ import logging
 import os
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
-
 from system.utils.exception_handler import ConfigError, ConfigNotFoundError, InvalidConfigError
 
+""" Global variable to store the configuration data. """
 config = None
 
 

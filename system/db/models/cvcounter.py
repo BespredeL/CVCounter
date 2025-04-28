@@ -7,9 +7,7 @@
 # Website: https://bespredel.name
 
 from datetime import datetime
-
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
-
 from system.db.models.base_model import Base
 
 
