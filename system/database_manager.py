@@ -14,8 +14,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 
 from system.logger import Logger
-from system.models.base_model import Base
-from system.models.cvcounter import CVCounter
+from system.db_model.base_model import Base
+from system.db_model.cvcounter import CVCounter
 
 
 class DatabaseManager:

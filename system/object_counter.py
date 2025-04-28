@@ -22,8 +22,8 @@ from shapely.geometry import Point, Polygon
 from system.config_manager import ConfigManager
 from system.logger import Logger
 from system.notification_manager import NotificationManager
-from system.object_detections.base_object_detection import BaseObjectDetectionService
-from system.object_detections.object_detection_yolo import ObjectDetectionYOLO
+from system.object_detection.base_object_detection import BaseObjectDetectionService
+from system.object_detection.object_detection_yolo import ObjectDetectionYOLO
 from system.sort import Sort
 from system.timer import Timer
 from system.utils import trans

@@ -9,7 +9,7 @@
 from ultralytics import YOLO, settings
 
 from system.exception_handler import ModelLoadingError, ModelNotFoundError
-from system.object_detections.base_object_detection import BaseObjectDetectionService
+from system.object_detection.base_object_detection import BaseObjectDetectionService
 
 
 class ObjectDetectionYOLO(BaseObjectDetectionService):

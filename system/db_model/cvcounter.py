@@ -10,7 +10,7 @@ from datetime import datetime
 
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
 
-from system.models.base_model import Base
+from system.db_model.base_model import Base
 
 
 class CVCounter(Base):

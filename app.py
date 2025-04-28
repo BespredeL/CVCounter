@@ -26,7 +26,7 @@ from system.database_manager import DatabaseManager
 from system.object_counter import ObjectCounter
 from system.thread_manager import ThreadManager
 from system.utils import get_system_info, is_ajax, slug, system_check, trans as translate
-from system.models.base_model import TablePrefixBase
+from system.db_model.base_model import TablePrefixBase
 
 # --------------------------------------------------------------------------------
 # Init and Config
