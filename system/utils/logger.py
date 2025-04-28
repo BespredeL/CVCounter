@@ -3,14 +3,14 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 31.03.2025
+# Updated: 28.04.2025
 # Website: https://bespredel.name
 
 import logging
 import traceback
 from typing import Optional
 
-from system.config_manager import config
+from system.managers.config_manager import config
 
 
 class Logger:

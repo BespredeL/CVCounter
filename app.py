@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 23.04.2025
+# Updated: 28.04.2025
 # Website: https://bespredel.name
 
 import json
@@ -21,19 +21,19 @@ from werkzeug import Response
 from werkzeug.security import check_password_hash, generate_password_hash
 
 # from werkzeug.middleware.proxy_fix import ProxyFix  # For NGINX
-from system.config_manager import init_config
-from system.database_manager import DatabaseManager
-from system.object_counter import ObjectCounter
-from system.thread_manager import ThreadManager
-from system.utils import get_system_info, is_ajax, slug, system_check, trans as translate
-from system.db_model.base_model import TablePrefixBase
+from system.managers.config_manager import init_config
+from system.managers.database_manager import DatabaseManager
+from system.core.object_counter import ObjectCounter
+from system.managers.thread_manager import ThreadManager
+from system.utils.utils import get_system_info, is_ajax, slug, system_check, trans as translate
+from system.db.models.base_model import TablePrefixBase
 
 # --------------------------------------------------------------------------------
 # Init and Config
 # --------------------------------------------------------------------------------
 
 # Init config
-config = init_config()
+config = init_config(os.path.join(os.path.dirname(__file__), "config.json"))
 
 # System check
 system_check()

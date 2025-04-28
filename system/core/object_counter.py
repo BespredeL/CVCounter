@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 25.04.2025
+# Updated: 28.04.2025
 # Website: https://bespredel.name
 
 import json
@@ -19,15 +19,15 @@ from flask_socketio import SocketIO
 from numpy import ndarray
 from shapely.geometry import Point, Polygon
 
-from system.config_manager import ConfigManager
-from system.logger import Logger
-from system.notification_manager import NotificationManager
+from system.managers.config_manager import ConfigManager
+from system.utils.logger import Logger
+from system.managers.notification_manager import NotificationManager
 from system.object_detection.base_object_detection import BaseObjectDetectionService
 from system.object_detection.object_detection_yolo import ObjectDetectionYOLO
-from system.sort import Sort
-from system.timer import Timer
-from system.utils import trans
-from system.video_stream_manager import VideoStreamManager
+from system.core.sort import Sort
+from system.core.timer import Timer
+from system.utils.utils import trans
+from system.managers.video_stream_manager import VideoStreamManager
 
 
 class ObjectCounter:

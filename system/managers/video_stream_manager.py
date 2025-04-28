@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 26.03.2024
-# Updated: 26.12.2024
+# Updated: 28.04.2025
 # Website: https://bespredel.name
 
 import time
@@ -11,8 +11,8 @@ import time
 import cv2
 from imutils.video import VideoStream
 
-from system.exception_handler import FrameEncodingError, StreamConnectionError, StreamSourceError
-from system.logger import Logger
+from system.utils.exception_handler import FrameEncodingError, StreamConnectionError, StreamSourceError
+from system.utils.logger import Logger
 
 
 class VideoStreamManager:

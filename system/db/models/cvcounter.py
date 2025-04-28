@@ -3,14 +3,14 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 27.12.2024
-# Updated: 27.12.2024
+# Updated: 28.04.2025
 # Website: https://bespredel.name
 
 from datetime import datetime
 
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
 
-from system.db_model.base_model import Base
+from system.db.models.base_model import Base
 
 
 class CVCounter(Base):

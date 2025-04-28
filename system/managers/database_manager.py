@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 25.04.2025
+# Updated: 28.04.2025
 # Website: https://bespredel.name
 
 import json
@@ -13,9 +13,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 
-from system.logger import Logger
-from system.db_model.base_model import Base
-from system.db_model.cvcounter import CVCounter
+from system.utils.logger import Logger
+from system.db.models.base_model import Base
+from system.db.models.cvcounter import CVCounter
 
 
 class DatabaseManager:
