@@ -18,8 +18,8 @@ import numpy as np
 from flask_socketio import SocketIO
 from numpy import ndarray
 from shapely.geometry import Point, Polygon
-
 from system.managers.config_manager import ConfigManager
+from system.utils.frame_utils import FrameUtils
 from system.utils.logger import Logger
 from system.managers.notification_manager import NotificationManager
 from system.object_detection.base_object_detection import BaseObjectDetectionService
@@ -383,10 +383,10 @@ class ObjectCounter:
 
                     # Scale the frame
                     if self.video_scale > 0:
-                        frame = self.vsm.resize_frame(frame, int(self.video_scale))
+                        frame = FrameUtils.resize_frame(frame, int(self.video_scale))
 
                     # Encode the frame
-                    encoded_frame = self.vsm.encoding_frame(frame, int(self.video_quality), 'jpeg')
+                    encoded_frame = FrameUtils.encoding_frame(frame, int(self.video_quality), 'jpeg')
 
                     yield b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + encoded_frame.tobytes() + b'\r\n'
                 else:
