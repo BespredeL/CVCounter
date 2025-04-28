@@ -668,14 +668,14 @@ def report_list(location: str = None) -> str:
     )
 
 
-@app.route('/reports/<string:location>/<int:id>')
-def report_show(location: str, id: int) -> str:
+@app.route('/reports/<string:location>/<int:report_id>')
+def report_show(location: str, report_id: int) -> str:
     """
     Display detailed view of a specific report.
 
     Args:
         location (str): The identifier for the detection location
-        id (int): The report ID
+        report_id (int): The report ID
 
     Returns:
         str: Rendered HTML template with report details
@@ -683,7 +683,7 @@ def report_show(location: str, id: int) -> str:
     Raises:
         HTTPException: If the report is not found
     """
-    counter = db_manager.get_count(id)
+    counter = db_manager.get_count(report_id)
 
     if counter is None:
         abort(404, trans('Page not found'))
