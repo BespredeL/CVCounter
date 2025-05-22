@@ -11,9 +11,22 @@ import time
 
 import cv2
 
+from system.managers.video_stream_manager import VideoStreamManager
+
 
 class VideoRecorderManager:
-    def __init__(self, stream_manager, output_path, codec='mp4v', fps=20.0, resolution=(640, 480)):
+    def __init__(self, stream_manager: VideoStreamManager, output_path: str, codec: str = 'mp4v', fps: float = 20.0,
+                 resolution: tuple = (640, 480)):
+        """
+        Initialize the VideoRecorderManager.
+
+        Args:
+            stream_manager: VideoStreamManager
+            output_path (str): Path to save the recorded video
+            codec (str): Codec for the recorded video
+            fps (float): Frames per second
+            resolution (tuple): Resolution of the recorded video
+        """
         self.stream_manager = stream_manager
         self.output_path = output_path
         self.codec = codec
@@ -26,6 +39,12 @@ class VideoRecorderManager:
         self.stop_event = threading.Event()
 
     def start_recording(self):
+        """
+        Start recording video.
+
+        Returns:
+            None
+        """
         if not self.recording:
             fourcc = cv2.VideoWriter_fourcc(*self.codec)
             self.writer = cv2.VideoWriter(self.output_path, fourcc, self.fps, self.resolution)
@@ -35,11 +54,26 @@ class VideoRecorderManager:
             self.recording = True
 
     def write(self, frame):
+        """
+        Write a frame to the video.
+
+        Args:
+            frame: The frame to write.
+
+        Returns:
+            None
+        """
         if self.recording and self.writer is not None:
             resized_frame = cv2.resize(frame, self.resolution)
             self.writer.write(resized_frame)
 
     def _record(self):
+        """
+        Record video.
+
+        Returns:
+            None
+        """
         while not self.stop_event.is_set():
             frame = self.stream_manager.get_frame()
             if frame is not None:
@@ -48,6 +82,12 @@ class VideoRecorderManager:
             time.sleep(1 / self.fps)
 
     def stop_recording(self):
+        """
+        Stop recording video.
+
+        Returns:
+            None
+        """
         if self.recording:
             self.stop_event.set()
             self.thread.join()
@@ -56,4 +96,10 @@ class VideoRecorderManager:
             self.recording = False
 
     def is_recording(self):
+        """
+        Check if video is being recorded.
+
+        Returns:
+            bool: True if video is being recorded, False otherwise.
+        """
         return self.recording
