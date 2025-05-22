@@ -11,7 +11,7 @@ import time
 import cv2
 from imutils.video import VideoStream
 
-from system.utils.exception_handler import FrameEncodingError, StreamConnectionError, StreamSourceError
+from system.utils.exception_handler import StreamConnectionError, StreamSourceError
 from system.utils.logger import Logger
 
 
