@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 23.04.2025
+# Updated: 03.12.2025
 # Website: https://bespredel.name
 
 import json
@@ -20,13 +20,13 @@ from markupsafe import escape
 from werkzeug import Response
 from werkzeug.security import check_password_hash, generate_password_hash
 
-# from werkzeug.middleware.proxy_fix import ProxyFix  # For NGINX
-from system.config import init_config
-from system.database_manager import DatabaseManager
-from system.object_counter import ObjectCounter
-from system.thread_manager import ThreadManager
-from system.utils import get_system_info, is_ajax, slug, system_check, trans as translate
-from system.models.base_model import TablePrefixBase
+# from werkzeug.middleware.proxy_fix import ProxyFix  # For NGINX proxy fix
+from system.managers.config_manager import init_config
+from system.managers.database_manager import DatabaseManager
+from system.core.object_counter import ObjectCounter
+from system.managers.thread_manager import ThreadManager
+from system.utils.utils import get_system_info, is_ajax, slug, system_check, trans as translate
+from system.db.models.base_model import TablePrefixBase
 
 # --------------------------------------------------------------------------------
 # Init and Config
@@ -668,14 +668,14 @@ def report_list(location: str = None) -> str:
     )
 
 
-@app.route('/reports/<string:location>/<int:id>')
-def report_show(location: str, id: int) -> str:
+@app.route('/reports/<string:location>/<int:report_id>')
+def report_show(location: str, report_id: int) -> str:
     """
     Display detailed view of a specific report.
 
     Args:
         location (str): The identifier for the detection location
-        id (int): The report ID
+        report_id (int): The report ID
 
     Returns:
         str: Rendered HTML template with report details
@@ -683,7 +683,7 @@ def report_show(location: str, id: int) -> str:
     Raises:
         HTTPException: If the report is not found
     """
-    counter = db_manager.get_count(id)
+    counter = db_manager.get_count(report_id)
 
     if counter is None:
         abort(404, trans('Page not found'))

@@ -3,10 +3,10 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 21.07.2024
-# Updated: 26.12.2024
+# Updated: 28.04.2025
 # Website: https://bespredel.name
 
-from system.exception_handler import InvalidLocationError, MissingSocketInstanceError, NotificationError
+from system.utils.exception_handler import InvalidLocationError, MissingSocketInstanceError, NotificationError
 
 
 class NotificationManager:

@@ -21,7 +21,7 @@
         "admin": "scrypt:32768:8:1$rsdPYhqaQqpXQQ0o$aa3359c86228b4cee5fe8c4ed694db4b371fa7fab5100fa7b446db7e1ed8077e3bb63228d4a1899aeeef9b8d15f8e8bdbcc3457f020bcb3ec320332c76b5896b"
     },
     "db": {
-        "uri": "sqlite:///system/database.sqlite",
+        "uri": "sqlite:///system/db/database.sqlite",
         "prefix": ""
     },
     "form": {
@@ -94,7 +94,13 @@
             211,
             255
         ],
-        "classes": {}
+        "classes": {},
+        "recording": {
+            "enable": false,
+            "path": "yolo_cfg/saved_recordings",
+            "scale": 100,
+            "quality": 80
+        }
     },
     "detections": {
         "ExampleCam": {
@@ -139,6 +145,11 @@
                 "enable": true,
                 "probability": 0.05,
                 "path": "yolo_cfg/saved_images/ExampleCam"
+            },
+            "recording": {
+                "enable": true,
+                "scale": 80,
+                "quality": 60
             }
         }
     }

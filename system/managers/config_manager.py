@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 26.12.2024
+# Updated: 03.12.2025
 # Website: https://bespredel.name
 
 import ast
@@ -12,8 +12,10 @@ import logging
 import os
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
+from system.utils.exception_handler import ConfigError, ConfigNotFoundError, InvalidConfigError
 
-from system.exception_handler import ConfigError, ConfigNotFoundError, InvalidConfigError
+""" Global variable to store the configuration data. """
+config = None
 
 
 class ConfigManager:
@@ -25,7 +27,7 @@ class ConfigManager:
         if cls._instance is None:
             cls._instance = super(ConfigManager, cls).__new__(cls)
             if not os.path.isabs(config_path):
-                project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
                 config_path = os.path.join(project_root, config_path)
             cls._instance._config_path = str(config_path)
             cls._instance._config = cls._instance.read_config()
@@ -175,3 +177,23 @@ class ConfigManager:
         except ConfigError as e:
             logging.error(f"Error reloading configuration: {str(e)}")
             raise
+
+# ------------------------------------------------------------------
+# Initialize config
+# ------------------------------------------------------------------
+
+def init_config(config_path: str = "config.json") -> ConfigManager:
+    """
+    Initializes the global configuration instance.
+
+    Args:
+        config_path (str): Path to the configuration file
+
+    Returns:
+        ConfigManager: Configuration instance
+    """
+    global config
+    if config is None:
+        config = ConfigManager(config_path)
+        config.read_config()
+    return config
