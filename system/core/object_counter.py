@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 28.04.2025
+# Updated: 03.12.2025
 # Website: https://bespredel.name
 
 import json
@@ -28,6 +28,7 @@ from system.core.sort import Sort
 from system.core.timer import Timer
 from system.utils.utils import trans
 from system.managers.video_stream_manager import VideoStreamManager
+from system.managers.video_recorder_manager import VideoRecorderManager
 
 
 class ObjectCounter:
@@ -47,6 +48,7 @@ class ObjectCounter:
     DEFAULT_JPEG_QUALITY: int = 100
     DEFAULT_INDICATOR_SIZE: int = 10
     DEFAULT_VID_STRIDE: int = 1
+    DEFAULT_RECORDING_PATH: str = "yolo_cfg/saved_recordings"
 
     def __init__(self, location: str, config_manager: ConfigManager, socketio: SocketIO, **kwargs: any) -> None:
         # Init variables
@@ -59,6 +61,11 @@ class ObjectCounter:
         self.get_frames_running: bool = False
         self.running: bool = True
         self.paused = False
+        self.recording_enabled: bool = False
+        self.recording_base_path: str | None = None
+        self.recording_scale: int = 100
+        self.recording_quality: int = 80
+        self.recorder: VideoRecorderManager | None = None
 
         # Load and initialize config
         self.__initialize_config(location, config_manager, kwargs)
@@ -72,6 +79,9 @@ class ObjectCounter:
         # Initialize video stream manager
         self.vsm: VideoStreamManager = VideoStreamManager(self.video_path, self.video_fps)
         self.vsm.start()
+
+        # Init recorder (async video writer) if enabled for this detection
+        self._init_recorder()
 
         # Init model
         if self.model_type == 'yolo':
@@ -91,244 +101,9 @@ class ObjectCounter:
         # Set polygon
         self.polygon: Polygon = Polygon(self.counting_area)
 
-    def __initialize_config(self, location: str, config_manager: ConfigManager, kwargs: dict) -> None:
-        """
-        Initializes the configuration for the object counter.
-
-        Args:
-            location (str): The location of the object counter.
-            config_manager (ConfigManager): The configuration object.
-            kwargs (dict): Additional keyword arguments.
-
-        Returns:
-            None
-
-        Initializes the following attributes:
-            - self.location (str): The location of the object counter.
-            - self.debug (bool): The debug mode flag.
-            - self.config_manager (ConfigManager): The ConfigManager instance.
-            - self.model_type (str): The type of object detection model.
-            - self.weights (str): The path to the weights file.
-            - self.device (str): The device to use for inference ('cpu' by default).
-            - self.confidence (float): The confidence threshold for object detection.
-            - self.iou (float): The IoU threshold for object detection.
-            - self.video_fps (int): The frame rate of the video.
-            - self.counting_area (list): The coordinates of the counting area.
-            - self.counting_area_color (tuple): The color of the counting area.
-            - self.video_scale (int): The scale of the video.
-            - self.video_quality (int): The quality of the video.
-            - self.indicator_size (int): The size of the indicator.
-            - self.vid_stride (int): The stride for video processing.
-            - self.classes (dict): The classes for object detection.
-            - self.dataset (dict): The dataset for creating the object counter.
-            - self.video_path (str): The path to the video.
-            - self.total_count (int): The total count of objects.
-            - self.total_objects (set): The set of total objects.
-
-        If the 'start_total_count' key in the detector_config is greater than 0,
-        sets the total_count and total_objects attributes and updates the configuration file.
-        """
-
-        config_manager.read_config()
-        detector_config = config_manager.get(f"detections.{location}")
-        detection_default = config_manager.get("detection_default", {})
-
-        self.location: str = location
-        self.debug: bool = kwargs.get('debug', config_manager.get('debug', False))
-        self.model_type = kwargs.get('model_type', detector_config.get('model_type', 'yolo'))
-        self.weights: str = kwargs.get('weights', detector_config.get('weights_path'))
-        self.device: str = kwargs.get('device', detector_config.get('device', 'cpu'))
-        self.confidence: float = kwargs.get('confidence',
-                                            detector_config.get('confidence', detection_default.get('confidence', self.DEFAULT_CONFIDENCE)))
-        self.iou: float = kwargs.get('iou', detector_config.get('iou', detection_default.get('iou', self.DEFAULT_IOU)))
-        self.counting_area: List[Tuple[int, int]] = kwargs.get('counting_area', detector_config.get('counting_area'))
-        self.counting_area_color: tuple = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
-        self.video_fps: int = detector_config.get('video_fps', detection_default.get("video_fps"))
-        self.video_scale: int = detector_config.get('video_show_scale', detection_default.get("video_show_scale", self.DEFAULT_VIDEO_SCALE))
-        self.video_quality: int = detector_config.get('video_show_quality',
-                                                      detection_default.get("video_show_quality", self.DEFAULT_VIDEO_QUALITY))
-        self.indicator_size: int = detector_config.get('indicator_size',
-                                                       detection_default.get("indicator_size", self.DEFAULT_INDICATOR_SIZE))
-        self.vid_stride: int = detector_config.get('vid_stride', detection_default.get("vid_stride", self.DEFAULT_VID_STRIDE))
-        self.classes: dict = detector_config.get('classes', {})
-        self.dataset: dict = detector_config.get('dataset_create', {})
-
-        # Video
-        self.video_path: str = kwargs.get('video_path', detector_config['video_path'])
-
-        # Started counter value from config
-        start_count: int = int(detector_config.get('start_total_count', 0))
-        if start_count > 0:
-            self.total_count: int = start_count
-            self.total_objects: set = set(range(-start_count, 0))
-            config_manager.set(f"detections.{self.location}.start_total_count", 0)
-            config_manager.save_config()
-
-    def _detect(self, image: np.ndarray) -> np.ndarray:
-        """
-        Detects objects in an image using a pre-trained model.
-
-        Args:
-            image (ndarray): The input image as a numpy array.
-
-        Returns:
-            ndarray: An array of updated results after tracking the detected objects.
-        """
-        xyxy, conf = self.model.detect(image=image)
-        detections = np.concatenate((xyxy, conf.reshape(-1, 1)), axis=1)
-
-        return self.tracker.update(detections)
-
-    def _draw_counting_area(self, image: np.ndarray) -> np.ndarray:
-        """
-        Draws a counting area on the given image.
-
-        Args:
-            image (numpy.ndarray): The image on which the counting area should be drawn.
-
-        Returns:
-            numpy.ndarray: The image with the counting area drawn on it.
-        """
-        overlay = image.copy()
-
-        # Polygon corner points coordinates
-        pts = np.array(self.counting_area, np.int32).reshape((-1, 1, 2))
-        cv2.fillPoly(overlay, [pts], self.counting_area_color)
-
-        return cv2.addWeighted(overlay, self.DEFAULT_POLYGON_ALPHA, image, 1 - self.DEFAULT_POLYGON_ALPHA, 0)
-
-    def _draw_indicator(self, image: np.ndarray, center: tuple[int, int], rid: int) -> np.ndarray:
-        """
-        Draws an indicator on the given image.
-
-        Args:
-            image (numpy.ndarray): The image on which the indicator should be drawn.
-            center (tuple[int, int]): The center coordinates of the indicator.
-            rid (int): The ID of the indicator.
-
-        Returns:
-            numpy.ndarray: The image with the indicator drawn on it.
-        """
-        color = (0, 255, 0) if rid in self.total_objects else (255, 0, 255)
-        cv2.circle(image, center, self.indicator_size, color, cv2.FILLED)
-
-        return image
-
-    def _detect_count(self, image: np.ndarray, boxes: list | np.ndarray) -> np.ndarray:
-        """
-        Counts objects in the given image and draws indicators on the image.
-
-        Args:
-            image (numpy.ndarray): The image on which the boxes will be drawn.
-            boxes (List[Tuple[int]] | numpy.ndarray): A list of boxes, where each box is represented by a tuple of (x1, y1, x2, y2, rid),
-                                      where x1, y1 are the top-left coordinates, x2, y2 are the bottom-right coordinates,
-                                      and rid is the ID of the box.
-
-        Returns:
-            numpy.ndarray: The modified image with the boxes drawn on it.
-        """
-        if self.paused:
-            return image
-
-        for result in boxes:
-            x1, y1, x2, y2, rid = map(int, result[:5])  # Unpack all values as integers
-            cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
-
-            # Draw indicator on the image
-            image = self._draw_indicator(image, (cx, cy), rid)
-
-            # Check if the object is within the counting area
-            point = Point(cx, cy)
-            if point.within(self.polygon) and rid not in self.total_objects:
-                self.total_objects.add(rid)
-                self.current_count += 1
-
-            self.total_count = len(self.total_objects)
-
-        self.notif_manager.emit(f'{self.location}_count', {
-            'total': self.total_count - self.defect_count + self.correct_count,
-            'current': self.current_count,
-            'defect': self.defect_count,
-            'correct': self.correct_count
-        })
-
-        return image
-
-    def _process_frame(self, frame: np.ndarray) -> ndarray | None:
-        """
-        Process the frame.
-
-        Args:
-            frame (numpy.ndarray): The frame to process.
-
-        Returns:
-            numpy.ndarray: The processed frame.
-        """
-        if frame is None:
-            return None
-
-        with Timer() as timer:
-            frame_copy = frame.copy() if self.dataset.get('enable', False) else None
-            last_total_count = self.total_count
-
-            boxes = self._detect(frame)
-
-            if self.get_frames_running:
-                frame = self._draw_counting_area(frame)
-
-            frame = self._detect_count(frame, boxes)
-
-            if self.dataset.get('enable', False) and last_total_count != self.total_count:
-                if random.random() < float(self.dataset['probability']):
-                    self._save_dataset_image(frame_copy, boxes, self.dataset.get('classes', None))
-
-            if self.debug:
-                fps = int(1 / timer.elapsed)
-                cv2.putText(frame, f'FPS: {fps}',
-                            self.DEFAULT_FPS_POSITION, cv2.FONT_HERSHEY_SIMPLEX,
-                            self.DEFAULT_FPS_FONT_SCALE, self.DEFAULT_FPS_COLOR, self.DEFAULT_FPS_THICKNESS)
-
-            return frame
-
-    def _save_dataset_image(self, frame: np.ndarray, boxes: list | np.ndarray = None, classes_to_save: dict = None) -> None:
-        """
-        Saves an image to the dataset path if it exists.
-
-        Args:
-            frame (numpy.ndarray): The image frame to be saved.
-
-        Returns:
-            None
-        """
-        if frame is None:
-            return
-
-        try:
-            dataset_path = self.dataset.get('path')
-            if not dataset_path:
-                self.logger.warning('Dataset path is not configured')
-                return
-
-            # Check if the frame contains any of the specified classes
-            if classes_to_save is not None and boxes is not None:
-                detected_classes = [int(result[-1]) for result in boxes]
-                if not any(str(cls) in classes_to_save for cls in detected_classes):
-                    print("No matching classes found. Skipping save.")
-                    return
-
-            os.makedirs(dataset_path, exist_ok=True)
-
-            location_clean = re.sub('[^A-Za-z0-9-_]+', '', self.location)
-            create_time = int(time.time())
-
-            image_path = f'{dataset_path}/{location_clean}_{create_time}.jpg'
-            success = cv2.imwrite(image_path, frame, [cv2.IMWRITE_JPEG_QUALITY, self.DEFAULT_JPEG_QUALITY])
-
-            if not success:
-                self.logger.error(f'Failed to save image to {image_path}')
-
-        except Exception as e:
-            self.logger.error(f'Error saving dataset image: {e}')
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
 
     def run_frames(self) -> None:
         """
@@ -457,6 +232,10 @@ class ObjectCounter:
             # self.total_objects = []
             # self.total_count = 0
             # self.current_count = 0
+            # Stop the current recording video
+            # if self.recording_enabled and self.recorder is not None:
+            #     self.recorder.stop()
+
             self.notif_manager.notify(trans('Saved successfully!'), 'success')
         else:
             self.notif_manager.notify(trans('Save error!'), 'danger')
@@ -473,6 +252,7 @@ class ObjectCounter:
         Returns:
             None
         """
+
         self.total_objects.clear()
         self.total_count = 0
         self.current_count = 0
@@ -480,6 +260,10 @@ class ObjectCounter:
         self.correct_count = 0
 
         self.db_manager.close_current_count(location)
+
+        # Stop the current recording video
+        if self.recording_enabled and self.recorder is not None:
+            self.recorder.stop()
 
         self.notif_manager.notify(trans('Counting completed successfully!'), 'primary')
 
@@ -543,6 +327,10 @@ class ObjectCounter:
             self.notif_manager.event('counter_status', {'status': 'stopped', 'location': self.location})
         self.running = False
 
+        # Stop the current recording video
+        if self.recording_enabled and self.recorder is not None:
+            self.recorder.stop()
+
     def pause(self) -> None:
         """
         Pause counting.
@@ -583,9 +371,312 @@ class ObjectCounter:
         Cleaning resources
         """
         self.stop()
+        if hasattr(self, 'recorder') and self.recording_enabled:
+            self.recorder.stop()
         if hasattr(self, 'vsm'):
             self.vsm.stop()
         if hasattr(self, 'model'):
             self.model.cleanup()
         if hasattr(self, 'db_manager'):
             self.db_manager.close()
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def __initialize_config(self, location: str, config_manager: ConfigManager, kwargs: dict) -> None:
+        """
+        Initializes the configuration for the object counter.
+
+        Args:
+            location (str): The location of the object counter.
+            config_manager (ConfigManager): The configuration object.
+            kwargs (dict): Additional keyword arguments.
+
+        Returns:
+            None
+
+        Initializes the following attributes:
+            - self.location (str): The location of the object counter.
+            - self.debug (bool): The debug mode flag.
+            - self.config_manager (ConfigManager): The ConfigManager instance.
+            - self.model_type (str): The type of object detection model.
+            - self.weights (str): The path to the weights file.
+            - self.device (str): The device to use for inference ('cpu' by default).
+            - self.confidence (float): The confidence threshold for object detection.
+            - self.iou (float): The IoU threshold for object detection.
+            - self.video_fps (int): The frame rate of the video.
+            - self.counting_area (list): The coordinates of the counting area.
+            - self.counting_area_color (tuple): The color of the counting area.
+            - self.video_scale (int): The scale of the video.
+            - self.video_quality (int): The quality of the video.
+            - self.indicator_size (int): The size of the indicator.
+            - self.vid_stride (int): The stride for video processing.
+            - self.classes (dict): The classes for object detection.
+            - self.dataset (dict): The dataset for creating the object counter.
+            - self.video_path (str): The path to the video.
+            - self.total_count (int): The total count of objects.
+            - self.total_objects (set): The set of total objects.
+
+        If the 'start_total_count' key in the detector_config is greater than 0,
+        sets the total_count and total_objects attributes and updates the configuration file.
+        """
+
+        config_manager.read_config()
+        detector_config = config_manager.get(f"detections.{location}")
+        detection_default = config_manager.get("detection_default", {})
+
+        self.location: str = location
+        self.debug: bool = kwargs.get('debug', config_manager.get('debug', False))
+        self.model_type = kwargs.get('model_type', detector_config.get('model_type', 'yolo'))
+        self.weights: str = kwargs.get('weights', detector_config.get('weights_path'))
+        self.device: str = kwargs.get('device', detector_config.get('device', 'cpu'))
+        self.confidence: float = kwargs.get('confidence',
+                                            detector_config.get('confidence', detection_default.get('confidence', self.DEFAULT_CONFIDENCE)))
+        self.iou: float = kwargs.get('iou', detector_config.get('iou', detection_default.get('iou', self.DEFAULT_IOU)))
+        self.counting_area: List[Tuple[int, int]] = kwargs.get('counting_area', detector_config.get('counting_area'))
+        self.counting_area_color: tuple = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
+        self.video_fps: int = detector_config.get('video_fps', detection_default.get("video_fps"))
+        self.video_scale: int = detector_config.get('video_show_scale', detection_default.get("video_show_scale", self.DEFAULT_VIDEO_SCALE))
+        self.video_quality: int = detector_config.get('video_show_quality',
+                                                      detection_default.get("video_show_quality", self.DEFAULT_VIDEO_QUALITY))
+        self.indicator_size: int = detector_config.get('indicator_size',
+                                                       detection_default.get("indicator_size", self.DEFAULT_INDICATOR_SIZE))
+        self.vid_stride: int = detector_config.get('vid_stride', detection_default.get("vid_stride", self.DEFAULT_VID_STRIDE))
+        self.classes: dict = detector_config.get('classes', {})
+        self.dataset: dict = detector_config.get('dataset_create', {})
+
+        # Video
+        self.video_path: str = kwargs.get('video_path', detector_config['video_path'])
+
+        # Recording
+        recording_default = detection_default.get('recording', {})
+        recording_config = detector_config.get('recording', {})
+        self.recording_enabled: bool = bool(recording_config.get('enable', recording_default.get('enable', False)))
+        self.recording_base_path = recording_config.get('path', recording_default.get('path', self.DEFAULT_RECORDING_PATH))
+        self.recording_scale: int = int(recording_config.get('scale', recording_default.get('scale', 100)))
+        self.recording_quality: int = int(recording_config.get('quality', recording_default.get('quality', 80)))
+
+        # Started counter value from config
+        start_count: int = int(detector_config.get('start_total_count', 0))
+        if start_count > 0:
+            self.total_count: int = start_count
+            self.total_objects: set = set(range(-start_count, 0))
+            config_manager.set(f"detections.{self.location}.start_total_count", 0)
+            config_manager.save_config()
+
+    def _init_recorder(self) -> None:
+        """
+        Initializing the asynchronous recorder for current recognition.
+        """
+        if not self.recording_enabled:
+            return
+
+        try:
+            self.recorder = VideoRecorderManager(
+                location=self.location,
+                base_path=self.recording_base_path,
+                fps=self.video_fps,
+                scale=self.recording_scale,
+                quality=self.recording_quality,
+            )
+        except Exception as e:
+            # If it was not possible to initialize the record, log it and continue the operation of the counter without recording
+            self.logger.error(f"Error initializing VideoRecorderManager: {e}")
+            self.recording_enabled = False
+
+    def _start_recording_if_needed(self) -> None:
+        """
+        Start recording if it is enabled and not yet started.
+        This method is safe to call multiple times.
+        """
+        if not self.recording_enabled or self.recorder is None:
+            return
+        try:
+            self.recorder.start()
+        except Exception as e:
+            self.logger.error(f"Error starting VideoRecorderManager: {e}")
+            self.recording_enabled = False
+
+    def _detect(self, image: np.ndarray) -> np.ndarray:
+        """
+        Detects objects in an image using a pre-trained model.
+
+        Args:
+            image (ndarray): The input image as a numpy array.
+
+        Returns:
+            ndarray: An array of updated results after tracking the detected objects.
+                     Each row has the following structure:
+                     [x1, y1, x2, y2, track_id, (optional) class_id]
+        """
+        xyxy, conf, cls = self.model.detect(image=image)
+
+        # Prepare detections for the tracker: [x1, y1, x2, y2, conf, class]
+        detections = np.concatenate((xyxy, conf.reshape(-1, 1), cls.reshape(-1, 1)), axis=1)
+
+        # Update tracker and get tracked boxes: [x1, y1, x2, y2, conf]
+        tracked_boxes = self.tracker.update(detections[:, :5])
+
+        # Attach class IDs to tracked boxes if sizes match
+        if len(tracked_boxes) > 0 and len(cls) == len(tracked_boxes):
+            tracked_boxes = np.concatenate((tracked_boxes, cls.reshape(-1, 1)), axis=1)
+
+        return tracked_boxes
+
+    def _draw_counting_area(self, image: np.ndarray) -> np.ndarray:
+        """
+        Draws a counting area on the given image.
+
+        Args:
+            image (numpy.ndarray): The image on which the counting area should be drawn.
+
+        Returns:
+            numpy.ndarray: The image with the counting area drawn on it.
+        """
+        overlay = image.copy()
+
+        # Polygon corner points coordinates
+        pts = np.array(self.counting_area, np.int32).reshape((-1, 1, 2))
+        cv2.fillPoly(overlay, [pts], self.counting_area_color)
+
+        return cv2.addWeighted(overlay, self.DEFAULT_POLYGON_ALPHA, image, 1 - self.DEFAULT_POLYGON_ALPHA, 0)
+
+    def _draw_indicator(self, image: np.ndarray, center: tuple[int, int], rid: int) -> np.ndarray:
+        """
+        Draws an indicator on the given image.
+
+        Args:
+            image (numpy.ndarray): The image on which the indicator should be drawn.
+            center (tuple[int, int]): The center coordinates of the indicator.
+            rid (int): The ID of the indicator.
+
+        Returns:
+            numpy.ndarray: The image with the indicator drawn on it.
+        """
+        color = (0, 255, 0) if rid in self.total_objects else (255, 0, 255)
+        cv2.circle(image, center, self.indicator_size, color, cv2.FILLED)
+
+        return image
+
+    def _detect_count(self, image: np.ndarray, boxes: list | np.ndarray) -> np.ndarray:
+        """
+        Counts objects in the given image and draws indicators on the image.
+
+        Args:
+            image (numpy.ndarray): The image on which the boxes will be drawn.
+            boxes (List[Tuple[int]] | numpy.ndarray): A list of boxes, where each box is represented by a tuple of (x1, y1, x2, y2, rid),
+                                      where x1, y1 are the top-left coordinates, x2, y2 are the bottom-right coordinates,
+                                      and rid is the ID of the box.
+
+        Returns:
+            numpy.ndarray: The modified image with the boxes drawn on it.
+        """
+        if self.paused:
+            return image
+
+        for result in boxes:
+            x1, y1, x2, y2, rid = map(int, result[:5])  # Unpack all values as integers
+            cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+
+            # Draw indicator on the image
+            image = self._draw_indicator(image, (cx, cy), rid)
+
+            # Check if the object is within the counting area
+            point = Point(cx, cy)
+            if point.within(self.polygon) and rid not in self.total_objects:
+                self.total_objects.add(rid)
+                self.current_count += 1
+                # Start recording as soon as the first object is detected
+                self._start_recording_if_needed()
+
+            self.total_count = len(self.total_objects)
+
+        self.notif_manager.emit(f'{self.location}_count', {
+            'total': self.total_count - self.defect_count + self.correct_count,
+            'current': self.current_count,
+            'defect': self.defect_count,
+            'correct': self.correct_count
+        })
+
+        return image
+
+    def _process_frame(self, frame: np.ndarray) -> ndarray | None:
+        """
+        Process the frame.
+
+        Args:
+            frame (numpy.ndarray): The frame to process.
+
+        Returns:
+            numpy.ndarray: The processed frame.
+        """
+        if frame is None:
+            return None
+
+        with Timer() as timer:
+            frame_copy = frame.copy() if self.dataset.get('enable', False) else None
+            last_total_count = self.total_count
+
+            boxes = self._detect(frame)
+
+            if self.get_frames_running:
+                frame = self._draw_counting_area(frame)
+
+            frame = self._detect_count(frame, boxes)
+
+            if self.dataset.get('enable', False) and last_total_count != self.total_count:
+                if random.random() < float(self.dataset['probability']):
+                    self._save_dataset_image(frame_copy, boxes, self.dataset.get('classes', None))
+
+            if self.debug:
+                fps = int(1 / timer.elapsed)
+                cv2.putText(frame, f'FPS: {fps}',
+                            self.DEFAULT_FPS_POSITION, cv2.FONT_HERSHEY_SIMPLEX,
+                            self.DEFAULT_FPS_FONT_SCALE, self.DEFAULT_FPS_COLOR, self.DEFAULT_FPS_THICKNESS)
+
+            # Sending a frame to an asynchronous recorder
+            if self.recording_enabled and self.recorder is not None:
+                self.recorder.push_frame(frame)
+
+            return frame
+
+    def _save_dataset_image(self, frame: np.ndarray, boxes: list | np.ndarray = None, classes_to_save: dict = None) -> None:
+        """
+        Saves an image to the dataset path if it exists.
+
+        Args:
+            frame (numpy.ndarray): The image frame to be saved.
+
+        Returns:
+            None
+        """
+        if frame is None:
+            return
+
+        try:
+            dataset_path = self.dataset.get('path')
+            if not dataset_path:
+                self.logger.warning('Dataset path is not configured')
+                return
+
+            # Check if the frame contains any of the specified classes
+            if classes_to_save is not None and boxes is not None:
+                detected_classes = [int(result[-1]) for result in boxes]
+                if not any(str(cls) in classes_to_save for cls in detected_classes):
+                    print("No matching classes found. Skipping save.")
+                    return
+
+            os.makedirs(dataset_path, exist_ok=True)
+
+            location_clean = re.sub('[^A-Za-z0-9-_]+', '', self.location)
+            create_time = int(time.time())
+
+            image_path = f'{dataset_path}/{location_clean}_{create_time}.jpg'
+            success = cv2.imwrite(image_path, frame, [cv2.IMWRITE_JPEG_QUALITY, self.DEFAULT_JPEG_QUALITY])
+
+            if not success:
+                self.logger.error(f'Failed to save image to {image_path}')
+
+        except Exception as e:
+            self.logger.error(f'Error saving dataset image: {e}')

@@ -206,7 +206,18 @@ startup).
             255
         ],
         // classes to detect (leave empty for all classes)
-        "classes": {}
+        "classes": {},
+        // video recording configuration for all recognitions
+        "recording": {
+            // enable video recording
+            "enable": false,
+            // path to storage folder
+            "path": "yolo_cfg/saved_recordings",
+            // video size (percentage)
+            "scale": 100,
+            // video quality
+            "quality": 80
+        }
     },
     "detections": {
         // detection configs
@@ -273,6 +284,17 @@ startup).
                 // probability of creating a dataset image (number from 0.01 to 1, where 0.01 is 1% and 1 is 100%)
                 "path": "yolo_cfg/saved_images/ExampleCam"
                 // path for saving dataset
+            },
+            // detection video recording configuration
+            "recording": {
+                // enable video recording
+                "enable": false,
+                // path to storage folder
+                "path": "yolo_cfg/saved_recordings",
+                // video size (percentage)
+                "scale": 100,
+                // video quality
+                "quality": 80
             }
         },
     }

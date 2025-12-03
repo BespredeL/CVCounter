@@ -94,7 +94,13 @@
             211,
             255
         ],
-        "classes": {}
+        "classes": {},
+        "recording": {
+            "enable": false,
+            "path": "yolo_cfg/saved_recordings",
+            "scale": 100,
+            "quality": 80
+        }
     },
     "detections": {
         "ExampleCam": {
@@ -139,6 +145,11 @@
                 "enable": true,
                 "probability": 0.05,
                 "path": "yolo_cfg/saved_images/ExampleCam"
+            },
+            "recording": {
+                "enable": true,
+                "scale": 80,
+                "quality": 60
             }
         }
     }

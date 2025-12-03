@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 26.12.2024
-# Updated: 29.01.2025
+# Updated: 03.12.2025
 # Website: https://bespredel.name
 
 from ultralytics import YOLO, settings
@@ -33,7 +33,12 @@ class ObjectDetectionYOLO(BaseObjectDetectionService):
             image: The input image as a numpy array.
 
         Returns:
-            ndarray: An array of updated results after tracking the detected objects.
+            tuple: (boxes_xyxy, confidences, classes)
+
+        Notes:
+            - boxes_xyxy: ndarray with shape (N, 4)
+            - confidences: ndarray with shape (N,)
+            - classes: ndarray with shape (N,), integer class IDs
         """
 
         if self.model is None:
@@ -48,10 +53,12 @@ class ObjectDetectionYOLO(BaseObjectDetectionService):
             classes=self.classes_list
         )
 
-        boxes_xyxy = results[0].boxes.xyxy.cpu().numpy()
-        confidences = results[0].boxes.conf.cpu().numpy()
+        boxes = results[0].boxes
+        boxes_xyxy = boxes.xyxy.cpu().numpy()
+        confidences = boxes.conf.cpu().numpy()
+        classes = boxes.cls.cpu().numpy().astype(int)
 
-        return boxes_xyxy, confidences
+        return boxes_xyxy, confidences, classes
 
     def load_model(self, weights: str, **kwargs):
         """

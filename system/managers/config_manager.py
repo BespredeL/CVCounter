@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 28.04.2025
+# Updated: 03.12.2025
 # Website: https://bespredel.name
 
 import ast
@@ -178,6 +178,9 @@ class ConfigManager:
             logging.error(f"Error reloading configuration: {str(e)}")
             raise
 
+# ------------------------------------------------------------------
+# Initialize config
+# ------------------------------------------------------------------
 
 def init_config(config_path: str = "config.json") -> ConfigManager:
     """
