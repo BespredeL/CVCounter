@@ -105,6 +105,10 @@ CVCounter - это приложение для подсчета объектов
         "debug": true,
         // путь к файлу журнала
         "log_path": "errors.log",
+        // минимальный уровень журнала: DEBUG, INFO, WARNING, ERROR, CRITICAL
+        "log_level": "INFO",
+        // включить вывод журнала в консоль (рекомендуется false в рабочей среде)
+        "log_console": false,
         // язык по умолчанию
         "default_language": "ru",
         // разрешить небезопасные операции в werkzeug

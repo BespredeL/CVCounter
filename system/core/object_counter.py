@@ -17,7 +17,6 @@ import cv2
 import numpy as np
 from flask_socketio import SocketIO
 from numpy import ndarray
-from shapely.geometry import Point, Polygon
 from system.managers.config_manager import ConfigManager
 from system.utils.frame_utils import FrameUtils
 from system.utils.logger import Logger
@@ -45,7 +44,7 @@ class ObjectCounter:
     DEFAULT_MAX_AGE: int = 30
     DEFAULT_MIN_HITS: int = 3
     DEFAULT_TRACKER_IOU: float = 0.3
-    DEFAULT_JPEG_QUALITY: int = 100
+    DEFAULT_JPEG_QUALITY: int = 90
     DEFAULT_INDICATOR_SIZE: int = 10
     DEFAULT_VID_STRIDE: int = 1
     DEFAULT_RECORDING_PATH: str = "yolo_cfg/saved_recordings"
@@ -66,6 +65,9 @@ class ObjectCounter:
         self.recording_scale: int = 100
         self.recording_quality: int = 80
         self.recorder: VideoRecorderManager | None = None
+
+        # Mask for fast point-in-polygon check (generated on first frame)
+        self._counting_mask: Optional[np.ndarray] = None
 
         # Load and initialize config
         self.__initialize_config(location, config_manager, kwargs)
@@ -97,9 +99,6 @@ class ObjectCounter:
 
         # Init Database manager
         self.db_manager: any = kwargs.get('db_manager', None)
-
-        # Set polygon
-        self.polygon: Polygon = Polygon(self.counting_area)
 
     # ------------------------------------------------------------------
     # Public API
@@ -415,6 +414,10 @@ class ObjectCounter:
             - self.classes (dict): The classes for object detection.
             - self.dataset (dict): The dataset for creating the object counter.
             - self.video_path (str): The path to the video.
+            - self.recording_enabled (bool): The recording enabled flag.
+            - self.recording_base_path (str): The base path for recording.
+            - self.recording_scale (int): The scale of the recording video.
+            - self.recording_quality (int): The quality of the recording video.
             - self.total_count (int): The total count of objects.
             - self.total_objects (set): The set of total objects.
 
@@ -559,6 +562,25 @@ class ObjectCounter:
 
         return image
 
+    def _ensure_counting_mask(self, frame_shape: Tuple[int, int]) -> None:
+        """
+        Lazily builds a boolean mask of the counting area for fast point checks.
+
+        Args:
+            frame_shape (Tuple[int, int]): The shape of the frame.
+
+        Returns:
+            None
+        """
+        if self._counting_mask is not None:
+            return
+
+        height, width = frame_shape[:2]
+        mask: np.ndarray = np.zeros((height, width), dtype=np.uint8)
+        pts: np.ndarray = np.asarray(self.counting_area, dtype=np.int32).reshape((-1, 1, 2))
+        cv2.fillPoly(mask, [pts], 1)
+        self._counting_mask = mask.astype(bool)
+
     def _detect_count(self, image: np.ndarray, boxes: list | np.ndarray) -> np.ndarray:
         """
         Counts objects in the given image and draws indicators on the image.
@@ -575,16 +597,26 @@ class ObjectCounter:
         if self.paused:
             return image
 
+        # Ensure mask for fast point-in-polygon
+        if boxes is not None and len(boxes) > 0:
+            h, w = image.shape[:2]
+            self._ensure_counting_mask((h, w))
+
         for result in boxes:
-            x1, y1, x2, y2, rid = map(int, result[:5])  # Unpack all values as integers
+            x1, y1, x2, y2, rid = map(int, result[:5])
             cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
 
             # Draw indicator on the image
             image = self._draw_indicator(image, (cx, cy), rid)
 
-            # Check if the object is within the counting area
-            point = Point(cx, cy)
-            if point.within(self.polygon) and rid not in self.total_objects:
+            # Check if the object is within the counting area using mask
+            if (
+                    self._counting_mask is not None
+                    and 0 <= cy < self._counting_mask.shape[0]
+                    and 0 <= cx < self._counting_mask.shape[1]
+                    and self._counting_mask[cy, cx]
+                    and rid not in self.total_objects
+            ):
                 self.total_objects.add(rid)
                 self.current_count += 1
                 # Start recording as soon as the first object is detected

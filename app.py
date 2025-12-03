@@ -36,7 +36,8 @@ from system.db.models.base_model import TablePrefixBase
 config = init_config()
 
 # System check
-system_check()
+if config.get("general.system_check", False):
+    system_check()
 
 # Generate and save secret key if not set
 if not config.get("server.secret_key"):

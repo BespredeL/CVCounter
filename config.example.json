@@ -1,7 +1,10 @@
 {
     "general": {
         "debug": true,
+        "system_check": true,
         "log_path": "errors.log",
+        "log_level": "INFO",
+        "log_console": false,
         "default_language": "ru",
         "allow_unsafe_werkzeug": false,
         "button_change_theme": true,
@@ -98,8 +101,8 @@
         "recording": {
             "enable": false,
             "path": "yolo_cfg/saved_recordings",
-            "scale": 100,
-            "quality": 80
+            "scale": 50,
+            "quality": 70
         }
     },
     "detections": {

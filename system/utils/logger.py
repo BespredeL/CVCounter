@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 28.04.2025
+# Updated: 03.12.2025
 # Website: https://bespredel.name
 
 import logging
@@ -26,31 +26,40 @@ class Logger:
         """
         Initializes the logger.
         """
-        if not self._initialized:
-            self._logger: logging.Logger = logging.getLogger(__name__)
-            self._logger.setLevel(logging.DEBUG)
+        if self._initialized:
+            return
 
-            # Create a handler for writing to file
-            file_handler: logging.FileHandler = logging.FileHandler(
-                config.get('general.log_path', 'errors.log') if config else 'errors.log',
-                encoding='utf-8'
-            )
-            file_handler.setLevel(logging.DEBUG)
+        log_path = 'errors.log'
+        log_level_name = 'INFO'
+        log_console = False
 
-            # Create a handler for console output
-            console_handler: logging.StreamHandler = logging.StreamHandler()
-            console_handler.setLevel(logging.DEBUG)
+        if config is not None:
+            log_path = config.get('general.log_path', log_path)
+            log_level_name = config.get('general.log_level', log_level_name)
+            log_console = bool(config.get('general.log_console', log_console))
 
+        log_level = getattr(logging, str(log_level_name).upper(), logging.INFO)
+
+        self._logger: logging.Logger = logging.getLogger("cvcounter")
+        self._logger.setLevel(log_level)
+
+        if not self._logger.handlers:
             formatter: logging.Formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+
+            # File handler
+            file_handler: logging.FileHandler = logging.FileHandler(log_path, encoding='utf-8')
+            file_handler.setLevel(log_level)
             file_handler.setFormatter(formatter)
-            console_handler.setFormatter(formatter)
-
-            # Add handlers to the logger
             self._logger.addHandler(file_handler)
-            self._logger.addHandler(console_handler)
 
-            self.print_logs: bool = True
-            self._initialized = True
+            # Console handler (optional)
+            if log_console:
+                console_handler: logging.StreamHandler = logging.StreamHandler()
+                console_handler.setLevel(log_level)
+                console_handler.setFormatter(formatter)
+                self._logger.addHandler(console_handler)
+
+        self._initialized = True
 
     def log(self, level: int, msg: str, *args, **kwargs) -> None:
         """

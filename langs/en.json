@@ -151,5 +151,8 @@
     "created_at": "Date of creation",
     "Recording": "Recording video",
     "Scale": "Scale",
-    "Quality": "Quality"
+    "Quality": "Quality",
+    "System Check": "Checking the system before starting",
+    "Log Level": "Log level",
+    "Log Console": "Output log to console"
 }

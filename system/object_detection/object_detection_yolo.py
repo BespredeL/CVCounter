@@ -50,7 +50,8 @@ class ObjectDetectionYOLO(BaseObjectDetectionService):
             iou=self.iou,
             device=self.device,
             vid_stride=self.vid_stride,
-            classes=self.classes_list
+            classes=self.classes_list,
+            # half=True
         )
 
         boxes = results[0].boxes
