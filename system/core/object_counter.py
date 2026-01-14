@@ -137,6 +137,7 @@ class ObjectCounter:
                 time.sleep(self.DEFAULT_SLEEP_TIME)
             except Exception as e:
                 print(e)
+                #self.logger.error(f"Lost connection to camera! | {self.location}: {e}")
                 self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
                 self.notif_manager.event('counter_status', {'status': 'error', 'location': self.location})
 
@@ -228,6 +229,7 @@ class ObjectCounter:
         )
 
         if result:
+            # Uncomment to reset counters
             # self.total_objects = []
             # self.total_count = 0
             # self.current_count = 0
