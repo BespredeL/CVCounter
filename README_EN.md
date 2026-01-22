@@ -134,7 +134,9 @@ startup).
         // enable log output
         "log_output": true,
         // socketio key
-        "socketio_key": ""
+        "socketio_key": "",
+        // allowed origins
+        "allowed_origins": "*"
     },
     "users": {
         // login:password default admin:admin

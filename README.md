@@ -134,7 +134,9 @@ CVCounter - это приложение для подсчета объектов
         // включить вывод журнала
         "log_output": true,
         // socketio ключ
-        "socketio_key": ""
+        "socketio_key": "",
+        // allowed origins 
+        "allowed_origins": "*"
     },
     "users": {
         // логин:пароль по умолчанию admin:admin
