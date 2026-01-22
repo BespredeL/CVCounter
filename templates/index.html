@@ -106,7 +106,7 @@
                     return false;
                 }
 
-                let baseUrl = '{{ url_for('counter_dual_text', location_first='', location_second='') }}'.replace(/\/+$/, '');
+                let baseUrl = '{{ url_for('counters.counter_dual_text', location_first='', location_second='') }}'.replace(/\/+$/, '');
                 let fullUrl = baseUrl + '/' + counterDualTextIn + '/' + counterDualTextOut;
                 window.open(fullUrl, '_self');
             });
@@ -132,10 +132,10 @@
         <div class="col-12">
             <h4>{{ trans('Pages') }}:</h4>
             <div class="d-grid gap-2 d-md-block ms-0 ms-md-3">
-                <a href="{{ url_for('reports') }}" class="btn btn-secondary m-2">{{ trans('Reports') }}</a>
-                <a href="{{ url_for('page', name='help') }}" class="btn btn-secondary m-2">{{ trans('Help') }}</a>
-                <a href="{{ url_for('settings') }}" class="btn btn-secondary m-2">{{ trans('Settings') }}</a>
-                <a href="{{ url_for('system_info') }}" class="btn btn-secondary m-2">{{ trans('System info') }}</a>
+                <a href="{{ url_for('reports.reports') }}" class="btn btn-secondary m-2">{{ trans('Reports') }}</a>
+                <a href="{{ url_for('main.page', name='help') }}" class="btn btn-secondary m-2">{{ trans('Help') }}</a>
+                <a href="{{ url_for('settings.settings') }}" class="btn btn-secondary m-2">{{ trans('Settings') }}</a>
+                <a href="{{ url_for('settings.system_info') }}" class="btn btn-secondary m-2">{{ trans('System info') }}</a>
             </div>
         </div>
     </div>
@@ -147,7 +147,7 @@
             <div class="d-grid gap-2 d-md-block ms-0 ms-md-3" id="counter_video">
                 {% for k in object_counters %}
                     <div class="btn-group m-2" role="group" aria-label="" id="counter_video_{{ k }}">
-                        <a href="{{ url_for('counter_video', location=k) }}"
+                        <a href="{{ url_for('counters.counter_video', location=k) }}"
                            class="btn btn-{{ counter_status_class(k) }}">
                             {{ object_counters[k]|striptags|title }}
                         </a>
@@ -157,7 +157,7 @@
                             <ul class="dropdown-menu">
                                 <li>
                                     <a class="dropdown-item counter_run {% if counter_status(k) == 'running' %}disabled{% endif %}"
-                                       href="{{ url_for('counter_video', location=k) }}" target="_blank">
+                                       href="{{ url_for('counters.counter_video', location=k) }}" target="_blank">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
                                              fill="currentColor"
                                              class="bi bi-power" viewBox="0 0 18 18">
@@ -169,7 +169,7 @@
                                 </li>
                                 <li>
                                     <a class="dropdown-item counter_stop {% if counter_status(k) == 'stopped' %}disabled{% endif %}"
-                                       href="{{ url_for('stop_count', location=k) }}">
+                                       href="{{ url_for('counters.stop_count', location=k) }}">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
                                              fill="currentColor"
                                              class="bi bi-stop-fill" viewBox="0 0 18 18">
@@ -183,7 +183,7 @@
                                 </li>
                                 <li>
                                     <a class="dropdown-item counter_start {% if counter_status(k) not in ['paused'] %}disabled{% endif %}"
-                                       href="{{ url_for('start_count', location=k) }}">
+                                       href="{{ url_for('counters.start_count', location=k) }}">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
                                              fill="currentColor"
                                              class="bi bi-play-fill" viewBox="0 0 18 18">
@@ -194,7 +194,7 @@
                                 </li>
                                 <li>
                                     <a class="dropdown-item counter_pause {% if counter_status(k) in ['paused', 'stopped'] %}disabled{% endif %}"
-                                       href="{{ url_for('pause_count', location=k) }}">
+                                       href="{{ url_for('counters.pause_count', location=k) }}">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
                                              fill="currentColor"
                                              class="bi bi-pause-fill" viewBox="0 0 18 18">
@@ -218,7 +218,7 @@
             <div class="d-grid gap-1 d-md-block ms-0 ms-md-3" id="counter_text">
                 {% for k in object_counters %}
                     <div class="btn-group m-2" role="group" aria-label="" id="counter_text_{{ k }}">
-                        <a href="{{ url_for('counter_text', location=k) }}"
+                        <a href="{{ url_for('counters.counter_text', location=k) }}"
                            class="btn btn-{{ counter_status_class(k) }}">
                             {{ object_counters[k]|striptags|title }}
                         </a>
@@ -229,7 +229,7 @@
                             <ul class="dropdown-menu">
                                 <li>
                                     <a class="dropdown-item counter_run {% if counter_status(k) == 'running' %}disabled{% endif %}"
-                                       href="{{ url_for('counter_text', location=k) }}"
+                                       href="{{ url_for('counters.counter_text', location=k) }}"
                                        target="_blank">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
                                              fill="currentColor"
@@ -242,7 +242,7 @@
                                 </li>
                                 <li>
                                     <a class="dropdown-item counter_stop {% if counter_status(k) == 'stopped' %}disabled{% endif %}"
-                                       href="{{ url_for('stop_count', location=k) }}">
+                                       href="{{ url_for('counters.stop_count', location=k) }}">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
                                              fill="currentColor"
                                              class="bi bi-stop-fill" viewBox="0 0 18 18">
@@ -256,7 +256,7 @@
                                 </li>
                                 <li>
                                     <a class="dropdown-item counter_start {% if counter_status(k) not in ['paused'] %}disabled{% endif %}"
-                                       href="{{ url_for('start_count', location=k) }}">
+                                       href="{{ url_for('counters.start_count', location=k) }}">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
                                              fill="currentColor"
                                              class="bi bi-play-fill" viewBox="0 0 18 18">
@@ -267,7 +267,7 @@
                                 </li>
                                 <li>
                                     <a class="dropdown-item counter_pause {% if counter_status(k) in ['paused', 'stopped'] %}disabled{% endif %}"
-                                       href="{{ url_for('pause_count', location=k) }}">
+                                       href="{{ url_for('counters.pause_count', location=k) }}">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
                                              fill="currentColor"
                                              class="bi bi-pause-fill" viewBox="0 0 18 18">

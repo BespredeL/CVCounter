@@ -8,7 +8,7 @@
         <div class="col-12 col-lg-8 col-xl-9 d-flex justify-content-center position-relative my-2">
             <div class="img-container">
                 <img id="video_feed" class="text-center rounded user-select-none"
-                     src="{{ url_for('counter_get_frames', location=location) }}" alt=""/>
+                     src="{{ url_for('counters.counter_get_frames', location=location) }}" alt=""/>
             </div>
 
             <div class="{{ 'd-flex' if is_paused else 'd-none' }} justify-content-center align-items-center rounded-end-3 pause-display"
@@ -83,33 +83,33 @@
             //---------------------------------------------------------------------------
 
             $('#btn_save').on('click', function () {
-                saveCount("{{ url_for('save_count', location=location) }}");
+                saveCount("{{ url_for('counters.save_count', location=location) }}");
             });
 
             $('#btn_reset').on('click', function () {
-                resetCount("{{ url_for('reset_count', location=location) }}");
+                resetCount("{{ url_for('counters.reset_count', location=location) }}");
             });
 
             $('#btn_reset_current').on('click', function () {
-                resetCountCurrent("{{ url_for('reset_count_current', location=location) }}");
+                resetCountCurrent("{{ url_for('counters.reset_count_current', location=location) }}");
             });
 
             //---------------------------------------------------------------------------
             // Form buttons 2
             //---------------------------------------------------------------------------
             $('#btn_start').on('click', function () {
-                startCount("{{ url_for('start_count', location=location) }}");
+                startCount("{{ url_for('counters.start_count', location=location) }}");
             });
 
             $('#btn_pause').on('click', function () {
-                pauseCount("{{ url_for('pause_count', location=location) }}");
+                pauseCount("{{ url_for('counters.pause_count', location=location) }}");
             });
 
             //---------------------------------------------------------------------------
             // Dev buttons
             //---------------------------------------------------------------------------
             $('#save-capture').on('click', function () {
-                saveCapture("{{ url_for('save_capture', location=location) }}");
+                saveCapture("{{ url_for('counters.save_capture', location=location) }}");
             });
         });
     </script>

@@ -254,3 +254,20 @@ class DatabaseManager:
             return None  # Return None on error
         finally:
             session.close()
+
+    def close(self) -> None:
+        """
+        Closes all database connections and releases resources.
+        
+        This method should be called when the application is shutting down
+        to properly close all database connections.
+        
+        Returns:
+            None
+        """
+        try:
+            if hasattr(self, '_DatabaseManager__engine'):
+                self.__engine.dispose()
+                self.__logger.info("Database connections closed successfully")
+        except Exception as e:
+            self.__logger.error(f"Error closing database connections: {e}")
