@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 28.04.2025
+# Updated: 22.01.2026
 # Website: https://bespredel.name
 
 import json
@@ -75,15 +75,15 @@ class DatabaseManager:
                 new_custom_fields = json.loads(custom_fields if custom_fields else '{}')
 
             if result:
-                # Обновляем существующие custom_fields
+                # Updating existing custom_fields
                 existing_custom_fields = json.loads(result.custom_fields if result.custom_fields else '{}')
                 if new_custom_fields:
-                    # Объединение нового и существующего словаря
+                    # Combining new and existing vocabulary
                     existing_custom_fields.update(new_custom_fields)
                     custom_fields = json.dumps(existing_custom_fields)
 
             if result:
-                # Обновляем существующую запись
+                # Updating an existing record
                 result.active = active
                 result.total_count = total_count
                 result.source_count = source_count
@@ -92,7 +92,7 @@ class DatabaseManager:
                 result.custom_fields = custom_fields
                 result.updated_at = datetime.now()
             else:
-                # Вставляем новую запись
+                # Insert a new record
                 new_result = CVCounter(
                     active=active,
                     location=location,
