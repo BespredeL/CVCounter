@@ -42,12 +42,25 @@ def create_app(config_path: str = "config.json", test_config: dict = None):
         tuple: (Flask app instance, SocketIO instance, application context dict)
     """
 
-    # Init config
-    _config = init_config(config_path)
+    # Init config with error handling
+    try:
+        _config = init_config(config_path)
+    except Exception as e:
+        from system.utils.logger import Logger
+        logger = Logger()
+        logger.error(f"Failed to initialize configuration: {e}")
+        logger.log_exception()
+        raise
 
     # System check
-    if _config.get("general.system_check", False):
-        system_check()
+    try:
+        if _config.get("general.system_check", False):
+            system_check()
+    except Exception as e:
+        from system.utils.logger import Logger
+        logger = Logger()
+        logger.warning(f"System check failed: {e}")
+        # Continue even if system check fails
 
     # Generate and save secret key if not set
     if not _config.get("server.secret_key"):
@@ -115,6 +128,9 @@ def create_app(config_path: str = "config.json", test_config: dict = None):
 
     # Register blueprints
     register_blueprints(_app)
+
+    # Register error handlers
+    register_error_handlers(_app, app_context)
 
     # Register signal handlers
     register_signal_handlers(app_context)
@@ -229,7 +245,8 @@ def setup_authentication(context: dict):
         None
     """
     from system.auth import setup_auth
-    setup_auth()
+    # Pass context directly to avoid Flask context issues during initialization
+    setup_auth(context)
 
 
 def register_blueprints(app: Flask):
@@ -246,6 +263,116 @@ def register_blueprints(app: Flask):
     app.register_blueprint(counters_bp)
     app.register_blueprint(reports_bp)
     app.register_blueprint(settings_bp)
+
+
+def register_error_handlers(app: Flask, context: dict):
+    """
+    Register error handlers for the application.
+
+    Args:
+        app (Flask): Flask application instance
+        context (dict): Application context dictionary
+
+    Returns:
+        None
+    """
+    from flask import render_template, request
+    from system.utils.logger import Logger
+    from system.utils.exception_handler import (
+        BaseError,
+        ConfigError,
+        ConfigNotFoundError,
+        InvalidConfigError,
+        ObjectDetectionError,
+        VideoStreamError
+    )
+
+    logger = Logger()
+
+    @app.errorhandler(400)
+    def bad_request(error):
+        """Handle 400 Bad Request errors."""
+        logger.warning(f"Bad Request: {request.url} - {error.description if hasattr(error, 'description') else str(error)}")
+        return render_template('errors/400.html', error=error), 400
+
+    @app.errorhandler(401)
+    def unauthorized(error):
+        """Handle 401 Unauthorized errors."""
+        logger.warning(f"Unauthorized access attempt: {request.url}")
+        return render_template('errors/401.html', error=error), 401
+
+    @app.errorhandler(403)
+    def forbidden(error):
+        """Handle 403 Forbidden errors."""
+        logger.warning(f"Forbidden access: {request.url} - {error.description if hasattr(error, 'description') else str(error)}")
+        return render_template('errors/403.html', error=error), 403
+
+    @app.errorhandler(404)
+    def not_found(error):
+        """Handle 404 Not Found errors."""
+        logger.debug(f"Page not found: {request.url}")
+        return render_template('errors/404.html', error=error), 404
+
+    @app.errorhandler(500)
+    def internal_server_error(error):
+        """Handle 500 Internal Server Error."""
+        logger.error(f"Internal Server Error: {request.url} - {str(error)}")
+        logger.log_exception()
+        return render_template('errors/500.html', error=error), 500
+
+    @app.errorhandler(ConfigNotFoundError)
+    def config_not_found_error(error):
+        """Handle configuration file not found errors."""
+        logger.error(f"Configuration error: {error.message}")
+        return render_template('errors/config_error.html', error=error, error_type="Configuration File Not Found"), 500
+
+    @app.errorhandler(InvalidConfigError)
+    def invalid_config_error(error):
+        """Handle invalid configuration errors."""
+        logger.error(f"Invalid configuration: {error.message}")
+        if hasattr(error, 'details') and error.details and 'validation_errors' in error.details:
+            logger.error(f"Validation errors: {error.details['validation_errors']}")
+        return render_template('errors/config_error.html', error=error, error_type="Invalid Configuration"), 500
+
+    @app.errorhandler(ConfigError)
+    def config_error(error):
+        """Handle general configuration errors."""
+        logger.error(f"Configuration error: {error.message}")
+        return render_template('errors/config_error.html', error=error, error_type="Configuration Error"), 500
+
+    @app.errorhandler(ObjectDetectionError)
+    def object_detection_error(error):
+        """Handle object detection errors."""
+        logger.error(f"Object detection error: {error.message}")
+        logger.log_exception()
+        return render_template('errors/500.html', error=error, error_message="Object detection error occurred"), 500
+
+    @app.errorhandler(VideoStreamError)
+    def video_stream_error(error):
+        """Handle video stream errors."""
+        logger.error(f"Video stream error: {error.message}")
+        logger.log_exception()
+        return render_template('errors/500.html', error=error, error_message="Video stream error occurred"), 500
+
+    @app.errorhandler(BaseError)
+    def base_error(error):
+        """Handle base application errors."""
+        logger.error(f"Application error: {error.message}")
+        logger.log_exception()
+        return render_template('errors/500.html', error=error, error_message=error.message), 500
+
+    @app.errorhandler(Exception)
+    def handle_exception(error):
+        """Handle all unhandled exceptions."""
+        logger.error(f"Unhandled exception: {type(error).__name__}: {str(error)}")
+        logger.log_exception()
+
+        # In debug mode, show more details
+        if context['config'].get('general.debug', False):
+            import traceback
+            return render_template('errors/500.html', error=error, error_message=str(error), traceback=traceback.format_exc()), 500
+
+        return render_template('errors/500.html', error=error, error_message="An unexpected error occurred"), 500
 
 
 def register_signal_handlers(context: dict):
@@ -302,7 +429,7 @@ def register_signal_handlers(context: dict):
         except Exception as e:
             logger.error(f"Error closing database: {e}")
 
-        logger.info("Graceful shutdown completed.")
+        logger.info("Shutdown completed.")
         sys.exit(0)
 
     # Register signal handlers

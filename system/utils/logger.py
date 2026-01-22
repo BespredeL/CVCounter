@@ -10,8 +10,6 @@ import logging
 import traceback
 from typing import Optional
 
-from system.managers.config_manager import config
-
 
 class Logger:
     _instance: Optional['Logger'] = None
@@ -33,10 +31,15 @@ class Logger:
         log_level_name = 'INFO'
         log_console = False
 
-        if config is not None:
-            log_path = config.get('general.log_path', log_path)
-            log_level_name = config.get('general.log_level', log_level_name)
-            log_console = bool(config.get('general.log_console', log_console))
+        try:
+            from system.managers.config_manager import config
+            if config is not None:
+                log_path = config.get('general.log_path', log_path)
+                log_level_name = config.get('general.log_level', log_level_name)
+                log_console = bool(config.get('general.log_console', log_console))
+        except (ImportError, AttributeError):
+            # Config not available yet, use defaults
+            pass
 
         log_level = getattr(logging, str(log_level_name).upper(), logging.INFO)
 
@@ -124,13 +127,34 @@ class Logger:
         """
         self._logger.debug(msg)
 
-    def log_exception(self) -> None:
+    def log_exception(self, exc_info=None) -> None:
         """
         Logs the exception that occurred during the execution of the program.
-        This function takes no parameters.
+
+        Args:
+            exc_info: Exception info tuple (sys.exc_info()) or None to use current exception
 
         Returns:
             None
         """
-        exception_info: str = traceback.format_exc()
+        if exc_info is None:
+            exception_info: str = traceback.format_exc()
+        else:
+            exception_info: str = ''.join(traceback.format_exception(*exc_info))
         self._logger.error("Exception occurred:\n%s", exception_info)
+
+    def exception(self, msg: str, exc_info=None) -> None:
+        """
+        Logs an exception with a message.
+
+        Args:
+            msg (str): The error message to log
+            exc_info: Exception info tuple (sys.exc_info()) or None to use current exception
+
+        Returns:
+            None
+        """
+        if exc_info is None:
+            self._logger.error(msg, exc_info=True)
+        else:
+            self._logger.error(msg, exc_info=exc_info)

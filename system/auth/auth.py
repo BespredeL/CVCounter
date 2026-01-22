@@ -36,7 +36,7 @@ def get_auth() -> HTTPBasicAuth:
     return context['auth']
 
 
-def setup_auth() -> HTTPBasicAuth:
+def setup_auth(context: dict = None) -> HTTPBasicAuth:
     """
     Setup and configure authentication.
     
@@ -44,13 +44,30 @@ def setup_auth() -> HTTPBasicAuth:
     It should be called once during application initialization.
     The function is idempotent - it can be called multiple times safely.
     
+    Args:
+        context (dict, optional): Application context dictionary. If not provided,
+                                 will try to get it from Flask's application context.
+    
     Returns:
         HTTPBasicAuth: Configured HTTPBasicAuth instance
     """
-    auth = get_auth()
-    context = get_app_context()
-    users = context['users']
-
+    # Get auth instance
+    if context is not None:
+        auth = context['auth']
+        users = context['users']
+    else:
+        # Try to get from Flask context (for runtime use)
+        try:
+            auth = get_auth()
+            context = get_app_context()
+            users = context['users']
+        except RuntimeError:
+            # Working outside of application context
+            raise RuntimeError(
+                "setup_auth() called without context and outside Flask application context. "
+                "Provide context parameter during initialization."
+            )
+    
     # Check if verify_password is already set to avoid re-registration
     if not hasattr(auth, '_cvcounter_configured'):
         @auth.verify_password
@@ -65,13 +82,23 @@ def setup_auth() -> HTTPBasicAuth:
             Returns:
                 str | None: Username if credentials are valid, None otherwise
             """
-            if username in users and werkzeug_check_password_hash(users.get(username), password):
+            # Get users from context (may have been updated)
+            if context is not None:
+                current_users = context['users']
+            else:
+                try:
+                    current_context = get_app_context()
+                    current_users = current_context['users']
+                except RuntimeError:
+                    current_users = users
+            
+            if username in current_users and werkzeug_check_password_hash(current_users.get(username), password):
                 return username
             return None
-
+        
         # Mark as configured to avoid re-registration
         auth._cvcounter_configured = True
-
+    
     return auth
 
 

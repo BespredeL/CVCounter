@@ -164,7 +164,7 @@ class ThreadManager:
             
         Note:
             This method should be called when the application is shutting down.
-            It will attempt to stop all threads gracefully.
+            It will attempt to stop all threads.
         """
         if timeout is None:
             timeout = self._shutdown_timeout
