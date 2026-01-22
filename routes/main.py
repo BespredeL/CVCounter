@@ -19,9 +19,7 @@ main_bp = Blueprint('main', __name__)
 
 
 def get_app_context():
-    """
-    Get application context from g or current_app.
-    """
+    """Get application context from g or current_app."""
     if not hasattr(g, 'app_context'):
         g.app_context = current_app.config.get('APP_CONTEXT')
     return g.app_context

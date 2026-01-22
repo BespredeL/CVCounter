@@ -71,19 +71,19 @@ def create_app(config_path: str = "config.json", test_config: dict = None):
         _app.config["TEMPLATES_AUTO_RELOAD"] = True
 
     # Configure Socket.IO
-    _allowed_origins = _config.get("server.allowed_origins", ["http://localhost:8080"])
-    _socketio = SocketIO(_app, async_mode="threading", cors_allowed_origins=_allowed_origins)
+    allowed_origins = _config.get("server.allowed_origins", ["http://localhost:8080"])
+    _socketio = SocketIO(_app, async_mode="threading", cors_allowed_origins=allowed_origins)
 
     # Auth
     _auth = HTTPBasicAuth()
-    _users = _config.get("users", {})
+    users = _config.get("users", {})
 
     # Set table prefix
     TablePrefixBase.set_table_prefix(_config.get("db.prefix", ""))
 
     # Start DB
-    _db_uri = _config.get("db.uri") or "sqlite:///:memory:"
-    _db_manager = DatabaseManager(uri=_db_uri, prefix=_config.get("db.prefix"))
+    db_uri = _config.get("db.uri") or "sqlite:///:memory:"
+    _db_manager = DatabaseManager(uri=db_uri, prefix=_config.get("db.prefix"))
 
     # Init objects
     _object_counters: dict[str, ObjectCounter] = {}
@@ -100,7 +100,7 @@ def create_app(config_path: str = "config.json", test_config: dict = None):
         'thread_manager': _thread_manager,
         'lock': _lock,
         'auth': _auth,
-        'users': _users,
+        'users': users,
         'socketio': _socketio
     }
 
@@ -109,6 +109,9 @@ def create_app(config_path: str = "config.json", test_config: dict = None):
 
     # Register template filters and globals
     register_template_helpers(_app, app_context)
+
+    # Setup authentication
+    setup_authentication(app_context)
 
     # Register blueprints
     register_blueprints(_app)
@@ -137,21 +140,46 @@ def register_template_helpers(app: Flask, context: dict):
 
     @app.template_filter('slug')
     def _slug(string: str) -> str:
-        """Convert a string to a URL-friendly slug."""
+        """
+        Convert a string to a URL-friendly slug.
+
+        Args:
+            string (str): Input string
+
+        Returns:
+            str: URL-friendly slug
+        """
         if not string:
             return ""
         return slug(string)
 
     @app.template_global()
     def trans(string: str, **kwargs: dict) -> str:
-        """Translate a string using the configured language."""
+        """
+        Translate a string using the configured language.
+
+        Args:
+            string (str): Input string
+            **kwargs (dict): Additional keyword arguments
+
+        Returns:
+            str: Translated string
+        """
         if kwargs.get('lang') is None:
             kwargs['lang'] = config.get('general.default_language', 'ru')
         return translate(string, **kwargs)
 
     @app.template_global()
     def counter_status(key: str) -> str:
-        """Get the current status of a counter."""
+        """
+        Get the current status of a counter.
+
+        Args:
+            key (str): Counter key
+
+        Returns:
+            str: Counter status
+        """
         if key not in thread_manager.threads:
             return 'stopped'
         if key not in object_counters:
@@ -162,7 +190,15 @@ def register_template_helpers(app: Flask, context: dict):
 
     @app.template_global()
     def counter_status_class(key: str) -> str:
-        """Get the CSS class for a counter's status."""
+        """
+        Get the CSS class for a counter's status.
+
+        Args:
+            key (str): Counter key
+
+        Returns:
+            str: CSS class
+        """
         if key not in thread_manager.threads:
             return 'secondary'
         if key not in object_counters:
@@ -173,12 +209,39 @@ def register_template_helpers(app: Flask, context: dict):
 
     @app.context_processor
     def utility_processor() -> dict:
-        """Add global variables to all template contexts."""
+        """
+        Add global variables to all template contexts.
+
+        Returns:
+            dict: Global variables
+        """
         return dict(config=config)
 
 
+def setup_authentication(context: dict):
+    """
+    Setup authentication for the application.
+    
+    Args:
+        context (dict): Application context dictionary
+    
+    Returns:
+        None
+    """
+    from system.auth import setup_auth
+    setup_auth()
+
+
 def register_blueprints(app: Flask):
-    """Register all application blueprints."""
+    """
+    Register all application blueprints.
+
+    Args:
+        app (Flask): Flask application instance
+
+    Returns:
+        None
+    """
     app.register_blueprint(main_bp)
     app.register_blueprint(counters_bp)
     app.register_blueprint(reports_bp)
@@ -186,18 +249,27 @@ def register_blueprints(app: Flask):
 
 
 def register_signal_handlers(context: dict):
-    """Register signal handlers for graceful shutdown."""
+    """
+    Register signal handlers for shutdown.
+    """
+
     thread_manager = context['thread_manager']
     object_counters = context['object_counters']
     lock = context['lock']
     db_manager = context['db_manager']
 
     def shutdown_handler(signum=None, frame=None):
-        """Graceful shutdown handler for the application."""
+        """
+        Shutdown handler for the application.
+
+        Args:
+            signum (int): Signal number.
+            frame (frame): Current stack frame.
+        """
         from system.utils.logger import Logger
         logger = Logger()
 
-        logger.info("Received shutdown signal. Starting graceful shutdown...")
+        logger.info("Received shutdown signal. Starting shutdown...")
 
         # Stop all threads and object counters
         try:
@@ -243,7 +315,7 @@ def register_signal_handlers(context: dict):
     try:
         signal.signal(signal.SIGINT, shutdown_handler)
     except (ValueError, OSError):
-        # This should not happen, but handle it gracefully
+        # This should not happen, but need try handle it this shit
         pass
 
 
@@ -265,7 +337,7 @@ config = app_context['config']
 if __name__ == '__main__':
     """
     Main entry point for the application.
-    Starts the Flask development server with configured settings.
+    Starts the Flask server with configured settings.
     """
     try:
         socketio.run(
