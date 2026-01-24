@@ -387,7 +387,7 @@ def save_capture(location: str = None) -> dict[str, str] | Response:
 
     object_counters[location].save_capture()
 
-    if is_ajax() is True:
+    if is_ajax():
         return {'status': 'saved'}
     return redirect(url_for('main.index'))
 
@@ -409,7 +409,7 @@ def start_count(location: str = None) -> dict[str, str] | Response:
 
     object_counters[location].start()
 
-    if is_ajax() is True:
+    if is_ajax():
         return {'status': 'started'}
     return redirect(url_for('main.index'))
 
@@ -431,7 +431,7 @@ def pause_count(location: str = None) -> dict[str, str] | Response:
 
     object_counters[location].pause()
 
-    if is_ajax() is True:
+    if is_ajax():
         return {'status': 'paused'}
     return redirect(url_for('main.index'))
 
@@ -461,6 +461,6 @@ def stop_count(location: str = None) -> dict[str, str] | Response:
         if location in object_counters:
             del object_counters[location]
 
-    if is_ajax() is True:
+    if is_ajax():
         return {'status': 'stopped'}
     return redirect(url_for('main.index'))
