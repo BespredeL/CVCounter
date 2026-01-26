@@ -105,6 +105,10 @@ startup).
         "debug": true,
         // path to log file
         "log_path": "errors.log",
+        // minimal log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+        "log_level": "INFO",
+        // enable console log output (recommended false in production)
+        "log_console": false,
         // default language
         "default_language": "ru",
         // allow unsafe operations in werkzeug
@@ -130,7 +134,9 @@ startup).
         // enable log output
         "log_output": true,
         // socketio key
-        "socketio_key": ""
+        "socketio_key": "",
+        // allowed origins
+        "allowed_origins": "*"
     },
     "users": {
         // login:password default admin:admin

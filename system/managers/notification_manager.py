@@ -10,7 +10,16 @@ from system.utils.exception_handler import InvalidLocationError, MissingSocketIn
 
 
 class NotificationManager:
+
     def __init__(self, socketio: any, location: str) -> None:
+        """
+        Notification manager using SocketIO.
+
+        Args:
+            socketio (any): The SocketIO instance.
+            location (str): The location of the notification.
+        """
+
         if not socketio:
             raise MissingSocketInstanceError("SocketIO instance is required")
 

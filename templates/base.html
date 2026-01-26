@@ -8,7 +8,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
-    <title>{% if url_for(request.endpoint, **request.view_args) != "/" %}CVCounter - {% endif %}{% block title %}{% endblock %}</title>
+    <title>{% if request.endpoint and request.view_args is not none and url_for(request.endpoint, **(request.view_args or {})) != "/" %}
+        CVCounter - {% endif %}{% block title %}{% endblock %}</title>
     <!-- Styles -->
     <link rel="shortcut icon" href="{{ url_for('static', filename='icons/favicon.ico') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
@@ -120,7 +121,7 @@
                 </a>
             {% endif %}
 
-            {% if config.get('general.button_save_capture') and url_for(request.endpoint, **request.view_args).startswith('/counter') %}
+            {% if config.get('general.button_save_capture') and request.endpoint and url_for(request.endpoint, **(request.view_args or {})).startswith('/counter') %}
                 <button type="button" class="btn btn-sm d-flex align-items-center" id="save-capture"
                         data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{ trans('Save capture to disk') }}">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-floppy"
@@ -135,7 +136,7 @@
         <div class="translate-middle-x d-none d-md-block"></div>
 
         <div class="d-flex align-items-center justify-content-end py-2">
-            {% if url_for(request.endpoint, **request.view_args) == "/" %}
+            {% if request.endpoint and url_for(request.endpoint, **(request.view_args or {})) == "/" %}
                 <a href="https://createdby.ru" class="d-none d-sm-block text-body-secondary text-decoration-none font-monospace lh-1 small"
                    data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
                    data-bs-title="Computer Vision Counter"

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Unauthorized{% endblock %}
+
+{% block content %}
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h4 class="mb-0"><i class="bi bi-lock"></i> 401 - Unauthorized</h4>
+                    </div>
+                    <div class="card-body">
+                        <p class="lead">{{ trans('Authentication required to access this resource.') }}</p>
+                        <p>{{ trans('Please provide valid credentials.') }}</p>
+                        <hr>
+                        <a href="{{ url_for('main.index') }}" class="btn btn-primary">{{ trans('Go to Home') }}</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

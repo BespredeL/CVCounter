@@ -3,13 +3,17 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 26.12.2024
-# Updated: 03.12.2025
+# Updated: 12.01.2026
 # Website: https://bespredel.name
 
-from ultralytics import YOLO, settings
+import gc
+import torch
 
-from system.utils.exception_handler import ModelLoadingError, ModelNotFoundError
+# from datetime import datetime
+from ultralytics import YOLO, settings
 from system.object_detection.base_object_detection import BaseObjectDetectionService
+from system.utils.exception_handler import ModelLoadingError, ModelNotFoundError
+from system.utils.utils import pr_color
 
 
 class ObjectDetectionYOLO(BaseObjectDetectionService):
@@ -50,8 +54,14 @@ class ObjectDetectionYOLO(BaseObjectDetectionService):
             iou=self.iou,
             device=self.device,
             vid_stride=self.vid_stride,
-            classes=self.classes_list
+            classes=self.classes_list,
+            # half=True
         )
+
+        # Clearing the context every hour
+        # dt_now = datetime.now()
+        # if dt_now.minute == 0 and dt_now.second == 1:
+        #    self.cleanup()
 
         boxes = results[0].boxes
         boxes_xyxy = boxes.xyxy.cpu().numpy()
@@ -86,3 +96,15 @@ class ObjectDetectionYOLO(BaseObjectDetectionService):
             self.model = YOLO(weights)
         except Exception as e:
             raise ModelLoadingError(f"Error loading model: {e}")
+
+    def cleanup(self):
+        """
+        Cleaning resources
+
+        Returns:
+            None
+        """
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            gc.collect()
+            pr_color("Context cleared", 'green')

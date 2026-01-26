@@ -95,12 +95,12 @@
             //---------------------------------------------------------------------------
 
             $('.btn_save').on('click', function () {
-                let save_url = '{{ url_for('save_count', location=location) }}';
+                let save_url = '{{ url_for('counters.save_count', location=location) }}';
 
                 let total_count_id = '.total_count_txt';
                 if (this.dataset.location) {
                     total_count_id = ".total_count_" + this.dataset.location;
-                    save_url = '{{ url_for('save_count', location='') }}' + this.dataset.location;
+                    save_url = '{{ url_for('counters.save_count', location='') }}' + this.dataset.location;
                 }
 
                 $.ajax({
@@ -120,12 +120,12 @@
             });
 
             $('.btn_reset').on('click', function () {
-                let reset_url = '{{ url_for('reset_count', location=location) }}';
+                let reset_url = '{{ url_for('counters.reset_count', location=location) }}';
 
                 let total_count_id = '.total_count_txt';
                 if (this.dataset.location) {
                     total_count_id = ".total_count_" + this.dataset.location;
-                    reset_url = '{{ url_for('reset_count', location='') }}' + this.dataset.location;
+                    reset_url = '{{ url_for('counters.reset_count', location='') }}' + this.dataset.location;
                 }
 
                 $.ajax({
@@ -142,12 +142,12 @@
             });
 
             $('.btn_reset_current').on('click', function () {
-                let reset_current_url = '{{ url_for('reset_count_current', location=location) }}';
+                let reset_current_url = '{{ url_for('counters.reset_count_current', location=location) }}';
 
                 let current_count_id = '.current_count_txt';
                 if (this.dataset.location) {
                     current_count_id = ".current_count_" + this.dataset.location;
-                    reset_current_url = '{{ url_for('reset_count_current', location='') }}' + this.dataset.location;
+                    reset_current_url = '{{ url_for('counters.reset_count_current', location='') }}' + this.dataset.location;
                 }
 
                 $.ajax({

@@ -3,14 +3,12 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 28.04.2025
+# Updated: 03.12.2025
 # Website: https://bespredel.name
 
 import logging
 import traceback
 from typing import Optional
-
-from system.managers.config_manager import config
 
 
 class Logger:
@@ -26,31 +24,45 @@ class Logger:
         """
         Initializes the logger.
         """
-        if not self._initialized:
-            self._logger: logging.Logger = logging.getLogger(__name__)
-            self._logger.setLevel(logging.DEBUG)
+        if self._initialized:
+            return
 
-            # Create a handler for writing to file
-            file_handler: logging.FileHandler = logging.FileHandler(
-                config.get('general.log_path', 'errors.log') if config else 'errors.log',
-                encoding='utf-8'
-            )
-            file_handler.setLevel(logging.DEBUG)
+        log_path = 'errors.log'
+        log_level_name = 'INFO'
+        log_console = False
 
-            # Create a handler for console output
-            console_handler: logging.StreamHandler = logging.StreamHandler()
-            console_handler.setLevel(logging.DEBUG)
+        try:
+            from system.managers.config_manager import config
+            if config is not None:
+                log_path = config.get('general.log_path', log_path)
+                log_level_name = config.get('general.log_level', log_level_name)
+                log_console = bool(config.get('general.log_console', log_console))
+        except (ImportError, AttributeError):
+            # Config not available yet, use defaults
+            pass
 
+        log_level = getattr(logging, str(log_level_name).upper(), logging.INFO)
+
+        self._logger: logging.Logger = logging.getLogger("cvcounter")
+        self._logger.setLevel(log_level)
+
+        if not self._logger.handlers:
             formatter: logging.Formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+
+            # File handler
+            file_handler: logging.FileHandler = logging.FileHandler(log_path, encoding='utf-8')
+            file_handler.setLevel(log_level)
             file_handler.setFormatter(formatter)
-            console_handler.setFormatter(formatter)
-
-            # Add handlers to the logger
             self._logger.addHandler(file_handler)
-            self._logger.addHandler(console_handler)
 
-            self.print_logs: bool = True
-            self._initialized = True
+            # Console handler (optional)
+            if log_console:
+                console_handler: logging.StreamHandler = logging.StreamHandler()
+                console_handler.setLevel(log_level)
+                console_handler.setFormatter(formatter)
+                self._logger.addHandler(console_handler)
+
+        self._initialized = True
 
     def log(self, level: int, msg: str, *args, **kwargs) -> None:
         """
@@ -115,13 +127,34 @@ class Logger:
         """
         self._logger.debug(msg)
 
-    def log_exception(self) -> None:
+    def log_exception(self, exc_info=None) -> None:
         """
         Logs the exception that occurred during the execution of the program.
-        This function takes no parameters.
+
+        Args:
+            exc_info: Exception info tuple (sys.exc_info()) or None to use current exception
 
         Returns:
             None
         """
-        exception_info: str = traceback.format_exc()
+        if exc_info is None:
+            exception_info: str = traceback.format_exc()
+        else:
+            exception_info: str = ''.join(traceback.format_exception(*exc_info))
         self._logger.error("Exception occurred:\n%s", exception_info)
+
+    def exception(self, msg: str, exc_info=None) -> None:
+        """
+        Logs an exception with a message.
+
+        Args:
+            msg (str): The error message to log
+            exc_info: Exception info tuple (sys.exc_info()) or None to use current exception
+
+        Returns:
+            None
+        """
+        if exc_info is None:
+            self._logger.error(msg, exc_info=True)
+        else:
+            self._logger.error(msg, exc_info=exc_info)

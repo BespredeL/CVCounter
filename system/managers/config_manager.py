@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 from system.utils.exception_handler import ConfigError, ConfigNotFoundError, InvalidConfigError
+from system.utils.config_validator import validate_config
 
 """ Global variable to store the configuration data. """
 config = None
@@ -45,13 +46,17 @@ class ConfigManager:
 
         Raises:
             ConfigNotFoundError: If the configuration file doesn't exist.
-            InvalidConfigError: If the configuration file contains invalid JSON.
+            InvalidConfigError: If the configuration file contains invalid JSON or validation fails.
         """
         try:
             with open(self._config_path, 'r', encoding='utf-8') as config_file:
                 config_data = json.load(config_file)
                 if not isinstance(config_data, dict):
                     raise InvalidConfigError("Configuration must be a JSON object")
+                
+                # Validate configuration
+                validate_config(config_data, self._config_path, raise_on_error=True)
+                
                 return config_data
         except FileNotFoundError:
             raise ConfigNotFoundError(f"Configuration file '{self._config_path}' does not exist")
@@ -165,15 +170,27 @@ class ConfigManager:
             logging.error(f"Error saving configuration: {str(e)}")
             raise ConfigError(f"Failed to save configuration: {str(e)}")
 
-    def reload_config(self) -> None:
+    def reload_config(self, validate: bool = True) -> None:
         """
         Reloads the configuration file from disk.
+
+        Args:
+            validate (bool): Whether to validate the configuration after reloading. Defaults to True.
 
         Returns:
             None
         """
         try:
-            self._config = self.read_config()
+            # Temporarily disable validation if requested
+            if not validate:
+                # Read without validation
+                with open(self._config_path, 'r', encoding='utf-8') as config_file:
+                    config_data = json.load(config_file)
+                    if not isinstance(config_data, dict):
+                        raise InvalidConfigError("Configuration must be a JSON object")
+                    self._config = config_data
+            else:
+                self._config = self.read_config()
         except ConfigError as e:
             logging.error(f"Error reloading configuration: {str(e)}")
             raise

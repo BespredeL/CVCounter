@@ -1,7 +1,10 @@
 {
     "general": {
         "debug": true,
+        "system_check": true,
         "log_path": "errors.log",
+        "log_level": "INFO",
+        "log_console": false,
         "default_language": "ru",
         "allow_unsafe_werkzeug": false,
         "button_change_theme": true,
@@ -15,7 +18,8 @@
         "port": 8080,
         "use_reloader": false,
         "log_output": false,
-        "secret_key": ""
+        "secret_key": "",
+        "allowed_origins": "*"
     },
     "users": {
         "admin": "scrypt:32768:8:1$rsdPYhqaQqpXQQ0o$aa3359c86228b4cee5fe8c4ed694db4b371fa7fab5100fa7b446db7e1ed8077e3bb63228d4a1899aeeef9b8d15f8e8bdbcc3457f020bcb3ec320332c76b5896b"
@@ -98,8 +102,8 @@
         "recording": {
             "enable": false,
             "path": "yolo_cfg/saved_recordings",
-            "scale": 100,
-            "quality": 80
+            "scale": 50,
+            "quality": 70
         }
     },
     "detections": {
