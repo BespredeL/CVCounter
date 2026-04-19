@@ -17,9 +17,9 @@
 
 # General -------------------------------------
 filterpy==1.4.5
-Flask-HTTPAuth==4.8.0
-Flask-SocketIO==5.5.1
-Flask==3.1.2
+Flask-HTTPAuth==4.8.*
+Flask-SocketIO==5.6.*
+Flask==3.1.*
 imutils==0.5.4
 MarkupSafe==2.1.5
 matplotlib==3.8.4
@@ -31,7 +31,7 @@ scikit-image==0.22
 shapely==2.0.5
 SQLAlchemy==2.0.37
 mysql-connector-python==9.3
-ultralytics==8.3.*
+ultralytics==8.4.*
 Werkzeug==3.1.*
 
 # Export --------------------------------------
