@@ -377,6 +377,8 @@ Ultralytics: [https://github.com/ultralytics](https://github.com/ultralytics)
 **AGPL-3.0 License**: Эта [OSI-approved](https://opensource.org/licenses/) лицензия с открытым исходным кодом идеально подходит для
 студентов и энтузиастов, способствуя открытому сотрудничеству и обмену знаниями.
 
+---
+
 ## ⭐ Поддержка
 
 Буду признателен за звезду ⭐ на GitHub, если проект оказался полезным.
