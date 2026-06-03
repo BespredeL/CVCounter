@@ -1,13 +1,15 @@
 {% extends 'base.html' %}
 
+{% block title %}{{ trans('Reports') }}{% endblock %}
+
 {% block header %}
-    <a href="{{ url_for('main.index') }}" class="text-decoration-none text-body">
-        <h1>{% block title %}CVCounter - {{ trans('Reports') }}{% endblock %}</h1>
-    </a>
+    {% with page_title=trans('Reports') %}
+        {% include 'partials/page_header.html' %}
+    {% endwith %}
 {% endblock %}
 
 {% block breadcrumb %}
-    <nav class="col-12" aria-label="breadcrumb">
+    <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">{{ trans('Home') }}</a></li>
             <li class="breadcrumb-item active" aria-current="page">{{ trans('Reports') }}</li>
@@ -16,28 +18,37 @@
 {% endblock %}
 
 {% block content %}
-    <div class="row py-3">
-        <div class="col-12">
-            <table class="table">
-                <thead>
-                <tr>
-                    <th scope="col">#</th>
-                    <th scope="col">{{ trans('Location') }}</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for k in object_counters %}
+    {% include 'partials/inner_page_nav.html' %}
+
+    <div class="page-content">
+        <p class="text-body-secondary mb-3">{{ trans('Select a location to view saved counts.') }}</p>
+        <div class="cv-card overflow-hidden">
+            <div class="table-responsive">
+                <table class="table table-modern table-hover mb-0">
+                    <thead>
                     <tr>
-                        <th scope="row">{{ loop.index }}</th>
-                        <td>
-                            <a href="{{ url_for('reports.report_list', location=k) }}">
-                                {{ object_counters[k]|striptags|title }}
-                            </a>
-                        </td>
+                        <th scope="col" class="text-center" style="width: 4rem">#</th>
+                        <th scope="col">{{ trans('Location') }}</th>
                     </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                    {% for k in object_counters %}
+                        <tr>
+                            <th scope="row" class="text-center text-body-secondary">{{ loop.index }}</th>
+                            <td>
+                                <a href="{{ url_for('reports.report_list', location=k) }}">
+                                    {{ object_counters[k]|striptags|title }}
+                                </a>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="2" class="empty-state">{{ trans('No data') }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 {% endblock %}

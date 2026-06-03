@@ -67,7 +67,7 @@ def setup_auth(context: dict = None) -> HTTPBasicAuth:
                 "setup_auth() called without context and outside Flask application context. "
                 "Provide context parameter during initialization."
             )
-    
+
     # Check if verify_password is already set to avoid re-registration
     if not hasattr(auth, '_cvcounter_configured'):
         @auth.verify_password
@@ -91,14 +91,14 @@ def setup_auth(context: dict = None) -> HTTPBasicAuth:
                     current_users = current_context['users']
                 except RuntimeError:
                     current_users = users
-            
+
             if username in current_users and werkzeug_check_password_hash(current_users.get(username), password):
                 return username
             return None
-        
+
         # Mark as configured to avoid re-registration
         auth._cvcounter_configured = True
-    
+
     return auth
 
 

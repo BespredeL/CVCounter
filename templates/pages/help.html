@@ -1,13 +1,15 @@
 {% extends 'base.html' %}
 
+{% block title %}{{ trans('Help') }}{% endblock %}
+
 {% block header %}
-    <a href="{{ url_for('main.index') }}" class="text-decoration-none text-body">
-        <h1>CVCounter - {% block title %}{{ trans('Help') }}{% endblock %}</h1>
-    </a>
+    {% with page_title=trans('Help') %}
+        {% include 'partials/page_header.html' %}
+    {% endwith %}
 {% endblock %}
 
 {% block breadcrumb %}
-    <nav class="col-12" aria-label="breadcrumb">
+    <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">{{ trans('Home') }}</a></li>
             <li class="breadcrumb-item active" aria-current="page">{{ trans('Help') }}</li>
@@ -16,10 +18,11 @@
 {% endblock %}
 
 {% block content %}
-    <div class="col-12">
-        <div class="row py-3 mb-5">
+    {% include 'partials/inner_page_nav.html' %}
+    <div class="page-content doc-page pb-5">
+        <div class="row g-0">
             <div class="col-12 border-bottom mb-3 pb-3">
-                <div class="h4 mb-3">{{ trans('Start page') }}</div>
+                <h2 class="section-block__title">{{ trans('Start page') }}</h2>
 
                 <table class="table table-bordered mb-3">
                     <thead class="table-dark">
@@ -136,7 +139,7 @@
             </div>
 
             <div class="col-12 border-bottom mb-3 pb-3">
-                <div class="h4 mb-3">{{ trans('Video') }} / {{ trans('Text') }}</div>
+                <h2 class="section-block__title">{{ trans('Video') }} / {{ trans('Text') }}</h2>
 
                 <table class="table table-bordered mb-3">
                     <thead class="table-dark">
@@ -148,7 +151,7 @@
                     <tbody>
                     <tr>
                         <td class="align-middle">
-                            <div class="bg-warning text-dark rounded position-relative my-2 px-2"
+                            <div class="sidebar-counter-tile text-dark position-relative my-2 px-3 py-2"
                                  style="width: 100%; max-width: 250px">
                                 <div class="h4 mb-0">{{ trans('Quantity:') }} <span>1000</span></div>
                                 <div class="display-1 lh-1">9999</div>
@@ -168,7 +171,7 @@
 
                     <tr>
                         <td class="align-middle">
-                            <div class="border border-danger-subtle rounded my-2 me-3 p-2 d-inline-block"
+                            <div class="cv-panel cv-panel--danger my-2 me-3 d-inline-block"
                                  style="max-width: 290px">
                                 <div class="col-12 mb-3">
                                     <label for="defect_count" class="form-label h4">{{ trans('Defective products') }}</label>
@@ -224,7 +227,7 @@
 
                     <tr>
                         <td class="align-middle">
-                            <div class="border border-warning-subtle rounded my-2 me-3 p-2 d-inline-block" style="max-width: 290px">
+                            <div class="cv-panel cv-panel--warning my-2 me-3 d-inline-block" style="max-width: 290px">
                                 <div class="col-12 mb-3">
                                     <label for="correct_keyboard" class="form-label h4">{{ trans('Correct count') }}</label>
                                     <button class="btn btn-outline-info float-end"
@@ -345,7 +348,7 @@
             </div>
 
             <div class="col-12 border-bottom mb-3 pb-3">
-                <div class="h4 mb-3">{{ trans('Text double') }}</div>
+                <h2 class="section-block__title">{{ trans('Text double') }}</h2>
 
                 <table class="table table-bordered mb-3">
                     <thead class="table-dark">
@@ -380,7 +383,7 @@
             </div>
 
             <div class="col-12 border-bottom mb-3 pb-3">
-                <div class="h4">{{ trans('Developer') }}</div>
+                <h2 class="section-block__title">{{ trans('Developer') }}</h2>
                 <div>Александр Киреев (Aleksandr Kireev)</div>
                 <div>{{ trans('Website') }}: <a href="https://bespredel.name">https://bespredel.name</a></div>
                 <div>{{ trans('E-mail') }}: <a href="mailto:hello@bespredel.name">hello@bespredel.name</a></div>
@@ -388,12 +391,12 @@
             </div>
 
             <div class="col-12 border-bottom mb-3 pb-3">
-                <div class="h4">{{ trans('References') }}</div>
+                <h2 class="section-block__title">{{ trans('References') }}</h2>
                 <div>Ultralytics: https://github.com/ultralytics</div>
             </div>
 
             <div class="col-12 border-bottom mb-3 pb-3">
-                <div class="h4">{{ trans('License') }}</div>
+                <h2 class="section-block__title">{{ trans('License') }}</h2>
                 <div>
                     <a href="https://www.gnu.org/licenses/agpl-3.0.en.html">AGPL-3.0 License</a>
                 </div>

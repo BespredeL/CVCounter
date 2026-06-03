@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 03.12.2025
+# Updated: 03.06.2026
 # Website: https://bespredel.name
 
 import json
@@ -137,7 +137,7 @@ class ObjectCounter:
                 time.sleep(self.DEFAULT_SLEEP_TIME)
             except Exception as e:
                 print(e)
-                #self.logger.error(f"Lost connection to camera! | {self.location}: {e}")
+                # self.logger.error(f"Lost connection to camera! | {self.location}: {e}")
                 self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
                 self.notif_manager.event('counter_status', {'status': 'error', 'location': self.location})
 
@@ -352,6 +352,38 @@ class ObjectCounter:
             None
         """
         return self.paused
+
+    def get_source_frame(self) -> Optional[np.ndarray]:
+        """
+        Return a raw frame from the video source (without overlays).
+
+        Returns:
+            Optional[np.ndarray]: BGR frame or None if unavailable.
+        """
+        try:
+            return self.vsm.get_frame()
+        except Exception as e:
+            self.logger.error(f'Error reading source frame: {e}')
+            return None
+
+    def update_counting_area(
+            self,
+            counting_area: List[Tuple[int, int]],
+            counting_area_color: tuple | None = None,
+    ) -> None:
+        """
+        Update counting polygon and invalidate the point-in-polygon mask.
+
+        Args:
+            counting_area: Polygon vertices as (x, y) in frame pixel coordinates.
+            counting_area_color: Optional BGR color tuple for the overlay.
+        """
+        if len(counting_area) < 3:
+            raise ValueError('counting_area must have at least 3 points')
+        self.counting_area = [(int(p[0]), int(p[1])) for p in counting_area]
+        if counting_area_color is not None:
+            self.counting_area_color = tuple(int(c) for c in counting_area_color)
+        self._counting_mask = None
 
     def save_capture(self) -> None:
         """

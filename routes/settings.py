@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 03.12.2025
-# Updated: 22.01.2026
+# Updated: 03.06.2026
 # Website: https://bespredel.name
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
@@ -16,7 +16,11 @@ settings_bp = Blueprint('settings', __name__)
 
 
 def get_app_context():
-    """Get application context from g or current_app."""
+    """Get application context from g or current_app.
+    
+    Returns:
+        dict: Application context
+    """
     if not hasattr(g, 'app_context'):
         g.app_context = current_app.config.get('APP_CONTEXT')
     return g.app_context

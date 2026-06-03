@@ -1,0 +1,17 @@
+{# error_code, error_title, message, extra_html optional #}
+<div class="error-page-wrap">
+    <div class="col-12 col-md-8 col-lg-6">
+        <div class="card error-page-card border-0 cv-card overflow-hidden">
+            <div class="card-header border-0 py-4 text-center error-card-header--{{ tone|default('neutral') }}">
+                <span class="display-4 fw-bold">{{ error_code }}</span>
+                <div class="small text-body-secondary mt-1">{{ error_title }}</div>
+            </div>
+            <div class="card-body p-4 text-center">
+                <p class="lead mb-2">{{ message }}</p>
+                {% if detail %}<p class="text-body-secondary mb-3">{{ detail }}</p>{% endif %}
+                {% if extra_html %}{{ extra_html|safe }}{% endif %}
+                <a href="{{ url_for('main.index') }}" class="btn btn-primary px-4 mt-3">{{ trans('Go to Home') }}</a>
+            </div>
+        </div>
+    </div>
+</div>

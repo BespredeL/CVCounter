@@ -3,24 +3,36 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 03.12.2025
-# Updated: 22.01.2026
+# Updated: 03.06.2026
 # Website: https://bespredel.name
 
 from functools import wraps
 
-from flask import Blueprint, Response, abort, redirect, render_template, url_for
+from flask import Blueprint, Response, abort, jsonify, redirect, render_template, request, url_for
 from flask import current_app, g
 from markupsafe import escape
 
 from system.core.object_counter import ObjectCounter
+from system.managers.video_stream_manager import VideoStreamManager
+from system.utils.frame_utils import FrameUtils
 from system.utils.utils import is_ajax, trans as translate
-from system.utils.validators import (ValidationError, validate_reset_count_current_request, validate_save_count_request)
+from system.utils.validators import (
+    ValidationError,
+    validate_counting_area_payload,
+    validate_reset_count_current_request,
+    validate_save_count_request,
+)
 
 counters_bp = Blueprint('counters', __name__)
 
 
 def get_app_context():
-    """Get application context from g or current_app."""
+    """
+    Get application context from g or current_app.
+    
+    Returns:
+        dict: Application context
+    """
     if not hasattr(g, 'app_context'):
         g.app_context = current_app.config.get('APP_CONTEXT')
     return g.app_context
@@ -84,6 +96,88 @@ def object_detector_init(location: str):
                 counting_area_color=tuple(detector_config['counting_area_color'])
             )
     return object_counters
+
+
+def _require_detection_location(location: str) -> None:
+    """
+    Abort if location is not configured in detections.
+    
+    Args:
+        location (str): The identifier for the detection location
+    
+    Returns:
+        None
+    """
+    context = get_app_context()
+    if location not in context['locations']:
+        abort(400, translate('Detection config not found!'))
+
+
+def _get_editor_snapshot_frame(location: str):
+    """
+    Return one BGR frame for the zone editor without loading the YOLO model.
+
+    Reuses an already running counter stream when available.
+
+    Args:
+        location (str): The identifier for the detection location
+
+    Returns:
+        numpy.ndarray: The frame
+    """
+    context = get_app_context()
+    config = context['config']
+    object_counters = context['object_counters']
+
+    if location in object_counters:
+        frame = object_counters[location].get_source_frame()
+        if frame is not None:
+            return frame
+
+    detector_config = config.get(f'detections.{location}', {})
+    video_path = detector_config.get('video_path')
+    video_fps = detector_config.get('video_fps', config.get('detection_default.video_fps', 0))
+
+    vsm = VideoStreamManager(video_path, video_fps)
+    try:
+        vsm.start()
+        return vsm.get_frame()
+    finally:
+        vsm.stop()
+
+
+def _init_counter_for_location(location: str) -> ObjectCounter:
+    """
+    Ensure ObjectCounter exists and video source is open.
+    
+    Args:
+        location (str): The identifier for the detection location
+    
+    Returns:
+        ObjectCounter: The ObjectCounter instance
+    """
+    _require_detection_location(location)
+    counters = object_detector_init(location)
+    return counters[location]
+
+
+def _counting_area_i18n() -> dict:
+    """
+    Strings for the counting-area editor (passed to template as JSON).
+    
+    Returns:
+        dict: Dictionary containing the strings
+    """
+    return {
+        'defaultHint': translate(
+            'Click to add points. Drag vertices to adjust. Double-click a vertex to remove.'
+        ),
+        'rectHint': translate('Drag on the image to draw a rectangle.'),
+        'points': translate('Points'),
+        'minPoints': translate('need at least 3 points'),
+        'minPointsToast': translate('At least 3 points required'),
+        'saved': translate('Zone saved'),
+    }
 
 
 def process_custom_fields(form_config: dict, current_count: dict) -> list:
@@ -154,6 +248,139 @@ def counter_video(location: str = None):
         custom_fields=custom_fields,
         counter_on_sidebar=True
     )
+
+
+@counters_bp.route('/counter/<string:location>/counting_area')
+def counting_area_edit(location: str = None) -> str:
+    """
+    Visual editor for the counting zone polygon.
+
+    Args:
+        location: Detection location identifier.
+
+    Returns:
+        str: Rendered editor page.
+    """
+    context = get_app_context()
+    locations_dict = context['locations_dict']
+
+    location = str(escape(location))
+    _require_detection_location(location)
+
+    return render_template(
+        'counters/counting_area_edit.html',
+        title=locations_dict.get(location, location),
+        location=location,
+        ca_i18n=_counting_area_i18n(),
+    )
+
+
+@counters_bp.route('/counter/<string:location>/counting_area/data')
+def counting_area_data(location: str = None):
+    """
+    Return current counting area configuration as JSON.
+    
+    Args:
+        location (str): The identifier for the detection location
+    
+    Returns:
+        dict: Dictionary containing the counting area configuration
+    """
+    context = get_app_context()
+    config = context['config']
+
+    location = str(escape(location))
+    _require_detection_location(location)
+
+    detector_config = config.get(f'detections.{location}', {})
+    return jsonify({
+        'counting_area': detector_config.get('counting_area', []),
+        'counting_area_color': detector_config.get('counting_area_color', [67, 211, 255]),
+    })
+
+
+@counters_bp.route('/counter/<string:location>/counting_area/snapshot')
+def counting_area_snapshot(location: str = None) -> Response:
+    """
+    Return a single raw JPEG frame for the zone editor background.
+    
+    Args:
+        location (str): The identifier for the detection location
+    
+    Returns:
+        Response: MIME type response containing the JPEG frame
+    """
+    location = str(escape(location))
+    _require_detection_location(location)
+
+    try:
+        frame = _get_editor_snapshot_frame(location)
+    except Exception as e:
+        from system.utils.logger import Logger
+        Logger().error(f'counting_area_snapshot({location}): {e}')
+        abort(503, translate('No video frame available. Check camera or video_path.'))
+
+    if frame is None:
+        abort(503, translate('No video frame available. Check camera or video_path.'))
+
+    try:
+        encoded = FrameUtils.encoding_frame(frame, 90, 'jpeg')
+        payload = encoded.tobytes() if hasattr(encoded, 'tobytes') else bytes(encoded)
+    except Exception:
+        abort(500, translate('Failed to encode video frame'))
+
+    response = Response(payload, mimetype='image/jpeg')
+    response.headers['X-Frame-Width'] = str(frame.shape[1])
+    response.headers['X-Frame-Height'] = str(frame.shape[0])
+    return response
+
+
+@counters_bp.route('/counter/<string:location>/counting_area', methods=['POST'])
+def counting_area_save(location: str = None):
+    """Save counting area polygon to config and apply to a running counter.
+    
+    Args:
+        location (str): The identifier for the detection location
+    
+    Returns:
+        dict: Dictionary containing the status, counting area, and counting area color
+    """
+    context = get_app_context()
+    config = context['config']
+    object_counters = context['object_counters']
+
+    location = str(escape(location))
+    _require_detection_location(location)
+
+    if not request.is_json:
+        abort(400, translate('Request must be JSON'))
+
+    try:
+        payload = validate_counting_area_payload(request.get_json(silent=True) or {})
+    except ValidationError as e:
+        abort(400, str(e))
+
+    counting_area = payload['counting_area']
+    config.set(f'detections.{location}.counting_area', counting_area)
+    if 'counting_area_color' in payload:
+        config.set(f'detections.{location}.counting_area_color', payload['counting_area_color'])
+    config.save_config()
+
+    if location in object_counters:
+        color = payload.get('counting_area_color')
+        if color is not None:
+            object_counters[location].update_counting_area(counting_area, tuple(color))
+        else:
+            object_counters[location].update_counting_area(counting_area)
+
+    return jsonify({
+        'status': 'saved',
+        'counting_area': counting_area,
+        'counting_area_color': payload.get(
+            'counting_area_color',
+            config.get(f'detections.{location}.counting_area_color'),
+        ),
+    })
 
 
 @counters_bp.route('/counter_get_frames/<string:location>')

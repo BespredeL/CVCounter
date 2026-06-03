@@ -1,7 +1,7 @@
 /**
  * Developed by: Aleksandr Kireev
  * Created: 01.11.2023
- * Updated: 18.12.2024
+ * Updated: 03.06.2026
  * Website: https://bespredel.name
  */
 
@@ -9,6 +9,13 @@
  * Utility to manage cookies
  */
 const CookieUtil = {
+    /**
+     * Set a cookie
+     * 
+     * @param {string} name - The name of the cookie
+     * @param {string} value - The value of the cookie
+     * @param {number} days - The number of days to expire the cookie
+     */ 
     set(name, value, days) {
         let expires = "";
         if (days) {
@@ -19,6 +26,12 @@ const CookieUtil = {
         document.cookie = `${name}=${value}${expires}; path=/`;
     },
 
+    /**
+     * Get a cookie
+     * 
+     * @param {string} name - The name of the cookie
+     * @returns {string} - The value of the cookie
+     */
     get(name) {
         const nameEQ = `${name}=`;
         return document.cookie
@@ -27,6 +40,11 @@ const CookieUtil = {
             .find(cookie => cookie.startsWith(nameEQ))?.substring(nameEQ.length) || null;
     },
 
+    /**
+     * Delete a cookie
+     * 
+     * @param {string} name - The name of the cookie
+     */
     delete(name) {
         this.set(name, "", -1);
     },
@@ -36,19 +54,35 @@ const CookieUtil = {
  * Theme management
  */
 const ThemeManager = {
+    /**
+     * Set the theme
+     * 
+     * @param {string} theme - The theme to set
+     */
     set(theme) {
         $("html").attr("data-bs-theme", theme);
         const themeSwitch = $("#theme-switch");
         themeSwitch.find(".bi-brightness-high").toggleClass("d-none", theme !== "light");
         themeSwitch.find(".bi-moon-stars").toggleClass("d-none", theme === "light");
         CookieUtil.set("theme", theme, 365);
+
+        const metaTheme = document.querySelector('meta[name="theme-color"]:not([media])');
+        if (metaTheme) {
+            metaTheme.content = theme === "light" ? "#f4f6f9" : "#16181d";
+        }
     },
 
+    /**
+     * Toggle the theme
+     */
     toggle() {
         const currentTheme = $("html").attr("data-bs-theme") || "dark";
         this.set(currentTheme === "light" ? "dark" : "light");
     },
 
+    /**
+     * Initialize the theme manager
+     */
     initialize() {
         this.set(CookieUtil.get("theme") || "dark");
         $("#theme-switch").on("click", () => this.toggle());
@@ -59,6 +93,11 @@ const ThemeManager = {
  * Fullscreen management
  */
 const FullscreenManager = {
+    /**
+     * Toggle the fullscreen mode
+     * 
+     * @returns {boolean} - The new fullscreen state
+     */
     toggle() {
         const doc = document;
         const elem = document.documentElement;
@@ -72,6 +111,9 @@ const FullscreenManager = {
         }
     },
 
+    /**
+     * Initialize the fullscreen manager
+     */
     initialize() {
         $("#toggle-fullscreen").on("click", function () {
             const isFullscreen = FullscreenManager.toggle();
@@ -84,8 +126,8 @@ const FullscreenManager = {
 /**
  * Show toast notifications
  *
- * @param {string} message
- * @param {string} [type="primary"]
+ * @param {string} message - The message to show
+ * @param {string} [type="primary"] - The type of toast
  */
 function showToast(message, type = "primary") {
     const toastContainer = document.getElementById("toast-container");
@@ -115,8 +157,7 @@ function showToast(message, type = "primary") {
  */
 $(function () {
     // Bootstrap tooltips
-    document.querySelectorAll('[data-bs-toggle="tooltip"]')
-        .forEach(el => new bootstrap.Tooltip(el));
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
 
     // Socket.IO connection management
     const socket = (window.socket = io());

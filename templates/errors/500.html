@@ -3,34 +3,22 @@
 {% block title %}Internal Server Error{% endblock %}
 
 {% block content %}
-    <div class="container mt-5">
-        <div class="row justify-content-center">
-            <div class="col-md-8">
-                <div class="card border-danger">
-                    <div class="card-header bg-danger text-white">
-                        <h4 class="mb-0"><i class="bi bi-exclamation-triangle-fill"></i> 500 - Internal Server Error</h4>
-                    </div>
-                    <div class="card-body">
-                        <p class="lead">{{ trans('An unexpected error occurred on the server.') }}</p>
-                        {% if error_message %}
-                            <div class="alert alert-warning">
-                                <strong>{{ trans('Error') }}:</strong> {{ error_message }}
-                            </div>
-                        {% endif %}
-                        {% if traceback and config.get('general.debug', False) %}
-                            <div class="mt-3">
-                                <details>
-                                    <summary class="btn btn-sm btn-outline-secondary">{{ trans('Show Details') }}</summary>
-                                    <pre class="mt-2 p-3 bg-dark text-light rounded"
-                                         style="max-height: 400px; overflow-y: auto;"><code>{{ traceback }}</code></pre>
-                                </details>
-                            </div>
-                        {% endif %}
-                        <hr>
-                        <a href="{{ url_for('main.index') }}" class="btn btn-primary">{{ trans('Go to Home') }}</a>
-                    </div>
-                </div>
+    {% set extra %}
+        {% if error_message %}
+            <div class="alert alert-warning text-start mt-3 mb-0">
+                <strong>{{ trans('Error') }}:</strong> {{ error_message }}
             </div>
-        </div>
-    </div>
+        {% endif %}
+        {% if traceback and config.get('general.debug', False) %}
+            <div class="mt-3 text-start">
+                <details>
+                    <summary class="btn btn-sm btn-outline-secondary">{{ trans('Show Details') }}</summary>
+                    <pre class="mt-2 p-3 rounded small text-start" style="max-height: 400px; overflow-y: auto; background: var(--cv-surface);"><code>{{ traceback }}</code></pre>
+                </details>
+            </div>
+        {% endif %}
+    {% endset %}
+    {% with error_code='500', error_title=trans('Internal Server Error'), tone='danger', message=trans('An unexpected error occurred on the server.'), extra_html=extra %}
+        {% include 'partials/error_card.html' %}
+    {% endwith %}
 {% endblock %}

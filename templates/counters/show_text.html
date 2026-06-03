@@ -1,44 +1,44 @@
 {% extends 'base.html' %}
 
+{% block body_class %}app-body--counter{% endblock %}
+{% block shell_class %}app-shell--counter{% endblock %}
+
 {% block title %}{{ title.title() }}{% endblock %}
 
 {% block content %}
-    <div class="row mb-3">
-        <!-- START: Left block -->
-        <div class="col-12 col-lg-8 col-xl-9 d-flex justify-content-center align-items-center position-relative">
-            <div class="text-center w-100 user-select-none">
+    <div class="row counter-layout g-0 h-100 flex-lg-nowrap">
+        <div class="col-12 col-lg-8 col-xl-9 counter-layout__main position-relative">
+            <div class="counter-display text-center w-100 user-select-none">
                 <div id="current_count" class="display-1 current-count-txt">0</div>
-                <div class="border-top">
-                    <div class="row">
-                        <div class="col">
-                            <div class="display-5 text-muted">{{ trans('Defective products') }}:</div>
+                <div class="border-top counter-display__footer w-100">
+                    <div class="row g-2 g-md-3">
+                        <div class="col-4">
+                            <div class="display-6 text-muted small mb-1">{{ trans('Defective products') }}:</div>
                             <div id="defect_count" class="display-1 total-count-txt text-muted">0</div>
                         </div>
-                        <div class="col">
-                            <div class="display-5 text-muted">{{ trans('Total') }}:</div>
+                        <div class="col-4">
+                            <div class="display-6 text-muted small mb-1">{{ trans('Total') }}:</div>
                             <div id="total_count" class="display-1 total-count-txt text-muted">0</div>
                         </div>
-                        <div class="col">
-                            <div class="display-5 text-muted">{{ trans('Corr.') }}:</div>
+                        <div class="col-4">
+                            <div class="display-6 text-muted small mb-1">{{ trans('Corr.') }}:</div>
                             <div id="correct_count" class="display-1 total-count-txt text-muted">0</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="{{ 'd-flex' if is_paused else 'd-none' }} justify-content-center align-items-center rounded-end-3 pause-display"
+            <div class="{{ 'd-flex' if is_paused else 'd-none' }} justify-content-center align-items-center pause-display"
                  id="pause_display">
                 <svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" fill="currentColor" class="bi bi-pause"
-                     viewBox="0 0 16 16">
+                     viewBox="0 0 16 16" aria-hidden="true">
                     <path d="M6 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5m4 0a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5"/>
                 </svg>
             </div>
         </div>
-        <!-- END: Left block -->
 
         {% include 'partials/counter_sidebar_right.html' %}
     </div>
-    {#{% include 'partials/counter_bottom_help.html' %}#}
 {% endblock %}
 
 {% block footer_assets %}
@@ -50,11 +50,6 @@
                 e.preventDefault();
             });
 
-            //---------------------------------------------------------------------------
-            // Socket IO
-            //---------------------------------------------------------------------------
-
-            // Counter get handler
             socket.on('{{ location }}_count', function (data) {
                 const defect_count = Math.max(parseInt($("#defect_keyboard input").val(), 10) || 0, 0);
                 const correct_count = parseInt($("#correct_keyboard input").val(), 10) || 0;
@@ -70,14 +65,12 @@
                 $('#correct_count').html(correct_count + data.correct || 0);
             });
 
-            // Notification receipt handler
             socket.on('{{ location }}_notification', function (data) {
                 if (data.message.length > 0) {
                     showToast(data.message, data.type);
                 }
             });
 
-            // Counter status handler
             socket.on('counter_status_event', function (data) {
                 if (data.data.location === '{{ location }}') {
                     switch (data.data.status) {
@@ -95,10 +88,6 @@
                 }
             });
 
-            //---------------------------------------------------------------------------
-            // Form buttons
-            //---------------------------------------------------------------------------
-
             $('#btn_save').on('click', function () {
                 saveCount("{{ url_for('counters.save_count', location=location) }}");
             });
@@ -111,9 +100,6 @@
                 resetCountCurrent("{{ url_for('counters.reset_count_current', location=location) }}");
             });
 
-            //---------------------------------------------------------------------------
-            // Form buttons 2
-            //---------------------------------------------------------------------------
             $('#btn_start').on('click', function () {
                 startCount("{{ url_for('counters.start_count', location=location) }}");
             });
@@ -122,9 +108,6 @@
                 pauseCount("{{ url_for('counters.pause_count', location=location) }}");
             });
 
-            //---------------------------------------------------------------------------
-            // Dev buttons
-            //---------------------------------------------------------------------------
             $('#save-capture').on('click', function () {
                 saveCapture("{{ url_for('counters.save_capture', location=location) }}");
             });

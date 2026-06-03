@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 22.01.2026
-# Updated: 22.01.2026
+# Updated: 03.06.2026
 # Website: https://bespredel.name
 
 import json
@@ -287,6 +287,61 @@ def validate_reset_count_current_request(location: str, available_locations: lis
         'correct_count': correct_count,
         'defect_count': defect_count
     }
+
+
+def validate_counting_area_payload(data: dict[str, Any]) -> dict[str, Any]:
+    """
+    Validate JSON payload for counting area save.
+
+    Args:
+        data: Parsed JSON body.
+
+    Returns:
+        dict: Validated counting_area and optional counting_area_color (BGR).
+
+    Raises:
+        ValidationError: If validation fails.
+    """
+    if not isinstance(data, dict):
+        raise ValidationError('Request body must be a JSON object')
+
+    area = data.get('counting_area')
+    if not isinstance(area, list) or len(area) < 3:
+        raise ValidationError('counting_area must be a list of at least 3 points')
+
+    validated_area: list[list[int]] = []
+    for i, point in enumerate(area):
+        if not isinstance(point, (list, tuple)) or len(point) != 2:
+            raise ValidationError(f'counting_area[{i}] must be [x, y]')
+
+        try:
+            x, y = int(point[0]), int(point[1])
+        except (TypeError, ValueError):
+            raise ValidationError(f'counting_area[{i}] coordinates must be integers')
+
+        if x < 0 or y < 0:
+            raise ValidationError(f'counting_area[{i}] coordinates must be non-negative')
+
+        validated_area.append([x, y])
+
+    result: dict[str, Any] = {'counting_area': validated_area}
+
+    if 'counting_area_color' in data and data['counting_area_color'] is not None:
+        color = data['counting_area_color']
+        if not isinstance(color, (list, tuple)) or len(color) != 3:
+            raise ValidationError('counting_area_color must be a list of 3 integers (BGR)')
+
+        try:
+            bgr = [int(color[0]), int(color[1]), int(color[2])]
+        except (TypeError, ValueError):
+            raise ValidationError('counting_area_color values must be integers')
+
+        if not all(0 <= c <= 255 for c in bgr):
+            raise ValidationError('counting_area_color values must be between 0 and 255')
+
+        result['counting_area_color'] = bgr
+
+    return result
 
 
 def validate_report_list_request() -> dict[str, Any]:
