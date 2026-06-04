@@ -1,4 +1,12 @@
-<!-- Pagination -->
+{# 
+    Pagination
+    Args:
+        current_page: The current page
+        total_pages: The total number of pages
+        endpoint: The endpoint to paginate
+        query_params: The query parameters
+#}
+<!-- START: Pagination -->
 <nav class="p-3 border-top" aria-label="Page navigation">
     <ul class="pagination pagination-modern justify-content-center flex-wrap mb-0">
         {% if current_page > 1 %}
@@ -29,3 +37,4 @@
         {% endif %}
     </ul>
 </nav>
+<!-- END: Pagination -->

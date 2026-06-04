@@ -21,6 +21,16 @@
     <link href="{{ url_for('static', filename='assets/css/style.css') }}" rel="stylesheet">
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='assets/socketio/socket.io.min.js') }}"></script>
+    <script>
+        window.SOCKETIO_OPTIONS = {
+            path: "/socket.io",
+            transports: {{ config.get('server.socketio_transports', ['websocket'])|tojson }},
+            upgrade: {{ config.get('server.socketio_upgrade', true)|tojson }},
+            reconnection: true//,
+            //reconnectionAttempts: 20,
+            //timeout: 20000
+        };
+    </script>
     <script src="{{ url_for('static', filename='assets/js/jquery-3.7.1.min.js') }}"></script>
     <!-- START: Head block -->
     {% block head_assets %}{% endblock %}
@@ -161,17 +171,9 @@
 
 <!-- START: Scripts -->
 <script>
-    // Simple function for line translation
-    window.trans = (str) => {
-        const appLang = {
-            'Connection to server successful': "{{ trans('Connection to server successful') }}",
-            'Error connecting to the server. Contact the IT department.': "{{ trans('Error connecting to the server. Contact the IT department.') }}",
-            'Reload page': "{{ trans('Reload page') }}",
-        };
-
-        return typeof appLang[str] === 'string' && appLang[str] ? appLang[str] : str;
-    };
+    window.APP_I18N = {{ frontend_i18n|tojson }};
 </script>
+<script src="{{ url_for('static', filename='assets/js/i18n.js') }}"></script>
 <script src="{{ url_for('static', filename='assets/bootstrap5/js/bootstrap.bundle.min.js') }}"></script>
 <script src="{{ url_for('static', filename='assets/js/main.js') }}"></script>
 <!-- END: Scripts -->

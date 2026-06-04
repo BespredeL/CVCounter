@@ -163,14 +163,19 @@ $(function () {
     // Bootstrap tooltips
     document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
 
-    // Socket.IO connection management
-    const socket = (window.socket = io());
+    const socketOptions = window.SOCKETIO_OPTIONS || {
+        path: "/socket.io",
+        transports: ["polling", "websocket"],
+        upgrade: true,
+        reconnection: true,
+    };
+    const socket = (window.socket = io(socketOptions));
 
     socket.io.on("reconnect", () => {
         const alertHtml = `
             <div class="alert alert-success mt-3 d-flex justify-content-between" role="alert">
-                <span class="h3">${window.trans("Connection to server successful")}</span>
-                <button id="reload-btn" class="btn btn-warning">${window.trans("Reload page")}</button>
+                <span class="h3">${window.trans("socket.connectionOk")}</span>
+                <button id="reload-btn" class="btn btn-warning">${window.trans("socket.reloadPage")}</button>
             </div>`;
 
         $("#alert-container").html(alertHtml);
@@ -183,11 +188,11 @@ $(function () {
         }, 1000 * 60 * 15);
     });
 
-    socket.io.on("error", () => {
+    socket.on("connect_error", () => {
         const alertHtml = `
             <div class="alert alert-danger mt-3 d-flex justify-content-between" role="alert">
-                <span class="h3">${window.trans("Error connecting to the server. Contact the IT department.")}</span>
-                <button id="reload-btn" class="btn btn-warning">${window.trans("Reload page")}</button>
+                <span class="h3">${window.trans("socket.connectionError")}</span>
+                <button id="reload-btn" class="btn btn-warning">${window.trans("socket.reloadPage")}</button>
             </div>`;
 
         $("#alert-container").html(alertHtml);

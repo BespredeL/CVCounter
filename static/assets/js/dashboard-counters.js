@@ -17,12 +17,12 @@ const CounterDashboard = {
     STATUS_CLASSES: ["stopped", "running", "paused", "error"],
 
     /**
-     * Get the strings
+     * Get the internationalization strings
      *
      * @returns {object} The strings
      */
-    strings() {
-        return window.DASHBOARD_I18N || {};
+    i18n() {
+        return window.i18nGroup("dashboard");
     },
 
     /**
@@ -32,7 +32,7 @@ const CounterDashboard = {
      * @returns {string} The status label
      */
     statusLabel(status) {
-        const s = this.strings();
+        const s = this.i18n();
 
         switch (status) {
             case "running":
@@ -129,7 +129,7 @@ const CounterDashboard = {
         $card.find("[data-role=status-dot]").attr("title", this.statusLabel(status));
 
         const $toggle = $card.find("[data-role=toggle]");
-        const strings = this.strings();
+        const s = this.i18n();
         const $play = $toggle.find(".icon-play");
         const $pause = $toggle.find(".icon-pause");
 
@@ -138,14 +138,14 @@ const CounterDashboard = {
         if (status === "running") {
             $play.addClass("d-none");
             $pause.removeClass("d-none");
-            $toggle.attr("title", strings.pauseCounting || "Pause");
+            $toggle.attr("title", s.pauseCounting || "Pause");
         } else {
             $play.removeClass("d-none");
             $pause.addClass("d-none");
 
             const label = status === "paused"
-                ? (strings.resumeCounting || "Resume")
-                : (strings.startCounter || "Start");
+                ? (s.resumeCounting || "Resume")
+                : (s.startCounter || "Start");
 
             $toggle.attr("title", label);
         }
@@ -174,8 +174,7 @@ const CounterDashboard = {
         });
 
         const total = counts.running + counts.paused + counts.stopped + counts.error;
-        const template = this.strings().statsTemplate || "{total} counters · {running} running · {paused} paused";
-
+        const template = this.i18n().statsTemplate || "{total} counters · {running} running · {paused} paused";
         $stats.text(
             template
                 .replace("{total}", total)
@@ -213,44 +212,67 @@ const CounterDashboard = {
     },
 
     /**
-     * Run the action
+     * Apply server status from AJAX response
+     *
+     * @param {jQuery} $card - The card element
+     * @param {string} location - Counter location
+     * @param {object} data - Response JSON
+     * @returns {void}
+     */
+    applyActionResponse($card, location, data) {
+        const status = data?.status;
+        if (status === "started") {
+            this.applyStatus(location, "running");
+            if (data.preview_ts) {
+                this.refreshPreview($card, data.preview_ts);
+            }
+        } else if (status === "paused") {
+            this.applyStatus(location, "paused");
+        } else if (status === "stopped") {
+            this.applyStatus(location, "stopped");
+        }
+    },
+
+    /**
+     * Sync transport button disabled state after loading ends
+     *
+     * @param {jQuery} $card - The card element
+     * @returns {void}
+     */
+    syncTransportButtons($card) {
+        const status = $card.attr("data-status") || "stopped";
+        $card.find("[data-role=toggle]").prop("disabled", false);
+        $card.find("[data-action=stop]").prop("disabled", status === "stopped");
+    },
+
+    /**
+     * Run counter control request (start / pause / resume / stop)
      *
      * @param {jQuery} $card - The card element
      * @param {string} url - The URL
-     * @returns {void}
+     * @param {jQuery} [$activeBtn] - Button showing loading state (toggle or stop)
+     * @returns {jqXHR}
      */
-    runAction($card, url) {
+    runAction($card, url, $activeBtn) {
         const location = $card.data("location");
-        const $toggle = $card.find("[data-role=toggle]");
+        const $btn = $activeBtn || $card.find("[data-role=toggle]");
         const spinner = $('<span class="spinner-border spinner-border-sm" role="status"></span>');
 
-        $toggle.prop("disabled", true).addClass("is-loading").append(spinner);
+        $card.find(".counter-card__transport .btn").prop("disabled", true);
+        $btn.addClass("is-loading").append(spinner);
 
         return $.ajax({
             url,
             method: "GET",
             headers: {"X-Requested-With": "XMLHttpRequest"},
-        })
-            .done((data) => {
-                const status = data?.status;
-
-                if (status === "started") {
-                    this.applyStatus(location, "running");
-                    if (data.preview_ts) {
-                        this.refreshPreview($card, data.preview_ts);
-                    }
-                } else if (status === "paused") {
-                    this.applyStatus(location, "paused");
-                } else if (status === "stopped") {
-                    this.applyStatus(location, "stopped");
-                }
-            })
+        }).done((data) => this.applyActionResponse($card, location, data))
             .fail(() => {
-                showToast(this.strings().requestFailed || "Request failed", "danger");
+                showToast(this.i18n().requestFailed || "Request failed", "danger");
             })
             .always(() => {
                 spinner.remove();
-                $toggle.prop("disabled", false).removeClass("is-loading");
+                $btn.removeClass("is-loading");
+                this.syncTransportButtons($card);
             });
     },
 
@@ -262,12 +284,12 @@ const CounterDashboard = {
      * @returns {void}
      */
     openCounter($card, mode) {
-        const strings = this.strings();
+        const s = this.i18n();
         const location = $card.data("location");
         const status = $card.attr("data-status") || "stopped";
         const url = mode === "text" ? $card.data("textUrl") : $card.data("videoUrl");
         const $launch = $card.find(".counter-card__launch");
-        const label = mode === "text" ? (strings.openText || "Text") : (strings.openVideo || "Video");
+        const label = mode === "text" ? (s.openText || "Text") : (s.openVideo || "Video");
 
         $launch.attr("title", label);
 
@@ -308,7 +330,7 @@ const CounterDashboard = {
                 this.applyStatus(location, mapped);
             }
 
-            const s = this.strings();
+            const s = this.i18n();
 
             switch (status) {
                 case "started":
@@ -353,27 +375,14 @@ const CounterDashboard = {
             }
 
             const $card = $btn.closest(".counter-card");
-            const strings = self.strings();
+            const s = self.i18n();
             const name = $card.find(".counter-card__name").text().trim();
 
-            if (!window.confirm(`${strings.confirmStop || "Stop counter"} «${name}»?`)) {
+            if (!window.confirm(`${s.confirmStop || "Stop counter"} «${name}»?`)) {
                 return;
             }
 
-            const spinner = $('<span class="spinner-border spinner-border-sm" role="status"></span>');
-
-            $btn.prop("disabled", true).append(spinner);
-
-            $.ajax({
-                url: $card.data("stopUrl"),
-                method: "GET",
-                headers: {"X-Requested-With": "XMLHttpRequest"},
-            }).done(() => self.applyStatus($card.data("location"), "stopped"))
-                .fail(() => showToast(strings.requestFailed || "Request failed", "danger"))
-                .always(() => {
-                    spinner.remove();
-                    $btn.prop("disabled", $card.attr("data-status") === "stopped");
-                });
+            self.runAction($card, $card.data("stopUrl"), $btn);
         });
 
         $("#counter-dashboard").on("click", "[data-open-mode]", function (e) {
@@ -395,54 +404,104 @@ const CounterDashboard = {
     },
 
     /**
+     * Get the multi checkboxes
+     *
+     * @returns {jQuery}
+     */
+    multiCheckboxes() {
+        return $("#counter-dashboard [data-role=multi-select]");
+    },
+
+    /**
+     * Sync the card selected state
+     *
+     * @param {jQuery} $checkbox - The checkbox element
+     * @returns {void}
+     */
+    syncCardSelectedState($checkbox) {
+        $checkbox.closest(".counter-card").toggleClass("counter-card--selected", $checkbox.prop("checked"));
+    },
+
+    /**
+     * Update the multi selection count
+     *
+     * @returns {void}
+     */
+    updateMultiSelectionCount() {
+        const $count = $("#counterMultiCount");
+        if (!$count.length) {
+            return;
+        }
+
+        const n = this.multiCheckboxes().filter(":checked").length;
+        const template = this.i18n().multiSelectedTemplate || "{n} selected";
+        $count.text(template.replace("{n}", n));
+    },
+
+    /**
      * Bind the multi counter
      *
      * @returns {void}
      */
     bindMultiCounter() {
-        const $panel = $("#counterMultiPicker");
-        const $checkboxes = $('input[name="multi_counter_locations"]');
-        const $count = $("#counterMultiCount");
+        const $section = $(".counter-dashboard-section");
+        const $checkboxes = this.multiCheckboxes();
 
-        if (!$panel.length) {
+        if (!$section.length || !$checkboxes.length) {
             return;
         }
 
-        const strings = this.strings();
-        const updateCount = () => {
-            const n = $checkboxes.filter(":checked").length;
-            const template = strings.multiSelectedTemplate || "{n} selected";
-            $count.text(template.replace("{n}", n));
-        };
+        const s = this.i18n();
 
-        $checkboxes.on("change", () => updateCount());
+        $checkboxes.on("change", (e) => {
+            e.stopPropagation();
+            this.syncCardSelectedState($(e.currentTarget));
+            this.updateMultiSelectionCount();
+        });
+
+        $checkboxes.on("click", (e) => e.stopPropagation());
+
+        $("#counterMultiSelectVisible").on("click", () => {
+            $checkboxes.each((_, el) => {
+                const $cb = $(el);
+                const visible = !$cb.closest(".counter-card").hasClass("counter-card--hidden");
+                $cb.prop("checked", visible);
+                this.syncCardSelectedState($cb);
+            });
+            this.updateMultiSelectionCount();
+        });
 
         $("#counterMultiSelectAll").on("click", () => {
             $checkboxes.prop("checked", true);
-            updateCount();
+            $checkboxes.each((_, el) => this.syncCardSelectedState($(el)));
+            this.updateMultiSelectionCount();
         });
 
         $("#counterMultiClear").on("click", () => {
             $checkboxes.prop("checked", false);
-            updateCount();
+            $checkboxes.each((_, el) => this.syncCardSelectedState($(el)));
+            this.updateMultiSelectionCount();
         });
 
         $("#counterMultiOpen").on("click", () => {
-            const selected = $checkboxes.filter(":checked").map(function () {
-                return $(this).val();
-            }).get();
+            const selected = $checkboxes
+                .filter(":checked")
+                .map(function () {
+                    return $(this).val();
+                })
+                .get();
 
             if (!selected.length) {
-                showToast(strings.selectAtLeastOne || "Select at least one counter", "warning");
+                showToast(s.selectAtLeastOne || "Select at least one counter", "warning");
                 return;
             }
 
-            const baseUrl = ($panel.data("multi-url") || "").replace(/\/+$/, "");
+            const baseUrl = ($section.data("multi-url") || "").replace(/\/+$/, "");
             const params = new URLSearchParams({locations: selected.join(",")});
             window.location.href = `${baseUrl}?${params.toString()}`;
         });
 
-        updateCount();
+        this.updateMultiSelectionCount();
     },
 
     /**

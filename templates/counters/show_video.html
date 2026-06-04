@@ -35,6 +35,16 @@
     <script src="{{ url_for('static', filename='assets/js/counter.js') }}"></script>
     <script>
         $(function () {
+            const releaseVideoFeed = () => {
+                const img = document.getElementById('video_feed');
+                if (img) {
+                    img.removeAttribute('src');
+                }
+            };
+
+            window.addEventListener('pagehide', releaseVideoFeed);
+            $(document).on('click', 'a[href]:not([target="_blank"])', releaseVideoFeed);
+
             $(document).on('contextmenu', function (e) {
                 e.preventDefault();
             });

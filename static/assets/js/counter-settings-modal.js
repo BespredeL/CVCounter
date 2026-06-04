@@ -28,8 +28,8 @@ const CounterSettingsModal = {
      *
      * @returns {object} The strings
      */
-    strings() {
-        return window.DASHBOARD_I18N || {};
+    i18n() {
+        return window.i18nGroup("dashboard");
     },
 
     /**
@@ -65,12 +65,14 @@ const CounterSettingsModal = {
      * @returns {void}
      */
     setLoading() {
-        const s = this.strings();
+        const s = this.i18n();
 
-        $("#counterSettingsModalBody").html(`<div class="counter-settings-modal__loading text-center py-5">
+        $("#counterSettingsModalBody").html(
+            `<div class="counter-settings-modal__loading text-center py-5">
                 <span class="spinner-border" role="status" aria-hidden="true"></span>
                 <p class="text-muted small mt-2 mb-0">${s.loadingSettings || "Loading settings"}</p>
-            </div>`);
+            </div>`
+        );
 
         $("#counterSettingsSaveBtn").prop("disabled", true);
     },
@@ -88,30 +90,25 @@ const CounterSettingsModal = {
             e.preventDefault();
 
             const $btn = $("#counterSettingsSaveBtn");
-            const strings = self.strings();
+            const s = self.i18n();
             const spinner = $('<span class="spinner-border spinner-border-sm ms-2" role="status"></span>');
 
             $btn.prop("disabled", true).append(spinner);
 
             $.ajax({
                 url: $form.attr("action"), method: "POST", data: $form.serialize(), headers: {"X-Requested-With": "XMLHttpRequest"},
-            })
-                .done((data) => {
-                    showToast(strings.settingsSaved || "Settings saved", "success");
-
-                    if (data?.restart_recommended) {
-                        showToast(strings.settingsRestartHint || "Stop and start the counter to apply all changes", "info");
-                    }
-
-                    self.getModal()?.hide();
-                })
-                .fail(() => {
-                    showToast(strings.requestFailed || "Request failed", "danger");
-                })
-                .always(() => {
-                    spinner.remove();
-                    $btn.prop("disabled", false);
-                });
+            }).done((data) => {
+                showToast(s.settingsSaved || "Settings saved", "success");
+                if (data?.restart_recommended) {
+                    showToast(s.settingsRestartHint || "Stop and start the counter to apply all changes", "info");
+                }
+                self.getModal()?.hide();
+            }).fail(() => {
+                showToast(s.requestFailed || "Request failed", "danger");
+            }).always(() => {
+                spinner.remove();
+                $btn.prop("disabled", false);
+            });
         });
     },
 
@@ -124,7 +121,7 @@ const CounterSettingsModal = {
     open($card) {
         const location = $card.data("location");
         const title = $card.find(".counter-card__name").text().trim();
-        const strings = this.strings();
+        const s = this.i18n();
         const modal = this.getModal();
 
         if (!modal || !location) {
@@ -132,7 +129,7 @@ const CounterSettingsModal = {
         }
 
         this._location = location;
-        $("#counterSettingsModalTitle").text(strings.counterSettings || "Counter settings");
+        $("#counterSettingsModalTitle").text(s.counterSettings || "Counter settings");
         $("#counterSettingsModalSubtitle").text(`${title} · ${location}`);
         this.setLoading();
         modal.show();
@@ -144,8 +141,8 @@ const CounterSettingsModal = {
                 this.bindFormSubmit();
             })
             .fail(() => {
-                $("#counterSettingsModalBody").html(`<p class="text-danger mb-0">${strings.requestFailed || "Request failed"}</p>`);
-                showToast(strings.requestFailed || "Request failed", "danger");
+                $("#counterSettingsModalBody").html(`<p class="text-danger mb-0">${s.requestFailed || "Request failed"}</p>`);
+                showToast(s.requestFailed || "Request failed", "danger");
             });
     },
 
@@ -162,7 +159,6 @@ const CounterSettingsModal = {
             e.stopPropagation();
 
             const $toggle = $(this).closest(".counter-card__open").find(".dropdown-toggle")[0];
-
             if ($toggle) {
                 bootstrap.Dropdown.getOrCreateInstance($toggle).hide();
             }

@@ -7,6 +7,7 @@
 # Website: https://bespredel.name
 
 import json
+import os
 import re
 import subprocess
 from shutil import disk_usage
@@ -60,6 +61,9 @@ def trans(text: str, **kwargs: dict) -> str:
     return text
 
 
+_translations_cache: dict[str, tuple[float, dict]] = {}
+
+
 def load_translations(language_code: str) -> dict:
     """
     Load translations
@@ -73,10 +77,20 @@ def load_translations(language_code: str) -> dict:
     Raises:
         None
     """
+    file_path = f"langs/{language_code}.json"
     try:
-        file_path = f"langs/{language_code}.json"
+        mtime = os.path.getmtime(file_path)
+    except OSError:
+        return {}
+
+    cached = _translations_cache.get(language_code)
+    if cached and cached[0] == mtime:
+        return cached[1]
+
+    try:
         with open(file_path, "r", encoding="utf-8") as file:
             translations = json.load(file)
+        _translations_cache[language_code] = (mtime, translations)
         return translations
     except Exception:
         return {}

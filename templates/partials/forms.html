@@ -1,5 +1,13 @@
-{# Generate form fields from dict #}
+{# 
+    Generate form fields from dict
+    Args:
+        key: The key of the field
+        value: The value of the field
+        prefix: The prefix of the field
+        depth: The depth of the field
+#}
 {% macro generate_form_fields(key, value, prefix='', depth=0) %}
+<!-- START: Generate form fields -->
     {% set field_id = prefix ~ key %}
     {% if value is mapping %}
         <section class="cv-form-section{% if depth > 0 %} cv-form-section--nested{% endif %}">
@@ -65,9 +73,18 @@
             {% endif %}
         </div>
     {% endif %}
+    <!-- END: Generate form fields -->
 {% endmacro %}
 
-{# Input fields #}
+
+{# 
+    Input fields
+    Args:
+        name: The name of the input
+        value: The value of the input
+        label: The label of the input
+        type: The type of the input (text, password, number, email, url, tel, search, date, time, datetime-local, month, week)
+#}
 {% macro input(name, value='', label='', type='text') -%}
     <div class="cv-form-field">
         {% if label or name %}
@@ -78,7 +95,15 @@
     </div>
 {%- endmacro %}
 
-{# Textarea fields #}
+{# 
+    Generate textarea fields from dict
+    Args:
+        name: The name of the textarea
+        value: The value of the textarea
+        label: The label of the textarea
+        rows: The number of rows of the textarea
+        cols: The number of columns of the textarea
+#}
 {%- macro textarea(name, value='', label='', rows=10, cols=40) -%}
     <div class="cv-form-field">
         {% if label %}
@@ -89,7 +114,14 @@
     </div>
 {%- endmacro %}
 
-{# Button #}
+
+{# 
+    Button
+    Args:
+        text: The text of the button
+        type: The type of the button (submit, button, reset)
+        color: The color of the button (primary, secondary, success, danger, warning, info, light, dark)
+#}
 {%- macro button(text, type='submit', color='primary') -%}
     <button type="{{ type }}" class="btn btn-{{ color }} cv-form-submit px-4">{{ text }}</button>
 {%- endmacro %}

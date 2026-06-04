@@ -34,7 +34,9 @@ const CounterMultiText = {
 
             window.socket.on(`${location}_count`, (data) => {
                 const current = Math.max(0, parseInt(data.current, 10) || 0);
-                const total = data.total > 0 ? Math.max(0, parseInt(data.total, 10) || 0) : 0;
+                const total = data.total > 0
+                    ? Math.max(0, parseInt(data.total, 10) || 0)
+                    : 0;
 
                 $(`.current_count_${slug}`).html(current);
                 $(`.total_count_${slug}`).html(total);

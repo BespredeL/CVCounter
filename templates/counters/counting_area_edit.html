@@ -79,6 +79,5 @@
 {% endblock %}
 
 {% block footer_assets %}
-    <script>window.CA_I18N = {{ ca_i18n | tojson }};</script>
     <script src="{{ url_for('static', filename='assets/js/counting-area-editor.js') }}"></script>
 {% endblock %}

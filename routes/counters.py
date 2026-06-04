@@ -84,19 +84,27 @@ def object_detector_init(location: str):
     socketio = context['socketio']
     lock = context['lock']
 
+    if location in object_counters:
+        return object_counters
+
+    detector_config = config.get("detections." + location)
+    counter = ObjectCounter(
+        location=location,
+        config_manager=config,
+        socketio=socketio,
+        video_path=detector_config['video_path'],
+        db_manager=db_manager,
+        weights=detector_config['weights_path'],
+        counting_area=detector_config['counting_area'],
+        counting_area_color=tuple(detector_config['counting_area_color']),
+    )
+
     with lock:
         if location not in object_counters:
-            detector_config = config.get("detections." + location)
-            object_counters[location] = ObjectCounter(
-                location=location,
-                config_manager=config,
-                socketio=socketio,
-                video_path=detector_config['video_path'],
-                db_manager=db_manager,
-                weights=detector_config['weights_path'],
-                counting_area=detector_config['counting_area'],
-                counting_area_color=tuple(detector_config['counting_area_color'])
-            )
+            object_counters[location] = counter
+        else:
+            counter.cleanup()
+
     return object_counters
 
 
@@ -223,25 +231,6 @@ def _init_counter_for_location(location: str) -> ObjectCounter:
     return counters[location]
 
 
-def _counting_area_i18n() -> dict:
-    """
-    Strings for the counting-area editor (passed to template as JSON).
-    
-    Returns:
-        dict: Dictionary containing the strings
-    """
-    return {
-        'defaultHint': translate(
-            'Click to add points. Drag vertices to adjust. Double-click a vertex to remove.'
-        ),
-        'rectHint': translate('Drag on the image to draw a rectangle.'),
-        'points': translate('Points'),
-        'minPoints': translate('need at least 3 points'),
-        'minPointsToast': translate('At least 3 points required'),
-        'saved': translate('Zone saved'),
-    }
-
-
 def process_custom_fields(form_config: dict, current_count: dict) -> list:
     """
     Process custom fields for a specific location.
@@ -330,7 +319,6 @@ def counting_area_edit(location: str = None) -> str:
         'counters/counting_area_edit.html',
         title=locations_dict.get(location, location),
         location=location,
-        ca_i18n=_counting_area_i18n(),
     )
 
 

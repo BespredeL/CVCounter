@@ -19,7 +19,12 @@
         "use_reloader": false,
         "log_output": false,
         "secret_key": "",
-        "allowed_origins": "*"
+        "allowed_origins": "*",
+        "socketio_async_mode": "threading",
+        "socketio_transports": [
+            "websocket"
+        ],
+        "socketio_upgrade": true
     },
     "users": {
         "admin": "scrypt:32768:8:1$rsdPYhqaQqpXQQ0o$aa3359c86228b4cee5fe8c4ed694db4b371fa7fab5100fa7b446db7e1ed8077e3bb63228d4a1899aeeef9b8d15f8e8bdbcc3457f020bcb3ec320332c76b5896b"

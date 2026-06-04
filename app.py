@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 22.01.2026
+# Updated: 04.06.2026
 # Website: https://bespredel.name
 
 import os
@@ -85,7 +85,17 @@ def create_app(config_path: str = "config.json", test_config: dict = None):
 
     # Configure Socket.IO
     allowed_origins = _config.get("server.allowed_origins", ["http://localhost:8080"])
-    _socketio = SocketIO(_app, async_mode="threading", cors_allowed_origins=allowed_origins)
+    async_mode = _config.get("server.socketio_async_mode", "threading")
+    socketio_transports = _config.get("server.socketio_transports", ["polling", "websocket"])
+
+    _socketio = SocketIO(
+        _app,
+        async_mode=async_mode,
+        cors_allowed_origins=allowed_origins,
+        transports=socketio_transports,
+        ping_interval=25,
+        ping_timeout=60,
+    )
 
     # Auth
     _auth = HTTPBasicAuth()
@@ -231,7 +241,14 @@ def register_template_helpers(app: Flask, context: dict):
         Returns:
             dict: Global variables
         """
-        return dict(config=config)
+        from system.utils.frontend_i18n import build_frontend_i18n
+
+        lang = config.get('general.default_language', 'ru')
+
+        return dict(
+            config=config,
+            frontend_i18n=build_frontend_i18n(lang),
+        )
 
 
 def setup_authentication(context: dict):
@@ -245,7 +262,6 @@ def setup_authentication(context: dict):
         None
     """
     from system.auth import setup_auth
-    # Pass context directly to avoid Flask context issues during initialization
     setup_auth(context)
 
 

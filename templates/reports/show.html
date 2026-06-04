@@ -11,8 +11,12 @@
 {% block breadcrumb %}
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">{{ trans('Home') }}</a></li>
-            <li class="breadcrumb-item"><a href="{{ url_for('reports.reports') }}">{{ trans('Reports') }}</a></li>
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('main.index') }}">{{ trans('Home') }}</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('reports.reports') }}">{{ trans('Reports') }}</a>
+            </li>
             <li class="breadcrumb-item">
                 <a href="{{ url_for('reports.report_list', location=location) }}">{{ location|striptags|title }}</a>
             </li>

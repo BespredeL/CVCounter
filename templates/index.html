@@ -9,33 +9,6 @@
 {% endblock %}
 
 {% block footer_assets %}
-    <script>
-        window.DASHBOARD_I18N = {
-            running: {{ trans('Counter running')|tojson }},
-            paused: {{ trans('Counter paused')|tojson }},
-            stopped: {{ trans('Counter stopped')|tojson }},
-            error: {{ trans('Counting has error!')|tojson }},
-            toastStarted: {{ trans('Counting has started!')|tojson }},
-            toastStopped: {{ trans('Counting has stopped!')|tojson }},
-            toastPaused: {{ trans('Counting has paused!')|tojson }},
-            toastError: {{ trans('Counting has error!')|tojson }},
-            requestFailed: {{ trans('Request failed')|tojson }},
-            confirmStop: {{ trans('Stop counter')|tojson }},
-            startCounter: {{ trans('Start counter')|tojson }},
-            resumeCounting: {{ trans('Resume counting')|tojson }},
-            pauseCounting: {{ trans('Pause counting')|tojson }},
-            openVideo: {{ trans('Open video')|tojson }},
-            openText: {{ trans('Open text')|tojson }},
-            selectAtLeastOne: {{ trans('Select at least one counter')|tojson }},
-            multiSelectedTemplate: {{ trans('Multi counter selected count')|tojson }},
-            filterEmpty: {{ trans('No counters match filter')|tojson }},
-            statsTemplate: {{ trans('Counters stats')|tojson }},
-            counterSettings: {{ trans('Counter settings')|tojson }},
-            settingsSaved: {{ trans('Settings saved')|tojson }},
-            loadingSettings: {{ trans('Loading settings')|tojson }},
-            settingsRestartHint: {{ trans('Stop and start the counter to apply all changes')|tojson }}
-        };
-    </script>
     <script src="{{ url_for('static', filename='assets/js/counter-settings-modal.js') }}"></script>
     <script src="{{ url_for('static', filename='assets/js/dashboard-counters.js') }}"></script>
 {% endblock %}
@@ -43,7 +16,8 @@
 {% block content %}
     {% include 'partials/app_nav_cards.html' %}
 
-    <section class="section-block section-block--compact counter-dashboard-section">
+    <section class="section-block section-block--compact counter-dashboard-section"
+             data-multi-url="{{ url_for('counters.counter_multi_text') }}">
         <div class="counter-dashboard-toolbar">
             <span class="counter-dashboard-toolbar__label">{{ trans('Counters') }}</span>
             <input type="search" class="form-control counter-dashboard-toolbar__search" id="counterSearch"
@@ -62,6 +36,23 @@
         </div>
 
         {% if object_counters %}
+            <div class="counter-dashboard-toolbar counter-dashboard-toolbar--multi">
+                <span class="counter-dashboard-toolbar__hint text-muted small">{{ trans('Multi counter hint short') }}</span>
+                <div class="counter-dashboard-toolbar__multi-actions">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="counterMultiSelectVisible">
+                        {{ trans('Select visible') }}
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="counterMultiSelectAll">
+                        {{ trans('Select all') }}
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="counterMultiClear">
+                        {{ trans('Clear selection') }}
+                    </button>
+                    <span class="counter-dashboard-multi-count text-muted small" id="counterMultiCount" aria-live="polite"></span>
+                    <button type="button" class="btn btn-primary btn-sm" id="counterMultiOpen">{{ trans('Open multi view') }}</button>
+                </div>
+            </div>
+
             <div class="counter-card-grid" id="counter-dashboard">
                 {% for location, label in object_counters.items() %}
                     {% with status=counter_status(location) %}
@@ -76,38 +67,4 @@
     </section>
 
     {% include 'partials/counter_settings_modal.html' %}
-
-    <section class="section-block section-block--compact">
-        <h2 class="section-block__title">{{ trans('Multi counter view') }}</h2>
-        <p class="text-muted small mb-2">{{ trans('Multi counter hint') }}</p>
-        <div class="multi-counter-picker" id="counterMultiPicker"
-             data-multi-url="{{ url_for('counters.counter_multi_text') }}">
-            {% if object_counters %}
-                <div class="multi-counter-picker__grid" role="group" aria-label="{{ trans('Choose counters') }}">
-                    {% for location, label in object_counters.items() %}
-                        <label class="multi-counter-picker__chip">
-                            <input type="checkbox" class="form-check-input" name="multi_counter_locations"
-                                   value="{{ location }}">
-                            <span class="multi-counter-picker__chip-body">
-                                <span class="multi-counter-picker__label">{{ label|striptags|title }}</span>
-                                <span class="multi-counter-picker__id">{{ location }}</span>
-                            </span>
-                        </label>
-                    {% endfor %}
-                </div>
-                <div class="multi-counter-picker__toolbar">
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="counterMultiSelectAll">
-                        {{ trans('Select all') }}
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="counterMultiClear">
-                        {{ trans('Clear selection') }}
-                    </button>
-                    <span class="multi-counter-picker__count text-muted small" id="counterMultiCount" aria-live="polite"></span>
-                    <button type="button" class="btn btn-primary" id="counterMultiOpen">{{ trans('Open multi view') }}</button>
-                </div>
-            {% else %}
-                <p class="text-muted small mb-0">{{ trans('No detections configured') }}</p>
-            {% endif %}
-        </div>
-    </section>
 {% endblock %}

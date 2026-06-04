@@ -57,6 +57,7 @@ class ObjectCounter:
         self.defect_count: int = 0
         self.correct_count: int = 0
         self.frame: Optional[np.ndarray] = None
+        self._mjpeg_chunk: bytes | None = None
         self.get_frames_running: bool = False
         self.running: bool = True
         self.paused = False
@@ -145,6 +146,9 @@ class ObjectCounter:
         """
         Generator that yields frames in the form of JPEG images.
 
+        JPEG encoding runs in the counter thread; this generator only forwards
+        the latest chunk so the HTTP worker thread stays mostly idle.
+
         Returns:
             A generator that yields frames in the form of JPEG images.
         """
@@ -152,24 +156,15 @@ class ObjectCounter:
         try:
             while self.running:
                 self.get_frames_running = True
-
-                if self.frame is not None:
-                    frame = self.frame
-
-                    # Scale the frame
-                    if self.video_scale > 0:
-                        frame = FrameUtils.resize_frame(frame, int(self.video_scale))
-
-                    # Encode the frame
-                    encoded_frame = FrameUtils.encoding_frame(frame, int(self.video_quality), 'jpeg')
-
-                    yield b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + encoded_frame.tobytes() + b'\r\n'
-                else:
-                    time.sleep(self.DEFAULT_SLEEP_TIME)  # Wait for a short pause if there is no frame yet
+                chunk = self._mjpeg_chunk
+                if chunk is not None:
+                    yield chunk
+                time.sleep(self.DEFAULT_SLEEP_TIME)
         except Exception as e:
             self.logger.error(f'Error in get_frames: {e}')
         finally:
             self.get_frames_running = False
+            self._mjpeg_chunk = None
 
     def get_current_count(self) -> dict:
         """
@@ -705,7 +700,39 @@ class ObjectCounter:
             if self.recording_enabled and self.recorder is not None:
                 self.recorder.push_frame(frame)
 
+            if self.get_frames_running:
+                self._mjpeg_chunk = self._encode_mjpeg_chunk(frame)
+
             return frame
+
+    def _encode_mjpeg_chunk(self, frame: np.ndarray) -> bytes | None:
+        """
+        Build one multipart JPEG chunk for the browser MJPEG stream.
+
+        Args:
+            frame (numpy.ndarray): BGR frame to encode.
+
+        Returns:
+            bytes | None: Encoded multipart chunk or None on failure.
+        """
+        if frame is None:
+            return None
+
+        try:
+            stream_frame = frame
+            if self.video_scale > 0:
+                stream_frame = FrameUtils.resize_frame(stream_frame, int(self.video_scale))
+
+            encoded_frame = FrameUtils.encoding_frame(stream_frame, int(self.video_quality), 'jpeg')
+            return (
+                b'--frame\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n'
+                + encoded_frame.tobytes()
+                + b'\r\n'
+            )
+        except Exception as e:
+            self.logger.error(f'Error encoding MJPEG chunk: {e}')
+            return None
 
     def _save_dataset_image(self, frame: np.ndarray, boxes: list | np.ndarray = None, classes_to_save: dict = None) -> None:
         """

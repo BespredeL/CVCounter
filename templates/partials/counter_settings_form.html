@@ -1,3 +1,5 @@
+{# Counter settings form #}
+<!-- START: Counter settings form -->
 {% import 'partials/forms.html' as forms %}
 <form class="counter-settings-form" id="counterSettingsForm" method="post"
       action="{{ url_for('counters.counter_settings_save', location=location) }}"
@@ -8,3 +10,4 @@
         {% endfor %}
     </div>
 </form>
+<!-- END: Counter settings form -->

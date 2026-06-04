@@ -1,6 +1,14 @@
-{# Split button + dropdown for dashboard counter chips
-   Args: chip_id, main_url, main_label, status, status_class, location
+{# 
+    Counter dropdown group
+    Args: 
+        chip_id: The ID of the chip
+        main_url: The URL of the main button
+        main_label: The label of the main button
+        status: The status of the counter
+        status_class: The class of the status
+        location: The location of the counter
 #}
+<!-- START: Counter dropdown group -->
 <div class="btn-group counter-chip shadow-sm" role="group" id="{{ chip_id }}_{{ location }}">
     <a href="{{ main_url }}"
        class="btn btn-{{ status_class }} rounded-start rounded-end-0">
@@ -68,3 +76,4 @@
         </li>
     </ul>
 </div>
+<!-- END: Counter dropdown group -->

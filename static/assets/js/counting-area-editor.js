@@ -107,7 +107,7 @@ class CountingAreaEditor {
      * @returns {object}
      */
     i18n() {
-        return window.CA_I18N || {};
+        return window.i18nGroup("countingArea");
     }
 
     /**
@@ -154,7 +154,6 @@ class CountingAreaEditor {
             }
 
             const pt = this.eventToDisplay(e);
-
             if (e.type === "pointerdown") {
                 this.onPointerDown(pt, e);
             } else if (e.type === "pointermove") {
@@ -194,8 +193,8 @@ class CountingAreaEditor {
             }
 
             const data = await response.json();
-            this.points = (data.counting_area || []).map((p) => ({x: p[0], y: p[1]}));
 
+            this.points = (data.counting_area || []).map((p) => ({x: p[0], y: p[1]}));
             if (data.counting_area_color?.length === 3) {
                 this.areaColorBgr = data.counting_area_color;
                 this.colorInput.value = CountingAreaColorUtil.bgrToHex(
@@ -204,7 +203,6 @@ class CountingAreaEditor {
                     this.areaColorBgr[2]
                 );
             }
-
             await this.loadSnapshot(false);
         } catch (err) {
             this.setStatus(err.message || "Load failed", true);
@@ -237,7 +235,6 @@ class CountingAreaEditor {
             this.img.src = url;
         });
     }
-
 
     /**
      * Resize the canvas
@@ -331,7 +328,10 @@ class CountingAreaEditor {
      * @returns {{x: number, y: number}} - The clamped point
      */
     clampNative(point) {
-        return {x: Math.max(0, Math.min(this.frameWidth, point.x)), y: Math.max(0, Math.min(this.frameHeight, point.y))};
+        return {
+            x: Math.max(0, Math.min(this.frameWidth, point.x)),
+            y: Math.max(0, Math.min(this.frameHeight, point.y))
+        };
     }
 
     /**
@@ -345,7 +345,6 @@ class CountingAreaEditor {
         this.canvas.setPointerCapture(e.pointerId);
 
         const hit = this.hitTest(pt.x, pt.y);
-
         if (hit >= 0) {
             this.dragIndex = hit;
             return;
@@ -387,6 +386,7 @@ class CountingAreaEditor {
                 {x: x2, y: y2},
                 {x: x1, y: y2},
             ];
+
             this.redraw();
         }
     }
@@ -426,6 +426,7 @@ class CountingAreaEditor {
             {x: this.frameWidth, y: this.frameHeight},
             {x: 0, y: this.frameHeight},
         ];
+
         this.redraw();
     }
 
@@ -441,6 +442,7 @@ class CountingAreaEditor {
         const r = parseInt(value.slice(0, 2), 16);
         const g = parseInt(value.slice(2, 4), 16);
         const b = parseInt(value.slice(4, 6), 16);
+
         return `rgba(${r},${g},${b},${alpha})`;
     }
 
