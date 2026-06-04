@@ -6,16 +6,18 @@
 # Updated: 03.06.2026
 # Website: https://bespredel.name
 
+import time
 from functools import wraps
 
-from flask import Blueprint, Response, abort, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, Response, abort, jsonify, redirect, render_template, request, send_file, url_for
 from flask import current_app, g
 from markupsafe import escape
 
 from system.core.object_counter import ObjectCounter
 from system.managers.video_stream_manager import VideoStreamManager
+from system.utils.counter_preview import get_preview_path, save_counter_preview
 from system.utils.frame_utils import FrameUtils
-from system.utils.utils import is_ajax, trans as translate
+from system.utils.utils import is_ajax, slug, trans as translate
 from system.utils.validators import (
     ValidationError,
     validate_counting_area_payload,
@@ -146,6 +148,66 @@ def _get_editor_snapshot_frame(location: str):
         vsm.stop()
 
 
+def _capture_counter_preview_on_start(location: str) -> int | None:
+    """
+    Grab one frame after thread start and store a dashboard thumbnail.
+
+    Args:
+        location: Detection location identifier.
+
+    Returns:
+        int | None: Unix timestamp when saved, else None.
+    """
+    context = get_app_context()
+    object_counters = context['object_counters']
+    counter = object_counters.get(location)
+    frame = None
+
+    if counter:
+        for _ in range(40):
+            frame = counter.get_source_frame()
+            if frame is not None:
+                break
+            time.sleep(0.1)
+
+    if frame is None:
+        try:
+            frame = _get_editor_snapshot_frame(location)
+        except Exception:
+            frame = None
+
+    if save_counter_preview(location, frame):
+        return int(time.time())
+    return None
+
+
+def _ensure_counter_running(location: str) -> dict:
+    """
+    Initialize ObjectCounter and start its thread when not already running.
+
+    Dashboard preview is refreshed only on the first start (new thread).
+
+    Args:
+        location: Detection location identifier.
+
+    Returns:
+        dict: Keys started_new (bool), preview_ts (int | None).
+    """
+    context = get_app_context()
+    thread_manager = context['thread_manager']
+    started_new = not thread_manager.has_thread(location)
+
+    object_counters = object_detector_init(location)
+    if location in object_counters:
+        thread_manager.start_thread(location, object_counters[location].run_frames)
+
+    preview_ts = None
+    if started_new:
+        preview_ts = _capture_counter_preview_on_start(location)
+
+    return {'started_new': started_new, 'preview_ts': preview_ts}
+
+
 def _init_counter_for_location(location: str) -> ObjectCounter:
     """
     Ensure ObjectCounter exists and video source is open.
@@ -223,15 +285,12 @@ def counter_video(location: str = None):
     locations = context['locations']
     locations_dict = context['locations_dict']
     object_counters = context['object_counters']
-    thread_manager = context['thread_manager']
 
     location = str(escape(location))
     if location not in locations:
         abort(400, translate('Detection config not found'))
 
-    object_detector_init(location)
-    if location in object_counters:
-        thread_manager.start_thread(location, object_counters[location].run_frames)
+    _ensure_counter_running(location)
 
     # Get form config
     form_config = config.get('form', {})
@@ -297,6 +356,96 @@ def counting_area_data(location: str = None):
         'counting_area': detector_config.get('counting_area', []),
         'counting_area_color': detector_config.get('counting_area_color', [67, 211, 255]),
     })
+
+
+@counters_bp.route('/counter/<string:location>/preview')
+def counter_preview_image(location: str = None) -> Response:
+    """
+    Serve the persisted dashboard camera thumbnail for a location.
+
+    Preview files are written only when the counter thread is first started.
+    """
+    location = str(escape(location))
+    _require_detection_location(location)
+
+    path = get_preview_path(location)
+    if not path.is_file():
+        abort(404)
+
+    return send_file(path, mimetype='image/jpeg', conditional=True)
+
+
+@counters_bp.route('/counter/<string:location>/settings/form')
+def counter_settings_form(location: str = None) -> str:
+    """
+    Return HTML form fields for one detection (dashboard settings modal).
+
+    Args:
+        location: Detection location identifier.
+
+    Returns:
+        str: Rendered form partial.
+    """
+    context = get_app_context()
+    config = context['config']
+    locations_dict = context['locations_dict']
+
+    location = str(escape(location))
+    _require_detection_location(location)
+
+    detection = config.get(f'detections.{location}', {})
+
+    return render_template(
+        'partials/counter_settings_form.html',
+        location=location,
+        title=locations_dict.get(location, location),
+        detection=detection,
+    )
+
+
+@counters_bp.route('/counter/<string:location>/settings', methods=['POST'])
+def counter_settings_save(location: str = None):
+    """
+    Save detection settings from the dashboard modal.
+
+    Args:
+        location: Detection location identifier.
+
+    Returns:
+        JSON or redirect with save status.
+    """
+    context = get_app_context()
+    config = context['config']
+    object_counters = context['object_counters']
+
+    location = str(escape(location))
+    _require_detection_location(location)
+
+    prefix = f'detections-{location}-'
+    form_data = {key: value for key, value in request.form.items() if key.startswith(prefix)}
+
+    if not form_data:
+        abort(400, translate('No settings to save'))
+
+    config.save_from_request(form_data)
+
+    counter = object_counters.get(location)
+    if counter is not None:
+        counting_area = config.get(f'detections.{location}.counting_area')
+        counting_area_color = config.get(f'detections.{location}.counting_area_color')
+        if counting_area is not None:
+            if counting_area_color is not None:
+                counter.update_counting_area(counting_area, tuple(counting_area_color))
+            else:
+                counter.update_counting_area(counting_area)
+
+    if is_ajax():
+        return jsonify({
+            'status': 'saved',
+            'restart_recommended': location in object_counters,
+        })
+
+    return redirect(url_for('main.index'))
 
 
 @counters_bp.route('/counter/<string:location>/counting_area/snapshot')
@@ -423,15 +572,12 @@ def counter_text(location: str = None) -> str:
     locations = context['locations']
     locations_dict = context['locations_dict']
     object_counters = context['object_counters']
-    thread_manager = context['thread_manager']
 
     location = str(escape(location))
     if location not in locations:
         abort(400, translate('Detection config not found'))
 
-    object_detector_init(location)
-    if location in object_counters:
-        thread_manager.start_thread(location, object_counters[location].run_frames)
+    _ensure_counter_running(location)
 
     # Get form config
     form_config = config.get('form', {})
@@ -449,54 +595,98 @@ def counter_text(location: str = None) -> str:
     )
 
 
-@counters_bp.route('/counter_dual/<string:location_first>/<string:location_second>')
-@counters_bp.route('/counter_dual/text/<string:location_first>/<string:location_second>')
-def counter_dual_text(location_first: str, location_second: str) -> str:
+def _parse_multi_locations_param(raw: str | None) -> list[str]:
     """
-    Display a dual counter interface for two locations.
-    
+    Parse a comma-separated list of detection location ids.
+
     Args:
-        location_first (str): The identifier for the first detection location
-        location_second (str): The identifier for the second detection location
-    
+        raw: Query string value.
+
     Returns:
-        str: Rendered HTML template with dual counter interface
-    
-    Raises:
-        HTTPException: If either location configuration is not found
+        list[str]: Unique location ids in order.
+    """
+    if not raw:
+        return []
+
+    seen: set[str] = set()
+    result: list[str] = []
+
+    for part in raw.split(','):
+        loc = str(escape(part.strip()))
+        if loc and loc not in seen:
+            seen.add(loc)
+            result.append(loc)
+
+    return result
+
+
+def _start_counters_for_locations(locations_list: list[str]) -> None:
+    """Initialize ObjectCounter instances and start threads for each location."""
+    context = get_app_context()
+    object_counters = context['object_counters']
+    thread_manager = context['thread_manager']
+
+    for location in locations_list:
+        object_detector_init(location)
+        if location in object_counters:
+            thread_manager.start_thread(location, object_counters[location].run_frames)
+
+
+@counters_bp.route('/counter_multi/text')
+def counter_multi_text() -> str:
+    """
+    Display a fullscreen text view for one or more detection locations.
+
+    Query:
+        locations: Comma-separated detection ids, e.g. ?locations=Cam1,Cam2,Cam3
+
+    Returns:
+        str: Rendered multi-counter page.
     """
     context = get_app_context()
     locations = context['locations']
     locations_dict = context['locations_dict']
-    object_counters = context['object_counters']
-    thread_manager = context['thread_manager']
 
-    location_first = str(escape(location_first))
-    location_second = str(escape(location_second))
-    if location_first not in locations or location_second not in locations:
-        abort(400, translate('Detection config not found'))
+    locations_list = _parse_multi_locations_param(request.args.get('locations'))
 
-    # Init objects and threads for first location
-    object_detector_init(location_first)
-    if location_first in object_counters:
-        thread_manager.start_thread(location_first, object_counters[location_first].run_frames)
+    if not locations_list:
+        abort(400, translate('Select at least one counter'))
 
-    # Init objects and threads for second location
-    object_detector_init(location_second)
-    if location_second in object_counters:
-        thread_manager.start_thread(location_second, object_counters[location_second].run_frames)
+    for location in locations_list:
+        if location not in locations:
+            abort(400, translate('Detection config not found'))
 
-    # Page title
-    title = locations_dict.get(location_first, '') + ' - ' + locations_dict.get(location_second, '')
+    _start_counters_for_locations(locations_list)
+
+    counters = [
+        {
+            'location': loc,
+            'slug': slug(loc),
+            'label': locations_dict.get(loc, loc),
+        }
+        for loc in locations_list
+    ]
+
+    title = ' · '.join(c['label'] for c in counters)
 
     return render_template(
         'counters/show_text_multi.html',
         title=title,
-        location_in=location_first,
-        location_out=location_second,
-        location_in_label=locations_dict.get(location_first, ''),
-        location_out_label=locations_dict.get(location_second, ''),
+        counters=counters,
     )
+
+
+@counters_bp.route('/counter_dual/<string:location_first>/<string:location_second>')
+@counters_bp.route('/counter_dual/text/<string:location_first>/<string:location_second>')
+def counter_dual_text(location_first: str, location_second: str):
+    """
+    Legacy dual-counter URL — redirects to the multi-counter view.
+    """
+    location_first = str(escape(location_first))
+    location_second = str(escape(location_second))
+    locations_param = ','.join([location_first, location_second])
+
+    return redirect(url_for('counters.counter_multi_text', locations=locations_param))
 
 
 @counters_bp.route('/save_count/<string:location>', methods=['POST'])
@@ -619,6 +809,29 @@ def save_capture(location: str = None) -> dict[str, str] | Response:
     return redirect(url_for('main.index'))
 
 
+@counters_bp.route('/counter/<string:location>/bootstrap')
+def counter_bootstrap(location: str = None):
+    """
+    Start counter thread in the background without opening the UI.
+
+    Args:
+        location: Detection location identifier.
+
+    Returns:
+        JSON status response.
+    """
+    location = str(escape(location))
+    _require_detection_location(location)
+
+    result = _ensure_counter_running(location)
+
+    return jsonify({
+        'status': 'started',
+        'location': location,
+        'preview_ts': result['preview_ts'],
+    })
+
+
 @counters_bp.route('/start_count/<string:location>')
 @require_location
 def start_count(location: str = None) -> dict[str, str] | Response:
@@ -637,7 +850,7 @@ def start_count(location: str = None) -> dict[str, str] | Response:
     object_counters[location].start()
 
     if is_ajax():
-        return {'status': 'started'}
+        return jsonify({'status': 'started'})
     return redirect(url_for('main.index'))
 
 
@@ -659,7 +872,7 @@ def pause_count(location: str = None) -> dict[str, str] | Response:
     object_counters[location].pause()
 
     if is_ajax():
-        return {'status': 'paused'}
+        return jsonify({'status': 'paused'})
     return redirect(url_for('main.index'))
 
 
@@ -689,5 +902,5 @@ def stop_count(location: str = None) -> dict[str, str] | Response:
             del object_counters[location]
 
     if is_ajax():
-        return {'status': 'stopped'}
+        return jsonify({'status': 'stopped'})
     return redirect(url_for('main.index'))

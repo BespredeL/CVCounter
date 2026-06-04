@@ -11,9 +11,10 @@
 const SidebarKeyboard = {
     /**
      * Bind the stepper events
-     * 
+     *
      * @param {string} selector - The selector for the input
      * @param {boolean} increment - Whether to increment the value
+     * @returns {void}
      */
     bindStepper(selector, increment) {
         $(selector).on("click", function () {
@@ -110,6 +111,9 @@ const SidebarKeyboard = {
     },
 };
 
+/**
+ * Initialize the sidebar keyboard
+ */
 $(function () {
     SidebarKeyboard.initialize();
 });

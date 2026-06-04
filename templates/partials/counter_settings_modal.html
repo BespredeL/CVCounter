@@ -1,0 +1,26 @@
+<div class="modal fade counter-settings-modal" id="counterSettingsModal" tabindex="-1"
+     aria-labelledby="counterSettingsModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title" id="counterSettingsModalTitle">{{ trans('Settings') }}</h5>
+                    <p class="modal-subtitle text-muted mb-0" id="counterSettingsModalSubtitle"></p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ trans('Dismiss') }}"></button>
+            </div>
+            <div class="modal-body" id="counterSettingsModalBody">
+                <div class="counter-settings-modal__loading text-center py-5">
+                    <span class="spinner-border" role="status" aria-hidden="true"></span>
+                    <p class="text-muted small mt-2 mb-0">{{ trans('Loading settings') }}</p>
+                </div>
+            </div>
+            <div class="modal-footer counter-settings-modal__footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ trans('Dismiss') }}</button>
+                <button type="submit" form="counterSettingsForm" class="btn btn-primary" id="counterSettingsSaveBtn" disabled>
+                    {{ trans('Save') }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -32,7 +32,8 @@
                            class="form-control cv-form-control">
                     <p class="cv-form-hint mb-2">{{ trans('Configure the polygon on a live video frame') }}</p>
                     <a class="btn btn-outline-primary btn-sm"
-                       href="{{ url_for('counters.counting_area_edit', location=detection_location) }}">
+                       href="{{ url_for('counters.counting_area_edit', location=detection_location) }}"
+                       target="_blank" rel="noopener">
                         {{ trans('Open zone editor') }}
                     </a>
                 </div>

@@ -1,7 +1,7 @@
 /**
  * Developed by: Aleksandr Kireev
  * Created: 17.12.2024
- * Updated: 03.06.2026
+ * Updated: 04.06.2026
  * Website: https://bespredel.name
  */
 
@@ -9,9 +9,25 @@
  * Numpad shortcuts for correct_count field
  */
 const CorrectionsKeyboard = {
+    /**
+     * The previous value
+     *
+     * @type {number}
+     */
     prevVal: 0,
+
+    /**
+     * The next value
+     *
+     * @type {number}
+     */
     nextVal: 0,
 
+    /**
+     * Initialize the corrections keyboard
+     *
+     * @returns {void}
+     */
     initialize() {
         $(document).on("keydown", (e) => {
             const input = $('input[name="correct_count"]');

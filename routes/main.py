@@ -13,6 +13,7 @@ from flask import Blueprint, abort, render_template
 from flask import current_app, g
 from markupsafe import escape
 
+from system.utils.counter_preview import preview_exists
 from system.utils.utils import trans as translate
 
 main_bp = Blueprint('main', __name__)
@@ -44,7 +45,8 @@ def index() -> str:
     return render_template(
         'index.html',
         object_counters=locations_dict,
-        running_counters=thread_manager.threads
+        running_counters=thread_manager.threads,
+        counter_previews={loc: preview_exists(loc) for loc in locations_dict},
     )
 
 

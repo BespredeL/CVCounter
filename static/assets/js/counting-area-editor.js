@@ -1,14 +1,23 @@
 /**
  * Developed by: Aleksandr Kireev
  * Created: 03.06.2026
- * Updated: 03.06.2026
+ * Updated: 04.06.2026
  * Website: https://bespredel.name
  */
 
+
 /**
- * Constants for the counting area editor
+ * The hit radius for the counting area editor
+ *
+ * @type {number}
  */
 const COUNTING_AREA_HIT_RADIUS = 12;
+
+/**
+ * The minimum number of points for the counting area editor
+ *
+ * @type {number}
+ */
 const COUNTING_AREA_MIN_POINTS = 3;
 
 /**
@@ -17,7 +26,7 @@ const COUNTING_AREA_MIN_POINTS = 3;
 const CountingAreaColorUtil = {
     /**
      * Convert BGR to hex color string
-     * 
+     *
      * @param {number} b - Blue component
      * @param {number} g - Green component
      * @param {number} r - Red component
@@ -30,7 +39,7 @@ const CountingAreaColorUtil = {
 
     /**
      * Convert hex color string to BGR array
-     * 
+     *
      * @param {string} hex - Hex color string
      * @returns {number[]}
      */
@@ -83,7 +92,7 @@ class CountingAreaEditor {
 
     /**
      * Set the status of the editor
-     * 
+     *
      * @param {string} text - The text to set as the status
      * @param {boolean} [isError] - Whether the status is an error
      */
@@ -94,7 +103,7 @@ class CountingAreaEditor {
 
     /**
      * Get the internationalization strings
-     * 
+     *
      * @returns {object}
      */
     i18n() {
@@ -206,7 +215,7 @@ class CountingAreaEditor {
 
     /**
      * Load the snapshot image
-     * 
+     *
      * @param {boolean} bustCache
      * @returns {Promise<void>}
      */
@@ -229,7 +238,7 @@ class CountingAreaEditor {
         });
     }
 
-    
+
     /**
      * Resize the canvas
      */
@@ -254,7 +263,7 @@ class CountingAreaEditor {
 
     /**
      * Convert display coordinates to native coordinates
-     * 
+     *
      * @param {number} dx - The x coordinate in display coordinates
      * @param {number} dy - The y coordinate in display coordinates
      * @returns {{x: number, y: number}} - The native coordinates
@@ -268,7 +277,7 @@ class CountingAreaEditor {
 
     /**
      * Convert native coordinates to display coordinates
-     * 
+     *
      * @param {number} nx - The x coordinate in native coordinates
      * @param {number} ny - The y coordinate in native coordinates
      * @returns {{x: number, y: number}} - The display coordinates
@@ -282,7 +291,7 @@ class CountingAreaEditor {
 
     /**
      * Convert event coordinates to display coordinates
-     * 
+     *
      * @param {PointerEvent} e - The pointer event
      * @returns {{x: number, y: number}} - The display coordinates
      * @returns {{x: number, y: number}}
@@ -297,7 +306,7 @@ class CountingAreaEditor {
 
     /**
      * Test if a point is within the hit radius of a point
-     * 
+     *
      * @param {number} dx - The x coordinate of the point to test
      * @param {number} dy - The y coordinate of the point to test
      * @returns {number} - The index of the point if it is within the hit radius, otherwise -1
@@ -317,7 +326,7 @@ class CountingAreaEditor {
 
     /**
      * Clamp a point to the frame
-     * 
+     *
      * @param {{x: number, y: number}} point - The point to clamp
      * @returns {{x: number, y: number}} - The clamped point
      */
@@ -327,7 +336,7 @@ class CountingAreaEditor {
 
     /**
      * Handle pointer down event
-     * 
+     *
      * @param {{x: number, y: number}} pt - The point to clamp
      * @param {PointerEvent} e - The pointer event
      * @param {PointerEvent} e
@@ -353,7 +362,7 @@ class CountingAreaEditor {
 
     /**
      * Handle pointer move event
-     * 
+     *
      * @param {{x: number, y: number}} pt - The point to clamp
      * @param {PointerEvent} e - The pointer event
      * @param {PointerEvent} e
@@ -384,7 +393,7 @@ class CountingAreaEditor {
 
     /**
      * Handle pointer up event
-     * 
+     *
      * @param {PointerEvent} e
      */
     onPointerUp(e) {
@@ -422,7 +431,7 @@ class CountingAreaEditor {
 
     /**
      * Get the fill color rgba
-     * 
+     *
      * @param {number} alpha - The alpha value
      * @returns {string}
      */
@@ -437,7 +446,7 @@ class CountingAreaEditor {
 
     /**
      * Get the stroke color
-     * 
+     *
      * @returns {string} - The stroke color
      */
     strokeColor() {

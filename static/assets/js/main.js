@@ -11,11 +11,11 @@
 const CookieUtil = {
     /**
      * Set a cookie
-     * 
+     *
      * @param {string} name - The name of the cookie
      * @param {string} value - The value of the cookie
      * @param {number} days - The number of days to expire the cookie
-     */ 
+     */
     set(name, value, days) {
         let expires = "";
         if (days) {
@@ -28,7 +28,7 @@ const CookieUtil = {
 
     /**
      * Get a cookie
-     * 
+     *
      * @param {string} name - The name of the cookie
      * @returns {string} - The value of the cookie
      */
@@ -42,7 +42,7 @@ const CookieUtil = {
 
     /**
      * Delete a cookie
-     * 
+     *
      * @param {string} name - The name of the cookie
      */
     delete(name) {
@@ -56,7 +56,7 @@ const CookieUtil = {
 const ThemeManager = {
     /**
      * Set the theme
-     * 
+     *
      * @param {string} theme - The theme to set
      */
     set(theme) {
@@ -74,6 +74,8 @@ const ThemeManager = {
 
     /**
      * Toggle the theme
+     *
+     * @returns {void}
      */
     toggle() {
         const currentTheme = $("html").attr("data-bs-theme") || "dark";
@@ -82,6 +84,8 @@ const ThemeManager = {
 
     /**
      * Initialize the theme manager
+     *
+     * @returns {void}
      */
     initialize() {
         this.set(CookieUtil.get("theme") || "dark");
@@ -95,7 +99,7 @@ const ThemeManager = {
 const FullscreenManager = {
     /**
      * Toggle the fullscreen mode
-     * 
+     *
      * @returns {boolean} - The new fullscreen state
      */
     toggle() {

@@ -3,195 +3,111 @@
 {% block title %}CVCounter{% endblock %}
 
 {% block header %}
-    {% with page_title='CVCounter', page_subtitle=trans('Computer vision counting for production lines. Select a counter mode below.'), home_variant=true %}
+    {% with page_title='CVCounter', page_subtitle=trans('Launch counters and control detection from one place.'), home_variant=true %}
         {% include 'partials/page_header.html' %}
     {% endwith %}
 {% endblock %}
 
 {% block footer_assets %}
     <script>
-        $(document).ready(function () {
-            /**
-             * Handler for receiving counter statuses
-             */
-            socket.on('counter_status_event', function (data) {
-
-                /**
-                 * Update classes for buttons
-                 *
-                 * @param {string} baseId
-                 * @param {string} remove
-                 * @param {string} add
-                 *
-                 * @return {void}
-                 */
-                function updateClasses(baseId, remove, add) {
-                    const baseSelector = '#' + baseId + '_' + data.data.location;
-                    const btnSelector = baseSelector + ' > .btn, ' + baseSelector + ' > .dropdown-toggle';
-                    const btnCounterRun = baseSelector + ' a.counter_run';
-                    const btnCounterStart = baseSelector + ' a.counter_start';
-                    const btnCounterStop = baseSelector + ' a.counter_stop';
-                    const btnCounterPause = baseSelector + ' a.counter_pause';
-
-                    $(btnSelector).removeClass(remove).addClass(add);
-                    if (add === 'btn-success') {
-                        $(btnCounterRun).addClass('disabled');
-                        $(btnCounterStop).removeClass('disabled');
-                        $(btnCounterStart).addClass('disabled');
-                        $(btnCounterPause).removeClass('disabled');
-                    } else if (add === 'btn-warning') {
-                        $(btnCounterStart).removeClass('disabled');
-                        $(btnCounterPause).addClass('disabled');
-                    } else if (add === 'btn-secondary') {
-                        $(btnCounterRun).removeClass('disabled');
-                        $(btnCounterStop).addClass('disabled');
-                        $(btnCounterStart).addClass('disabled');
-                        $(btnCounterPause).addClass('disabled');
-                    }
-                }
-
-                switch (data.data.status) {
-                    case 'started':
-                        updateClasses('counter_video', 'btn-secondary btn-warning btn-danger', 'btn-success');
-                        updateClasses('counter_text', 'btn-secondary btn-warning btn-danger', 'btn-success');
-                        showToast('{{ trans("Counting has started!") }}', 'success');
-                        break;
-                    case 'stopped':
-                        updateClasses('counter_video', 'btn-success btn-warning btn-danger', 'btn-secondary');
-                        updateClasses('counter_text', 'btn-success btn-warning btn-danger', 'btn-secondary');
-                        showToast('{{ trans("Counting has stopped!") }}', 'secondary');
-                        break;
-                    case 'paused':
-                        updateClasses('counter_video', 'btn-success btn-danger', 'btn-warning');
-                        updateClasses('counter_text', 'btn-success btn-danger', 'btn-warning');
-                        showToast('{{ trans("Counting has paused!") }}', 'warning');
-                        break;
-                    case 'error':
-                        updateClasses('counter_video', 'btn-success btn-warning', 'btn-danger');
-                        updateClasses('counter_text', 'btn-success btn-warning', 'btn-danger');
-                        showToast('{{ trans("Counting has error!") }}', 'danger');
-                        break;
-                }
-            });
-
-            /**
-             * On click counter dropdown actions (scoped - do not break other dropdowns)
-             */
-            $('#counter_video, #counter_text').on('click', '.dropdown-item', function (e) {
-                if ($(this).hasClass('disabled')) {
-                    e.preventDefault();
-                    return;
-                }
-                e.preventDefault();
-
-                let element = $(this);
-                let href = element.attr('href');
-                let parent = element.closest('.btn-group').find('.dropdown-toggle');
-
-                let spinnerTimer = setTimeout(() => {
-                    parent.append('<span class="spinner-border spinner-border-sm spinner-btn-dropdown" role="status" aria-hidden="true"></span>');
-                }, 300);
-
-                $.get(href).done(() => {
-                    spinnerTimer && clearTimeout(spinnerTimer);
-                    parent.find('.spinner-border').remove();
-                }).fail(() => {
-                    showToast('{{ trans("Something went wrong") }}', 'success');
-                }).always(() => {
-                    spinnerTimer && clearTimeout(spinnerTimer);
-                    parent.find('.spinner-border').remove();
-                });
-            });
-
-            /**
-             * On click the start button redirect to the counter
-             */
-            $('#counterDualTextStart').on('click', function () {
-                let counterDualTextIn = $('#counterDualText input[name="counter_in"]:checked').val();
-                let counterDualTextOut = $('#counterDualText input[name="counter_out"]:checked').val();
-                if (!counterDualTextIn || !counterDualTextOut) {
-                    alert('{{ trans('Please select 2 counters') }}');
-                    return false;
-                }
-
-                let baseUrl = '{{ url_for('counters.counter_dual_text', location_first='', location_second='') }}'.replace(/\/+$/, '');
-                let fullUrl = baseUrl + '/' + counterDualTextIn + '/' + counterDualTextOut;
-                window.open(fullUrl, '_self');
-            });
-
-            /**
-             * On change the radio buttons disable
-             * the other radio buttons with the same name
-             */
-            $('#counterDualText').on('change', function (e) {
-                let opposite = e.target.name === 'counter_in' ? 'counter_out' : 'counter_in';
-                let selectedValue = e.target.value;
-                $('#counterDualText input[name="' + opposite + '"]').each(function () {
-                    this.disabled = this.value === selectedValue;
-                });
-            });
-        });
+        window.DASHBOARD_I18N = {
+            running: {{ trans('Counter running')|tojson }},
+            paused: {{ trans('Counter paused')|tojson }},
+            stopped: {{ trans('Counter stopped')|tojson }},
+            error: {{ trans('Counting has error!')|tojson }},
+            toastStarted: {{ trans('Counting has started!')|tojson }},
+            toastStopped: {{ trans('Counting has stopped!')|tojson }},
+            toastPaused: {{ trans('Counting has paused!')|tojson }},
+            toastError: {{ trans('Counting has error!')|tojson }},
+            requestFailed: {{ trans('Request failed')|tojson }},
+            confirmStop: {{ trans('Stop counter')|tojson }},
+            startCounter: {{ trans('Start counter')|tojson }},
+            resumeCounting: {{ trans('Resume counting')|tojson }},
+            pauseCounting: {{ trans('Pause counting')|tojson }},
+            openVideo: {{ trans('Open video')|tojson }},
+            openText: {{ trans('Open text')|tojson }},
+            selectAtLeastOne: {{ trans('Select at least one counter')|tojson }},
+            multiSelectedTemplate: {{ trans('Multi counter selected count')|tojson }},
+            filterEmpty: {{ trans('No counters match filter')|tojson }},
+            statsTemplate: {{ trans('Counters stats')|tojson }},
+            counterSettings: {{ trans('Counter settings')|tojson }},
+            settingsSaved: {{ trans('Settings saved')|tojson }},
+            loadingSettings: {{ trans('Loading settings')|tojson }},
+            settingsRestartHint: {{ trans('Stop and start the counter to apply all changes')|tojson }}
+        };
     </script>
+    <script src="{{ url_for('static', filename='assets/js/counter-settings-modal.js') }}"></script>
+    <script src="{{ url_for('static', filename='assets/js/dashboard-counters.js') }}"></script>
 {% endblock %}
 
 {% block content %}
     {% include 'partials/app_nav_cards.html' %}
 
-    <!-- Video -->
-    <section class="section-block">
-        <h2 class="section-block__title">{{ trans('Video') }}</h2>
-        <div class="counter-chip-grid" id="counter_video">
-            {% for k in object_counters %}
-                {% with chip_id='counter_video', main_url=url_for('counters.counter_video', location=k), main_label=object_counters[k]|striptags|title, status=counter_status(k), status_class=counter_status_class(k), location=k %}
-                    {% include 'partials/counter_dropdown_group.html' %}
-                {% endwith %}
-            {% endfor %}
+    <section class="section-block section-block--compact counter-dashboard-section">
+        <div class="counter-dashboard-toolbar">
+            <span class="counter-dashboard-toolbar__label">{{ trans('Counters') }}</span>
+            <input type="search" class="form-control counter-dashboard-toolbar__search" id="counterSearch"
+                   placeholder="{{ trans('Search counters') }}" autocomplete="off" aria-label="{{ trans('Search counters') }}">
+            <div class="counter-filter-pills btn-group" role="group" aria-label="{{ trans('Filter by status') }}">
+                <input type="radio" class="btn-check" name="counterStatusFilter" id="filterAll" value="all" checked>
+                <label class="btn btn-outline-secondary" for="filterAll">{{ trans('All') }}</label>
+                <input type="radio" class="btn-check" name="counterStatusFilter" id="filterRunning" value="running">
+                <label class="btn btn-outline-secondary" for="filterRunning">{{ trans('Running') }}</label>
+                <input type="radio" class="btn-check" name="counterStatusFilter" id="filterPaused" value="paused">
+                <label class="btn btn-outline-secondary" for="filterPaused">{{ trans('Paused') }}</label>
+                <input type="radio" class="btn-check" name="counterStatusFilter" id="filterStopped" value="stopped">
+                <label class="btn btn-outline-secondary" for="filterStopped">{{ trans('Stopped') }}</label>
+            </div>
+            <span class="counter-dashboard-stats" id="counterStats" aria-live="polite"></span>
         </div>
+
+        {% if object_counters %}
+            <div class="counter-card-grid" id="counter-dashboard">
+                {% for location, label in object_counters.items() %}
+                    {% with status=counter_status(location) %}
+                        {% include 'partials/counter_dashboard_card.html' %}
+                    {% endwith %}
+                {% endfor %}
+            </div>
+            <div class="empty-state d-none" id="counterFilterEmpty">{{ trans('No counters match filter') }}</div>
+        {% else %}
+            <div class="empty-state">{{ trans('No detections configured') }}</div>
+        {% endif %}
     </section>
 
-    <!-- Text -->
-    <section class="section-block">
-        <h2 class="section-block__title">{{ trans('Text') }}</h2>
-        <div class="counter-chip-grid" id="counter_text">
-            {% for k in object_counters %}
-                {% with chip_id='counter_text', main_url=url_for('counters.counter_text', location=k), main_label=object_counters[k]|striptags|title, status=counter_status(k), status_class=counter_status_class(k), location=k %}
-                    {% include 'partials/counter_dropdown_group.html' %}
-                {% endwith %}
-            {% endfor %}
-        </div>
-    </section>
+    {% include 'partials/counter_settings_modal.html' %}
 
-    <!-- Text double -->
-    <section class="section-block">
-        <h2 class="section-block__title">{{ trans('Text double') }}</h2>
-        <div class="dual-counter-panel" id="counterDualText">
-            <div class="row g-4">
-                <div class="col-md-6">
-                    <div class="mb-2 fw-semibold">{{ trans('Counter on the left:') }}</div>
-                    {% for k in object_counters %}
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" value="{{ k }}" name="counter_in"
-                                   id="counterIn{{ k|striptags|slug }}">
-                            <label class="form-check-label"
-                                   for="counterIn{{ k|striptags|slug }}">{{ object_counters[k]|striptags|title }}</label>
-                        </div>
+    <section class="section-block section-block--compact">
+        <h2 class="section-block__title">{{ trans('Multi counter view') }}</h2>
+        <p class="text-muted small mb-2">{{ trans('Multi counter hint') }}</p>
+        <div class="multi-counter-picker" id="counterMultiPicker"
+             data-multi-url="{{ url_for('counters.counter_multi_text') }}">
+            {% if object_counters %}
+                <div class="multi-counter-picker__grid" role="group" aria-label="{{ trans('Choose counters') }}">
+                    {% for location, label in object_counters.items() %}
+                        <label class="multi-counter-picker__chip">
+                            <input type="checkbox" class="form-check-input" name="multi_counter_locations"
+                                   value="{{ location }}">
+                            <span class="multi-counter-picker__chip-body">
+                                <span class="multi-counter-picker__label">{{ label|striptags|title }}</span>
+                                <span class="multi-counter-picker__id">{{ location }}</span>
+                            </span>
+                        </label>
                     {% endfor %}
                 </div>
-                <div class="col-md-6">
-                    <div class="mb-2 fw-semibold">{{ trans('Counter on the right:') }}</div>
-                    {% for k in object_counters %}
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" value="{{ k }}" name="counter_out"
-                                   id="counterOut{{ k|striptags|slug }}">
-                            <label class="form-check-label"
-                                   for="counterOut{{ k|striptags|slug }}">{{ object_counters[k]|striptags|title }}</label>
-                        </div>
-                    {% endfor %}
+                <div class="multi-counter-picker__toolbar">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="counterMultiSelectAll">
+                        {{ trans('Select all') }}
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="counterMultiClear">
+                        {{ trans('Clear selection') }}
+                    </button>
+                    <span class="multi-counter-picker__count text-muted small" id="counterMultiCount" aria-live="polite"></span>
+                    <button type="button" class="btn btn-primary" id="counterMultiOpen">{{ trans('Open multi view') }}</button>
                 </div>
-            </div>
-            <div class="mt-3">
-                <button class="btn btn-primary px-4" id="counterDualTextStart">{{ trans('Start counting') }}</button>
-            </div>
+            {% else %}
+                <p class="text-muted small mb-0">{{ trans('No detections configured') }}</p>
+            {% endif %}
         </div>
     </section>
 {% endblock %}
