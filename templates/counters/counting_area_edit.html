@@ -33,7 +33,6 @@
 
         <div class="counting-area-toolbar cv-card p-3 mb-3">
             <div class="d-flex flex-wrap align-items-center gap-2">
-                <span class="text-body-secondary small me-2 d-none d-md-inline">{{ trans('Editor hint') }}</span>
                 <div class="btn-group btn-group-sm" role="group">
                     <button type="button" class="btn btn-outline-secondary" id="ca-btn-undo" title="{{ trans('Undo last point') }}">
                         {{ trans('Undo') }}
@@ -51,6 +50,9 @@
                 <button type="button" class="btn btn-sm btn-outline-info" id="ca-btn-refresh">
                     {{ trans('Refresh frame') }}
                 </button>
+
+                <span class="text-body-secondary small me-2 d-none d-md-inline">{{ trans('Editor hint') }}</span>
+
                 <label class="counting-area-color-picker ms-md-auto mb-0">
                     <span class="small text-body-secondary me-1">{{ trans('Zone color') }}</span>
                     <input type="color" id="ca-color" value="#43d3ff" aria-label="{{ trans('Zone color') }}">

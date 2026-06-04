@@ -114,7 +114,7 @@ class CountingAreaEditor {
      * Bind the toolbar events
      */
     bindToolbar() {
-        const strings = this.i18n();
+        const s = this.i18n();
 
         $("#ca-btn-undo").on("click", () => {
             if (this.points.length > 0) {
@@ -134,7 +134,7 @@ class CountingAreaEditor {
             this.rectMode = !this.rectMode;
             this.rectStart = null;
             $("#ca-btn-rect").toggleClass("active", this.rectMode);
-            this.setStatus(this.rectMode ? strings.rectHint : strings.defaultHint);
+            this.setStatus(this.rectMode ? s.rectHint : s.defaultHint);
         });
 
         $("#ca-btn-refresh").on("click", () => this.loadSnapshot(true));

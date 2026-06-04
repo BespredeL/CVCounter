@@ -61,9 +61,7 @@ def build_frontend_i18n(language_code: str | None = None) -> dict[str, Any]:
             'settingsRestartHint': t('Stop and start the counter to apply all changes'),
         },
         'countingArea': {
-            'defaultHint': t(
-                'Click to add points. Drag vertices to adjust. Double-click a vertex to remove.'
-            ),
+            'defaultHint': t('Click to add points. Drag vertices to adjust. Double-click a vertex to remove.'),
             'rectHint': t('Drag on the image to draw a rectangle.'),
             'points': t('Points'),
             'minPoints': t('need at least 3 points'),
