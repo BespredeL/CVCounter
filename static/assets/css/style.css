@@ -201,8 +201,8 @@ body.app-body--counter-dual .app-topbar {
 
 .nav-card {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
+    flex-wrap: wrap;
     gap: 0.35rem;
     padding: 1rem 1.15rem;
     height: 100%;
@@ -1091,6 +1091,12 @@ body.app-body--counter {
 
 .counting-area-fab:hover {
     opacity: 1;
+}
+
+.counting-area-toolbar {
+    position: sticky;
+    top: 0.5rem;
+    z-index: 3;
 }
 
 .img-container img {
