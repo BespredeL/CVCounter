@@ -38,7 +38,7 @@
 {% block footer_assets %}
     <script src="{{ url_for('static', filename='assets/js/counter.js') }}"></script>
     <script>
-        $(function () {
+        document.addEventListener('DOMContentLoaded', () => {
             const releaseVideoFeed = () => {
                 const img = document.getElementById('video_feed');
                 if (img) {
@@ -47,71 +47,76 @@
             };
 
             window.addEventListener('pagehide', releaseVideoFeed);
-            $(document).on('click', 'a[href]:not([target="_blank"])', releaseVideoFeed);
-
-            $(document).on('contextmenu', function (e) {
-                e.preventDefault();
+            document.addEventListener('click', (e) => {
+                const link = e.target.closest('a[href]:not([target="_blank"])');
+                if (link) {
+                    releaseVideoFeed();
+                }
             });
 
-            socket.on('{{ location }}_count', function (data) {
-                const defect_count = Math.max(parseInt($("#defect_keyboard input").val(), 10) || 0, 0);
-                const correct_count = parseInt($("#correct_keyboard input").val(), 10) || 0;
+            document.addEventListener('contextmenu', (e) => e.preventDefault());
 
-                const updateCount = (selector, count) => {
-                    $(selector).html(Math.max(count - defect_count + correct_count, 0));
+            socket.on('{{ location }}_count', (data) => {
+                const defect_count = Math.max(parseInt(document.querySelector('#defect_keyboard input')?.value, 10) || 0, 0);
+                const correct_count = parseInt(document.querySelector('#correct_keyboard input')?.value, 10) || 0;
+
+                const updateCount = (id, count) => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.textContent = Math.max(count - defect_count + correct_count, 0);
+                    }
                 };
 
-                updateCount('#total_count', data.total || 0);
-                updateCount('#current_count', data.current || 0);
+                updateCount('total_count', data.total || 0);
+                updateCount('current_count', data.current || 0);
 
-                $('#defect_count').html(defect_count + data.defect || 0);
-                $('#correct_count').html(correct_count + data.correct || 0);
+                const defectEl = document.getElementById('defect_count');
+                const correctEl = document.getElementById('correct_count');
+                if (defectEl) {
+                    defectEl.textContent = defect_count + data.defect || 0;
+                }
+                if (correctEl) {
+                    correctEl.textContent = correct_count + data.correct || 0;
+                }
             });
 
-            socket.on('{{ location }}_notification', function (data) {
+            socket.on('{{ location }}_notification', (data) => {
                 if (data.message.length > 0) {
                     showToast(data.message, data.type);
                 }
             });
 
-            socket.on('counter_status_event', function (data) {
+            socket.on('counter_status_event', (data) => {
                 if (data.data.location === '{{ location }}') {
-                    switch (data.data.status) {
-                        case 'paused':
-                            $('#btn_pause').removeClass('btn-outline-secondary').addClass('btn-warning');
-                            $('#btn_start').removeClass('btn-outline-secondary').addClass('btn-info');
-                            $('#pause_display').removeClass('d-none').addClass('d-flex');
-                            break;
-                        case 'started':
-                            $('#btn_pause').removeClass('btn-warning').addClass('btn-outline-secondary');
-                            $('#btn_start').removeClass('btn-info').addClass('btn-outline-secondary');
-                            $('#pause_display').removeClass('d-flex').addClass('d-none');
-                            break;
+                    if (data.data.status === 'paused') {
+                        setPauseUI(true);
+                    } else if (data.data.status === 'started') {
+                        setPauseUI(false);
                     }
                 }
             });
 
-            $('#btn_save').on('click', function () {
+            document.getElementById('btn_save')?.addEventListener('click', () => {
                 saveCount("{{ url_for('counters.save_count', location=location) }}");
             });
 
-            $('#btn_reset').on('click', function () {
+            document.getElementById('btn_reset')?.addEventListener('click', () => {
                 resetCount("{{ url_for('counters.reset_count', location=location) }}");
             });
 
-            $('#btn_reset_current').on('click', function () {
+            document.getElementById('btn_reset_current')?.addEventListener('click', () => {
                 resetCountCurrent("{{ url_for('counters.reset_count_current', location=location) }}");
             });
 
-            $('#btn_start').on('click', function () {
+            document.getElementById('btn_start')?.addEventListener('click', () => {
                 startCount("{{ url_for('counters.start_count', location=location) }}");
             });
 
-            $('#btn_pause').on('click', function () {
+            document.getElementById('btn_pause')?.addEventListener('click', () => {
                 pauseCount("{{ url_for('counters.pause_count', location=location) }}");
             });
 
-            $('#save-capture').on('click', function () {
+            document.getElementById('save-capture')?.addEventListener('click', () => {
                 saveCapture("{{ url_for('counters.save_capture', location=location) }}");
             });
         });

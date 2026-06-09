@@ -1,7 +1,7 @@
 /**
  * Developed by: Aleksandr Kireev
  * Created: 01.11.2023
- * Updated: 03.06.2026
+ * Updated: 08.06.2026
  * Website: https://bespredel.name
  */
 
@@ -60,10 +60,12 @@ const ThemeManager = {
      * @param {string} theme - The theme to set
      */
     set(theme) {
-        $("html").attr("data-bs-theme", theme);
-        const themeSwitch = $("#theme-switch");
-        themeSwitch.find(".bi-brightness-high").toggleClass("d-none", theme !== "light");
-        themeSwitch.find(".bi-moon-stars").toggleClass("d-none", theme === "light");
+        document.documentElement.setAttribute("data-bs-theme", theme);
+        const themeSwitch = document.getElementById("theme-switch");
+        if (themeSwitch) {
+            themeSwitch.querySelector(".bi-brightness-high")?.classList.toggle("d-none", theme !== "light");
+            themeSwitch.querySelector(".bi-moon-stars")?.classList.toggle("d-none", theme === "light");
+        }
         CookieUtil.set("theme", theme, 365);
 
         const metaTheme = document.querySelector('meta[name="theme-color"]:not([media])');
@@ -78,7 +80,7 @@ const ThemeManager = {
      * @returns {void}
      */
     toggle() {
-        const currentTheme = $("html").attr("data-bs-theme") || "dark";
+        const currentTheme = document.documentElement.getAttribute("data-bs-theme") || "dark";
         this.set(currentTheme === "light" ? "dark" : "light");
     },
 
@@ -89,7 +91,7 @@ const ThemeManager = {
      */
     initialize() {
         this.set(CookieUtil.get("theme") || "dark");
-        $("#theme-switch").on("click", () => this.toggle());
+        document.getElementById("theme-switch")?.addEventListener("click", () => this.toggle());
     },
 };
 
@@ -119,10 +121,10 @@ const FullscreenManager = {
      * Initialize the fullscreen manager
      */
     initialize() {
-        $("#toggle-fullscreen").on("click", function () {
+        document.getElementById("toggle-fullscreen")?.addEventListener("click", function () {
             const isFullscreen = FullscreenManager.toggle();
-            $(this).find(".bi-arrows-angle-expand").toggleClass("d-none", isFullscreen);
-            $(this).find(".bi-arrows-angle-contract").toggleClass("d-none", !isFullscreen);
+            this.querySelector(".bi-arrows-angle-expand")?.classList.toggle("d-none", isFullscreen);
+            this.querySelector(".bi-arrows-angle-contract")?.classList.toggle("d-none", !isFullscreen);
         });
     },
 };
@@ -157,10 +159,20 @@ function showToast(message, type = "primary") {
 }
 
 /**
+ * Show flashed toasts rendered server-side
+ */
+function showFlashedToasts() {
+    document.querySelectorAll(".toast-show").forEach((el) => {
+        new bootstrap.Toast(el).show();
+    });
+}
+
+/**
  * Initialize application
  */
-$(function () {
-    // Bootstrap tooltips
+document.addEventListener("DOMContentLoaded", () => {
+    showFlashedToasts();
+
     document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
 
     const socketOptions = window.SOCKETIO_OPTIONS || {
@@ -174,16 +186,18 @@ $(function () {
     socket.io.on("reconnect", () => {
         const alertHtml = `
             <div class="alert alert-success mt-3 d-flex justify-content-between" role="alert">
-                <span class="h3">${window.trans("socket.connectionOk")}</span>
-                <button id="reload-btn" class="btn btn-warning">${window.trans("socket.reloadPage")}</button>
+                <span class="h3">${window.trans("Connection to server successful")}</span>
+                <button id="reload-btn" class="btn btn-warning">${window.trans("Reload page")}</button>
             </div>`;
 
-        $("#alert-container").html(alertHtml);
-
-        $("#reload-btn").on("click", () => location.reload());
+        const alertContainer = document.getElementById("alert-container");
+        if (alertContainer) {
+            alertContainer.innerHTML = alertHtml;
+            document.getElementById("reload-btn")?.addEventListener("click", () => location.reload());
+        }
 
         setTimeout(() => {
-            $("#alert-container").empty();
+            alertContainer?.replaceChildren();
             location.reload();
         }, 1000 * 60 * 15);
     });
@@ -191,13 +205,15 @@ $(function () {
     socket.on("connect_error", () => {
         const alertHtml = `
             <div class="alert alert-danger mt-3 d-flex justify-content-between" role="alert">
-                <span class="h3">${window.trans("socket.connectionError")}</span>
-                <button id="reload-btn" class="btn btn-warning">${window.trans("socket.reloadPage")}</button>
+                <span class="h3">${window.trans("Error connecting to the server. Contact the IT department.")}</span>
+                <button id="reload-btn" class="btn btn-warning">${window.trans("Reload page")}</button>
             </div>`;
 
-        $("#alert-container").html(alertHtml);
-
-        $("#reload-btn").on("click", () => location.reload());
+        const alertContainer = document.getElementById("alert-container");
+        if (alertContainer) {
+            alertContainer.innerHTML = alertHtml;
+            document.getElementById("reload-btn")?.addEventListener("click", () => location.reload());
+        }
     });
 
     ThemeManager.initialize();

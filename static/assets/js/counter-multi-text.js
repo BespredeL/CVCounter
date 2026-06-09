@@ -1,7 +1,7 @@
 /**
  * Developed by: Aleksandr Kireev
  * Created: 03.06.2026
- * Updated: 04.06.2026
+ * Updated: 08.06.2026
  * Website: https://bespredel.name
  */
 
@@ -38,8 +38,12 @@ const CounterMultiText = {
                     ? Math.max(0, parseInt(data.total, 10) || 0)
                     : 0;
 
-                $(`.current_count_${slug}`).html(current);
-                $(`.total_count_${slug}`).html(total);
+                document.querySelectorAll(`.current_count_${slug}`).forEach((el) => {
+                    el.textContent = current;
+                });
+                document.querySelectorAll(`.total_count_${slug}`).forEach((el) => {
+                    el.textContent = total;
+                });
             });
 
             window.socket.on(`${location}_notification`, (data) => {
@@ -56,38 +60,47 @@ const CounterMultiText = {
      * @returns {void}
      */
     bindActions() {
-        $(".btn_reset_current").on("click", function () {
-            const location = this.dataset.location;
-            const slug = CounterMultiText.items().find((i) => i.location === location)?.slug;
+        document.querySelectorAll(".btn_reset_current").forEach((button) => {
+            button.addEventListener("click", function () {
+                const location = this.dataset.location;
+                const slug = CounterMultiText.items().find((i) => i.location === location)?.slug;
 
-            if (!location || !slug) {
-                return;
-            }
+                if (!location || !slug) {
+                    return;
+                }
 
-            $.ajax({
-                url: `/reset_count_current/${encodeURIComponent(location)}`,
-                method: "POST",
-                data: {correct_count: 0, defect_count: 0},
-            }).done((data) => {
-                const value = data?.current_count ?? 0;
-                $(`.current_count_${slug}`).html(value);
+                fetch(`/reset_count_current/${encodeURIComponent(location)}`, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                    body: new URLSearchParams({correct_count: 0, defect_count: 0}),
+                })
+                    .then((r) => r.json())
+                    .then((data) => {
+                        const value = data?.current_count ?? 0;
+                        document.querySelectorAll(`.current_count_${slug}`).forEach((el) => {
+                            el.textContent = value;
+                        });
+                    });
             });
         });
 
-        $(".btn_reset").on("click", function () {
-            const location = this.dataset.location;
-            const slug = CounterMultiText.items().find((i) => i.location === location)?.slug;
+        document.querySelectorAll(".btn_reset").forEach((button) => {
+            button.addEventListener("click", function () {
+                const location = this.dataset.location;
+                const slug = CounterMultiText.items().find((i) => i.location === location)?.slug;
 
-            if (!location || !slug) {
-                return;
-            }
+                if (!location || !slug) {
+                    return;
+                }
 
-            $.ajax({
-                url: `/reset_count/${encodeURIComponent(location)}`,
-                method: "GET",
-            }).done((data) => {
-                const value = data?.total_count ?? 0;
-                $(`.total_count_${slug}`).html(value);
+                fetch(`/reset_count/${encodeURIComponent(location)}`)
+                    .then((r) => r.json())
+                    .then((data) => {
+                        const value = data?.total_count ?? 0;
+                        document.querySelectorAll(`.total_count_${slug}`).forEach((el) => {
+                            el.textContent = value;
+                        });
+                    });
             });
         });
     },
@@ -98,15 +111,12 @@ const CounterMultiText = {
      * @returns {void}
      */
     initialize() {
-        $(document).on("contextmenu", (e) => e.preventDefault());
+        document.addEventListener("contextmenu", (e) => e.preventDefault());
         this.bindSocket();
         this.bindActions();
     },
 };
 
-/**
- * Initialize the counter multi-text
- */
-$(function () {
+document.addEventListener("DOMContentLoaded", () => {
     CounterMultiText.initialize();
 });

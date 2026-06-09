@@ -20,7 +20,7 @@ RUN python -m pip install --no-cache-dir --upgrade pip && \
 
 COPY . .
 
-RUN mkdir -p /app/logs
+RUN mkdir -p /app/storage/logs /app/storage/saved_recordings /app/storage/saved_images /app/storage/counter_previews /app/storage/datasets
 
 
 EXPOSE 8080

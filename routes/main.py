@@ -14,7 +14,7 @@ from flask import current_app, g
 from markupsafe import escape
 
 from system.utils.counter_preview import preview_exists
-from system.utils.utils import trans as translate
+from system.utils.i18n import trans as translate
 
 main_bp = Blueprint('main', __name__)
 

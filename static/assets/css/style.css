@@ -62,9 +62,6 @@ body.app-body {
 }
 
 .app-shell {
-    /*max-width: 1400px;
-    margin-left: auto;
-    margin-right: auto;*/
     padding-bottom: calc(var(--cv-toolbar-height) + 1.5rem);
 }
 
@@ -369,6 +366,11 @@ body.app-body--counter-dual .app-topbar {
 
 .counter-card:focus-within {
     border-color: rgba(var(--cv-accent-rgb), 0.35);
+}
+
+.help-card-mock {
+    pointer-events: none;
+    user-select: none;
 }
 
 .counter-card--hidden {
@@ -953,7 +955,7 @@ body.app-body--counter-dual .app-topbar {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Counter view (video / text) - full-height stage, scrollable sidebar only   */
+/* Counter view (video / text)                                                */
 /* -------------------------------------------------------------------------- */
 
 body.app-body--counter {
@@ -1338,7 +1340,6 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
     font-weight: 600;
 }
 
-/* Dropdown polish (global) */
 .dropdown-menu {
     border-radius: var(--cv-radius);
     border: 1px solid var(--cv-border);
@@ -1376,10 +1377,8 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
     border-color: rgba(var(--cv-accent-rgb), 0.5);
 }
 
-/* Dual-counter fullscreen layout */
-
 /* -------------------------------------------------------------------------- */
-/* Inner pages (reports, settings, help, errors)                                */
+/* Inner pages (reports, settings, help, errors)                              */
 /* -------------------------------------------------------------------------- */
 
 .page-content {
@@ -1434,7 +1433,6 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
     margin-top: 0;
 }
 
-/* Dynamic settings form (cv-form) */
 .settings-layout__form .cv-form-panel {
     display: flex;
     flex-direction: column;

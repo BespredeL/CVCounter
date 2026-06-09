@@ -8,10 +8,22 @@
 <!-- START: Page header -->
 <div class="app-topbar__main{% if home_variant %} app-topbar__main--home{% endif %}">
     <a href="{{ url_for('main.index') }}" class="app-topbar__logo" aria-label="{{ trans('Home') }}">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+        {#<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M4 7V4h3M4 17v3h3M17 4h3v3M17 20h3V17"/>
             <circle cx="12" cy="12" r="3"/>
+        </svg>#}
+
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="CVCounter">
+            <g stroke="#4dabf7" stroke-width="28" stroke-linecap="round" fill="none">
+                <path d="M102 102 H186 M102 102 V186"/>
+                <path d="M410 102 H326 M410 102 V186"/>
+                <path d="M102 410 H186 M102 410 V326"/>
+                <path d="M410 410 H326 M410 410 V326"/>
+            </g>
+            <circle cx="256" cy="256" r="78" fill="none" stroke="#4dabf7" stroke-width="28"/>
+            <circle cx="256" cy="256" r="30" fill="#4dabf7"/>
+            <circle cx="256" cy="256" r="12" fill="rgba(255,255,255,0.9)"/>
         </svg>
     </a>
     <div class="app-topbar__text min-w-0 flex-grow-1">

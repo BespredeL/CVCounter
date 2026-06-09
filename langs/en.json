@@ -246,7 +246,6 @@
     "Launch counters and control detection from one place.": "Launch counters and control detection from one place.",
     "Start counter": "Start",
     "Resume counting": "Resume",
-    "Pause counting": "Pause",
     "Open video": "Open video",
     "Open text": "Open text",
     "Open as": "Open as",
@@ -281,5 +280,16 @@
     "py_torch_version": "PyTorch version",
     "virtual_memory": "Virtual memory",
     "swap_memory": "Swap memory",
-    "disk_usage": "Disk usage"
+    "disk_usage": "Disk usage",
+    "Help intro": "Overview of the main screens and controls in CVCounter.",
+    "Help search counters": "Search by counter name or location ID.",
+    "Help filter counters": "Show only counters with the selected status: running, paused, or stopped.",
+    "Help card toggle": "Play / pause button: start counting, pause, or resume.",
+    "Help card stop": "Stop button: fully stops detection (confirmation required).",
+    "Help card open menu": "Open menu: video counter, text counter, or per-counter detection settings.",
+    "Help counting zone link": "On the video counter page, opens the polygon editor for the detection area.",
+    "Help numpad description": "Physical NumPad on the correction field: digits 0–9 build a value, + confirms, − undoes the last digit.",
+    "Help counting zone editor": "Draw the detection polygon on a live frame: click to add points, drag vertices, rectangle mode, save when done.",
+    "Help multi counter card": "Shared fullscreen view: current batch and total per counter, reset current batch or full total.",
+    "Help toolbar": "Bottom toolbar"
 }

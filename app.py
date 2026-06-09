@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 04.06.2026
+# Updated: 08.06.2026
 # Website: https://bespredel.name
 
 import os
@@ -19,7 +19,9 @@ from system.managers.config_manager import init_config
 from system.managers.database_manager import DatabaseManager
 from system.core.object_counter import ObjectCounter
 from system.managers.thread_manager import ThreadManager
-from system.utils.utils import slug, system_check, trans as translate
+from system.utils.i18n import load_translations, trans as translate
+from system.utils.paths import resolve_sqlite_uri
+from system.utils.utils import slug, system_check
 from system.db.models.base_model import TablePrefixBase
 from routes import counters_bp, reports_bp, settings_bp, main_bp
 
@@ -28,14 +30,39 @@ from routes import counters_bp, reports_bp, settings_bp, main_bp
 # Application Factory
 # --------------------------------------------------------------------------------
 
-def create_app(config_path: str = "config.json", test_config: dict = None):
+def _normalize_socketio_transports(transports, async_mode: str) -> list[str]:
+    """
+    Ensure Socket.IO transports work with the selected async mode.
+
+    Werkzeug's development server (threading mode) requires HTTP long-polling
+    for the Engine.IO handshake; websocket-only fails with write() before start_response.
+    """
+    if not transports:
+        normalized = ["polling", "websocket"]
+    elif isinstance(transports, str):
+        normalized = [transports]
+    else:
+        normalized = list(transports)
+
+    if async_mode == "threading" and "polling" not in normalized:
+        from system.utils.logger import Logger
+        Logger().warning(
+            "server.socketio_transports is websocket-only; adding 'polling' "
+            "for compatibility with the built-in Werkzeug server"
+        )
+        normalized = ["polling", *normalized]
+
+    return normalized
+
+
+def create_app(config_path: str = "config/config.json", test_config: dict = None):
     """
     Application factory function.
     
     Creates and configures the Flask application instance.
     
     Args:
-        config_path (str): Path to configuration file. Defaults to "config.json".
+        config_path (str): Path to configuration file. Defaults to "config/config.json".
         test_config (dict): Optional test configuration to override defaults.
     
     Returns:
@@ -84,9 +111,13 @@ def create_app(config_path: str = "config.json", test_config: dict = None):
         _app.config["TEMPLATES_AUTO_RELOAD"] = True
 
     # Configure Socket.IO
-    allowed_origins = _config.get("server.allowed_origins", ["http://localhost:8080"])
+    allowed_origins = _config.get("server.allowed_origins", "*")
     async_mode = _config.get("server.socketio_async_mode", "threading")
-    socketio_transports = _config.get("server.socketio_transports", ["polling", "websocket"])
+    socketio_transports = _normalize_socketio_transports(
+        _config.get("server.socketio_transports", ["polling", "websocket"]),
+        async_mode,
+    )
+    socketio_upgrade = _config.get("server.socketio_upgrade", True)
 
     _socketio = SocketIO(
         _app,
@@ -106,6 +137,7 @@ def create_app(config_path: str = "config.json", test_config: dict = None):
 
     # Start DB
     db_uri = _config.get("db.uri") or "sqlite:///:memory:"
+    db_uri = resolve_sqlite_uri(db_uri, _config.project_root)
     _db_manager = DatabaseManager(uri=db_uri, prefix=_config.get("db.prefix"))
 
     # Init objects
@@ -124,7 +156,9 @@ def create_app(config_path: str = "config.json", test_config: dict = None):
         'lock': _lock,
         'auth': _auth,
         'users': users,
-        'socketio': _socketio
+        'socketio': _socketio,
+        'socketio_transports': socketio_transports,
+        'socketio_upgrade': socketio_upgrade,
     }
 
     # Store app_context in app config for access in blueprints
@@ -241,13 +275,13 @@ def register_template_helpers(app: Flask, context: dict):
         Returns:
             dict: Global variables
         """
-        from system.utils.frontend_i18n import build_frontend_i18n
-
         lang = config.get('general.default_language', 'ru')
 
         return dict(
             config=config,
-            frontend_i18n=build_frontend_i18n(lang),
+            translations=load_translations(lang or 'ru'),
+            socketio_transports=context.get('socketio_transports', ['polling', 'websocket']),
+            socketio_upgrade=context.get('socketio_upgrade', True),
         )
 
 

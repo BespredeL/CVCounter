@@ -3,11 +3,9 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 22.03.2024
-# Updated: 23.01.2025
+# Updated: 08.06.2026
 # Website: https://bespredel.name
 
-import json
-import os
 import re
 import subprocess
 from shutil import disk_usage
@@ -22,78 +20,6 @@ from flask import request
 def is_ajax() -> bool:
     """Check if the request is an AJAX request."""
     return str(request.headers.get('X-Requested-With')).lower() == 'XMLHttpRequest'.lower()
-
-
-def trans(text: str, **kwargs: dict) -> str:
-    """
-    Translates the given text to the specified language using the provided translations.
-
-    Args:
-        text (str): The text to be translated.
-        kwargs (dict, optional): A dictionary of arguments including:
-            - 'lang': Language code for translation (default: 'ru').
-            - Other placeholder replacements.
-
-    Returns:
-        str: The translated text with any placeholder replacements made.
-
-    Examples:
-        >>> trans('Hello')
-        'Привет'
-
-        >>> trans('The weather is {weather}', weather='sunny')
-        'Погода солнечная'
-    """
-    if kwargs is None:
-        kwargs = {}
-
-    # Extract the language or default to 'ru'
-    lang = kwargs.pop('lang', 'ru')
-
-    lang_list = load_translations(lang)
-    if text in lang_list:
-        text = lang_list[text]
-
-    # Replace placeholders in the text
-    for key, value in kwargs.items():
-        text = text.replace('{' + key + '}', str(value))
-
-    return text
-
-
-_translations_cache: dict[str, tuple[float, dict]] = {}
-
-
-def load_translations(language_code: str) -> dict:
-    """
-    Load translations
-
-    Args:
-        language_code (str): The language code to load translations for.
-
-    Returns:
-        dict: A dictionary of translations for the specified language code.
-
-    Raises:
-        None
-    """
-    file_path = f"langs/{language_code}.json"
-    try:
-        mtime = os.path.getmtime(file_path)
-    except OSError:
-        return {}
-
-    cached = _translations_cache.get(language_code)
-    if cached and cached[0] == mtime:
-        return cached[1]
-
-    try:
-        with open(file_path, "r", encoding="utf-8") as file:
-            translations = json.load(file)
-        _translations_cache[language_code] = (mtime, translations)
-        return translations
-    except Exception:
-        return {}
 
 
 def slug(s: str) -> str:

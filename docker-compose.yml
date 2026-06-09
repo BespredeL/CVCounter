@@ -6,9 +6,9 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./config.json:/app/config.json
-      - ./logs:/app/logs
-      - ./yolo_cfg:/app/yolo_cfg
+      - ./config:/app/config
+      - ./langs:/app/langs
+      - ./storage:/app/storage
     environment:
       - FLASK_ENV=production
     deploy:

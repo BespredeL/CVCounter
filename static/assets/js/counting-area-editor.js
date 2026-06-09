@@ -102,43 +102,35 @@ class CountingAreaEditor {
     }
 
     /**
-     * Get the internationalization strings
-     *
-     * @returns {object}
-     */
-    i18n() {
-        return window.i18nGroup("countingArea");
-    }
-
-    /**
      * Bind the toolbar events
      */
     bindToolbar() {
-        const s = this.i18n();
-
-        $("#ca-btn-undo").on("click", () => {
+        document.getElementById("ca-btn-undo")?.addEventListener("click", () => {
             if (this.points.length > 0) {
                 this.points.pop();
                 this.redraw();
             }
         });
 
-        $("#ca-btn-clear").on("click", () => {
+        document.getElementById("ca-btn-clear")?.addEventListener("click", () => {
             this.points = [];
             this.redraw();
         });
 
-        $("#ca-btn-full").on("click", () => this.setFullFrame());
+        document.getElementById("ca-btn-full")?.addEventListener("click", () => this.setFullFrame());
 
-        $("#ca-btn-rect").on("click", () => {
+        const rectBtn = document.getElementById("ca-btn-rect");
+        rectBtn?.addEventListener("click", () => {
             this.rectMode = !this.rectMode;
             this.rectStart = null;
-            $("#ca-btn-rect").toggleClass("active", this.rectMode);
-            this.setStatus(this.rectMode ? s.rectHint : s.defaultHint);
+            rectBtn.classList.toggle("active", this.rectMode);
+            this.setStatus(this.rectMode
+                ? window.trans("Drag on the image to draw a rectangle.")
+                : window.trans("Click to add points. Drag vertices to adjust. Double-click a vertex to remove."));
         });
 
-        $("#ca-btn-refresh").on("click", () => this.loadSnapshot(true));
-        $("#ca-btn-save").on("click", () => this.save());
+        document.getElementById("ca-btn-refresh")?.addEventListener("click", () => this.loadSnapshot(true));
+        document.getElementById("ca-btn-save")?.addEventListener("click", () => this.save());
 
         this.colorInput.addEventListener("input", () => this.redraw());
         window.addEventListener("resize", () => this.resizeCanvas());
@@ -227,7 +219,7 @@ class CountingAreaEditor {
                 this.img.hidden = false;
                 this.resizeCanvas();
                 this.redraw();
-                this.setStatus(this.i18n().defaultHint || "");
+                this.setStatus(window.trans("Click to add points. Drag vertices to adjust. Double-click a vertex to remove."));
                 resolve();
             };
 
@@ -400,7 +392,7 @@ class CountingAreaEditor {
         if (this.rectMode && this.rectStart) {
             this.rectStart = null;
             this.rectMode = false;
-            $("#ca-btn-rect").removeClass("active");
+            document.getElementById("ca-btn-rect")?.classList.remove("active");
         }
 
         this.dragIndex = -1;
@@ -463,8 +455,6 @@ class CountingAreaEditor {
             return;
         }
 
-        const strings = this.i18n();
-
         this.ctx.clearRect(0, 0, this.displayWidth, this.displayHeight);
 
         if (this.points.length >= 3) {
@@ -506,10 +496,10 @@ class CountingAreaEditor {
         });
 
         const ptsLabel = this.points.length;
-        let status = `${strings.points || "Points"}: ${ptsLabel}`;
+        let status = `${window.trans("Points")}: ${ptsLabel}`;
 
         if (ptsLabel < COUNTING_AREA_MIN_POINTS) {
-            status += ` - ${strings.minPoints || `need at least ${COUNTING_AREA_MIN_POINTS}`}`;
+            status += ` - ${window.trans("need at least 3 points")}`;
         }
 
         this.statusEl.textContent = status;
@@ -519,13 +509,8 @@ class CountingAreaEditor {
      * Save the counting area
      */
     async save() {
-        const strings = this.i18n();
-
         if (this.points.length < COUNTING_AREA_MIN_POINTS) {
-            showToast(
-                strings.minPointsToast || `At least ${COUNTING_AREA_MIN_POINTS} points required`,
-                "warning"
-            );
+            showToast(window.trans("At least 3 points required"), "warning");
             return;
         }
 
@@ -534,7 +519,10 @@ class CountingAreaEditor {
             counting_area_color: CountingAreaColorUtil.hexToBgr(this.colorInput.value),
         };
 
-        $("#ca-btn-save").prop("disabled", true);
+        const saveBtn = document.getElementById("ca-btn-save");
+        if (saveBtn) {
+            saveBtn.disabled = true;
+        }
 
         try {
             const response = await fetch(this.saveUrl, {
@@ -550,11 +538,13 @@ class CountingAreaEditor {
                 throw new Error(data.message || data.error || response.statusText);
             }
 
-            showToast(strings.saved || "Zone saved", "success");
+            showToast(window.trans("Zone saved"), "success");
         } catch (err) {
             showToast(err.message || "Save failed", "danger");
         } finally {
-            $("#ca-btn-save").prop("disabled", false);
+            if (saveBtn) {
+                saveBtn.disabled = false;
+            }
         }
     }
 }
@@ -575,6 +565,6 @@ const CountingAreaEditorManager = {
 /**
  * Initialize the counting area editor
  */
-$(function () {
+document.addEventListener("DOMContentLoaded", () => {
     CountingAreaEditorManager.initialize();
 });

@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 03.06.2026
-# Updated: 03.06.2026
+# Updated: 08.06.2026
 # Website: https://bespredel.name
 
 import re
@@ -12,14 +12,29 @@ from pathlib import Path
 import cv2
 from numpy import ndarray
 
-PREVIEW_DIR = Path('yolo_cfg/counter_previews')
+from system.utils.paths import resolve_project_path
+
+PREVIEW_DIR_NAME = 'storage/counter_previews'
 PREVIEW_MAX_WIDTH = 480
 PREVIEW_JPEG_QUALITY = 85
 
 
 def _safe_location_slug(location: str) -> str:
+    """
+    Safe location slug for the preview file.
+
+    Args:
+        location: Detection location identifier.
+
+    Returns:
+        str: Safe location slug.
+    """
     slug = re.sub(r'[^A-Za-z0-9-_]+', '_', location).strip('_')
     return slug or 'counter'
+
+
+def _preview_dir() -> Path:
+    return Path(resolve_project_path(PREVIEW_DIR_NAME))
 
 
 def get_preview_path(location: str) -> Path:
@@ -32,7 +47,7 @@ def get_preview_path(location: str) -> Path:
     Returns:
         Path: Preview file path.
     """
-    return PREVIEW_DIR / f'{_safe_location_slug(location)}.jpg'
+    return _preview_dir() / f'{_safe_location_slug(location)}.jpg'
 
 
 def preview_exists(location: str) -> bool:

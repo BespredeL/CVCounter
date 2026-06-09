@@ -1,7 +1,7 @@
 /**
  * Developed by: Aleksandr Kireev
  * Created: 04.06.2026
- * Updated: 04.06.2026
+ * Updated: 08.06.2026
  * Website: https://bespredel.name
  */
 
@@ -24,13 +24,11 @@ const CounterSettingsModal = {
     _location: null,
 
     /**
-     * Get the strings
+     * Bound form submit handler
      *
-     * @returns {object} The strings
+     * @type {Function|null}
      */
-    i18n() {
-        return window.i18nGroup("dashboard");
-    },
+    _formSubmitHandler: null,
 
     /**
      * Get the modal
@@ -65,16 +63,20 @@ const CounterSettingsModal = {
      * @returns {void}
      */
     setLoading() {
-        const s = this.i18n();
+        const body = document.getElementById("counterSettingsModalBody");
+        const saveBtn = document.getElementById("counterSettingsSaveBtn");
 
-        $("#counterSettingsModalBody").html(
-            `<div class="counter-settings-modal__loading text-center py-5">
-                <span class="spinner-border" role="status" aria-hidden="true"></span>
-                <p class="text-muted small mt-2 mb-0">${s.loadingSettings || "Loading settings"}</p>
-            </div>`
-        );
+        if (body) {
+            body.innerHTML = `
+                <div class="counter-settings-modal__loading text-center py-5">
+                    <span class="spinner-border" role="status" aria-hidden="true"></span>
+                    <p class="text-muted small mt-2 mb-0">${window.trans("Loading settings")}</p>
+                </div>`;
+        }
 
-        $("#counterSettingsSaveBtn").prop("disabled", true);
+        if (saveBtn) {
+            saveBtn.disabled = true;
+        }
     },
 
     /**
@@ -84,44 +86,64 @@ const CounterSettingsModal = {
      */
     bindFormSubmit() {
         const self = this;
-        const $form = $("#counterSettingsForm");
+        const form = document.getElementById("counterSettingsForm");
+        if (!form) {
+            return;
+        }
 
-        $form.off("submit.counterSettings").on("submit.counterSettings", function (e) {
+        if (this._formSubmitHandler) {
+            form.removeEventListener("submit", this._formSubmitHandler);
+        }
+
+        this._formSubmitHandler = (e) => {
             e.preventDefault();
 
-            const $btn = $("#counterSettingsSaveBtn");
-            const s = self.i18n();
-            const spinner = $('<span class="spinner-border spinner-border-sm ms-2" role="status"></span>');
+            const btn = document.getElementById("counterSettingsSaveBtn");
+            const spinner = document.createElement("span");
+            spinner.className = "spinner-border spinner-border-sm ms-2";
+            spinner.setAttribute("role", "status");
 
-            $btn.prop("disabled", true).append(spinner);
+            if (btn) {
+                btn.disabled = true;
+                btn.appendChild(spinner);
+            }
 
-            $.ajax({
-                url: $form.attr("action"), method: "POST", data: $form.serialize(), headers: {"X-Requested-With": "XMLHttpRequest"},
-            }).done((data) => {
-                showToast(s.settingsSaved || "Settings saved", "success");
-                if (data?.restart_recommended) {
-                    showToast(s.settingsRestartHint || "Stop and start the counter to apply all changes", "info");
-                }
-                self.getModal()?.hide();
-            }).fail(() => {
-                showToast(s.requestFailed || "Request failed", "danger");
-            }).always(() => {
-                spinner.remove();
-                $btn.prop("disabled", false);
-            });
-        });
+            fetch(form.getAttribute("action"), {
+                method: "POST",
+                headers: {"X-Requested-With": "XMLHttpRequest"},
+                body: new URLSearchParams(new FormData(form)),
+            })
+                .then((r) => r.json())
+                .then((data) => {
+                    showToast(window.trans("Settings saved"), "success");
+                    if (data?.restart_recommended) {
+                        showToast(window.trans("Stop and start the counter to apply all changes"), "info");
+                    }
+                    self.getModal()?.hide();
+                })
+                .catch(() => {
+                    showToast(window.trans("Request failed"), "danger");
+                })
+                .finally(() => {
+                    spinner.remove();
+                    if (btn) {
+                        btn.disabled = false;
+                    }
+                });
+        };
+
+        form.addEventListener("submit", this._formSubmitHandler);
     },
 
     /**
      * Open the modal
      *
-     * @param {jQuery} $card - The card element
+     * @param {HTMLElement} card - The card element
      * @returns {void}
      */
-    open($card) {
-        const location = $card.data("location");
-        const title = $card.find(".counter-card__name").text().trim();
-        const s = this.i18n();
+    open(card) {
+        const location = card.dataset.location;
+        const title = card.querySelector(".counter-card__name")?.textContent.trim() || "";
         const modal = this.getModal();
 
         if (!modal || !location) {
@@ -129,20 +151,38 @@ const CounterSettingsModal = {
         }
 
         this._location = location;
-        $("#counterSettingsModalTitle").text(s.counterSettings || "Counter settings");
-        $("#counterSettingsModalSubtitle").text(`${title} · ${location}`);
+
+        const titleEl = document.getElementById("counterSettingsModalTitle");
+        const subtitleEl = document.getElementById("counterSettingsModalSubtitle");
+        if (titleEl) {
+            titleEl.textContent = window.trans("Counter settings");
+        }
+        if (subtitleEl) {
+            subtitleEl.textContent = `${title} · ${location}`;
+        }
+
         this.setLoading();
         modal.show();
 
-        $.get(this.formUrl(location))
-            .done((html) => {
-                $("#counterSettingsModalBody").html(html);
-                $("#counterSettingsSaveBtn").prop("disabled", false);
+        fetch(this.formUrl(location))
+            .then((r) => r.text())
+            .then((html) => {
+                const body = document.getElementById("counterSettingsModalBody");
+                const saveBtn = document.getElementById("counterSettingsSaveBtn");
+                if (body) {
+                    body.innerHTML = html;
+                }
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                }
                 this.bindFormSubmit();
             })
-            .fail(() => {
-                $("#counterSettingsModalBody").html(`<p class="text-danger mb-0">${s.requestFailed || "Request failed"}</p>`);
-                showToast(s.requestFailed || "Request failed", "danger");
+            .catch(() => {
+                const body = document.getElementById("counterSettingsModalBody");
+                if (body) {
+                    body.innerHTML = `<p class="text-danger mb-0">${window.trans("Request failed")}</p>`;
+                }
+                showToast(window.trans("Request failed"), "danger");
             });
     },
 
@@ -154,21 +194,33 @@ const CounterSettingsModal = {
     initialize() {
         const self = this;
 
-        $("#counter-dashboard").on("click", "[data-action=settings]", function (e) {
+        document.getElementById("counter-dashboard")?.addEventListener("click", (e) => {
+            const settingsBtn = e.target.closest("[data-action=settings]");
+            if (!settingsBtn) {
+                return;
+            }
+
             e.preventDefault();
             e.stopPropagation();
 
-            const $toggle = $(this).closest(".counter-card__open").find(".dropdown-toggle")[0];
-            if ($toggle) {
-                bootstrap.Dropdown.getOrCreateInstance($toggle).hide();
+            const toggle = settingsBtn.closest(".counter-card__open")?.querySelector(".dropdown-toggle");
+            if (toggle) {
+                bootstrap.Dropdown.getOrCreateInstance(toggle).hide();
             }
 
-            self.open($(this).closest(".counter-card"));
+            const card = settingsBtn.closest(".counter-card");
+            if (card) {
+                self.open(card);
+            }
         });
 
         document.getElementById("counterSettingsModal")?.addEventListener("hidden.bs.modal", () => {
-            $("#counterSettingsModalBody").empty();
-            $("#counterSettingsSaveBtn").prop("disabled", true);
+            const body = document.getElementById("counterSettingsModalBody");
+            const saveBtn = document.getElementById("counterSettingsSaveBtn");
+            body?.replaceChildren();
+            if (saveBtn) {
+                saveBtn.disabled = true;
+            }
             self._location = null;
         });
     },

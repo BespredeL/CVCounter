@@ -2,11 +2,11 @@
     "name": "CVCounter",
     "short_name": "CVC",
     "description": "This is a web application for counting the number of objects using computer vision and deep neural networks Yolo",
-    "version": "4.1.0",
+    "version": "5.0.0",
     "start_url": "/",
     "display": "standalone",
-    "background_color": "#ffffff",
-    "theme_color": "#000000",
+    "background_color": "#16181d",
+    "theme_color": "#16181d",
     "icons": [
         {
             "src": "/static/icons/android-chrome-192x192.png",

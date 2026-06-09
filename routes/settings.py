@@ -10,7 +10,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask import current_app, g
 
 from system.auth import login_required, generate_password_hash
-from system.utils.utils import trans as translate
+from system.utils.i18n import trans as translate
 
 settings_bp = Blueprint('settings', __name__)
 

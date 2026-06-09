@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="{{ config.get('general.default_language', 'ru') }}" class="h-100" data-bs-theme="dark">
 <head>
-    <meta name="theme-color" content="#16181d">
     <!--
      Developer: Aleksandr Kireev (https://bespredel.name)
      Created: 01.11.2023
@@ -9,8 +8,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#16181d">
     <title>{% if request.path != '/' %}CVCounter - {% endif %}{% block title %}{% endblock %}</title>
     <!-- Styles -->
+    <link rel="icon" href="{{ url_for('static', filename='icons/icon.svg') }}" type="image/svg+xml">
     <link rel="shortcut icon" href="{{ url_for('static', filename='icons/favicon.ico') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32x32.png') }}">
@@ -24,14 +25,13 @@
     <script>
         window.SOCKETIO_OPTIONS = {
             path: "/socket.io",
-            transports: {{ config.get('server.socketio_transports', ['websocket'])|tojson }},
-            upgrade: {{ config.get('server.socketio_upgrade', true)|tojson }},
+            transports: {{ socketio_transports|tojson }},
+            upgrade: {{ socketio_upgrade|tojson }},
             reconnection: true//,
             //reconnectionAttempts: 20,
             //timeout: 20000
         };
     </script>
-    <script src="{{ url_for('static', filename='assets/js/jquery-3.7.1.min.js') }}"></script>
     <!-- START: Head block -->
     {% block head_assets %}{% endblock %}
     <!-- END: Head block -->
@@ -171,7 +171,7 @@
 
 <!-- START: Scripts -->
 <script>
-    window.APP_I18N = {{ frontend_i18n|tojson }};
+    window.APP_I18N = {{ translations|tojson }};
 </script>
 <script src="{{ url_for('static', filename='assets/js/i18n.js') }}"></script>
 <script src="{{ url_for('static', filename='assets/bootstrap5/js/bootstrap.bundle.min.js') }}"></script>
@@ -194,11 +194,6 @@
                     </div>
                 </div>
             {% endfor %}
-            <script>
-                $(document).ready(function () {
-                    $('.toast-show').toast('show');
-                });
-            </script>
         </div>
     {% endif %}
 {% endwith %}

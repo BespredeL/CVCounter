@@ -1,7 +1,7 @@
 /**
  * Developed by: Aleksandr Kireev
  * Created: 04.06.2026
- * Updated: 04.06.2026
+ * Updated: 08.06.2026
  * Website: https://bespredel.name
  */
 
@@ -12,38 +12,18 @@
     "use strict";
 
     /**
-     * Get a value by path
+     * Translate a string key with optional {placeholder} replacement.
+     * Keys match backend trans() and langs/*.json (English source strings).
      *
-     * @param {object} root - The root object
-     * @param {string} path - Dot-separated key path, e.g. dashboard.running
-     * @returns {*} - The value
-     */
-    function getByPath(root, path) {
-        if (!root || !path) {
-            return undefined;
-        }
-
-        return String(path).split(".").reduce((value, part) => {
-            if (value === undefined || value === null) {
-                return undefined;
-            }
-
-            return value[part];
-        }, root);
-    }
-
-    /**
-     * Translate a key with optional {placeholder} replacement.
-     *
-     * @param {string} key - Dot path inside APP_I18N
-     * @param {Record<string, string|number>} [params] - The parameters
+     * @param {string} key - Translation key, e.g. "Counter running"
+     * @param {Record<string, string|number>} [params] - Placeholder values
      * @returns {string} - The translated string
      */
     function trans(key, params) {
-        let value = getByPath(global.APP_I18N, key);
+        let value = global.APP_I18N?.[key];
 
         if (typeof value !== "string") {
-            return key;
+            value = key;
         }
 
         if (params) {
@@ -58,18 +38,5 @@
         return value;
     }
 
-    /**
-     * Return a translation group (dashboard, countingArea, socket, etc.)
-     *
-     * @param {string} group - The group name
-     * @returns {Record<string, string>} - The translation group
-     */
-    function i18nGroup(group) {
-        const bucket = global.APP_I18N?.[group];
-
-        return bucket && typeof bucket === "object" ? bucket : {};
-    }
-
     global.trans = trans;
-    global.i18nGroup = i18nGroup;
 })(window);

@@ -12,7 +12,7 @@ from flask import Blueprint, abort, render_template
 from flask import current_app, g
 from markupsafe import escape
 
-from system.utils.utils import trans as translate
+from system.utils.i18n import trans as translate
 from system.utils.validators import ValidationError, validate_report_list_request
 
 reports_bp = Blueprint('reports', __name__)

@@ -9,7 +9,7 @@
 import time
 from functools import wraps
 
-from flask import Blueprint, Response, abort, jsonify, redirect, render_template, request, send_file, url_for
+from flask import Blueprint, Response, abort, jsonify, redirect, render_template, request, send_file, stream_with_context, url_for
 from flask import current_app, g
 from markupsafe import escape
 
@@ -17,7 +17,8 @@ from system.core.object_counter import ObjectCounter
 from system.managers.video_stream_manager import VideoStreamManager
 from system.utils.counter_preview import get_preview_path, save_counter_preview
 from system.utils.frame_utils import FrameUtils
-from system.utils.utils import is_ajax, slug, trans as translate
+from system.utils.i18n import trans as translate
+from system.utils.utils import is_ajax, slug
 from system.utils.validators import (
     ValidationError,
     validate_counting_area_payload,
@@ -534,10 +535,15 @@ def counter_get_frames(location: str = None) -> Response:
     """
     context = get_app_context()
     object_counters = context['object_counters']
+    counter = object_counters[location]
+
+    @stream_with_context
+    def generate():
+        yield from counter.get_frames()
 
     return Response(
-        object_counters[location].get_frames(),
-        mimetype='multipart/x-mixed-replace; boundary=frame'
+        generate(),
+        mimetype='multipart/x-mixed-replace; boundary=frame',
     )
 
 
@@ -668,7 +674,7 @@ def counter_multi_text() -> str:
 @counters_bp.route('/counter_dual/text/<string:location_first>/<string:location_second>')
 def counter_dual_text(location_first: str, location_second: str):
     """
-    Legacy dual-counter URL — redirects to the multi-counter view.
+    Legacy dual-counter URL - redirects to the multi-counter view.
     """
     location_first = str(escape(location_first))
     location_second = str(escape(location_second))

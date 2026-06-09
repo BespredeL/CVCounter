@@ -24,14 +24,14 @@ class VideoRecorderManager:
     Asynchronous video recording manager so as not to block the counting thread.
 
     Using:
-        recorder = VideoRecorderManager(location="location_1", base_path="yolo_cfg/saved_recordings")
+        recorder = VideoRecorderManager(location="location_1", base_path="storage/saved_recordings")
         recorder.start()
         recorder.push_frame(frame)  # in the work cycle
         ...
         recorder.stop()  # on completion/reset
     """
 
-    DEFAULT_RECORDING_PATH: str = "yolo_cfg/saved_recordings"
+    DEFAULT_RECORDING_PATH: str = "storage/saved_recordings"
     DEFAULT_FPS: float = 25.0
     DEFAULT_QUEUE_SIZE: int = 100
 

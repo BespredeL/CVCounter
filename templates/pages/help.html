@@ -20,9 +20,12 @@
 {% block content %}
     {% include 'partials/inner_page_nav.html' %}
     <div class="page-content doc-page pb-5">
+        <p class="text-muted mb-4">{{ trans('Help intro') }}</p>
+
         <div class="row g-0">
             <div class="col-12 border-bottom mb-3 pb-3">
-                <h2 class="section-block__title">{{ trans('Start page') }}</h2>
+                <h2 class="section-block__title">{{ trans('Counters') }}</h2>
+                <p class="text-muted">{{ trans('Dashboard counters hint') }}</p>
 
                 <table class="table table-bordered mb-3">
                     <thead class="table-dark">
@@ -34,105 +37,138 @@
                     <tbody>
                     <tr>
                         <td class="align-middle">
-                            <div class="btn-group my-2" role="group" aria-label="">
-                                <a href="#" class="btn btn-secondary">{{ trans('Counter name') }}</a>
-                                <div class="btn-group" role="group">
-                                    <button type="button" class="btn dropdown-toggle btn-secondary"></button>
-                                </div>
+                            <input type="search" class="form-control form-control-sm" style="max-width: 220px"
+                                   placeholder="{{ trans('Search counters') }}" disabled>
+                        </td>
+                        <td>{{ trans('Help search counters') }}</td>
+                    </tr>
+                    <tr>
+                        <td class="align-middle">
+                            <div class="counter-filter-pills btn-group btn-group-sm" role="group">
+                                <span class="btn btn-secondary">{{ trans('All') }}</span>
+                                <span class="btn btn-outline-secondary">{{ trans('Running') }}</span>
+                                <span class="btn btn-outline-secondary">{{ trans('Paused') }}</span>
+                                <span class="btn btn-outline-secondary">{{ trans('Stopped') }}</span>
                             </div>
+                        </td>
+                        <td>{{ trans('Help filter counters') }}</td>
+                    </tr>
+                    <tr>
+                        <td class="align-middle">
+                            <article class="counter-card counter-card--stopped help-card-mock" style="max-width: 280px">
+                                <div class="counter-card__preview">
+                                    <div class="counter-card__preview-placeholder" aria-hidden="true">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="currentColor"
+                                             class="bi bi-camera-video opacity-50" viewBox="0 0 16 16">
+                                            <path fill-rule="evenodd"
+                                                  d="M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2zm11.5 5.175 3.5 1.556V4.269l-3.5 1.556zM2 4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h7.5a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z"/>
+                                        </svg>
+                                    </div>
+                                    <span class="counter-card__status-dot" aria-hidden="true"></span>
+                                </div>
+                                <div class="counter-card__body">
+                                    <div class="counter-card__head">
+                                        <h3 class="counter-card__name h6 mb-0">{{ trans('Counter name') }}</h3>
+                                        <span class="counter-card__badge">{{ trans('Counter stopped') }}</span>
+                                    </div>
+                                    <p class="counter-card__location text-muted small mb-2">location_id</p>
+                                </div>
+                            </article>
                         </td>
                         <td>{{ trans('Counter not running') }}</td>
                     </tr>
-
                     <tr>
                         <td class="align-middle">
-                            <div>
-                                <div class="btn-group my-2" role="group" aria-label="">
-                                    <a href="#" class="btn btn-success">{{ trans('Counter name') }}</a>
-                                    <div class="btn-group" role="group">
-                                        <button type="button" class="btn dropdown-toggle btn-success"></button>
+                            <article class="counter-card counter-card--running help-card-mock" style="max-width: 280px">
+                                <div class="counter-card__preview">
+                                    <div class="counter-card__preview-placeholder" aria-hidden="true"></div>
+                                    <span class="counter-card__status-dot" aria-hidden="true"></span>
+                                </div>
+                                <div class="counter-card__body">
+                                    <div class="counter-card__head">
+                                        <h3 class="counter-card__name h6 mb-0">{{ trans('Counter name') }}</h3>
+                                        <span class="counter-card__badge">{{ trans('Counter running') }}</span>
                                     </div>
                                 </div>
-                            </div>
+                            </article>
                         </td>
                         <td>{{ trans('Counter running') }}</td>
                     </tr>
-
                     <tr>
                         <td class="align-middle">
-                            <div>
-                                <div class="btn-group my-2" role="group" aria-label="">
-                                    <a href="#" class="btn btn-warning">{{ trans('Counter name') }}</a>
-                                    <div class="btn-group" role="group">
-                                        <button type="button" class="btn dropdown-toggle btn-warning"></button>
+                            <article class="counter-card counter-card--paused help-card-mock" style="max-width: 280px">
+                                <div class="counter-card__preview">
+                                    <div class="counter-card__preview-placeholder" aria-hidden="true"></div>
+                                    <span class="counter-card__status-dot" aria-hidden="true"></span>
+                                </div>
+                                <div class="counter-card__body">
+                                    <div class="counter-card__head">
+                                        <h3 class="counter-card__name h6 mb-0">{{ trans('Counter name') }}</h3>
+                                        <span class="counter-card__badge">{{ trans('Counter paused') }}</span>
                                     </div>
                                 </div>
-                            </div>
+                            </article>
                         </td>
                         <td>{{ trans('Counter paused') }}</td>
                     </tr>
-
                     <tr>
-                        <td>
-                            <div class="btn-group my-2" role="group" aria-label="">
-                                <a href="#" class="btn btn-secondary">{{ trans('Counter name') }}</a>
-                                <div class="btn-group" role="group">
-                                    <button type="button" class="btn dropdown-toggle btn-secondary"
-                                            style="background-color: var(--bs-btn-hover-bg);border-color: var(--bs-btn-hover-border-color);"></button>
-                                </div>
+                        <td class="align-middle">
+                            <div class="btn-group counter-card__transport my-2" role="group">
+                                <button type="button" class="btn counter-card__btn counter-card__toggle">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" fill="currentColor"
+                                         class="bi bi-play-fill" viewBox="0 0 16 16">
+                                        <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/>
+                                    </svg>
+                                </button>
+                                <button type="button" class="btn counter-card__btn counter-card__stop">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" fill="currentColor"
+                                         class="bi bi-stop-fill" viewBox="0 0 16 16">
+                                        <path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5"/>
+                                    </svg>
+                                </button>
                             </div>
-                            <ul class="dropdown-menu d-block position-relative mx-2 ms-md-5" style="max-width: 150px">
-                                <li>
-                                    <a href="#" class="dropdown-item ">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
-                                             class="bi bi-power" viewBox="0 0 18 18">
-                                            <path d="M7.5 1v7h1V1z"/>
-                                            <path d="M3 8.812a5 5 0 0 1 2.578-4.375l-.485-.874A6 6 0 1 0 11 3.616l-.501.865A5 5 0 1 1 3 8.812"/>
-                                        </svg>
-                                        {{ trans('Run') }}
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="#" class="dropdown-item">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
-                                             class="bi bi-stop-fill" viewBox="0 0 18 18">
-                                            <path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5"/>
-                                        </svg>
-                                        {{ trans('Stop') }}
-                                    </a>
-                                </li>
+                        </td>
+                        <td>
+                            <ul class="mb-0">
+                                <li>{{ trans('Help card toggle') }}</li>
+                                <li>{{ trans('Help card stop') }}</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="align-middle">
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-primary counter-card__btn counter-card__launch">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" fill="currentColor"
+                                         class="bi bi-box-arrow-up-right" viewBox="0 0 16 16">
+                                        <path fill-rule="evenodd"
+                                              d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5"/>
+                                        <path fill-rule="evenodd"
+                                              d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0z"/>
+                                    </svg>
+                                    {{ trans('Open') }}
+                                </button>
+                                <button type="button" class="btn btn-primary btn-sm dropdown-toggle dropdown-toggle-split"></button>
+                            </div>
+                            <ul class="dropdown-menu d-block position-relative mt-1" style="max-width: 180px">
+                                <li><span class="dropdown-item-text">{{ trans('Video') }}</span></li>
+                                <li><span class="dropdown-item-text">{{ trans('Text') }}</span></li>
                                 <li>
                                     <hr class="dropdown-divider">
                                 </li>
-                                <li>
-                                    <a href="#" class="dropdown-item">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
-                                             class="bi bi-play-fill" viewBox="0 0 18 18">
-                                            <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/>
-                                        </svg>
-                                        {{ trans('Start') }}
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="#" class="dropdown-item">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
-                                             class="bi bi-pause-fill" viewBox="0 0 18 18">
-                                            <path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"/>
-                                        </svg>
-                                        {{ trans('Pause') }}
-                                    </a>
-                                </li>
+                                <li><span class="dropdown-item-text">{{ trans('Settings') }}</span></li>
                             </ul>
                         </td>
-                        <td>
-                            {{ trans('Button actions') }}:
-                            <ul>
-                                <li>{{ trans('Run') }} - {{ trans('Run the counter') }}</li>
-                                <li>{{ trans('Stop') }} - {{ trans('Stop the counter') }}</li>
-                                <li>{{ trans('Start') }} - {{ trans('Start the counter') }}</li>
-                                <li>{{ trans('Pause') }} - {{ trans('Pause the counter') }}</li>
-                            </ul>
+                        <td>{{ trans('Help card open menu') }}</td>
+                    </tr>
+                    <tr>
+                        <td class="align-middle">
+                            <label class="d-inline-flex align-items-center gap-2">
+                                <input type="checkbox" class="form-check-input" readonly checked>
+                                <span class="small text-muted">{{ trans('Select for multi view') }}</span>
+                            </label>
                         </td>
+                        <td>{{ trans('Multi counter hint') }}</td>
                     </tr>
                     </tbody>
                 </table>
@@ -151,31 +187,54 @@
                     <tbody>
                     <tr>
                         <td class="align-middle">
+                            <span class="btn btn-sm btn-dark disabled">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                     class="bi bi-intersect me-1" viewBox="0 0 16 16">
+                                    <path d="M0 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2H2a2 2 0 0 1-2-2zm5 10v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2v5a2 2 0 0 1-2 2zm6-8V2a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2V6a2 2 0 0 1 2-2z"/>
+                                </svg>
+                                {{ trans('Counting zone') }}
+                            </span>
+                        </td>
+                        <td>{{ trans('Help counting zone link') }}</td>
+                    </tr>
+                    <tr>
+                        <td class="align-middle">
                             <div class="sidebar-counter-tile text-dark position-relative my-2 px-3 py-2"
                                  style="width: 100%; max-width: 250px">
                                 <div class="h4 mb-0">{{ trans('Quantity:') }} <span>1000</span></div>
                                 <div class="display-1 lh-1">9999</div>
-
                                 <div class="h5 d-flex flex-wrap justify-content-between w-100 mt-2 pb-1 border-top border-dark">
-                                    <div>
-                                        {{ trans('Defective products') }}: <span>0</span>
-                                    </div>
-                                    <div>
-                                        {{ trans('Corr.') }}: <span>0</span>
-                                    </div>
+                                    <div>{{ trans('Defective products') }}: <span>0</span></div>
+                                    <div>{{ trans('Corr.') }}: <span>0</span></div>
                                 </div>
                             </div>
                         </td>
                         <td>{{ trans('Show the current and total count') }}</td>
                     </tr>
-
                     <tr>
                         <td class="align-middle">
-                            <div class="cv-panel cv-panel--danger my-2 me-3 d-inline-block"
-                                 style="max-width: 290px">
+                            <div class="cv-panel cv-panel--danger my-2" style="max-width: 400px">
                                 <div class="col-12 mb-3">
-                                    <label for="defect_count" class="form-label h4">{{ trans('Defective products') }}</label>
-                                    <div class="input-group">
+                                    <label for="help_defect_keyboard"
+                                           class="form-label h4 user-select-none">{{ trans('Defective products') }}</label>
+                                    <button class="btn btn-outline-info float-end"
+                                            style="--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                                             class="bi bi-keyboard align-middle" viewBox="0 0 16 16">
+                                            <path d="M14 5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM2 4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
+                                            <path d="M13 10.25a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm0-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5 0A.25.25 0 0 1 8.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 8 8.75zm2 0a.25.25 0 0 1 .25-.25h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5a.25.25 0 0 1-.25-.25zm1 2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5-2A.25.25 0 0 1 6.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 6 8.75zm-2 0A.25.25 0 0 1 4.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 4 8.75zm-2 0A.25.25 0 0 1 2.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 2 8.75zm11-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0A.25.25 0 0 1 9.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 9 6.75zm-2 0A.25.25 0 0 1 7.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 7 6.75zm-2 0A.25.25 0 0 1 5.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 5 6.75zm-3 0A.25.25 0 0 1 2.25 6h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5A.25.25 0 0 1 2 6.75zm0 4a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm2 0a.25.25 0 0 1 .25-.25h5.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-5.5a.25.25 0 0 1-.25-.25z"></path>
+                                        </svg>
+                                    </button>
+                                    <button class="btn btn-outline-danger float-end me-2"
+                                            style="--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                                             class="bi bi-trash" viewBox="0 0 16 16">
+                                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"></path>
+                                            <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"></path>
+                                        </svg>
+                                    </button>
+
+                                    <div class="input-group" id="help_defect_keyboard">
                                         <button class="btn btn-sm btn-secondary input-plus">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
                                                  class="bi bi-plus-lg" viewBox="0 0 16 16">
@@ -183,15 +242,11 @@
                                                       d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"></path>
                                             </svg>
                                         </button>
-                                        <input type="number" class="form-control form-control-lg" aria-label=""
-                                               name="defect_count" value="0"
-                                               min="0" max="999999"
-                                               maxlength="9">
+                                        <input type="number" class="form-control form-control-lg valid_min_max" aria-label=""
+                                               name="defect_count" value="0" min="0" max="9999999" readonly>
                                         <button class="btn btn-sm btn-secondary input-minus">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
-                                                 fill="currentColor"
-                                                 class="bi bi-dash-lg"
-                                                 viewBox="0 0 16 16">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                                                 class="bi bi-dash-lg" viewBox="0 0 16 16">
                                                 <path fill-rule="evenodd"
                                                       d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8"></path>
                                             </svg>
@@ -199,7 +254,7 @@
                                     </div>
                                 </div>
 
-                                <div class="col-12 keyboard keyboard-defect px-2">
+                                <div class="col-12 keyboard keyboard-defect px-2 collapse show">
                                     <div class="row">
                                         <button class="btn btn-secondary col m-1 fs-5">1</button>
                                         <button class="btn btn-secondary col m-1 fs-5">2</button>
@@ -217,30 +272,35 @@
                                     </div>
                                     <div class="row">
                                         <button class="btn btn-secondary col m-1 fs-5">0</button>
-                                        <button class="btn btn-warning text-black col-4 m-1 text-truncate">{{ trans('Reset') }}</button>
+                                        <button class="btn btn-danger col-4 m-1 reset text-truncate">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                                                 class="bi bi-trash" viewBox="0 0 16 16">
+                                                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"></path>
+                                                <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"></path>
+                                            </svg>
+                                            {{ trans('Reset') }}
+                                        </button>
                                     </div>
                                 </div>
                             </div>
                         </td>
                         <td>{{ trans('Entering the number of defective products') }}</td>
                     </tr>
-
                     <tr>
                         <td class="align-middle">
-                            <div class="cv-panel cv-panel--warning my-2 me-3 d-inline-block" style="max-width: 290px">
+                            <div class="cv-panel cv-panel--warning my-2" style="max-width: 400px">
                                 <div class="col-12 mb-3">
-                                    <label for="correct_keyboard" class="form-label h4">{{ trans('Correct count') }}</label>
+                                    <label for="help_correct_keyboard" class="form-label h4 user-select-none">{{ trans('Correct count') }}</label>
                                     <button class="btn btn-outline-info float-end"
                                             style="--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem;">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
-                                             class="bi bi-keyboard align-middle" viewBox="0 0 16 16">
+                                             class="bi bi-keyboard align-middle"
+                                             viewBox="0 0 16 16">
                                             <path d="M14 5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM2 4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
                                             <path d="M13 10.25a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm0-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5 0A.25.25 0 0 1 8.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 8 8.75zm2 0a.25.25 0 0 1 .25-.25h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5a.25.25 0 0 1-.25-.25zm1 2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5-2A.25.25 0 0 1 6.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 6 8.75zm-2 0A.25.25 0 0 1 4.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 4 8.75zm-2 0A.25.25 0 0 1 2.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 2 8.75zm11-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0A.25.25 0 0 1 9.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 9 6.75zm-2 0A.25.25 0 0 1 7.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 7 6.75zm-2 0A.25.25 0 0 1 5.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 5 6.75zm-3 0A.25.25 0 0 1 2.25 6h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5A.25.25 0 0 1 2 6.75zm0 4a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm2 0a.25.25 0 0 1 .25-.25h5.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-5.5a.25.25 0 0 1-.25-.25z"></path>
                                         </svg>
                                     </button>
-
-                                    <button class="btn btn-outline-danger float-end me-2"
-                                            style="--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem;">
+                                    <button class="btn btn-outline-danger float-end me-2" style="--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem;">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
                                              class="bi bi-trash"
                                              viewBox="0 0 16 16">
@@ -248,21 +308,22 @@
                                             <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"></path>
                                         </svg>
                                     </button>
-
-                                    <div class="input-group">
+                                    <div class="input-group" id="help_correct_keyboard">
                                         <button class="btn btn-sm btn-secondary input-plus">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
-                                                 class="bi bi-plus-lg" viewBox="0 0 16 16">
+                                                 class="bi bi-plus-lg"
+                                                 viewBox="0 0 16 16">
                                                 <path fill-rule="evenodd"
                                                       d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"></path>
                                             </svg>
                                         </button>
-
-                                        <input type="number" class="form-control form-control-lg" aria-label="" value="0" maxlength="9">
-
+                                        <input type="number" class="form-control form-control-lg valid_min_max" aria-label=""
+                                               name="correct_count" value="0"
+                                               min="-9999999" max="9999999" readonly>
                                         <button class="btn btn-sm btn-secondary input-minus">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
-                                                 class="bi bi-dash-lg" viewBox="0 0 16 16">
+                                                 class="bi bi-dash-lg"
+                                                 viewBox="0 0 16 16">
                                                 <path fill-rule="evenodd"
                                                       d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8"></path>
                                             </svg>
@@ -270,7 +331,7 @@
                                     </div>
                                 </div>
 
-                                <div class="col-12 keyboard keyboard-correct px-2">
+                                <div class="col-12 keyboard keyboard-correct px-2 collapse show">
                                     <div class="row">
                                         <button class="btn btn-secondary col m-1 fs-5">1</button>
                                         <button class="btn btn-secondary col m-1 fs-5">2</button>
@@ -289,14 +350,24 @@
                                     <div class="row">
                                         <button class="btn btn-secondary col m-1 fs-5">+/-</button>
                                         <button class="btn btn-secondary col m-1 fs-5">0</button>
-                                        <button class="btn btn-warning text-black col m-1 text-truncate">{{ trans('Reset') }}</button>
+                                        <button class="btn btn-danger col m-1 reset text-truncate">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                                                 class="bi bi-trash"
+                                                 viewBox="0 0 16 16">
+                                                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"></path>
+                                                <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"></path>
+                                            </svg>
+                                            {{ trans('Reset') }}
+                                        </button>
                                     </div>
                                 </div>
                             </div>
                         </td>
-                        <td>{{ trans('Entering quantities to adjust product counts') }}</td>
+                        <td>
+                            {{ trans('Entering quantities to adjust product counts') }}
+                            <p class="small text-muted mb-0 mt-2">{{ trans('Help numpad description') }}</p>
+                        </td>
                     </tr>
-
                     <tr>
                         <td class="align-middle">
                             <button class="btn btn-outline-secondary btn-sm me-3">
@@ -309,7 +380,6 @@
                         </td>
                         <td>{{ trans('Pause counting') }}</td>
                     </tr>
-
                     <tr>
                         <td class="align-middle">
                             <button class="btn btn-outline-secondary btn-sm me-3">
@@ -322,25 +392,16 @@
                         </td>
                         <td>{{ trans('Continue counting') }}</td>
                     </tr>
-
                     <tr>
-                        <td class="align-middle">
-                            <span class="btn btn-primary me-3">{{ trans('New batch') }}</span>
-                        </td>
+                        <td class="align-middle"><span class="btn btn-primary me-3">{{ trans('New batch') }}</span></td>
                         <td>{{ trans('Reset the current count (without total)') }}</td>
                     </tr>
-
                     <tr>
-                        <td class="align-middle">
-                            <span class="btn btn-success me-3">{{ trans('Save') }}</span>
-                        </td>
+                        <td class="align-middle"><span class="btn btn-success me-3">{{ trans('Save') }}</span></td>
                         <td>{{ trans('Save the count') }}</td>
                     </tr>
-
                     <tr>
-                        <td class="align-middle">
-                            <span class="btn btn-danger me-3">{{ trans('Reset') }}</span>
-                        </td>
+                        <td class="align-middle"><span class="btn btn-danger me-3">{{ trans('Reset') }}</span></td>
                         <td>{{ trans('Reset the count (with total)') }}</td>
                     </tr>
                     </tbody>
@@ -348,8 +409,8 @@
             </div>
 
             <div class="col-12 border-bottom mb-3 pb-3">
-                <h2 class="section-block__title">{{ trans('Text double') }}</h2>
-
+                <h2 class="section-block__title">{{ trans('Counting zone editor') }}</h2>
+                <p class="text-muted">{{ trans('Configure the polygon on a live video frame') }}</p>
                 <table class="table table-bordered mb-3">
                     <thead class="table-dark">
                     <tr>
@@ -360,23 +421,113 @@
                     <tbody>
                     <tr>
                         <td class="align-middle">
-                            <span class="btn btn-primary me-3">{{ trans('New batch') }}</span>
+                            <div class="d-flex flex-wrap gap-1">
+                                <span class="btn btn-outline-secondary btn-sm">{{ trans('Undo') }}</span>
+                                <span class="btn btn-outline-secondary btn-sm">{{ trans('Clear') }}</span>
+                                <span class="btn btn-outline-secondary btn-sm">{{ trans('Full frame') }}</span>
+                                <span class="btn btn-outline-secondary btn-sm">{{ trans('Rectangle') }}</span>
+                                <span class="btn btn-primary btn-sm">{{ trans('Save zone') }}</span>
+                            </div>
                         </td>
-                        <td>{{ trans('Reset the current count (without total)') }}</td>
+                        <td>{{ trans('Help counting zone editor') }}</td>
                     </tr>
+                    </tbody>
+                </table>
+            </div>
 
-                    {#<tr>
-                    <td>
-                        <span class="btn btn-success me-3">{{ trans('Save') }}</span>
-                    </td>
-                    <td>{{ trans('Save the count') }}</td>
-                </tr>#}
-
+            <div class="col-12 border-bottom mb-3 pb-3">
+                <h2 class="section-block__title">{{ trans('Multi counter view') }}</h2>
+                <p class="text-muted">{{ trans('Multi counter hint short') }}</p>
+                <table class="table table-bordered mb-3">
+                    <thead class="table-dark">
+                    <tr>
+                        <th scope="col" class="w-50">{{ trans('Element') }}</th>
+                        <th scope="col" class="w-50">{{ trans('Description') }}</th>
+                    </tr>
+                    </thead>
+                    <tbody>
                     <tr>
                         <td class="align-middle">
-                            <span class="btn btn-danger me-3">{{ trans('Reset') }}</span>
+                            <article class="multi-counter-card" style="max-width: 260px">
+                                <header class="multi-counter-card__header">
+                                    <h2 class="multi-counter-card__title h5">{{ trans('Counter name') }}</h2>
+                                    <p class="multi-counter-card__id text-muted small">location_id</p>
+                                </header>
+                                <div class="multi-counter-card__metric multi-counter-card__metric--current">
+                                    <span class="multi-counter-card__metric-label">{{ trans('Current batch') }}</span>
+                                    <div class="multi-counter-card__value">42</div>
+                                </div>
+                                <div class="multi-counter-card__metric multi-counter-card__metric--total">
+                                    <span class="multi-counter-card__metric-label">{{ trans('Total') }}</span>
+                                    <div class="multi-counter-card__value multi-counter-card__value--total">1000</div>
+                                </div>
+                                <footer class="multi-counter-card__actions">
+                                    <div class="multi-counter-card__action-group">
+                                        <span class="btn btn-primary btn-sm disabled">{{ trans('New batch') }}</span>
+                                        <span class="btn btn-danger btn-sm disabled">{{ trans('Reset') }}</span>
+                                    </div>
+                                </footer>
+                            </article>
                         </td>
-                        <td>{{ trans('Reset the count (with total)') }}</td>
+                        <td>{{ trans('Help multi counter card') }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="col-12 border-bottom mb-3 pb-3">
+                <h2 class="section-block__title">{{ trans('Help toolbar') }}</h2>
+                <table class="table table-bordered mb-3">
+                    <thead class="table-dark">
+                    <tr>
+                        <th scope="col" class="w-50">{{ trans('Element') }}</th>
+                        <th scope="col" class="w-50">{{ trans('Description') }}</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td class="align-middle">
+                            <span class="btn toolbar-btn disabled">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-moon-stars"
+                                     viewBox="0 0 16 16">
+                                    <path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278M4.858 1.311A7.269 7.269 0 0 0 1.025 7.71c0 4.02 3.279 7.276 7.319 7.276a7.316 7.316 0 0 0 5.205-2.162c-.337.042-.68.063-1.029.063-4.61 0-8.343-3.714-8.343-8.29 0-1.167.242-2.278.681-3.286z"></path>
+                                    <path d="M10.794 3.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387a1.734 1.734 0 0 0-1.097 1.097l-.387 1.162a.217.217 0 0 1-.412 0l-.387-1.162A1.734 1.734 0 0 0 9.31 6.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387a1.734 1.734 0 0 0 1.097-1.097l.387-1.162zM13.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.156 1.156 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.156 1.156 0 0 0-.732-.732l-.774-.258a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732L13.863.1z"></path>
+                                </svg>
+                            </span>
+                        </td>
+                        <td>{{ trans('Switch theme color') }}</td>
+                    </tr>
+                    <tr>
+                        <td class="align-middle">
+                            <span class="btn toolbar-btn disabled">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                     class="bi bi-arrows-angle-expand" viewBox="0 0 16 16">
+                                    <path fill-rule="evenodd"
+                                          d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707m4.344-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707"/></svg>
+                            </span>
+                        </td>
+                        <td>{{ trans('Switch fullscreen mode') }}</td>
+                    </tr>
+                    <tr>
+                        <td class="align-middle">
+                            <span class="btn toolbar-btn disabled">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                     class="bi bi-arrow-return-left" viewBox="0 0 16 16">
+                                    <path fill-rule="evenodd"
+                                          d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"></path></svg>
+                            </span>
+                        </td>
+                        <td>{{ trans('Back to homepage') }}</td>
+                    </tr>
+                    <tr>
+                        <td class="align-middle">
+                            <span class="btn toolbar-btn disabled">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-floppy"
+                                     viewBox="0 0 16 16"><path d="M11 2H9v3h2z"/><path
+                                        d="M1.5 0h11.586a1.5 1.5 0 0 1 1.06.44l1.415 1.414A1.5 1.5 0 0 1 16 2.914V14.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 14.5v-13A1.5 1.5 0 0 1 1.5 0M1 1.5v13a.5.5 0 0 0 .5.5H2v-4.5A1.5 1.5 0 0 1 3.5 9h9a1.5 1.5 0 0 1 1.5 1.5V15h.5a.5.5 0 0 0 .5-.5V2.914a.5.5 0 0 0-.146-.353l-1.415-1.415A.5.5 0 0 0 13.086 1H13v4.5A1.5 1.5 0 0 1 11.5 7h-7A1.5 1.5 0 0 1 3 5.5V1H1.5a.5.5 0 0 0-.5.5m3 4a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V1H4zM3 15h10v-4.5a.5.5 0 0 0-.5-.5h-9a.5.5 0 0 0-.5.5z"/></svg>
+                            </span>
+                        </td>
+                        <td>{{ trans('Save capture to disk') }} ({{ trans('Video') }})</td>
                     </tr>
                     </tbody>
                 </table>
@@ -392,7 +543,8 @@
 
             <div class="col-12 border-bottom mb-3 pb-3">
                 <h2 class="section-block__title">{{ trans('References') }}</h2>
-                <div>Ultralytics: https://github.com/ultralytics</div>
+                <div>Ultralytics: <a href="https://github.com/ultralytics" target="_blank" rel="noopener">https://github.com/ultralytics</a>
+                </div>
             </div>
 
             <div class="col-12 border-bottom mb-3 pb-3">
