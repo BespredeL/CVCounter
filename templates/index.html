@@ -18,41 +18,45 @@
 
     <section class="section-block section-block--compact counter-dashboard-section"
              data-multi-url="{{ url_for('counters.counter_multi_text') }}">
-        <div class="counter-dashboard-toolbar">
-            <span class="counter-dashboard-toolbar__label">{{ trans('Counters') }}</span>
-            <input type="search" class="form-control counter-dashboard-toolbar__search" id="counterSearch"
-                   placeholder="{{ trans('Search counters') }}" autocomplete="off" aria-label="{{ trans('Search counters') }}">
-            <div class="counter-filter-pills btn-group" role="group" aria-label="{{ trans('Filter by status') }}">
-                <input type="radio" class="btn-check" name="counterStatusFilter" id="filterAll" value="all" checked>
-                <label class="btn btn-outline-secondary" for="filterAll">{{ trans('All') }}</label>
-                <input type="radio" class="btn-check" name="counterStatusFilter" id="filterRunning" value="running">
-                <label class="btn btn-outline-secondary" for="filterRunning">{{ trans('Running') }}</label>
-                <input type="radio" class="btn-check" name="counterStatusFilter" id="filterPaused" value="paused">
-                <label class="btn btn-outline-secondary" for="filterPaused">{{ trans('Paused') }}</label>
-                <input type="radio" class="btn-check" name="counterStatusFilter" id="filterStopped" value="stopped">
-                <label class="btn btn-outline-secondary" for="filterStopped">{{ trans('Stopped') }}</label>
+        <div class="d-flex justify-content-between flex-wrap mb-4">
+            <div class="counter-dashboard-toolbar">
+                <span class="counter-dashboard-toolbar__label">{{ trans('Counters') }}</span>
+                <input type="search" class="form-control counter-dashboard-toolbar__search" id="counterSearch"
+                       placeholder="{{ trans('Search counters') }}" autocomplete="off" aria-label="{{ trans('Search counters') }}">
+                <div class="counter-filter-pills btn-group" role="group" aria-label="{{ trans('Filter by status') }}">
+                    <input type="radio" class="btn-check" name="counterStatusFilter" id="filterAll" value="all" checked>
+                    <label class="btn btn-outline-secondary" for="filterAll">{{ trans('All') }}</label>
+                    <input type="radio" class="btn-check" name="counterStatusFilter" id="filterRunning" value="running">
+                    <label class="btn btn-outline-secondary" for="filterRunning">{{ trans('Running') }}</label>
+                    <input type="radio" class="btn-check" name="counterStatusFilter" id="filterPaused" value="paused">
+                    <label class="btn btn-outline-secondary" for="filterPaused">{{ trans('Paused') }}</label>
+                    <input type="radio" class="btn-check" name="counterStatusFilter" id="filterStopped" value="stopped">
+                    <label class="btn btn-outline-secondary" for="filterStopped">{{ trans('Stopped') }}</label>
+                </div>
+                <span class="counter-dashboard-stats" id="counterStats" aria-live="polite"></span>
             </div>
-            <span class="counter-dashboard-stats" id="counterStats" aria-live="polite"></span>
+
+            {% if object_counters %}
+                <div class="counter-dashboard-toolbar counter-dashboard-toolbar--multi">
+                    <span class="counter-dashboard-toolbar__hint text-muted small">{{ trans('Multi counter hint short') }}</span>
+                    <div class="counter-dashboard-toolbar__multi-actions">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="counterMultiSelectVisible">
+                            {{ trans('Select visible') }}
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="counterMultiSelectAll">
+                            {{ trans('Select all') }}
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="counterMultiClear">
+                            {{ trans('Clear selection') }}
+                        </button>
+                        <span class="counter-dashboard-multi-count text-muted small" id="counterMultiCount" aria-live="polite"></span>
+                        <button type="button" class="btn btn-primary btn-sm" id="counterMultiOpen">{{ trans('Open multi view') }}</button>
+                    </div>
+                </div>
+            {% endif %}
         </div>
 
         {% if object_counters %}
-            <div class="counter-dashboard-toolbar counter-dashboard-toolbar--multi">
-                <span class="counter-dashboard-toolbar__hint text-muted small">{{ trans('Multi counter hint short') }}</span>
-                <div class="counter-dashboard-toolbar__multi-actions">
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="counterMultiSelectVisible">
-                        {{ trans('Select visible') }}
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="counterMultiSelectAll">
-                        {{ trans('Select all') }}
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="counterMultiClear">
-                        {{ trans('Clear selection') }}
-                    </button>
-                    <span class="counter-dashboard-multi-count text-muted small" id="counterMultiCount" aria-live="polite"></span>
-                    <button type="button" class="btn btn-primary btn-sm" id="counterMultiOpen">{{ trans('Open multi view') }}</button>
-                </div>
-            </div>
-
             <div class="counter-card-grid" id="counter-dashboard">
                 {% for location, label in object_counters.items() %}
                     {% with status=counter_status(location) %}
