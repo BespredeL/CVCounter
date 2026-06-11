@@ -281,6 +281,28 @@ body.app-body--counter-dual .app-topbar {
     flex-shrink: 0;
 }
 
+.counter-dashboard-toolbar-row {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 0.65rem;
+    margin-bottom: 0.65rem;
+    overflow-x: auto;
+}
+
+.counter-dashboard-toolbar-row .counter-dashboard-toolbar {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-bottom: 0;
+}
+
+.counter-dashboard-toolbar-row .counter-dashboard-toolbar--multi {
+    flex: 0 1 auto;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-top: 0.55rem;
+}
+
 .counter-dashboard-toolbar {
     display: flex;
     flex-wrap: wrap;
@@ -321,7 +343,12 @@ body.app-body--counter-dual .app-topbar {
     margin-top: -0.25rem;
     margin-bottom: 0.5rem;
     padding-top: 0.45rem;
-    border-top: 1px dashed var(--cv-border);
+}
+
+.counter-dashboard-toolbar-row .counter-dashboard-toolbar__hint {
+    flex: 0 1 auto;
+    margin-bottom: 0;
+    white-space: nowrap;
 }
 
 .counter-dashboard-toolbar__hint {
@@ -335,6 +362,11 @@ body.app-body--counter-dual .app-topbar {
     align-items: center;
     gap: 0.35rem 0.45rem;
     width: 100%;
+}
+
+.counter-dashboard-toolbar-row .counter-dashboard-toolbar__multi-actions {
+    flex-wrap: nowrap;
+    width: auto;
 }
 
 .counter-dashboard-multi-count {
@@ -814,7 +846,29 @@ body.app-body--counter-dual .app-topbar {
     line-height: 1;
 }
 
-@media (max-width: 575.98px) {
+@media (max-width: 727.98px) {
+    .counter-dashboard-toolbar-row {
+        flex-wrap: wrap;
+    }
+
+    .counter-dashboard-toolbar-row .counter-dashboard-toolbar--multi {
+        flex: 1 1 100%;
+        margin-top: -0.25rem;
+        border-top: 1px dashed var(--cv-border);
+        padding-top: 0.45rem;
+    }
+
+    .counter-dashboard-toolbar-row .counter-dashboard-toolbar__hint {
+        flex: 1 1 100%;
+        margin-bottom: 0.15rem;
+        white-space: normal;
+    }
+
+    .counter-dashboard-toolbar-row .counter-dashboard-toolbar__multi-actions {
+        flex-wrap: wrap;
+        width: 100%;
+    }
+
     .counter-dashboard-toolbar__search {
         flex: 1 1 100%;
         max-width: none;
@@ -1924,7 +1978,6 @@ body.app-body--counter-dual {
 
     .counter-dashboard-multi-count {
         flex: 1 1 100%;
-        margin-left: 0;
         text-align: left;
     }
 
