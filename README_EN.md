@@ -455,11 +455,18 @@ class ObjectDetectionMy(BaseObjectDetectionService):
 
 ## 📸 Screenshots
 
-<img src="https://github.com/BespredeL/BespredeL/blob/9b1aa0d2a841c04fce5a0cf58453f6cd5c831a88/VideoView.gif" alt="">
-<img src="https://github.com/BespredeL/BespredeL/blob/da1fce84f2e64f149142a7302a98a7e5e06f62fa/IndexPage.png" alt="">
-<img src="https://github.com/BespredeL/BespredeL/blob/da1fce84f2e64f149142a7302a98a7e5e06f62fa/VideoView.png" alt="">
-<img src="https://github.com/BespredeL/BespredeL/blob/da1fce84f2e64f149142a7302a98a7e5e06f62fa/TextView.png" alt="">
-<img src="https://github.com/BespredeL/BespredeL/blob/da1fce84f2e64f149142a7302a98a7e5e06f62fa/MultiTextView.png" alt="">
+<img src="docs/en/images/Index.png" alt="Home page">
+<img src="docs/en/images/ReportsIndex.png" alt="Home Reports">
+<img src="docs/en/images/ReportsItems.png" alt="Counter Reports">
+<img src="docs/en/images/ReportsItemShow.png" alt="View the report">
+<img src="docs/en/images/Help.png" alt="Help page">
+<img src="docs/en/images/Settings.png" alt="Settings">
+<img src="docs/en/images/SystemInfo.png" alt="System Information">
+<img src="docs/en/images/CounterVideo.png" alt="Video Counter">
+<img src="docs/en/images/CounterText.png" alt="Text Counter">
+<img src="docs/en/images/CounterMultiText.png" alt="Multi Counters">
+<img src="docs/en/images/CounterArea.png" alt="Setting up a counting area">
+<img src="docs/en/images/CounterModalSetting.png" alt="Camera Setup">
 
 _P.S.: Not the best example in the screenshots. Couldn't find anything better than an open-access camera (((_
 

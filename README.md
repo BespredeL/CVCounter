@@ -453,11 +453,18 @@ class ObjectDetectionMy(BaseObjectDetectionService):
 
 ## 📸 Скриншоты
 
-<img src="https://github.com/BespredeL/BespredeL/blob/9b1aa0d2a841c04fce5a0cf58453f6cd5c831a88/VideoView.gif" alt="">
-<img src="https://github.com/BespredeL/BespredeL/blob/da1fce84f2e64f149142a7302a98a7e5e06f62fa/IndexPage.png" alt="">
-<img src="https://github.com/BespredeL/BespredeL/blob/da1fce84f2e64f149142a7302a98a7e5e06f62fa/VideoView.png" alt="">
-<img src="https://github.com/BespredeL/BespredeL/blob/da1fce84f2e64f149142a7302a98a7e5e06f62fa/TextView.png" alt="">
-<img src="https://github.com/BespredeL/BespredeL/blob/da1fce84f2e64f149142a7302a98a7e5e06f62fa/MultiTextView.png" alt="">
+<img src="docs/ru/images/Index.png" alt="Главная страница">
+<img src="docs/ru/images/ReportsIndex.png" alt="Главная отчетов">
+<img src="docs/ru/images/ReportsItems.png" alt="Отчеты счетчика">
+<img src="docs/ru/images/ReportsItemShow.png" alt="Просмотра отчета">
+<img src="docs/ru/images/Help.png" alt="Помощь">
+<img src="docs/ru/images/Settings.png" alt="Настройки">
+<img src="docs/ru/images/SystemInfo.png" alt="Системная информация">
+<img src="docs/ru/images/CounterVideo.png" alt="Счетчик с видео">
+<img src="docs/ru/images/CounterText.png" alt="Счетчик с текстом">
+<img src="docs/ru/images/CounterMultiText.png" alt="Мульти счетчики">
+<img src="docs/ru/images/CounterArea.png" alt="Настройка зоны подсчета">
+<img src="docs/ru/images/CounterModalSetting.png" alt="Настройка камеры">
 
 _P.S.: Не лучший пример на скриншотах. Не нашел ничего лучше, чем камера в открытом доступе (((_
 

@@ -145,7 +145,8 @@ class ConfigValidator:
             if isinstance(origins, str):
                 # Single origin as string
                 if not origins.startswith(('*', 'http://', 'https://')):
-                    self.warnings.append(f"'server.allowed_origins' should start with '*', 'http://' or 'https://': {origins}")
+                    self.warnings.append(
+                        f"'server.allowed_origins' should start with '*', 'http://' or 'https://': {origins}")
             elif isinstance(origins, list):
                 # Multiple origins as list
                 for origin in origins:
@@ -308,7 +309,8 @@ class ConfigValidator:
             # Validate detection-specific config
             self._validate_detection_config(detection_config, f"detections.{location}", config_path)
 
-    def _validate_detection_config(self, config: Dict[str, Any], prefix: str, config_path: Optional[str] = None) -> None:
+    def _validate_detection_config(self, config: Dict[str, Any], prefix: str,
+                                   config_path: Optional[str] = None) -> None:
         """
         Validate a single detection configuration.
 
