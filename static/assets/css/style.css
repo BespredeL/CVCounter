@@ -243,6 +243,13 @@ body.app-body--counter-dual .app-topbar {
     color: var(--bs-secondary-color);
 }
 
+@media (max-width: 1400px) {
+    .nav-card {
+        flex-direction: column;
+        align-items: start;
+    }
+}
+
 .section-block {
     margin-bottom: 1.75rem;
 }
@@ -319,7 +326,6 @@ body.app-body--counter-dual .app-topbar {
     flex: 1 1 11rem;
     min-width: 9rem;
     max-width: 16rem;
-    min-height: 2.25rem;
     font-size: 0.875rem;
     padding-top: 0.35rem;
     padding-bottom: 0.35rem;
@@ -329,7 +335,6 @@ body.app-body--counter-dual .app-topbar {
     padding: 0.35rem 0.65rem;
     font-size: 0.8125rem;
     font-weight: 600;
-    min-height: 2.25rem;
 }
 
 .counter-dashboard-stats {
@@ -1069,7 +1074,7 @@ body.app-body--counter {
 
 @media (max-width: 991.98px) {
     body.app-body--counter {
-        overflow: auto;
+        overflow-y: auto;
     }
 
     .counter-layout__main {
@@ -1085,6 +1090,8 @@ body.app-body--counter {
         max-height: none;
         overflow-y: visible;
         position: static;
+        padding-left: 10px;
+        padding-right: 10px;
     }
 }
 
@@ -1955,6 +1962,19 @@ body.app-body--counter-dual {
     flex: 1 1 7rem;
     min-width: 6.5rem;
     font-weight: 600;
+}
+
+@media (max-width: 992px) {
+    .counter-dashboard-multi-count {
+        flex: 1 1 100%;
+        text-align: left;
+        order: 999;
+
+    }
+
+    .counter-dashboard-toolbar-row .counter-dashboard-toolbar__multi-actions {
+        flex-wrap: wrap !important;
+    }
 }
 
 @media (max-width: 575.98px) {

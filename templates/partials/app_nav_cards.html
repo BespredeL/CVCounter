@@ -1,7 +1,7 @@
 {# Quick navigation on inner pages (reports, settings, help, ...) #}
 <!-- START: App nav cards -->
 <div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
+    <div class="col-12 col-sm-6 col-md-3">
         <a href="{{ url_for('reports.reports') }}" class="nav-card">
             <div class="nav-card__icon">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-file-earmark-bar-graph"
@@ -16,7 +16,7 @@
             </div>
         </a>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-12 col-sm-6 col-md-3">
         <a href="{{ url_for('main.page', name='help') }}" class="nav-card">
             <div class="nav-card__icon">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-question-circle"
@@ -31,7 +31,7 @@
             </div>
         </a>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-12 col-sm-6 col-md-3">
         <a href="{{ url_for('settings.settings') }}" class="nav-card">
             <div class="nav-card__icon">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-gear" viewBox="0 0 16 16">
@@ -45,7 +45,7 @@
             </div>
         </a>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-12 col-sm-6 col-md-3">
         <a href="{{ url_for('settings.system_info') }}" class="nav-card">
             <div class="nav-card__icon">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-info-circle"
