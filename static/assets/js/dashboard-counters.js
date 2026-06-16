@@ -1,7 +1,7 @@
 /**
  * Developed by: Aleksandr Kireev
  * Created: 04.06.2026
- * Updated: 08.06.2026
+ * Updated: 16.06.2026
  * Website: https://bespredel.name
  */
 
@@ -43,9 +43,7 @@ const CounterDashboard = {
      */
     card(location) {
         return [...document.querySelectorAll(".counter-card")]
-            .find(
-                (el) => el.dataset.location === location
-            ) || null;
+            .find((el) => el.dataset.location === location) || null;
     },
 
     /**
@@ -231,19 +229,73 @@ const CounterDashboard = {
             this.applyStatus(location, "paused");
         } else if (status === "stopped") {
             this.applyStatus(location, "stopped");
+        } else if (status === "error") {
+            this.applyStatus(location, "error");
         }
     },
 
     /**
-     * Sync transport button disabled state after loading ends
+     * All transport and open controls on a dashboard card.
+     *
+     * @param {HTMLElement} card - The card element
+     * @returns {NodeListOf<HTMLElement>}
+     */
+    cardActionControls(card) {
+        return card.querySelectorAll(
+            ".counter-card__transport .btn, .counter-card__open .btn, .counter-card__open [data-open-mode]",
+        );
+    },
+
+    /**
+     * Enable or disable transport/open controls while a request is in flight.
+     *
+     * @param {HTMLElement} card - The card element
+     * @param {boolean} disabled - Whether controls should be disabled
+     * @returns {void}
+     */
+    setCardActionsDisabled(card, disabled) {
+        if (!card) {
+            return;
+        }
+
+        this.cardActionControls(card).forEach((el) => {
+            el.disabled = disabled;
+        });
+
+        if (!disabled) {
+            this.syncActionButtons(card);
+        }
+    },
+
+    /**
+     * Remove loading spinners and re-enable card controls.
      *
      * @param {HTMLElement} card - The card element
      * @returns {void}
      */
-    syncTransportButtons(card) {
-        const status = card.getAttribute("data-status") || "stopped";
+    clearCardLoading(card) {
+        if (!card) {
+            return;
+        }
 
         card.querySelectorAll(".counter-card__transport .btn").forEach((btn) => {
+            btn.classList.remove("is-loading");
+            btn.querySelector(".spinner-border")?.remove();
+        });
+
+        this.setCardActionsDisabled(card, false);
+    },
+
+    /**
+     * Sync action button disabled state after loading ends.
+     *
+     * @param {HTMLElement} card - The card element
+     * @returns {void}
+     */
+    syncActionButtons(card) {
+        const status = card.getAttribute("data-status") || "stopped";
+
+        this.cardActionControls(card).forEach((btn) => {
             btn.disabled = false;
         });
 
@@ -268,29 +320,53 @@ const CounterDashboard = {
         spinner.className = "spinner-border spinner-border-sm";
         spinner.setAttribute("role", "status");
 
-        card.querySelectorAll(".counter-card__transport .btn").forEach((el) => {
-            el.disabled = true;
-        });
+        this.setCardActionsDisabled(card, true);
         btn?.classList.add("is-loading");
         btn?.appendChild(spinner);
+
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(() => controller.abort(), 120000);
 
         return fetch(url, {
             method: "GET",
             headers: {"X-Requested-With": "XMLHttpRequest"},
+            signal: controller.signal,
         })
-            .then((r) => r.json())
-            .then((data) => {
+            .then(async (response) => {
+                let data = {};
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    data = {};
+                }
+
+                if (!response.ok) {
+                    const message = data?.message || window.trans("Request failed");
+                    showToast(message, "danger");
+                    this.applyActionResponse(card, location, {status: data?.status || "error"});
+                    const err = new Error(message);
+                    err.handled = true;
+                    throw err;
+                }
+
                 this.applyActionResponse(card, location, data);
                 return data;
             })
-            .catch(() => {
-                showToast(window.trans("Request failed"), "danger");
-                throw new Error("Request failed");
+            .catch((error) => {
+                if (error?.name === "AbortError") {
+                    showToast(window.trans("Request failed"), "danger");
+                    this.applyStatus(location, "error");
+                } else if (!error?.handled) {
+                    showToast(window.trans("Request failed"), "danger");
+                    this.applyStatus(location, "error");
+                }
+                throw error;
             })
             .finally(() => {
+                window.clearTimeout(timeoutId);
                 spinner.remove();
                 btn?.classList.remove("is-loading");
-                this.syncTransportButtons(card);
+                this.syncActionButtons(card);
             });
     },
 
@@ -344,9 +420,14 @@ const CounterDashboard = {
                 return;
             }
 
+            const card = this.card(location);
             const mapped = status === "started" ? "running" : status;
             if (this.STATUS_CLASSES.includes(mapped)) {
                 this.applyStatus(location, mapped);
+            }
+
+            if (status === "error") {
+                this.clearCardLoading(card);
             }
 
             switch (status) {

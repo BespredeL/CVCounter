@@ -8,8 +8,10 @@
 
 import time
 from functools import wraps
+from threading import Thread
 
-from flask import Blueprint, Response, abort, jsonify, redirect, render_template, request, send_file, stream_with_context, url_for
+from flask import Blueprint, Response, abort, jsonify, redirect, render_template, request, send_file, \
+    stream_with_context, url_for
 from flask import current_app, g
 from markupsafe import escape
 
@@ -18,6 +20,7 @@ from system.managers.video_stream_manager import VideoStreamManager
 from system.utils.counter_preview import get_preview_path, save_counter_preview
 from system.utils.frame_utils import FrameUtils
 from system.utils.i18n import trans as translate
+from system.utils.logger import Logger
 from system.utils.utils import is_ajax, slug
 from system.utils.validators import (
     ValidationError,
@@ -89,16 +92,22 @@ def object_detector_init(location: str):
         return object_counters
 
     detector_config = config.get("detections." + location)
-    counter = ObjectCounter(
-        location=location,
-        config_manager=config,
-        socketio=socketio,
-        video_path=detector_config['video_path'],
-        db_manager=db_manager,
-        weights=detector_config['weights_path'],
-        counting_area=detector_config['counting_area'],
-        counting_area_color=tuple(detector_config['counting_area_color']),
-    )
+    counter = None
+    try:
+        counter = ObjectCounter(
+            location=location,
+            config_manager=config,
+            socketio=socketio,
+            video_path=detector_config['video_path'],
+            db_manager=db_manager,
+            weights=detector_config['weights_path'],
+            counting_area=detector_config['counting_area'],
+            counting_area_color=tuple(detector_config['counting_area_color']),
+        )
+    except Exception:
+        if counter is not None:
+            counter.cleanup()
+        raise
 
     with lock:
         if location not in object_counters:
@@ -174,8 +183,9 @@ def _capture_counter_preview_on_start(location: str) -> int | None:
 
     if counter:
         for _ in range(40):
-            frame = counter.get_source_frame()
-            if frame is not None:
+            cached = counter._cached_source_frame
+            if cached is not None:
+                frame = cached.copy()
                 break
             time.sleep(0.1)
 
@@ -188,6 +198,25 @@ def _capture_counter_preview_on_start(location: str) -> int | None:
     if save_counter_preview(location, frame):
         return int(time.time())
     return None
+
+
+def _schedule_counter_preview_capture(location: str) -> None:
+    """Capture dashboard preview in the background (must not block HTTP)."""
+    app = current_app._get_current_object()
+
+    def _worker() -> None:
+        try:
+            with app.app_context():
+                _capture_counter_preview_on_start(location)
+        except Exception as e:
+            Logger().error(f'Preview capture failed for {location}: {e}')
+            Logger().log_exception()
+
+    Thread(
+        target=_worker,
+        daemon=True,
+        name=f'PreviewCapture-{location}',
+    ).start()
 
 
 def _ensure_counter_running(location: str) -> dict:
@@ -212,7 +241,7 @@ def _ensure_counter_running(location: str) -> dict:
 
     preview_ts = None
     if started_new:
-        preview_ts = _capture_counter_preview_on_start(location)
+        _schedule_counter_preview_capture(location)
 
     return {'started_new': started_new, 'preview_ts': preview_ts}
 
@@ -255,6 +284,40 @@ def process_custom_fields(form_config: dict, current_count: dict) -> list:
     return custom_fields
 
 
+def _live_counter_counts(location: str) -> dict:
+    """
+    Counts for the counter UI: running in-memory state, else last DB record.
+
+    Args:
+        location: Detection location identifier.
+
+    Returns:
+        dict: Keys total, current, defect, correct.
+    """
+    context = get_app_context()
+    counter = context['object_counters'].get(location)
+    if counter is not None:
+        return counter.get_live_counts()
+
+    zeros = {'total': 0, 'current': 0, 'defect': 0, 'correct': 0}
+    row = context['db_manager'].get_current_count(location)
+    if row is None:
+        return zeros
+
+    def _as_int(value, default: int = 0) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
+    return {
+        'total': _as_int(row.total_count),
+        'current': 0,
+        'defect': _as_int(row.defects_count),
+        'correct': _as_int(row.correct_count),
+    }
+
+
 @counters_bp.route('/counter/<string:location>')
 @counters_bp.route('/counter/<string:location>/video')
 def counter_video(location: str = None):
@@ -295,7 +358,8 @@ def counter_video(location: str = None):
         is_paused=object_counters[location].is_pause(),
         form_config=form_config,
         custom_fields=custom_fields,
-        counter_on_sidebar=True
+        counter_on_sidebar=True,
+        initial_counts=_live_counter_counts(location),
     )
 
 
@@ -586,6 +650,7 @@ def counter_text(location: str = None) -> str:
         is_paused=object_counters[location].is_pause(),
         form_config=form_config,
         custom_fields=custom_fields,
+        initial_counts=_live_counter_counts(location),
     )
 
 
@@ -817,7 +882,16 @@ def counter_bootstrap(location: str = None):
     location = str(escape(location))
     _require_detection_location(location)
 
-    result = _ensure_counter_running(location)
+    try:
+        result = _ensure_counter_running(location)
+    except Exception as e:
+        Logger().error(f'counter_bootstrap({location}): {e}')
+        Logger().log_exception()
+        return jsonify({
+            'status': 'error',
+            'location': location,
+            'message': translate('Lost connection to camera!'),
+        }), 500
 
     return jsonify({
         'status': 'started',

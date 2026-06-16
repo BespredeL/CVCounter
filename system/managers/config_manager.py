@@ -15,7 +15,8 @@ from typing import Any, Dict, Optional, Union
 
 from system.utils.config_validator import validate_config
 from system.utils.exception_handler import ConfigError, ConfigNotFoundError, InvalidConfigError
-from system.utils.paths import project_root_from_config_path, resolve_project_path, set_project_root, ensure_storage_layout
+from system.utils.paths import project_root_from_config_path, resolve_project_path, set_project_root, \
+    ensure_storage_layout
 from system.utils.logger import Logger
 
 """ Global variable to store the configuration data. """

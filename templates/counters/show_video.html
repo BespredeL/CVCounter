@@ -36,88 +36,22 @@
 {% endblock %}
 
 {% block footer_assets %}
-    <script src="{{ url_for('static', filename='assets/js/counter.js') }}"></script>
+    <script src="{{ url_for('static', filename='assets/js/cvcounter-page.js') }}"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const releaseVideoFeed = () => {
-                const img = document.getElementById('video_feed');
-                if (img) {
-                    img.removeAttribute('src');
-                }
-            };
-
-            window.addEventListener('pagehide', releaseVideoFeed);
-            document.addEventListener('click', (e) => {
-                const link = e.target.closest('a[href]:not([target="_blank"])');
-                if (link) {
-                    releaseVideoFeed();
-                }
-            });
-
-            document.addEventListener('contextmenu', (e) => e.preventDefault());
-
-            socket.on('{{ location }}_count', (data) => {
-                const defect_count = Math.max(parseInt(document.querySelector('#defect_keyboard input')?.value, 10) || 0, 0);
-                const correct_count = parseInt(document.querySelector('#correct_keyboard input')?.value, 10) || 0;
-
-                const updateCount = (id, count) => {
-                    const el = document.getElementById(id);
-                    if (el) {
-                        el.textContent = Math.max(count - defect_count + correct_count, 0);
-                    }
-                };
-
-                updateCount('total_count', data.total || 0);
-                updateCount('current_count', data.current || 0);
-
-                const defectEl = document.getElementById('defect_count');
-                const correctEl = document.getElementById('correct_count');
-                if (defectEl) {
-                    defectEl.textContent = defect_count + data.defect || 0;
-                }
-                if (correctEl) {
-                    correctEl.textContent = correct_count + data.correct || 0;
-                }
-            });
-
-            socket.on('{{ location }}_notification', (data) => {
-                if (data.message.length > 0) {
-                    showToast(data.message, data.type);
-                }
-            });
-
-            socket.on('counter_status_event', (data) => {
-                if (data.data.location === '{{ location }}') {
-                    if (data.data.status === 'paused') {
-                        setPauseUI(true);
-                    } else if (data.data.status === 'started') {
-                        setPauseUI(false);
-                    }
-                }
-            });
-
-            document.getElementById('btn_save')?.addEventListener('click', () => {
-                saveCount("{{ url_for('counters.save_count', location=location) }}");
-            });
-
-            document.getElementById('btn_reset')?.addEventListener('click', () => {
-                resetCount("{{ url_for('counters.reset_count', location=location) }}");
-            });
-
-            document.getElementById('btn_reset_current')?.addEventListener('click', () => {
-                resetCountCurrent("{{ url_for('counters.reset_count_current', location=location) }}");
-            });
-
-            document.getElementById('btn_start')?.addEventListener('click', () => {
-                startCount("{{ url_for('counters.start_count', location=location) }}");
-            });
-
-            document.getElementById('btn_pause')?.addEventListener('click', () => {
-                pauseCount("{{ url_for('counters.pause_count', location=location) }}");
-            });
-
-            document.getElementById('save-capture')?.addEventListener('click', () => {
-                saveCapture("{{ url_for('counters.save_capture', location=location) }}");
+        document.addEventListener("DOMContentLoaded", () => {
+            CounterPage.init({
+                location: {{ location|tojson }},
+                isPaused: {{ is_paused|tojson }},
+                video: true,
+                counts: {{ initial_counts|tojson }},
+                urls: {
+                    save: {{ url_for('counters.save_count', location=location)|tojson }},
+                    reset: {{ url_for('counters.reset_count', location=location)|tojson }},
+                    resetCurrent: {{ url_for('counters.reset_count_current', location=location)|tojson }},
+                    start: {{ url_for('counters.start_count', location=location)|tojson }},
+                    pause: {{ url_for('counters.pause_count', location=location)|tojson }},
+                    capture: {{ url_for('counters.save_capture', location=location)|tojson }},
+                },
             });
         });
     </script>

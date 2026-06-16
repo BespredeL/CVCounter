@@ -21,7 +21,7 @@ from system.core.object_counter import ObjectCounter
 from system.managers.thread_manager import ThreadManager
 from system.utils.i18n import load_translations, trans as translate
 from system.utils.paths import resolve_sqlite_uri
-from system.utils.utils import slug, system_check
+from system.utils.utils import slug, system_check, should_run_startup_system_check
 from system.db.models.base_model import TablePrefixBase
 from routes import counters_bp, reports_bp, settings_bp, main_bp
 
@@ -79,9 +79,9 @@ def create_app(config_path: str = "config/config.json", test_config: dict = None
         logger.log_exception()
         raise
 
-    # System check
+    # System check (once per server start; skip werkzeug reloader parent)
     try:
-        if _config.get("general.system_check", False):
+        if _config.get("general.system_check", False) and should_run_startup_system_check():
             system_check()
     except Exception as e:
         from system.utils.logger import Logger

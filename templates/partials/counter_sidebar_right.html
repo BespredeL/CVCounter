@@ -1,21 +1,22 @@
 {# Counter sidebar right #}
 <!-- START: Counter sidebar right -->
 {% import 'partials/forms.html' as forms %}
+{% set counts = initial_counts if initial_counts is defined else {'total': 0, 'current': 0, 'defect': 0, 'correct': 0} %}
 
 <div class="col-12 col-lg-4 col-xl-3 sidebar-right">
     {% if counter_on_sidebar is not none and counter_on_sidebar %}
         <!-- Counter block -->
         <div class="sidebar-counter-tile text-dark position-relative my-2 px-3 py-2 user-select-none">
-            <div class="h4 mb-0">{{ trans('Quantity:') }} <span id="total_count">0</span></div>
-            <div id="current_count" class="display-1 lh-1">0</div>
+            <div class="h4 mb-0">{{ trans('Quantity:') }} <span id="total_count">{{ counts.total }}</span></div>
+            <div id="current_count" class="display-1 lh-1">{{ counts.current }}</div>
 
             {% if form_config.get('defect_show', true) or form_config.get('correct_show', true) %}
                 <div class="h5 d-flex flex-wrap justify-content-between w-100 mt-2 pb-1 border-top border-dark">
                     <div class="{{ 'd-none' if not form_config.get('defect_show', true) }}">
-                        {{ trans('Defective products') }}: <span id="defect_count">0</span>
+                        {{ trans('Defective products') }}: <span id="defect_count">{{ counts.defect }}</span>
                     </div>
                     <div class="{{ 'd-none' if not form_config.get('correct_show', true) }}">
-                        {{ trans('Corr.') }}: <span id="correct_count">0</span>
+                        {{ trans('Corr.') }}: <span id="correct_count">{{ counts.correct }}</span>
                     </div>
                 </div>
             {% endif %}

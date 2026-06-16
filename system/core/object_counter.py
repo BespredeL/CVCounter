@@ -64,6 +64,8 @@ class ObjectCounter:
     DEFAULT_INDICATOR_SIZE: int = 10
     DEFAULT_VID_STRIDE: int = 1
     DEFAULT_RECORDING_PATH: str = "storage/saved_recordings"
+    DEFAULT_MJPEG_FPS: float = 15.0
+    DEFAULT_PAUSED_SLEEP_TIME: float = 0.1
 
     def __init__(self, location: str, config_manager: ConfigManager, socketio: SocketIO, **kwargs: any) -> None:
         # Init variables
@@ -75,6 +77,9 @@ class ObjectCounter:
         self.frame: Optional[np.ndarray] = None
         self._mjpeg_chunk: bytes | None = None
         self._mjpeg_viewers: int = 0
+        self._last_mjpeg_encode_time: float = 0.0
+        self._last_count_payload: dict | None = None
+        self._cached_source_frame: np.ndarray | None = None
         self.get_frames_running: bool = False
         self.running: bool = True
         self.paused = False
@@ -155,13 +160,16 @@ class ObjectCounter:
                     self.notif_manager.notify(trans('Connection to camera restored!'), 'success')
                     self.notif_manager.event('counter_status', {'status': 'started', 'location': self.location})
 
+                self._cached_source_frame = frame
+
                 if self.get_frames_running:
                     self.frame = self._process_frame(frame)
                 else:
                     self.frame = None
                     self._process_frame(frame)
 
-                time.sleep(self.DEFAULT_SLEEP_TIME)
+                sleep_time = self.DEFAULT_PAUSED_SLEEP_TIME if self.paused else self.DEFAULT_SLEEP_TIME
+                time.sleep(sleep_time)
             except Exception as e:
                 self.logger.error(f"Lost connection to camera! | {self.location}: {e}")
                 self.logger.log_exception()
@@ -184,12 +192,15 @@ class ObjectCounter:
         self._mjpeg_viewers += 1
         self.get_frames_running = True
         sent = False
+        last_chunk: bytes | None = None
         try:
             while self.running or not sent:
                 chunk = self._mjpeg_chunk
                 if chunk is not None:
-                    yield chunk
-                    sent = True
+                    if chunk is not last_chunk:
+                        yield chunk
+                        last_chunk = chunk
+                        sent = True
                 elif not sent:
                     yield _placeholder_mjpeg_chunk()
                     sent = True
@@ -203,6 +214,20 @@ class ObjectCounter:
             if self._mjpeg_viewers == 0:
                 self.get_frames_running = False
                 self._mjpeg_chunk = None
+
+    def get_live_counts(self) -> dict:
+        """
+        Return in-memory counts in the same shape as the Socket.IO payload.
+
+        Returns:
+            dict: total, current, defect, correct
+        """
+        return {
+            'total': self.total_count - self.defect_count + self.correct_count,
+            'current': self.current_count,
+            'defect': self.defect_count,
+            'correct': self.correct_count,
+        }
 
     def get_current_count(self) -> dict:
         """
@@ -292,6 +317,7 @@ class ObjectCounter:
         self.current_count = 0
         self.defect_count = 0
         self.correct_count = 0
+        self._last_count_payload = None
 
         self.db_manager.close_current_count(location)
 
@@ -332,6 +358,7 @@ class ObjectCounter:
         self.current_count = 0
         self.defect_count += defect_count
         self.correct_count += correct_count
+        self._last_count_payload = None
 
         self.notif_manager.emit(f'{location}_count', {'total': total_count, 'current': 0})
         self.notif_manager.notify(trans('The counter has been reset!'), 'primary')
@@ -390,9 +417,16 @@ class ObjectCounter:
         """
         Return a raw frame from the video source (without overlays).
 
+        Reuses the latest frame from the counter loop to avoid a second
+        read/decode from the same capture device.
+
         Returns:
             Optional[np.ndarray]: BGR frame or None if unavailable.
         """
+        cached = self._cached_source_frame
+        if cached is not None:
+            return cached.copy()
+
         try:
             return self.vsm.get_frame()
         except Exception as e:
@@ -427,9 +461,9 @@ class ObjectCounter:
         """
 
         try:
-            frame = self.vsm.get_frame()
+            frame = self.get_source_frame()
             if frame is not None:
-                self._save_dataset_image(np.ascontiguousarray(frame).copy())
+                self._save_dataset_image(frame)
         except Exception as e:
             self.logger.error(f'Error saving captured image: {e}')
 
@@ -700,14 +734,38 @@ class ObjectCounter:
 
             self.total_count = len(self.total_objects)
 
-        self.notif_manager.emit(f'{self.location}_count', {
+        payload = {
             'total': self.total_count - self.defect_count + self.correct_count,
             'current': self.current_count,
             'defect': self.defect_count,
-            'correct': self.correct_count
-        })
+            'correct': self.correct_count,
+        }
+        if payload != self._last_count_payload:
+            self.notif_manager.emit(f'{self.location}_count', payload)
+            self._last_count_payload = payload
 
         return image
+
+    def _work_frame(self, frame: np.ndarray) -> np.ndarray:
+        """One owned contiguous frame per iteration (safe for async recorder/encode)."""
+        return np.ascontiguousarray(frame).copy()
+
+    def _mjpeg_encode_interval(self) -> float:
+        """Minimum seconds between MJPEG encodes for the browser stream."""
+        if self.video_fps and self.video_fps > 0:
+            return 1.0 / float(self.video_fps)
+        return 1.0 / self.DEFAULT_MJPEG_FPS
+
+    def _maybe_encode_mjpeg(self, frame: np.ndarray) -> None:
+        """Encode MJPEG only when the stream interval has elapsed."""
+        now = time.monotonic()
+        if now - self._last_mjpeg_encode_time < self._mjpeg_encode_interval():
+            return
+
+        chunk = self._encode_mjpeg_chunk(frame)
+        if chunk is not None:
+            self._mjpeg_chunk = chunk
+            self._last_mjpeg_encode_time = now
 
     def _process_frame(self, frame: np.ndarray) -> ndarray | None:
         """
@@ -723,27 +781,30 @@ class ObjectCounter:
             return None
 
         with Timer() as timer:
+            if self.paused:
+                display_frame = self._work_frame(frame)
+                if self.get_frames_running:
+                    display_frame = self._draw_counting_area(display_frame)
+                    self._maybe_encode_mjpeg(display_frame)
+                return display_frame
+
             dataset_enabled = self.dataset.get('enable', False)
             last_total_count = self.total_count
 
-            if dataset_enabled:
-                raw_frame = np.ascontiguousarray(frame).copy()
-                boxes = self._detect(raw_frame.copy())
-            else:
-                raw_frame = None
-                base_frame = np.ascontiguousarray(frame).copy()
-                boxes = self._detect(base_frame)
-                raw_frame_for_display = base_frame
+            work_frame = self._work_frame(frame)
+            boxes = self._detect(work_frame)
 
-            display_frame = (raw_frame if dataset_enabled else raw_frame_for_display).copy()
             if self.get_frames_running:
-                display_frame = self._draw_counting_area(display_frame)
+                area_source = work_frame.copy() if dataset_enabled else work_frame
+                display_frame = self._draw_counting_area(area_source)
+            else:
+                display_frame = work_frame.copy() if dataset_enabled else work_frame
 
             display_frame = self._detect_count(display_frame, boxes)
 
             if dataset_enabled and last_total_count != self.total_count:
                 if random.random() < float(self.dataset['probability']):
-                    self._save_dataset_image(raw_frame, boxes, self.dataset.get('classes', None))
+                    self._save_dataset_image(work_frame, boxes, self.dataset.get('classes', None))
 
             if self.debug and timer.elapsed > 0:
                 fps = int(round(1 / timer.elapsed))
@@ -756,7 +817,7 @@ class ObjectCounter:
                 self.recorder.push_frame(display_frame)
 
             if self.get_frames_running:
-                self._mjpeg_chunk = self._encode_mjpeg_chunk(display_frame)
+                self._maybe_encode_mjpeg(display_frame)
 
             return display_frame
 
