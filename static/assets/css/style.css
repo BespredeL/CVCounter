@@ -2026,6 +2026,21 @@ body.app-body--counter-dual {
     color: var(--bs-body-color);
 }
 
+.page-item:first-child .page-link,
+.page-item:last-child .page-link {
+    border-radius: 8px;
+}
+
+.page-item__previous .page-link {
+    border-top-left-radius: 0.9em !important;
+    border-bottom-left-radius: 0.9em !important;
+}
+
+.page-item__next .page-link {
+    border-top-right-radius: 0.9em !important;
+    border-bottom-right-radius: 0.9em !important;
+}
+
 /* Error pages */
 .error-page-wrap {
     min-height: 50vh;

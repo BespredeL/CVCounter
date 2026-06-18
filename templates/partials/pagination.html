@@ -10,7 +10,7 @@
 <nav class="p-3 border-top" aria-label="Page navigation">
     <ul class="pagination pagination-modern justify-content-center flex-wrap mb-0">
         {% if current_page > 1 %}
-            <li class="page-item">
+            <li class="page-item page-item__previous">
                 <a class="page-link"
                    href="{{ url_for(endpoint, page=current_page - 1, location=query_params.location) }}"
                    aria-label="Previous">
@@ -27,7 +27,7 @@
         {% endfor %}
 
         {% if current_page < total_pages %}
-            <li class="page-item">
+            <li class="page-item page-item__next">
                 <a class="page-link"
                    href="{{ url_for(endpoint, page=current_page + 1, location=query_params.location) }}"
                    aria-label="Next">
