@@ -8,9 +8,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
-    <title>{% if request.endpoint and request.view_args is not none and url_for(request.endpoint, **(request.view_args or {})) != "/" %}
-        CVCounter - {% endif %}{% block title %}{% endblock %}</title>
+    <meta name="theme-color" content="#16181d">
+    <title>{% if request.path != '/' %}CVCounter - {% endif %}{% block title %}{% endblock %}</title>
     <!-- Styles -->
+    <link rel="icon" href="{{ url_for('static', filename='icons/icon.svg') }}" type="image/svg+xml">
     <link rel="shortcut icon" href="{{ url_for('static', filename='icons/favicon.ico') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32x32.png') }}">
@@ -21,28 +22,39 @@
     <link href="{{ url_for('static', filename='assets/css/style.css') }}" rel="stylesheet">
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='assets/socketio/socket.io.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='assets/js/jquery-3.7.1.min.js') }}"></script>
+    <script>
+        window.SOCKETIO_OPTIONS = {
+            path: "/socket.io",
+            transports: {{ socketio_transports|tojson }},
+            upgrade: {{ socketio_upgrade|tojson }},
+            reconnection: true//,
+            //reconnectionAttempts: 20,
+            //timeout: 20000
+        };
+    </script>
     <!-- START: Head block -->
     {% block head_assets %}{% endblock %}
     <!-- END: Head block -->
 </head>
-<body class="d-flex flex-column h-100">
-<div class="container-fluid pb-4">
+<body class="d-flex flex-column h-100 app-body {% block body_class %}{% endblock %}">
+<div class="container-fluid app-shell {% block shell_class %}{% endblock %}">
     <div class="toast-container position-fixed bottom-0 start-0 p-3" id="toast-container"></div>
-    <!-- START: Header block -->
-    <div class="row">
-        {% if self.header() %}
-            <div class="col-12 border-bottom">
-                {% block header %}{% endblock %}
+    <!-- START: Top bar -->
+    {% if self.header() or self.breadcrumb() %}
+        <header class="app-topbar{% if request.endpoint == 'main.index' %} app-topbar--home{% endif %}">
+            <div class="app-topbar__inner">
+                {% if self.header() %}
+                    {% block header %}{% endblock %}
+                {% endif %}
+                {% if self.breadcrumb() %}
+                    <div class="app-topbar__breadcrumb">
+                        {% block breadcrumb %}{% endblock %}
+                    </div>
+                {% endif %}
             </div>
-        {% endif %}
-        {% if self.breadcrumb() %}
-            <div class="col-12 mt-2">
-                {% block breadcrumb %}{% endblock %}
-            </div>
-        {% endif %}
-    </div>
-    <!-- END: Header block -->
+        </header>
+    {% endif %}
+    <!-- END: Top bar -->
 
     <!-- START: Alert block -->
     <div id="alert-container"></div>
@@ -73,12 +85,12 @@
     <!-- END: Content block -->
 </div>
 
-<!-- START: Footer links -->
-<div class="footer-links bg-body border-top">
-    <div class="px-3 py-2 d-flex flex-wrap align-items-stretch justify-content-between user-select-none">
-        <div class="d-flex justify-content-start">
+<!-- START: App toolbar -->
+<div class="footer-links app-toolbar bg-body border-top">
+    <div class="px-3 py-2 d-flex flex-wrap align-items-center justify-content-between user-select-none gap-2">
+        <div class="d-flex justify-content-start gap-1">
             {% if config.get('general.button_change_theme') %}
-                <button type="button" class="btn btn-sm d-flex align-items-center" id="theme-switch"
+                <button type="button" class="btn toolbar-btn d-flex align-items-center justify-content-center" id="theme-switch"
                         data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{ trans('Switch theme color') }}">
                     {% set currentTheme = (request.cookies.get('theme')|striptags|trim) or 'dark' %}
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
@@ -94,7 +106,7 @@
             {% endif %}
 
             {% if config.get('general.button_fullscreen') %}
-                <button type="button" class="btn btn-sm d-flex align-items-center" id="toggle-fullscreen"
+                <button type="button" class="btn toolbar-btn d-flex align-items-center justify-content-center" id="toggle-fullscreen"
                         data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{ trans('Switch fullscreen mode') }}">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrows-angle-expand"
                          viewBox="0 0 16 16">
@@ -111,7 +123,7 @@
             {% endif %}
 
             {% if config.get('general.button_backward') %}
-                <a href="/" class="btn btn-sm d-flex align-items-center"
+                <a href="/" class="btn toolbar-btn d-flex align-items-center justify-content-center"
                    data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{ trans('Back to homepage') }}">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-return-left"
                          viewBox="0 0 16 16">
@@ -121,8 +133,8 @@
                 </a>
             {% endif %}
 
-            {% if config.get('general.button_save_capture') and request.endpoint and url_for(request.endpoint, **(request.view_args or {})).startswith('/counter') %}
-                <button type="button" class="btn btn-sm d-flex align-items-center" id="save-capture"
+            {% if config.get('general.button_save_capture') and request.path.startswith('/counter/') and request.path.endswith('/video') %}
+                <button type="button" class="btn toolbar-btn d-flex align-items-center justify-content-center" id="save-capture"
                         data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{ trans('Save capture to disk') }}">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-floppy"
                          viewBox="0 0 16 16">
@@ -135,26 +147,23 @@
 
         <div class="translate-middle-x d-none d-md-block"></div>
 
-        <div class="d-flex align-items-center justify-content-end py-2">
-            {% if request.endpoint and url_for(request.endpoint, **(request.view_args or {})) == "/" %}
-                <a href="https://createdby.ru" class="d-none d-sm-block text-body-secondary text-decoration-none font-monospace lh-1 small"
+        <div class="d-flex align-items-center justify-content-end py-1 toolbar-brand text-body-secondary">
+            {% if request.path == '/' %}
+                <a href="https://createdby.ru" class="d-none d-sm-block text-body-secondary text-decoration-none lh-1"
                    data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
                    data-bs-title="Computer Vision Counter"
                    target="_blank">CVCounter</a>
-                <span class="d-none d-sm-block text-body-secondary font-monospace lh-1 small">&nbsp;|&nbsp;</span>
-                <a href="https://bespredel.name" class="text-body-secondary text-decoration-none font-monospace lh-1 small"
-                   data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
-                   data-bs-title="Разработчик системы: <br><b>Александр Киреев</b>"
-                   target="_blank">Dev: Александр Киреев</a>
             {% else %}
-                <a href="#" class="d-none d-sm-block text-body-secondary text-decoration-none font-monospace lh-1 small"
+                <a href="{{ url_for('main.index') }}" class="d-none d-sm-block text-body-secondary text-decoration-none lh-1"
                    data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
                    data-bs-title="Computer Vision Counter">CVCounter</a>
-                <span class="d-none d-sm-block text-body-secondary font-monospace lh-1 small">&nbsp;|&nbsp;</span>
-                <a href="#" class="text-body-secondary text-decoration-none font-monospace lh-1 small"
-                   data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
-                   data-bs-title="Разработчик системы: <br><b>Александр Киреев</b>">Dev: Александр Киреев</a>
             {% endif %}
+
+            <span class="d-none d-sm-block lh-1 opacity-50">&nbsp;·&nbsp;</span>
+            <a href="https://bespredel.name" class="text-body-secondary text-decoration-none lh-1"
+               data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
+               data-bs-title="Разработчик системы: <br><b>Александр Киреев</b>"
+               target="_blank">Dev: Александр Киреев</a>
         </div>
     </div>
 </div>
@@ -162,17 +171,9 @@
 
 <!-- START: Scripts -->
 <script>
-    // Simple function for line translation
-    window.trans = (str) => {
-        const appLang = {
-            'Connection to server successful': "{{ trans('Connection to server successful') }}",
-            'Error connecting to the server. Contact the IT department.': "{{ trans('Error connecting to the server. Contact the IT department.') }}",
-            'Reload page': "{{ trans('Reload page') }}",
-        };
-
-        return typeof appLang[str] === 'string' && appLang[str] ? appLang[str] : str;
-    };
+    window.APP_I18N = {{ translations|tojson }};
 </script>
+<script src="{{ url_for('static', filename='assets/js/i18n.js') }}"></script>
 <script src="{{ url_for('static', filename='assets/bootstrap5/js/bootstrap.bundle.min.js') }}"></script>
 <script src="{{ url_for('static', filename='assets/js/main.js') }}"></script>
 <!-- END: Scripts -->
@@ -193,11 +194,6 @@
                     </div>
                 </div>
             {% endfor %}
-            <script>
-                $(document).ready(function () {
-                    $('.toast-show').toast('show');
-                });
-            </script>
         </div>
     {% endif %}
 {% endwith %}

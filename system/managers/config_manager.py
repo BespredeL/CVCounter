@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 03.12.2025
+# Updated: 09.06.2026
 # Website: https://bespredel.name
 
 import ast
@@ -12,8 +12,12 @@ import logging
 import os
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
-from system.utils.exception_handler import ConfigError, ConfigNotFoundError, InvalidConfigError
+
 from system.utils.config_validator import validate_config
+from system.utils.exception_handler import ConfigError, ConfigNotFoundError, InvalidConfigError
+from system.utils.paths import project_root_from_config_path, resolve_project_path, set_project_root, \
+    ensure_storage_layout
+from system.utils.logger import Logger
 
 """ Global variable to store the configuration data. """
 config = None
@@ -31,6 +35,8 @@ class ConfigManager:
                 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
                 config_path = os.path.join(project_root, config_path)
             cls._instance._config_path = str(config_path)
+            cls._instance.project_root = project_root_from_config_path(str(config_path))
+            set_project_root(cls._instance.project_root)
             cls._instance._config = cls._instance.read_config()
             cls._init_path = str(config_path)
         elif str(config_path) != cls._init_path:
@@ -53,10 +59,10 @@ class ConfigManager:
                 config_data = json.load(config_file)
                 if not isinstance(config_data, dict):
                     raise InvalidConfigError("Configuration must be a JSON object")
-                
+
                 # Validate configuration
                 validate_config(config_data, self._config_path, raise_on_error=True)
-                
+
                 return config_data
         except FileNotFoundError:
             raise ConfigNotFoundError(f"Configuration file '{self._config_path}' does not exist")
@@ -170,6 +176,10 @@ class ConfigManager:
             logging.error(f"Error saving configuration: {str(e)}")
             raise ConfigError(f"Failed to save configuration: {str(e)}")
 
+    def resolve_path(self, relative_path: Optional[str]) -> Optional[str]:
+        """Resolve a project-relative path from config.json."""
+        return resolve_project_path(relative_path, self.project_root)
+
     def reload_config(self, validate: bool = True) -> None:
         """
         Reloads the configuration file from disk.
@@ -195,11 +205,12 @@ class ConfigManager:
             logging.error(f"Error reloading configuration: {str(e)}")
             raise
 
+
 # ------------------------------------------------------------------
 # Initialize config
 # ------------------------------------------------------------------
 
-def init_config(config_path: str = "config.json") -> ConfigManager:
+def init_config(config_path: str = "config/config.json") -> ConfigManager:
     """
     Initializes the global configuration instance.
 
@@ -213,4 +224,6 @@ def init_config(config_path: str = "config.json") -> ConfigManager:
     if config is None:
         config = ConfigManager(config_path)
         config.read_config()
+        ensure_storage_layout(config.project_root)
+        Logger.configure_from_config(config)
     return config

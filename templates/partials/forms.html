@@ -1,65 +1,127 @@
-{# Generate form fields from dict #}
-{% macro generate_form_fields(key, value, prefix='') %}
+{# 
+    Generate form fields from dict
+    Args:
+        key: The key of the field
+        value: The value of the field
+        prefix: The prefix of the field
+        depth: The depth of the field
+#}
+{% macro generate_form_fields(key, value, prefix='', depth=0) %}
+<!-- START: Generate form fields -->
     {% set field_id = prefix ~ key %}
     {% if value is mapping %}
-        <div class="card border-secondary mb-3">
-            <h6 class="card-header bg-secondary text-light py-1">{{ trans(key.replace('_', ' ')|title) }}</h6>
-            <div class="card-body">
+        <section class="cv-form-section{% if depth > 0 %} cv-form-section--nested{% endif %}">
+            <h3 class="cv-form-section__title">{{ trans(key.replace('_', ' ')|title) }}</h3>
+            <div class="cv-form-section__body">
                 {% for sub_key, sub_value in value.items() %}
-                    {{ generate_form_fields(sub_key, sub_value, field_id ~ '-') }}
+                    {{ generate_form_fields(sub_key, sub_value, field_id ~ '-', depth + 1) }}
                 {% endfor %}
             </div>
-        </div>
+        </section>
     {% else %}
-        <div class="mb-3">
-            <label for="{{ field_id }}" class="form-label">{{ trans(key.replace('_', ' ')|title) }}</label>
+        <div class="cv-form-field">
+            <label for="{{ field_id }}" class="cv-form-label">{{ trans(key.replace('_', ' ')|title) }}</label>
             {% if value is string %}
-                <input type="{{ "text" if key != 'password' else "password" }}" id="{{ field_id }}" name="{{ field_id }}"
-                       value="{{ value }}" class="form-control" placeholder="">
+                {% if key == 'password' or 'password' in key or 'secret' in key %}
+                    <input type="password" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                           class="form-control cv-form-control" autocomplete="new-password">
+                {% elif value|length > 80 or '\n' in value %}
+                    <textarea id="{{ field_id }}" name="{{ field_id }}" rows="3"
+                              class="form-control cv-form-control cv-form-control--textarea">{{ value }}</textarea>
+                {% else %}
+                    <input type="text" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                           class="form-control cv-form-control">
+                {% endif %}
+            {% elif key == 'counting_area' and prefix.startswith('detections-') %}
+                {% set detection_location = prefix.replace('detections-', '').rstrip('-') %}
+                <div class="cv-form-field">
+                    {#<span class="cv-form-label">{{ trans(key.replace('_', ' ')|title) }}</span>#}
+                    <input type="text" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                           class="form-control cv-form-control">
+                    <p class="cv-form-hint mb-2">{{ trans('Configure the polygon on a live video frame') }}</p>
+                    <a class="btn btn-outline-primary btn-sm"
+                       href="{{ url_for('counters.counting_area_edit', location=detection_location) }}"
+                       target="_blank" rel="noopener">
+                        {{ trans('Open zone editor') }}
+                    </a>
+                </div>
             {% elif value is boolean %}
-                {#<div class="form-check form-switch">
-                    <input id="{{ field_id }}" name="{{ field_id }}" class="form-check-input" type="checkbox" role="switch" {% if value %}checked{% endif %}>
-                    <label class="form-check-label" for="{{ field_id }}">{{ key }}</label>
-                </div>#}
-                <div>
-                    <input type="radio" class="btn-check" value="on" name="{{ field_id }}" id="{{ field_id }}_yes" autocomplete="off"
-                           {% if value == true %}checked{% endif %}>
-                    <label class="btn btn-sm btn-outline-success" for="{{ field_id }}_yes">{{ trans('On') }}</label>
+                <div class="cv-form-toggle" role="group" aria-label="{{ trans(key.replace('_', ' ')|title) }}">
+                    <input type="radio" class="cv-form-toggle__input" value="on" name="{{ field_id }}" id="{{ field_id }}_yes"
+                           autocomplete="off" {% if value == true %}checked{% endif %}>
+                    <label class="cv-form-toggle__option cv-form-toggle__option--on" for="{{ field_id }}_yes">
+                        <span class="cv-form-toggle__dot" aria-hidden="true"></span>
+                        {{ trans('On') }}
+                    </label>
 
-                    <input type="radio" class="btn-check" value="off" name="{{ field_id }}" id="{{ field_id }}_no" autocomplete="off"
-                           {% if value == false %}checked{% endif %}>
-                    <label class="btn btn-sm btn-outline-danger" for="{{ field_id }}_no">{{ trans('Off') }}</label>
+                    <input type="radio" class="cv-form-toggle__input" value="off" name="{{ field_id }}" id="{{ field_id }}_no"
+                           autocomplete="off" {% if value == false %}checked{% endif %}>
+                    <label class="cv-form-toggle__option cv-form-toggle__option--off" for="{{ field_id }}_no">
+                        <span class="cv-form-toggle__dot" aria-hidden="true"></span>
+                        {{ trans('Off') }}
+                    </label>
                 </div>
             {% elif value is number %}
-                <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}" class="form-control" placeholder="">
+                <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                       class="form-control cv-form-control" step="any">
+            {% elif value is iterable and value is not string %}
+                <textarea id="{{ field_id }}" name="{{ field_id }}" rows="4"
+                          class="form-control cv-form-control cv-form-control--mono">{{ value }}</textarea>
             {% else %}
-                <input type="text" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}" class="form-control" placeholder="">
+                <input type="text" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                       class="form-control cv-form-control">
             {% endif %}
         </div>
     {% endif %}
+    <!-- END: Generate form fields -->
 {% endmacro %}
 
-{# Input fields #}
+
+{# 
+    Input fields
+    Args:
+        name: The name of the input
+        value: The value of the input
+        label: The label of the input
+        type: The type of the input (text, password, number, email, url, tel, search, date, time, datetime-local, month, week)
+#}
 {% macro input(name, value='', label='', type='text') -%}
-    <div class="mb-3">
+    <div class="cv-form-field">
         {% if label or name %}
-            <label for="{{ name }}" class="form-label">{{ label or name }}</label>
+            <label for="{{ name }}" class="cv-form-label">{{ label or name }}</label>
         {% endif %}
-        <input type="{{ type }}" class="form-control" id="{{ name }}" name="{{ name }}" value="{{ value|e }}">
+        <input type="{{ type }}" class="form-control cv-form-control" id="{{ name }}" name="{{ name }}"
+               value="{{ value|e }}" {% if type == 'password' %}autocomplete="new-password"{% endif %}>
     </div>
 {%- endmacro %}
 
-{# Textarea fields #}
+{# 
+    Generate textarea fields from dict
+    Args:
+        name: The name of the textarea
+        value: The value of the textarea
+        label: The label of the textarea
+        rows: The number of rows of the textarea
+        cols: The number of columns of the textarea
+#}
 {%- macro textarea(name, value='', label='', rows=10, cols=40) -%}
-    <div class="mb-3">
+    <div class="cv-form-field">
         {% if label %}
-            <label for="{{ name }}" class="form-label">{{ label }}</label>
+            <label for="{{ name }}" class="cv-form-label">{{ label }}</label>
         {% endif %}
-        <textarea name="{{ name }}" rows="{{ rows }}" cols="{{ cols }}" id="{{ name }}" class="form-control">{{ value|e }}</textarea>
+        <textarea name="{{ name }}" rows="{{ rows }}" cols="{{ cols }}" id="{{ name }}"
+                  class="form-control cv-form-control cv-form-control--textarea">{{ value|e }}</textarea>
     </div>
 {%- endmacro %}
 
-{# Button #}
+
+{# 
+    Button
+    Args:
+        text: The text of the button
+        type: The type of the button (submit, button, reset)
+        color: The color of the button (primary, secondary, success, danger, warning, info, light, dark)
+#}
 {%- macro button(text, type='submit', color='primary') -%}
-    <button type="{{ type }}" class="btn btn-{{ color }}">{{ text }}</button>
+    <button type="{{ type }}" class="btn btn-{{ color }} cv-form-submit px-4">{{ text }}</button>
 {%- endmacro %}

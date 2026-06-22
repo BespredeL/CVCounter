@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ trans('Counting zone editor') }} - {{ title }}{% endblock %}
+
+{% block header %}
+    {% with page_title=trans('Counting zone editor'), page_subtitle=title %}
+        {% include 'partials/page_header.html' %}
+    {% endwith %}
+{% endblock %}
+
+{% block breadcrumb %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">{{ trans('Home') }}</a></li>
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('counters.counter_video', location=location) }}">{{ title }}</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">{{ trans('Counting zone') }}</li>
+        </ol>
+    </nav>
+{% endblock %}
+
+{% block content %}
+    {% include 'partials/inner_page_nav.html' %}
+
+    <div class="page-content counting-area-page"
+         id="counting-area-app"
+         data-location="{{ location }}"
+         data-data-url="{{ url_for('counters.counting_area_data', location=location) }}"
+         data-snapshot-url="{{ url_for('counters.counting_area_snapshot', location=location) }}"
+         data-save-url="{{ url_for('counters.counting_area_save', location=location) }}"
+         data-video-url="{{ url_for('counters.counter_video', location=location) }}">
+
+        <div class="counting-area-toolbar cv-card p-3 mb-3">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-secondary" id="ca-btn-undo" title="{{ trans('Undo last point') }}">
+                        {{ trans('Undo') }}
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" id="ca-btn-clear" title="{{ trans('Reset polygon') }}">
+                        {{ trans('Clear') }}
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" id="ca-btn-full" title="{{ trans('Full frame') }}">
+                        {{ trans('Full frame') }}
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" id="ca-btn-rect" title="{{ trans('Draw rectangle') }}">
+                        {{ trans('Rectangle') }}
+                    </button>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-info" id="ca-btn-refresh">
+                    {{ trans('Refresh frame') }}
+                </button>
+
+                <span class="text-body-secondary small me-2 d-none d-md-inline">{{ trans('Editor hint') }}</span>
+
+                <label class="counting-area-color-picker ms-md-auto mb-0">
+                    <span class="small text-body-secondary me-1">{{ trans('Zone color') }}</span>
+                    <input type="color" id="ca-color" value="#43d3ff" aria-label="{{ trans('Zone color') }}">
+                </label>
+                <a href="{{ url_for('counters.counter_video', location=location) }}" class="btn btn-sm btn-outline-secondary">
+                    {{ trans('Back to counter') }}
+                </a>
+                <button type="button" class="btn btn-sm btn-primary" id="ca-btn-save">
+                    {{ trans('Save zone') }}
+                </button>
+            </div>
+            <div class="small text-body-secondary mt-2" id="ca-status">{{ trans('Loading video frame...') }}</div>
+        </div>
+
+        <div class="counting-area-stage cv-card">
+            <div class="counting-area-canvas-wrap" id="ca-canvas-wrap">
+                <img id="ca-frame" class="counting-area-frame" alt="" hidden>
+                <canvas id="ca-canvas" class="counting-area-canvas"></canvas>
+                <div class="counting-area-loading" id="ca-loading">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <span class="ms-2">{{ trans('Loading video frame...') }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block footer_assets %}
+    <script src="{{ url_for('static', filename='assets/js/counting-area-editor.js') }}"></script>
+{% endblock %}

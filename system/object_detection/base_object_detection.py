@@ -3,46 +3,34 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 26.12.2024
-# Updated: 31.03.2025
+# Updated: 09.06.2026
 # Website: https://bespredel.name
 
+from abc import ABC, abstractmethod
+from typing import Tuple
+from numpy import ndarray
 
-class BaseObjectDetectionService:
-    def __init__(self) -> None:
-        pass
+DetectionResult = Tuple[ndarray, ndarray, ndarray]
 
-    def detect(self, image, **kwargs):
+
+class BaseObjectDetectionService(ABC):
+    """Base class for object detection backends."""
+
+    @abstractmethod
+    def detect(self, image: ndarray, **kwargs) -> DetectionResult:
         """
-        Detects objects in an image using a pre-trained model.
-
-        Args:
-            image: The input image.
-            **kwargs: Additional keyword arguments.
+        Detect objects in an image.
 
         Returns:
-            ndarray: An array of updated results after tracking the detected objects.
+            tuple: (boxes_xyxy, confidences, classes)
+                - boxes_xyxy: ndarray (N, 4)
+                - confidences: ndarray (N,)
+                - classes: ndarray (N,) integer class IDs
         """
 
-        pass
+    @abstractmethod
+    def load_model(self, weights: str, **kwargs) -> None:
+        """Load model weights and apply runtime settings from kwargs."""
 
-    def load_model(self, weights: str, **kwargs):
-        """
-        Loads a pre-trained model for object detection.
-
-        Args:
-            weights: The path to the pre-trained model weights file.
-            **kwargs: Additional keyword arguments.
-
-        Returns:
-            None
-        """
-        pass
-
-    def cleanup(self):
-        """
-        Cleaning resources
-
-        Returns:
-            None
-        """
-        pass
+    def cleanup(self) -> None:
+        """Release backend resources."""

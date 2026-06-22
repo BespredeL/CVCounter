@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 03.12.2025
-# Updated: 22.01.2026
+# Updated: 03.06.2026
 # Website: https://bespredel.name
 
 import os
@@ -13,13 +13,18 @@ from flask import Blueprint, abort, render_template
 from flask import current_app, g
 from markupsafe import escape
 
-from system.utils.utils import trans as translate
+from system.utils.counter_preview import preview_exists
+from system.utils.i18n import trans as translate
 
 main_bp = Blueprint('main', __name__)
 
 
 def get_app_context():
-    """Get application context from g or current_app."""
+    """Get application context from g or current_app.
+    
+    Returns:
+        dict: Application context
+    """
     if not hasattr(g, 'app_context'):
         g.app_context = current_app.config.get('APP_CONTEXT')
     return g.app_context
@@ -40,7 +45,8 @@ def index() -> str:
     return render_template(
         'index.html',
         object_counters=locations_dict,
-        running_counters=thread_manager.threads
+        running_counters=thread_manager.threads,
+        counter_previews={loc: preview_exists(loc) for loc in locations_dict},
     )
 
 

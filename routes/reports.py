@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 03.12.2025
-# Updated: 22.01.2026
+# Updated: 03.06.2026
 # Website: https://bespredel.name
 
 import json
@@ -12,14 +12,18 @@ from flask import Blueprint, abort, render_template
 from flask import current_app, g
 from markupsafe import escape
 
-from system.utils.utils import trans as translate
+from system.utils.i18n import trans as translate
 from system.utils.validators import ValidationError, validate_report_list_request
 
 reports_bp = Blueprint('reports', __name__)
 
 
 def get_app_context():
-    """Get application context from g or current_app."""
+    """Get application context from g or current_app.
+    
+    Returns:
+        dict: Application context
+    """
     if not hasattr(g, 'app_context'):
         g.app_context = current_app.config.get('APP_CONTEXT')
     return g.app_context
@@ -52,9 +56,6 @@ def report_list(location: str = None) -> str:
     
     Returns:
         str: Rendered HTML template with paginated reports list
-    
-    Raises:
-        HTTPException: If the location is not found or invalid
     """
     context = get_app_context()
     locations = context['locations']
@@ -113,9 +114,6 @@ def report_show(location: str, report_id: int) -> str:
     
     Returns:
         str: Rendered HTML template with report details
-    
-    Raises:
-        HTTPException: If the report is not found
     """
     context = get_app_context()
     db_manager = context['db_manager']

@@ -1,170 +1,45 @@
 {% extends 'base.html' %}
 
+{% block body_class %}app-body--counter-multi{% endblock %}
+{% block shell_class %}app-shell--counter-multi{% endblock %}
+
 {% block title %}{{ title.title() }}{% endblock %}
 
 {% block content %}
-    <div class="row d-flex flex-wrap align-items-stretch justify-content-center position-relative vh-100 pb-5 user-select-none">
-        <!-- START: Top block -->
-        <div class="d-flex flex-column text-center col-12 col-sm-6 border-bottom border-end">
-            <div class="display-5 text-muted">{{ location_in_label|title|striptags }}</div>
-            <div class="display-1 current-count-txt-multi current_count_{{ location_in|slug }}">0</div>
-        </div>
+    <div class="multi-counter-view user-select-none" id="multiCounterView">
+        {% for item in counters %}
+            <article class="multi-counter-card" data-location="{{ item.location }}">
+                <header class="multi-counter-card__header">
+                    <h2 class="multi-counter-card__title">{{ item.label|title|striptags }}</h2>
+                    <p class="multi-counter-card__id text-muted">{{ item.location }}</p>
+                </header>
 
-        <div class="d-flex flex-column text-center col-12 col-sm-6 border-bottom">
-            <div class="display-5 text-muted">{{ location_out_label|title|striptags }}</div>
-            <div class="display-1 current-count-txt-multi current_count_{{ location_out|slug }}">0</div>
-        </div>
+                <div class="multi-counter-card__metric multi-counter-card__metric--current">
+                    <span class="multi-counter-card__metric-label">{{ trans('Current batch') }}</span>
+                    <div class="multi-counter-card__value current_count_{{ item.slug }}">0</div>
+                </div>
 
-        <div class="d-flex flex-column text-center col-12 col-sm-6 border-bottom border-end">
-            <div class="display-5 text-muted">
-                <span class="d-inline d-md-none">{{ location_in_label|title|striptags }}, </span>{{ trans('Total') }}:
-            </div>
-            <div class="display-1 total-count-txt text-muted total_count_{{ location_in|slug }}">0</div>
-        </div>
+                <div class="multi-counter-card__metric multi-counter-card__metric--total">
+                    <span class="multi-counter-card__metric-label">{{ trans('Total') }}</span>
+                    <div class="multi-counter-card__value multi-counter-card__value--total total_count_{{ item.slug }}">0</div>
+                </div>
 
-        <div class="d-flex flex-column text-center col-12 col-sm-6 border-bottom">
-            <div class="display-5 text-muted">
-                <span class="d-inline d-md-none">{{ location_out_label|title|striptags }}, </span>{{ trans('Total') }}:
-            </div>
-            <div class="display-1 total-count-txt text-muted total_count_{{ location_out|slug }}">0</div>
-        </div>
-        <!-- END: Top block -->
-
-        <!-- START: Bottom block -->
-        <div class="d-flex align-items-stretch flex-wrap text-center col-12 col-md-6 border-end border-bottom py-3">
-            <div class="d-inline d-md-none w-100 display-6">{{ location_in_label|title|striptags }}:</div>
-            <button class="btn btn-primary btn-lg col mb-3 m-1 btn_reset_current fs-2"
-                    data-location="{{ location_in }}">{{ trans('New batch') }}</button>
-            {#<button class="btn btn-success col mb-3 m-1 btn_save fs-2"
-                        data-location="{{ location_in }}">{{ trans('Save') }}</button>#}
-            <button class="btn btn-danger btn-lg col mb-3 m-1 btn_reset fs-2"
-                    data-location="{{ location_in }}">{{ trans('Reset') }}</button>
-        </div>
-
-        <div class="d-flex align-items-stretch flex-wrap text-center col-12 col-md-6 py-3 border-bottom">
-            <div class="d-inline d-md-none w-100 display-6">{{ location_out_label|title|striptags }}:</div>
-            <button class="btn btn-primary btn-lg col mb-3 m-1 btn_reset_current fs-2"
-                    data-location="{{ location_out }}">{{ trans('New batch') }}</button>
-            {#<button class="btn btn-success col mb-3 m-1 btn_save fs-2"
-                        data-location="{{ location_out }}">{{ trans('Save') }}</button>#}
-            <button class="btn btn-danger btn-lg col mb-3 m-1 btn_reset fs-2"
-                    data-location="{{ location_out }}">{{ trans('Reset') }}</button>
-        </div>
-        <!-- END: Bottom block -->
+                <footer class="multi-counter-card__actions">
+                    <div class="multi-counter-card__action-group">
+                        <button type="button" class="btn btn-primary btn-lg btn_reset_current"
+                                data-location="{{ item.location }}">{{ trans('New batch') }}</button>
+                        <button type="button" class="btn btn-danger btn-lg btn_reset"
+                                data-location="{{ item.location }}">{{ trans('Reset') }}</button>
+                    </div>
+                </footer>
+            </article>
+        {% endfor %}
     </div>
 {% endblock %}
 
 {% block footer_assets %}
     <script>
-        $(function () {
-            $(document).on('contextmenu', function (e) {
-                e.preventDefault();
-            });
-
-            //---------------------------------------------------------------------------
-            // Socket IO
-            //---------------------------------------------------------------------------
-
-            // Counter IN get handler
-            socket.on('{{ location_in }}_count', function (data) {
-                let current_count = Math.max(0, parseInt(data.current));
-                let total_count = data.total > 0 ? Math.max(0, parseInt(data.total)) : 0;
-
-                $('.current_count_{{ location_in|slug }}').html(current_count);
-                $('.total_count_{{ location_in|slug }}').html(total_count);
-            });
-
-            // Counter OUT get handler
-            socket.on('{{ location_out }}_count', function (data) {
-                let current_count = Math.max(0, parseInt(data.current));
-                let total_count = data.total > 0 ? Math.max(0, parseInt(data.total)) : 0;
-
-                $('.current_count_{{ location_out|slug }}').html(current_count);
-                $('.total_count_{{ location_out|slug }}').html(total_count);
-            });
-
-            // Notification receipt handler
-            socket.on('{{ location }}_notification', function (data) {
-                if (data.message.length > 0) {
-                    showToast(data.message, data.type);
-                }
-            });
-
-            //---------------------------------------------------------------------------
-            // Form buttons
-            //---------------------------------------------------------------------------
-
-            $('.btn_save').on('click', function () {
-                let save_url = '{{ url_for('counters.save_count', location=location) }}';
-
-                let total_count_id = '.total_count_txt';
-                if (this.dataset.location) {
-                    total_count_id = ".total_count_" + this.dataset.location;
-                    save_url = '{{ url_for('counters.save_count', location='') }}' + this.dataset.location;
-                }
-
-                $.ajax({
-                    url: save_url,
-                    method: 'post',
-                    data: {
-                        'correct_count': 0,
-                        'defect_count': 0
-                    },
-                    success: function (data) {
-                        if (!data) {
-                            data = 0;
-                        }
-                        $(total_count_id).html(data.total_count);
-                    }
-                });
-            });
-
-            $('.btn_reset').on('click', function () {
-                let reset_url = '{{ url_for('counters.reset_count', location=location) }}';
-
-                let total_count_id = '.total_count_txt';
-                if (this.dataset.location) {
-                    total_count_id = ".total_count_" + this.dataset.location;
-                    reset_url = '{{ url_for('counters.reset_count', location='') }}' + this.dataset.location;
-                }
-
-                $.ajax({
-                    url: reset_url,
-                    method: 'get',
-                    data: {},
-                    success: function (data) {
-                        if (!data) {
-                            data = 0;
-                        }
-                        $(total_count_id).html(data.total_count);
-                    }
-                });
-            });
-
-            $('.btn_reset_current').on('click', function () {
-                let reset_current_url = '{{ url_for('counters.reset_count_current', location=location) }}';
-
-                let current_count_id = '.current_count_txt';
-                if (this.dataset.location) {
-                    current_count_id = ".current_count_" + this.dataset.location;
-                    reset_current_url = '{{ url_for('counters.reset_count_current', location='') }}' + this.dataset.location;
-                }
-
-                $.ajax({
-                    url: reset_current_url,
-                    method: 'post',
-                    data: {
-                        'correct_count': 0,
-                        'defect_count': 0
-                    },
-                    success: function (data) {
-                        if (!data) {
-                            data = 0;
-                        }
-                        $(current_count_id).val(data.current_count);
-                    }
-                });
-            });
-        });
+        window.MULTI_COUNTER_ITEMS = {{ counters|tojson }};
     </script>
+    <script src="{{ url_for('static', filename='assets/js/counter-multi-text.js') }}"></script>
 {% endblock %}

@@ -3,10 +3,10 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 22.03.2024
-# Updated: 23.01.2025
+# Updated: 08.06.2026
 # Website: https://bespredel.name
 
-import json
+import os
 import re
 import subprocess
 from shutil import disk_usage
@@ -21,65 +21,6 @@ from flask import request
 def is_ajax() -> bool:
     """Check if the request is an AJAX request."""
     return str(request.headers.get('X-Requested-With')).lower() == 'XMLHttpRequest'.lower()
-
-
-def trans(text: str, **kwargs: dict) -> str:
-    """
-    Translates the given text to the specified language using the provided translations.
-
-    Args:
-        text (str): The text to be translated.
-        kwargs (dict, optional): A dictionary of arguments including:
-            - 'lang': Language code for translation (default: 'ru').
-            - Other placeholder replacements.
-
-    Returns:
-        str: The translated text with any placeholder replacements made.
-
-    Examples:
-        >>> trans('Hello')
-        'Привет'
-
-        >>> trans('The weather is {weather}', weather='sunny')
-        'Погода солнечная'
-    """
-    if kwargs is None:
-        kwargs = {}
-
-    # Extract the language or default to 'ru'
-    lang = kwargs.pop('lang', 'ru')
-
-    lang_list = load_translations(lang)
-    if text in lang_list:
-        text = lang_list[text]
-
-    # Replace placeholders in the text
-    for key, value in kwargs.items():
-        text = text.replace('{' + key + '}', str(value))
-
-    return text
-
-
-def load_translations(language_code: str) -> dict:
-    """
-    Load translations
-
-    Args:
-        language_code (str): The language code to load translations for.
-
-    Returns:
-        dict: A dictionary of translations for the specified language code.
-
-    Raises:
-        None
-    """
-    try:
-        file_path = f"langs/{language_code}.json"
-        with open(file_path, "r", encoding="utf-8") as file:
-            translations = json.load(file)
-        return translations
-    except Exception:
-        return {}
 
 
 def slug(s: str) -> str:
@@ -166,20 +107,101 @@ def format_bytes(size: int) -> str:
     return f"{size:.2f} PB"
 
 
+def _nvidia_smi_query(field: str) -> str | None:
+    """Read one GPU field via the stable nvidia-smi CSV query interface."""
+    try:
+        result = subprocess.run(
+            ['nvidia-smi', f'--query-gpu={field}', '--format=csv,noheader,nounits'],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+
+    if result.returncode != 0:
+        return None
+
+    line = result.stdout.strip().splitlines()
+    if not line:
+        return None
+
+    value = line[0].strip()
+    if not value or value.upper() == 'N/A':
+        return None
+    return value
+
+
+def _parse_nvidia_smi_text(stdout: str) -> dict[str, str | None]:
+    """
+    Parse human-readable nvidia-smi output.
+
+    Driver 6xx renamed header fields to KMD Version / CUDA UMD Version.
+    """
+    merged = stdout.replace('\n', ' ')
+
+    def _match(pattern: str) -> str | None:
+        found = re.search(pattern, merged, flags=re.IGNORECASE)
+        return found.group(1) if found else None
+
+    return {
+        'nvidia_smi_version': _match(r'NVIDIA-SMI\s+([\d.]+)'),
+        'driver_version': _match(r'(?:Driver Version|KMD Version):\s*([\d.]+)'),
+        'cuda_version': _match(r'CUDA(?: UMD)? Version:\s*([\d.]+)'),
+    }
+
+
+def _cuda_runtime_ok() -> bool:
+    """True when PyTorch can see at least one CUDA device."""
+    if not torch.cuda.is_available():
+        return False
+    try:
+        return torch.cuda.device_count() > 0
+    except Exception:
+        return False
+
+
 def get_system_info() -> dict[str | Any, str | int | Any]:
     """
-    Get system information
+    Get system information.
 
     Returns:
-        None
+        dict: Host, memory, disk, and GPU metadata.
     """
+    nvidia_info = {
+        'nvidia_smi_version': None,
+        'driver_version': None,
+        'cuda_version': None,
+        'gpu_name': None,
+    }
 
-    # Extract NVIDIA-SMI, Driver Version, and CUDA Version
-    result = subprocess.run(['nvidia-smi'], capture_output=True, text=True)
-    nvidia_smi_version = re.search(r'NVIDIA-SMI (\d+\.\d+)', result.stdout)
-    driver_version = re.search(r'Driver Version: (\d+\.\d+)', result.stdout)
-    cuda_version = re.search(r'CUDA Version: (\d+\.\d+)', result.stdout)
-    cuda_available = torch.cuda.is_available()
+    try:
+        result = subprocess.run(
+            ['nvidia-smi'],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        if result.returncode == 0 and result.stdout:
+            nvidia_info.update(_parse_nvidia_smi_text(result.stdout))
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+    if not nvidia_info['driver_version']:
+        nvidia_info['driver_version'] = _nvidia_smi_query('driver_version')
+
+    if not nvidia_info['gpu_name']:
+        nvidia_info['gpu_name'] = _nvidia_smi_query('name')
+
+    cuda_available = _cuda_runtime_ok()
+    cuda_device_count = 0
+    if cuda_available:
+        try:
+            cuda_device_count = torch.cuda.device_count()
+        except Exception:
+            cuda_device_count = 0
 
     # Extract information from the output
     virtual_memory = psutil.virtual_memory()._asdict()
@@ -196,9 +218,11 @@ def get_system_info() -> dict[str | Any, str | int | Any]:
         "cpu_count": psutil.cpu_count(logical=False),
         "cpu_percent": f"{psutil.cpu_percent(interval=1)} %",
 
-        "nvidia_smi_version": nvidia_smi_version.group(1) if nvidia_smi_version else None,
-        "driver_version": driver_version.group(1) if driver_version else None,
-        "cuda_version": cuda_version.group(1) if cuda_version else None,
+        "nvidia_smi_version": nvidia_info["nvidia_smi_version"],
+        "driver_version": nvidia_info["driver_version"],
+        "cuda_version": nvidia_info["cuda_version"],
+        "gpu_name": nvidia_info["gpu_name"],
+        "cuda_device_count": cuda_device_count,
         "py_torch_cuda_available": "Yes" if cuda_available else None,
         "py_torch_cuda_version": torch.version.cuda or None,
         "py_torch_version": torch.__version__,
@@ -226,6 +250,28 @@ def get_system_info() -> dict[str | Any, str | int | Any]:
     return sys_info
 
 
+def should_run_startup_system_check() -> bool:
+    """
+    Return True when startup hooks should run in the current process.
+
+    Werkzeug's debug reloader imports the application twice: a file-watcher
+    parent and the worker child (WERKZEUG_RUN_MAIN=true). Running GPU checks
+    in both processes duplicates console output.
+    """
+    run_main = os.environ.get("WERKZEUG_RUN_MAIN")
+    if run_main == "true":
+        return True
+
+    flask_debug = os.environ.get("FLASK_DEBUG", "").lower() in ("1", "true")
+    reload_disabled = os.environ.get("FLASK_RUN_RELOAD", "").lower() in ("0", "false")
+
+    # Single process: no reloader, or explicit --no-reload
+    if run_main is None and (not flask_debug or reload_disabled):
+        return True
+
+    return False
+
+
 def system_check() -> None:
     """
     System check
@@ -233,8 +279,6 @@ def system_check() -> None:
     Returns:
         None
     """
-
-    # Execute nvidia-smi in the console and capture the output
     sys_info = get_system_info()
 
     def colored_value(value):
@@ -249,16 +293,27 @@ def system_check() -> None:
     pr_color(f' * Driver Version: {colored_value(sys_info["driver_version"] or "N/A")}', 'yellow')
     pr_color(f' * CUDA Version: {colored_value(sys_info["cuda_version"] or "N/A")}', 'yellow')
 
+    if sys_info["gpu_name"]:
+        pr_color(f' * GPU: {colored_value(sys_info["gpu_name"])}', 'yellow')
+
     # Check CUDA availability using PyTorch
     pr_color(f' * PyTorch CUDA Available: {colored_value(sys_info["py_torch_cuda_available"] or "N/A")}', 'yellow')
+    if sys_info["cuda_device_count"]:
+        pr_color(
+            f' * CUDA Devices: {colored_value(str(sys_info["cuda_device_count"]))}',
+            'yellow',
+        )
     pr_color(f' * PyTorch CUDA Version: {colored_value(sys_info["py_torch_cuda_version"] or "N/A")}', 'yellow')
 
     # Check PyTorch version
     pr_color(f' * PyTorch Version: {colored_value(sys_info["py_torch_version"] or "N/A")}', 'yellow')
 
-    # Result of system check
-    if (not sys_info["py_torch_cuda_available"] or not sys_info["nvidia_smi_version"] or not sys_info["driver_version"]
-            or not sys_info["cuda_version"] or not sys_info["py_torch_version"]):
-        print(f'{colored_text(" * System Check Result:", "yellow")} {colored_text("FAILED", "red")}')
-    else:
+    cuda_ready = bool(sys_info["py_torch_cuda_available"])
+    driver_reported = bool(sys_info["driver_version"] or sys_info["nvidia_smi_version"])
+    cuda_reported = bool(sys_info["cuda_version"] or sys_info["py_torch_cuda_version"])
+
+    # Functional CUDA test wins; parsing tolerates driver 6xx header renames.
+    if cuda_ready and driver_reported and cuda_reported and sys_info["py_torch_version"]:
         print(f'{colored_text(" * System Check Result:", "yellow")} {colored_text("PASSED", "green")}')
+    else:
+        print(f'{colored_text(" * System Check Result:", "yellow")} {colored_text("FAILED", "red")}')

@@ -3,14 +3,13 @@
 {% block title %}Configuration Error{% endblock %}
 
 {% block content %}
-    <div class="container mt-5">
-        <div class="row justify-content-center">
-            <div class="col-md-10">
-                <div class="card border-danger">
-                    <div class="card-header bg-danger text-white">
-                        <h4 class="mb-0"><i class="bi bi-exclamation-triangle-fill"></i> {{ trans('Configuration Error') }}</h4>
+    <div class="error-page-wrap">
+        <div class="col-12 col-lg-10">
+                <div class="card error-page-card border-0 cv-card overflow-hidden">
+                    <div class="card-header border-0 py-3 error-card-header--danger text-center">
+                        <h4 class="mb-0">{{ trans('Configuration Error') }}</h4>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body p-4">
                         <h5 class="text-danger">{{ error_type }}</h5>
                         <p class="lead">{{ error.message }}</p>
 
@@ -48,7 +47,6 @@
                         <a href="{{ url_for('main.index') }}" class="btn btn-primary">{{ trans('Go to Home') }}</a>
                     </div>
                 </div>
-            </div>
         </div>
     </div>
 {% endblock %}

@@ -3,13 +3,15 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 22.01.2026
-# Updated: 22.01.2026
+# Updated: 08.06.2026
 # Website: https://bespredel.name
 
 import os
 from typing import Any, Dict, List, Optional
 
+from system.object_detection import supported_model_types
 from system.utils.exception_handler import InvalidConfigError
+from system.utils.paths import project_root_from_config_path
 
 
 class ConfigValidator:
@@ -44,6 +46,24 @@ class ConfigValidator:
 
         is_valid = len(self.errors) == 0
         return is_valid, self.errors, self.warnings
+
+    @staticmethod
+    def _project_path(relative_path: str, config_path: Optional[str]) -> str:
+        """
+        Project path resolver.
+
+        Args:
+            relative_path (str): Relative path
+            config_path (str, optional): Path to config file for relative path validation
+
+        Returns:
+            str: Resolved path
+        """
+        if os.path.isabs(relative_path):
+            return relative_path
+        if config_path:
+            return os.path.normpath(os.path.join(project_root_from_config_path(config_path), relative_path))
+        return relative_path
 
     def _validate_general(self, general: Dict[str, Any]) -> None:
         """
@@ -125,7 +145,8 @@ class ConfigValidator:
             if isinstance(origins, str):
                 # Single origin as string
                 if not origins.startswith(('*', 'http://', 'https://')):
-                    self.warnings.append(f"'server.allowed_origins' should start with '*', 'http://' or 'https://': {origins}")
+                    self.warnings.append(
+                        f"'server.allowed_origins' should start with '*', 'http://' or 'https://': {origins}")
             elif isinstance(origins, list):
                 # Multiple origins as list
                 for origin in origins:
@@ -185,7 +206,7 @@ class ConfigValidator:
             if db_path and db_path != ':memory:':
                 # Resolve relative paths
                 if config_path and not os.path.isabs(db_path):
-                    db_path = os.path.join(os.path.dirname(config_path), db_path)
+                    db_path = self._project_path(db_path, config_path)
                 db_dir = os.path.dirname(db_path) or '.'
                 if db_dir and not os.path.exists(db_dir):
                     try:
@@ -288,7 +309,8 @@ class ConfigValidator:
             # Validate detection-specific config
             self._validate_detection_config(detection_config, f"detections.{location}", config_path)
 
-    def _validate_detection_config(self, config: Dict[str, Any], prefix: str, config_path: Optional[str] = None) -> None:
+    def _validate_detection_config(self, config: Dict[str, Any], prefix: str,
+                                   config_path: Optional[str] = None) -> None:
         """
         Validate a single detection configuration.
 
@@ -303,20 +325,26 @@ class ConfigValidator:
 
         # Validate model_type
         if 'model_type' in config:
-            if config['model_type'] not in ['yolo']:
-                self.warnings.append(f"'{prefix}.model_type' is '{config['model_type']}', only 'yolo' is currently supported")
+            supported = supported_model_types()
+            if config['model_type'] not in supported:
+                self.warnings.append(
+                    f"'{prefix}.model_type' is '{config['model_type']}', "
+                    f"supported types: {', '.join(supported)}"
+                )
 
         # Validate weights_path
         if 'weights_path' in config:
             weights_path = config['weights_path']
             if not isinstance(weights_path, str):
                 self.errors.append(f"'{prefix}.weights_path' must be a string")
-            elif weights_path:
-                # Resolve relative paths
-                if config_path and not os.path.isabs(weights_path):
-                    weights_path = os.path.join(os.path.dirname(config_path), weights_path)
-                if not os.path.exists(weights_path):
-                    self.warnings.append(f"Model weights file not found: '{weights_path}'")
+            elif not weights_path.strip():
+                self.warnings.append(f"'{prefix}.weights_path' is empty")
+            else:
+                resolved_path = self._project_path(weights_path, config_path)
+                if not os.path.exists(resolved_path):
+                    self.warnings.append(
+                        f"Model weights file not found for '{prefix}': '{resolved_path}'"
+                    )
 
         # Validate confidence
         if 'confidence' in config:
@@ -377,9 +405,7 @@ class ConfigValidator:
                     if not isinstance(path, str):
                         self.errors.append(f"'{prefix}.recording.path' must be a string")
                     elif path:
-                        # Resolve relative paths
-                        if config_path and not os.path.isabs(path):
-                            path = os.path.join(os.path.dirname(config_path), path)
+                        path = self._project_path(path, config_path)
                         if not os.path.exists(path):
                             try:
                                 os.makedirs(path, exist_ok=True)
@@ -410,16 +436,11 @@ def validate_config(config: Dict[str, Any], config_path: Optional[str] = None, r
     # Try to log warnings, but don't fail if logger is not available
     if warnings:
         try:
-            # Import Logger locally to avoid circular dependency
-            from system.utils.logger import Logger
-            logger = Logger()
-            for warning in warnings:
-                logger.warning(f"Config validation warning: {warning}")
-        except Exception:
-            # Logger might not be available yet, just print to console
             import sys
             for warning in warnings:
                 print(f"Config validation warning: {warning}", file=sys.stderr)
+        except Exception:
+            pass
 
     if not is_valid and raise_on_error:
         error_message = "Configuration validation failed:\n" + "\n".join(f"  - {error}" for error in errors)

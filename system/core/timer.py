@@ -31,7 +31,7 @@ class Timer:
         Returns:
             Timer: Returns the timer instance for use in with block
         """
-        self._start = time.time()
+        self._start = time.perf_counter()
         return self
 
     def __exit__(self, *args):
@@ -40,4 +40,4 @@ class Timer:
         Args:
             *args: Ignored arguments for context manager protocol compatibility
         """
-        self.elapsed = time.time() - self._start
+        self.elapsed = time.perf_counter() - self._start

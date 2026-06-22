@@ -1,115 +1,57 @@
 {% extends 'base.html' %}
 
+{% block body_class %}app-body--counter{% endblock %}
+{% block shell_class %}app-shell--counter{% endblock %}
+
 {% block title %}{{ title.title() }}{% endblock %}
 
 {% block content %}
-    <div class="row mb-3">
-        <!-- START: Left block -->
-        <div class="col-12 col-lg-8 col-xl-9 d-flex justify-content-center position-relative my-2">
+    <div class="row counter-layout g-0 h-100 flex-lg-nowrap">
+        <div class="col-12 col-lg-8 col-xl-9 counter-layout__main position-relative">
             <div class="img-container">
-                <img id="video_feed" class="text-center rounded user-select-none"
+                <img id="video_feed" class="user-select-none"
                      src="{{ url_for('counters.counter_get_frames', location=location) }}" alt=""/>
+                <a href="{{ url_for('counters.counting_area_edit', location=location) }}"
+                   class="btn btn-sm btn-dark counting-area-fab shadow"
+                   title="{{ trans('Configure counting zone') }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-intersect"
+                         viewBox="0 0 16 16">
+                        <path d="M0 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2H2a2 2 0 0 1-2-2zm5 10v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2v5a2 2 0 0 1-2 2zm6-8V2a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2V6a2 2 0 0 1 2-2z"/>
+                    </svg>
+                    <span class="d-none d-md-inline ms-1">{{ trans('Counting zone') }}</span>
+                </a>
             </div>
 
-            <div class="{{ 'd-flex' if is_paused else 'd-none' }} justify-content-center align-items-center rounded-end-3 pause-display"
+            <div class="{{ 'd-flex' if is_paused else 'd-none' }} justify-content-center align-items-center pause-display"
                  id="pause_display">
                 <svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" fill="currentColor" class="bi bi-pause"
-                     viewBox="0 0 16 16">
+                     viewBox="0 0 16 16" aria-hidden="true">
                     <path d="M6 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5m4 0a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5"></path>
                 </svg>
             </div>
         </div>
-        <!-- END: Left block -->
 
         {% include 'partials/counter_sidebar_right.html' %}
     </div>
 {% endblock %}
 
 {% block footer_assets %}
-    <script src="{{ url_for('static', filename='assets/js/counter.js') }}"></script>
+    <script src="{{ url_for('static', filename='assets/js/cvcounter-page.js') }}"></script>
     <script>
-        $(function () {
-            $(document).on('contextmenu', function (e) {
-                e.preventDefault();
-            });
-
-            //---------------------------------------------------------------------------
-            // Socket IO
-            //---------------------------------------------------------------------------
-
-            // Counter get handler
-            socket.on('{{ location }}_count', function (data) {
-                const defect_count = Math.max(parseInt($("#defect_keyboard input").val(), 10) || 0, 0);
-                const correct_count = parseInt($("#correct_keyboard input").val(), 10) || 0;
-
-                const updateCount = (selector, count) => {
-                    $(selector).html(Math.max(count - defect_count + correct_count, 0));
-                };
-
-                updateCount('#total_count', data.total || 0);
-                updateCount('#current_count', data.current || 0);
-
-                $('#defect_count').html(defect_count + data.defect || 0);
-                $('#correct_count').html(correct_count + data.correct || 0);
-            });
-
-            // Notification receipt handler
-            socket.on('{{ location }}_notification', function (data) {
-                if (data.message.length > 0) {
-                    showToast(data.message, data.type);
-                }
-            });
-
-            // Counter status handler
-            socket.on('counter_status_event', function (data) {
-                if (data.data.location === '{{ location }}') {
-                    switch (data.data.status) {
-                        case 'paused':
-                            $('#btn_pause').removeClass('btn-outline-secondary').addClass('btn-warning');
-                            $('#btn_start').removeClass('btn-outline-secondary').addClass('btn-info');
-                            $('#pause_display').removeClass('d-none').addClass('d-flex');
-                            break;
-                        case 'started':
-                            $('#btn_pause').removeClass('btn-warning').addClass('btn-outline-secondary');
-                            $('#btn_start').removeClass('btn-info').addClass('btn-outline-secondary');
-                            $('#pause_display').removeClass('d-flex').addClass('d-none');
-                            break;
-                    }
-                }
-            });
-
-            //---------------------------------------------------------------------------
-            // Form buttons
-            //---------------------------------------------------------------------------
-
-            $('#btn_save').on('click', function () {
-                saveCount("{{ url_for('counters.save_count', location=location) }}");
-            });
-
-            $('#btn_reset').on('click', function () {
-                resetCount("{{ url_for('counters.reset_count', location=location) }}");
-            });
-
-            $('#btn_reset_current').on('click', function () {
-                resetCountCurrent("{{ url_for('counters.reset_count_current', location=location) }}");
-            });
-
-            //---------------------------------------------------------------------------
-            // Form buttons 2
-            //---------------------------------------------------------------------------
-            $('#btn_start').on('click', function () {
-                startCount("{{ url_for('counters.start_count', location=location) }}");
-            });
-
-            $('#btn_pause').on('click', function () {
-                pauseCount("{{ url_for('counters.pause_count', location=location) }}");
-            });
-
-            //---------------------------------------------------------------------------
-            // Dev buttons
-            //---------------------------------------------------------------------------
-            $('#save-capture').on('click', function () {
-                saveCapture("{{ url_for('counters.save_capture', location=location) }}");
+        document.addEventListener("DOMContentLoaded", () => {
+            CounterPage.init({
+                location: {{ location|tojson }},
+                isPaused: {{ is_paused|tojson }},
+                video: true,
+                counts: {{ initial_counts|tojson }},
+                urls: {
+                    save: {{ url_for('counters.save_count', location=location)|tojson }},
+                    reset: {{ url_for('counters.reset_count', location=location)|tojson }},
+                    resetCurrent: {{ url_for('counters.reset_count_current', location=location)|tojson }},
+                    start: {{ url_for('counters.start_count', location=location)|tojson }},
+                    pause: {{ url_for('counters.pause_count', location=location)|tojson }},
+                    capture: {{ url_for('counters.save_capture', location=location)|tojson }},
+                },
             });
         });
     </script>

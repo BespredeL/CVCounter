@@ -1,0 +1,79 @@
+{# 
+    Counter dropdown group
+    Args: 
+        chip_id: The ID of the chip
+        main_url: The URL of the main button
+        main_label: The label of the main button
+        status: The status of the counter
+        status_class: The class of the status
+        location: The location of the counter
+#}
+<!-- START: Counter dropdown group -->
+<div class="btn-group counter-chip shadow-sm" role="group" id="{{ chip_id }}_{{ location }}">
+    <a href="{{ main_url }}"
+       class="btn btn-{{ status_class }} rounded-start rounded-end-0">
+        {{ main_label }}
+    </a>
+    <button type="button"
+            class="btn btn-{{ status_class }} dropdown-toggle dropdown-toggle-split rounded-end rounded-start-0"
+            data-bs-toggle="dropdown"
+            data-bs-auto-close="true"
+            aria-expanded="false">
+        <span class="visually-hidden">{{ trans('Actions') }}</span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end shadow">
+        <li>
+            <a class="dropdown-item counter_run {% if status == 'running' %}disabled{% endif %}"
+               href="{{ main_url }}" target="_blank">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-power" viewBox="0 0 18 18"
+                     aria-hidden="true">
+                    <path d="M7.5 1v7h1V1z"></path>
+                    <path d="M3 8.812a5 5 0 0 1 2.578-4.375l-.485-.874A6 6 0 1 0 11 3.616l-.501.865A5 5 0 1 1 3 8.812"></path>
+                </svg>
+                <span>{{ trans('Run') }}</span>
+            </a>
+        </li>
+        <li>
+            <a class="dropdown-item counter_stop {% if status == 'stopped' %}disabled{% endif %}"
+               href="{{ url_for('counters.stop_count', location=location) }}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-stop-fill"
+                     viewBox="0 0 18 18" aria-hidden="true">
+                    <path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5"></path>
+                </svg>
+                <span>{{ trans('Stop') }}</span>
+            </a>
+        </li>
+        <li>
+            <a class="dropdown-item" href="{{ url_for('counters.counting_area_edit', location=location) }}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M8.5 1.5a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0m0 13a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0m5.5-6.5a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0M2 8a6 6 0 1 1 12 0A6 6 0 0 1 2 8"/>
+                </svg>
+                <span>{{ trans('Counting zone') }}</span>
+            </a>
+        </li>
+        <li>
+            <hr class="dropdown-divider">
+        </li>
+        <li>
+            <a class="dropdown-item counter_start {% if status not in ['paused'] %}disabled{% endif %}"
+               href="{{ url_for('counters.start_count', location=location) }}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-play-fill"
+                     viewBox="0 0 18 18" aria-hidden="true">
+                    <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"></path>
+                </svg>
+                <span>{{ trans('Start') }}</span>
+            </a>
+        </li>
+        <li>
+            <a class="dropdown-item counter_pause {% if status in ['paused', 'stopped'] %}disabled{% endif %}"
+               href="{{ url_for('counters.pause_count', location=location) }}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-pause-fill"
+                     viewBox="0 0 18 18" aria-hidden="true">
+                    <path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"></path>
+                </svg>
+                <span>{{ trans('Pause') }}</span>
+            </a>
+        </li>
+    </ul>
+</div>
+<!-- END: Counter dropdown group -->

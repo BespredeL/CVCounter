@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 03.12.2025
+# Updated: 03.06.2026
 # Website: https://bespredel.name
 
 import json
@@ -21,13 +21,29 @@ from system.managers.config_manager import ConfigManager
 from system.utils.frame_utils import FrameUtils
 from system.utils.logger import Logger
 from system.managers.notification_manager import NotificationManager
-from system.object_detection.base_object_detection import BaseObjectDetectionService
-from system.object_detection.object_detection_yolo import ObjectDetectionYOLO
+from system.object_detection import load_detector
 from system.core.sort import Sort
 from system.core.timer import Timer
-from system.utils.utils import trans
+from system.utils.i18n import trans
 from system.managers.video_stream_manager import VideoStreamManager
 from system.managers.video_recorder_manager import VideoRecorderManager
+
+_PLACEHOLDER_MJPEG_CHUNK: bytes | None = None
+
+
+def _placeholder_mjpeg_chunk() -> bytes:
+    """Minimal multipart JPEG chunk so Werkzeug commits headers before the first real frame."""
+    global _PLACEHOLDER_MJPEG_CHUNK
+    if _PLACEHOLDER_MJPEG_CHUNK is None:
+        frame = np.zeros((2, 2, 3), dtype=np.uint8)
+        encoded = FrameUtils.encoding_frame(frame, 60, 'jpeg')
+        _PLACEHOLDER_MJPEG_CHUNK = (
+            b'--frame\r\n'
+            b'Content-Type: image/jpeg\r\n\r\n'
+            + encoded.tobytes()
+            + b'\r\n'
+        )
+    return _PLACEHOLDER_MJPEG_CHUNK
 
 
 class ObjectCounter:
@@ -47,7 +63,9 @@ class ObjectCounter:
     DEFAULT_JPEG_QUALITY: int = 90
     DEFAULT_INDICATOR_SIZE: int = 10
     DEFAULT_VID_STRIDE: int = 1
-    DEFAULT_RECORDING_PATH: str = "yolo_cfg/saved_recordings"
+    DEFAULT_RECORDING_PATH: str = "storage/saved_recordings"
+    DEFAULT_MJPEG_FPS: float = 15.0
+    DEFAULT_PAUSED_SLEEP_TIME: float = 0.1
 
     def __init__(self, location: str, config_manager: ConfigManager, socketio: SocketIO, **kwargs: any) -> None:
         # Init variables
@@ -57,6 +75,11 @@ class ObjectCounter:
         self.defect_count: int = 0
         self.correct_count: int = 0
         self.frame: Optional[np.ndarray] = None
+        self._mjpeg_chunk: bytes | None = None
+        self._mjpeg_viewers: int = 0
+        self._last_mjpeg_encode_time: float = 0.0
+        self._last_count_payload: dict | None = None
+        self._cached_source_frame: np.ndarray | None = None
         self.get_frames_running: bool = False
         self.running: bool = True
         self.paused = False
@@ -86,13 +109,22 @@ class ObjectCounter:
         self._init_recorder()
 
         # Init model
-        if self.model_type == 'yolo':
-            classes_list = list(map(int, self.classes.keys())) if self.classes else None
-            self.model: BaseObjectDetectionService = ObjectDetectionYOLO()
-            self.model.load_model(weights=self.weights, confidence=self.confidence, iou=self.iou, device=self.device,
-                                  vid_stride=self.vid_stride, classes_list=classes_list)
-        else:
-            raise ValueError(f"Unsupported model type: {self.model_type}")
+        classes_list = list(map(int, self.classes.keys())) if self.classes else None
+        self.model = load_detector(
+            model_type=self.model_type,
+            weights=self.weights,
+            confidence=self.confidence,
+            iou=self.iou,
+            device=self.device,
+            vid_stride=self.vid_stride,
+            classes_list=classes_list,
+            verbose=self.debug,
+            model_config_path=self.model_config_path,
+            input_size=self.input_size,
+            backend=self.backend,
+            target=self.target,
+            providers=self.providers,
+        )
 
         # Init tracker
         self.tracker: Sort = Sort(max_age=self.DEFAULT_MAX_AGE, min_hits=self.DEFAULT_MIN_HITS, iou_threshold=self.DEFAULT_TRACKER_IOU)
@@ -128,16 +160,19 @@ class ObjectCounter:
                     self.notif_manager.notify(trans('Connection to camera restored!'), 'success')
                     self.notif_manager.event('counter_status', {'status': 'started', 'location': self.location})
 
+                self._cached_source_frame = frame
+
                 if self.get_frames_running:
                     self.frame = self._process_frame(frame)
                 else:
                     self.frame = None
                     self._process_frame(frame)
 
-                time.sleep(self.DEFAULT_SLEEP_TIME)
+                sleep_time = self.DEFAULT_PAUSED_SLEEP_TIME if self.paused else self.DEFAULT_SLEEP_TIME
+                time.sleep(sleep_time)
             except Exception as e:
-                print(e)
-                #self.logger.error(f"Lost connection to camera! | {self.location}: {e}")
+                self.logger.error(f"Lost connection to camera! | {self.location}: {e}")
+                self.logger.log_exception()
                 self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
                 self.notif_manager.event('counter_status', {'status': 'error', 'location': self.location})
 
@@ -145,31 +180,54 @@ class ObjectCounter:
         """
         Generator that yields frames in the form of JPEG images.
 
+        JPEG encoding runs in the counter thread; this generator only forwards
+        the latest chunk so the HTTP worker thread stays mostly idle.
+
+        Always yields at least one chunk so Werkzeug calls start_response
+        before the client disconnects (e.g. quick navigation away from /video).
+
         Returns:
             A generator that yields frames in the form of JPEG images.
         """
+        self._mjpeg_viewers += 1
         self.get_frames_running = True
+        sent = False
+        last_chunk: bytes | None = None
         try:
-            while self.running:
-                self.get_frames_running = True
-
-                if self.frame is not None:
-                    frame = self.frame
-
-                    # Scale the frame
-                    if self.video_scale > 0:
-                        frame = FrameUtils.resize_frame(frame, int(self.video_scale))
-
-                    # Encode the frame
-                    encoded_frame = FrameUtils.encoding_frame(frame, int(self.video_quality), 'jpeg')
-
-                    yield b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + encoded_frame.tobytes() + b'\r\n'
-                else:
-                    time.sleep(self.DEFAULT_SLEEP_TIME)  # Wait for a short pause if there is no frame yet
+            while self.running or not sent:
+                chunk = self._mjpeg_chunk
+                if chunk is not None:
+                    if chunk is not last_chunk:
+                        yield chunk
+                        last_chunk = chunk
+                        sent = True
+                elif not sent:
+                    yield _placeholder_mjpeg_chunk()
+                    sent = True
+                time.sleep(self.DEFAULT_SLEEP_TIME)
+        except GeneratorExit:
+            pass
         except Exception as e:
             self.logger.error(f'Error in get_frames: {e}')
         finally:
-            self.get_frames_running = False
+            self._mjpeg_viewers = max(0, self._mjpeg_viewers - 1)
+            if self._mjpeg_viewers == 0:
+                self.get_frames_running = False
+                self._mjpeg_chunk = None
+
+    def get_live_counts(self) -> dict:
+        """
+        Return in-memory counts in the same shape as the Socket.IO payload.
+
+        Returns:
+            dict: total, current, defect, correct
+        """
+        return {
+            'total': self.total_count - self.defect_count + self.correct_count,
+            'current': self.current_count,
+            'defect': self.defect_count,
+            'correct': self.correct_count,
+        }
 
     def get_current_count(self) -> dict:
         """
@@ -259,6 +317,7 @@ class ObjectCounter:
         self.current_count = 0
         self.defect_count = 0
         self.correct_count = 0
+        self._last_count_payload = None
 
         self.db_manager.close_current_count(location)
 
@@ -299,6 +358,7 @@ class ObjectCounter:
         self.current_count = 0
         self.defect_count += defect_count
         self.correct_count += correct_count
+        self._last_count_payload = None
 
         self.notif_manager.emit(f'{location}_count', {'total': total_count, 'current': 0})
         self.notif_manager.notify(trans('The counter has been reset!'), 'primary')
@@ -353,6 +413,45 @@ class ObjectCounter:
         """
         return self.paused
 
+    def get_source_frame(self) -> Optional[np.ndarray]:
+        """
+        Return a raw frame from the video source (without overlays).
+
+        Reuses the latest frame from the counter loop to avoid a second
+        read/decode from the same capture device.
+
+        Returns:
+            Optional[np.ndarray]: BGR frame or None if unavailable.
+        """
+        cached = self._cached_source_frame
+        if cached is not None:
+            return cached.copy()
+
+        try:
+            return self.vsm.get_frame()
+        except Exception as e:
+            self.logger.error(f'Error reading source frame: {e}')
+            return None
+
+    def update_counting_area(
+            self,
+            counting_area: List[Tuple[int, int]],
+            counting_area_color: tuple | None = None,
+    ) -> None:
+        """
+        Update counting polygon and invalidate the point-in-polygon mask.
+
+        Args:
+            counting_area: Polygon vertices as (x, y) in frame pixel coordinates.
+            counting_area_color: Optional BGR color tuple for the overlay.
+        """
+        if len(counting_area) < 3:
+            raise ValueError('counting_area must have at least 3 points')
+        self.counting_area = [(int(p[0]), int(p[1])) for p in counting_area]
+        if counting_area_color is not None:
+            self.counting_area_color = tuple(int(c) for c in counting_area_color)
+        self._counting_mask = None
+
     def save_capture(self) -> None:
         """
         Save a captured image.
@@ -362,8 +461,9 @@ class ObjectCounter:
         """
 
         try:
-            frame = self.vsm.get_frame()
-            self._save_dataset_image(frame)
+            frame = self.get_source_frame()
+            if frame is not None:
+                self._save_dataset_image(frame)
         except Exception as e:
             self.logger.error(f'Error saving captured image: {e}')
 
@@ -432,9 +532,11 @@ class ObjectCounter:
         detection_default = config_manager.get("detection_default", {})
 
         self.location: str = location
-        self.debug: bool = kwargs.get('debug', config_manager.get('debug', False))
+        self.debug: bool = kwargs.get('debug', config_manager.get('general.debug', False))
         self.model_type = kwargs.get('model_type', detector_config.get('model_type', 'yolo'))
-        self.weights: str = kwargs.get('weights', detector_config.get('weights_path'))
+        self.weights: str = config_manager.resolve_path(
+            kwargs.get('weights', detector_config.get('weights_path'))
+        )
         self.device: str = kwargs.get('device', detector_config.get('device', 'cpu'))
         self.confidence: float = kwargs.get('confidence',
                                             detector_config.get('confidence', detection_default.get('confidence', self.DEFAULT_CONFIDENCE)))
@@ -449,7 +551,16 @@ class ObjectCounter:
                                                        detection_default.get("indicator_size", self.DEFAULT_INDICATOR_SIZE))
         self.vid_stride: int = detector_config.get('vid_stride', detection_default.get("vid_stride", self.DEFAULT_VID_STRIDE))
         self.classes: dict = detector_config.get('classes', {})
-        self.dataset: dict = detector_config.get('dataset_create', {})
+        dataset_config = dict(detector_config.get('dataset_create', {}))
+        if dataset_config.get('path'):
+            dataset_config['path'] = config_manager.resolve_path(dataset_config['path'])
+        self.dataset: dict = dataset_config
+        model_config_path = detector_config.get('model_config_path') or detection_default.get('model_config_path')
+        self.model_config_path: str | None = config_manager.resolve_path(model_config_path)
+        self.input_size: int | list = detector_config.get('input_size', detection_default.get('input_size', 640))
+        self.backend: str | None = detector_config.get('backend', detection_default.get('backend'))
+        self.target: str | None = detector_config.get('target', detection_default.get('target'))
+        self.providers: list | None = detector_config.get('providers', detection_default.get('providers'))
 
         # Video
         self.video_path: str = kwargs.get('video_path', detector_config['video_path'])
@@ -458,7 +569,9 @@ class ObjectCounter:
         recording_default = detection_default.get('recording', {})
         recording_config = detector_config.get('recording', {})
         self.recording_enabled: bool = bool(recording_config.get('enable', recording_default.get('enable', False)))
-        self.recording_base_path = recording_config.get('path', recording_default.get('path', self.DEFAULT_RECORDING_PATH))
+        self.recording_base_path = config_manager.resolve_path(
+            recording_config.get('path', recording_default.get('path', self.DEFAULT_RECORDING_PATH))
+        )
         self.recording_scale: int = int(recording_config.get('scale', recording_default.get('scale', 100)))
         self.recording_quality: int = int(recording_config.get('quality', recording_default.get('quality', 80)))
 
@@ -547,22 +660,17 @@ class ObjectCounter:
 
         return cv2.addWeighted(overlay, self.DEFAULT_POLYGON_ALPHA, image, 1 - self.DEFAULT_POLYGON_ALPHA, 0)
 
-    def _draw_indicator(self, image: np.ndarray, center: tuple[int, int], rid: int) -> np.ndarray:
+    def _draw_indicator(self, image: np.ndarray, center: tuple[int, int], rid: int) -> None:
         """
-        Draws an indicator on the given image.
+        Draws an indicator on the given image (in place).
 
         Args:
             image (numpy.ndarray): The image on which the indicator should be drawn.
             center (tuple[int, int]): The center coordinates of the indicator.
             rid (int): The ID of the indicator.
-
-        Returns:
-            numpy.ndarray: The image with the indicator drawn on it.
         """
         color = (0, 255, 0) if rid in self.total_objects else (255, 0, 255)
         cv2.circle(image, center, self.indicator_size, color, cv2.FILLED)
-
-        return image
 
     def _ensure_counting_mask(self, frame_shape: Tuple[int, int]) -> None:
         """
@@ -609,7 +717,7 @@ class ObjectCounter:
             cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
 
             # Draw indicator on the image
-            image = self._draw_indicator(image, (cx, cy), rid)
+            self._draw_indicator(image, (cx, cy), rid)
 
             # Check if the object is within the counting area using mask
             if (
@@ -626,14 +734,38 @@ class ObjectCounter:
 
             self.total_count = len(self.total_objects)
 
-        self.notif_manager.emit(f'{self.location}_count', {
+        payload = {
             'total': self.total_count - self.defect_count + self.correct_count,
             'current': self.current_count,
             'defect': self.defect_count,
-            'correct': self.correct_count
-        })
+            'correct': self.correct_count,
+        }
+        if payload != self._last_count_payload:
+            self.notif_manager.emit(f'{self.location}_count', payload)
+            self._last_count_payload = payload
 
         return image
+
+    def _work_frame(self, frame: np.ndarray) -> np.ndarray:
+        """One owned contiguous frame per iteration (safe for async recorder/encode)."""
+        return np.ascontiguousarray(frame).copy()
+
+    def _mjpeg_encode_interval(self) -> float:
+        """Minimum seconds between MJPEG encodes for the browser stream."""
+        if self.video_fps and self.video_fps > 0:
+            return 1.0 / float(self.video_fps)
+        return 1.0 / self.DEFAULT_MJPEG_FPS
+
+    def _maybe_encode_mjpeg(self, frame: np.ndarray) -> None:
+        """Encode MJPEG only when the stream interval has elapsed."""
+        now = time.monotonic()
+        if now - self._last_mjpeg_encode_time < self._mjpeg_encode_interval():
+            return
+
+        chunk = self._encode_mjpeg_chunk(frame)
+        if chunk is not None:
+            self._mjpeg_chunk = chunk
+            self._last_mjpeg_encode_time = now
 
     def _process_frame(self, frame: np.ndarray) -> ndarray | None:
         """
@@ -649,41 +781,83 @@ class ObjectCounter:
             return None
 
         with Timer() as timer:
-            frame_copy = frame.copy() if self.dataset.get('enable', False) else None
+            if self.paused:
+                display_frame = self._work_frame(frame)
+                if self.get_frames_running:
+                    display_frame = self._draw_counting_area(display_frame)
+                    self._maybe_encode_mjpeg(display_frame)
+                return display_frame
+
+            dataset_enabled = self.dataset.get('enable', False)
             last_total_count = self.total_count
 
-            boxes = self._detect(frame)
+            work_frame = self._work_frame(frame)
+            boxes = self._detect(work_frame)
 
             if self.get_frames_running:
-                frame = self._draw_counting_area(frame)
+                area_source = work_frame.copy() if dataset_enabled else work_frame
+                display_frame = self._draw_counting_area(area_source)
+            else:
+                display_frame = work_frame.copy() if dataset_enabled else work_frame
 
-            frame = self._detect_count(frame, boxes)
+            display_frame = self._detect_count(display_frame, boxes)
 
-            if self.dataset.get('enable', False) and last_total_count != self.total_count:
+            if dataset_enabled and last_total_count != self.total_count:
                 if random.random() < float(self.dataset['probability']):
-                    self._save_dataset_image(frame_copy, boxes, self.dataset.get('classes', None))
+                    self._save_dataset_image(work_frame, boxes, self.dataset.get('classes', None))
 
-            if self.debug:
-                fps = int(1 / timer.elapsed)
-                cv2.putText(frame, f'FPS: {fps}',
+            if self.debug and timer.elapsed > 0:
+                fps = int(round(1 / timer.elapsed))
+                cv2.putText(display_frame, f'FPS: {fps}',
                             self.DEFAULT_FPS_POSITION, cv2.FONT_HERSHEY_SIMPLEX,
                             self.DEFAULT_FPS_FONT_SCALE, self.DEFAULT_FPS_COLOR, self.DEFAULT_FPS_THICKNESS)
 
             # Sending a frame to an asynchronous recorder
             if self.recording_enabled and self.recorder is not None:
-                self.recorder.push_frame(frame)
+                self.recorder.push_frame(display_frame)
 
-            return frame
+            if self.get_frames_running:
+                self._maybe_encode_mjpeg(display_frame)
+
+            return display_frame
+
+    def _encode_mjpeg_chunk(self, frame: np.ndarray) -> bytes | None:
+        """
+        Build one multipart JPEG chunk for the browser MJPEG stream.
+
+        Args:
+            frame (numpy.ndarray): BGR frame to encode.
+
+        Returns:
+            bytes | None: Encoded multipart chunk or None on failure.
+        """
+        if frame is None:
+            return None
+
+        try:
+            stream_frame = frame
+            if self.video_scale > 0:
+                stream_frame = FrameUtils.resize_frame(stream_frame, int(self.video_scale))
+
+            encoded_frame = FrameUtils.encoding_frame(stream_frame, int(self.video_quality), 'jpeg')
+            return (
+                b'--frame\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n'
+                + encoded_frame.tobytes()
+                + b'\r\n'
+            )
+        except Exception as e:
+            self.logger.error(f'Error encoding MJPEG chunk: {e}')
+            return None
 
     def _save_dataset_image(self, frame: np.ndarray, boxes: list | np.ndarray = None, classes_to_save: dict = None) -> None:
         """
-        Saves an image to the dataset path if it exists.
+        Saves a raw image frame to the dataset path (without overlays or detection marks).
 
         Args:
-            frame (numpy.ndarray): The image frame to be saved.
-
-        Returns:
-            None
+            frame (numpy.ndarray): Original BGR frame to be saved.
+            boxes: Detected objects used only for optional class filtering.
+            classes_to_save: Optional class filter from dataset config.
         """
         if frame is None:
             return
@@ -694,11 +868,9 @@ class ObjectCounter:
                 self.logger.warning('Dataset path is not configured')
                 return
 
-            # Check if the frame contains any of the specified classes
-            if classes_to_save is not None and boxes is not None:
+            if classes_to_save and boxes is not None and len(boxes) > 0:
                 detected_classes = [int(result[-1]) for result in boxes]
                 if not any(str(cls) in classes_to_save for cls in detected_classes):
-                    print("No matching classes found. Skipping save.")
                     return
 
             os.makedirs(dataset_path, exist_ok=True)
@@ -707,7 +879,11 @@ class ObjectCounter:
             create_time = int(time.time())
 
             image_path = f'{dataset_path}/{location_clean}_{create_time}.jpg'
-            success = cv2.imwrite(image_path, frame, [cv2.IMWRITE_JPEG_QUALITY, self.DEFAULT_JPEG_QUALITY])
+            success = cv2.imwrite(
+                image_path,
+                np.ascontiguousarray(frame),
+                [cv2.IMWRITE_JPEG_QUALITY, self.DEFAULT_JPEG_QUALITY],
+            )
 
             if not success:
                 self.logger.error(f'Failed to save image to {image_path}')

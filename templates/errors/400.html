@@ -1,25 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}Bad Request{% endblock %}
+{% block title %}{{ trans('Bad Request') }}{% endblock %}
 
 {% block content %}
-    <div class="container mt-5">
-        <div class="row justify-content-center">
-            <div class="col-md-8">
-                <div class="card border-danger">
-                    <div class="card-header bg-danger text-white">
-                        <h4 class="mb-0"><i class="bi bi-exclamation-triangle"></i> 400 - Bad Request</h4>
-                    </div>
-                    <div class="card-body">
-                        <p class="lead">{{ trans('The request was invalid or malformed.') }}</p>
-                        {% if error.description %}
-                            <p>{{ error.description }}</p>
-                        {% endif %}
-                        <hr>
-                        <a href="{{ url_for('main.index') }}" class="btn btn-primary">{{ trans('Go to Home') }}</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    {% with error_code='400', error_title=trans('Bad Request'), tone='danger', message=trans('The request could not be understood by the server.') %}
+        {% include 'partials/error_card.html' %}
+    {% endwith %}
 {% endblock %}

@@ -1,324 +1,74 @@
 {% extends 'base.html' %}
 
+{% block title %}CVCounter{% endblock %}
+
 {% block header %}
-    <h1>{% block title %}CVCounter{% endblock %}</h1>
+    {% with page_title='CVCounter', page_subtitle=trans('See. Count. In real time.'), home_variant=true %}
+        {% include 'partials/page_header.html' %}
+    {% endwith %}
 {% endblock %}
 
 {% block footer_assets %}
-    <script>
-        $(document).ready(function () {
-            /**
-             * Handler for receiving counter statuses
-             */
-            socket.on('counter_status_event', function (data) {
-
-                /**
-                 * Update classes for buttons
-                 *
-                 * @param {string} baseId
-                 * @param {string} remove
-                 * @param {string} add
-                 *
-                 * @return {void}
-                 */
-                function updateClasses(baseId, remove, add) {
-                    const baseSelector = '#' + baseId + '_' + data.data.location;
-                    const btnSelector = baseSelector + ' a.btn, ' + baseSelector + ' button.dropdown-toggle';
-                    const btnCounterRun = baseSelector + ' a.counter_run';
-                    const btnCounterStart = baseSelector + ' a.counter_start';
-                    const btnCounterStop = baseSelector + ' a.counter_stop';
-                    const btnCounterPause = baseSelector + ' a.counter_pause';
-
-                    $(btnSelector).removeClass(remove).addClass(add);
-                    if (add === 'btn-success') {
-                        $(btnCounterRun).addClass('disabled');
-                        $(btnCounterStop).removeClass('disabled');
-                        $(btnCounterStart).addClass('disabled');
-                        $(btnCounterPause).removeClass('disabled');
-                    } else if (add === 'btn-warning') {
-                        $(btnCounterStart).removeClass('disabled');
-                        $(btnCounterPause).addClass('disabled');
-                    } else if (add === 'btn-secondary') {
-                        $(btnCounterRun).removeClass('disabled');
-                        $(btnCounterStop).addClass('disabled');
-                        $(btnCounterStart).addClass('disabled');
-                        $(btnCounterPause).addClass('disabled');
-                    }
-                }
-
-                switch (data.data.status) {
-                    case 'started':
-                        updateClasses('counter_video', 'btn-secondary btn-warning btn-danger', 'btn-success');
-                        updateClasses('counter_text', 'btn-secondary btn-warning btn-danger', 'btn-success');
-                        showToast('{{ trans("Counting has started!") }}', 'success');
-                        break;
-                    case 'stopped':
-                        updateClasses('counter_video', 'btn-success btn-warning btn-danger', 'btn-secondary');
-                        updateClasses('counter_text', 'btn-success btn-warning btn-danger', 'btn-secondary');
-                        showToast('{{ trans("Counting has stopped!") }}', 'secondary');
-                        break;
-                    case 'paused':
-                        updateClasses('counter_video', 'btn-success btn-danger', 'btn-warning');
-                        updateClasses('counter_text', 'btn-success btn-danger', 'btn-warning');
-                        showToast('{{ trans("Counting has paused!") }}', 'warning');
-                        break;
-                    case 'error':
-                        updateClasses('counter_video', 'btn-success btn-warning', 'btn-danger');
-                        updateClasses('counter_text', 'btn-success btn-warning', 'btn-danger');
-                        showToast('{{ trans("Counting has error!") }}', 'danger');
-                        break;
-                }
-            });
-
-            /**
-             * On click the dropdown menu
-             */
-            $('.dropdown-item').on('click', function (e) {
-                e.preventDefault();
-
-                let element = $(this);
-                let href = element.attr('href');
-                let parent = element.parent().parent().parent().find('.btn.dropdown-toggle');
-
-                let spinnerTimer = setTimeout(() => {
-                    parent.append('<span class="spinner-border spinner-border-sm spinner-btn-dropdown" role="status" aria-hidden="true"></span>');
-                }, 300);
-
-                $.get(href).done(() => {
-                    spinnerTimer && clearTimeout(spinnerTimer);
-                    parent.find('.spinner-border').remove();
-                }).fail(() => {
-                    showToast('{{ trans("Something went wrong") }}', 'success');
-                }).always(() => {
-                    spinnerTimer && clearTimeout(spinnerTimer);
-                    parent.find('.spinner-border').remove();
-                });
-            });
-
-            /**
-             * On click the start button redirect to the counter
-             */
-            $('#counterDualTextStart').on('click', function () {
-                let counterDualTextIn = $('#counterDualText input[name="counter_in"]:checked').val();
-                let counterDualTextOut = $('#counterDualText input[name="counter_out"]:checked').val();
-                if (!counterDualTextIn || !counterDualTextOut) {
-                    alert('{{ trans('Please select 2 counters') }}');
-                    return false;
-                }
-
-                let baseUrl = '{{ url_for('counters.counter_dual_text', location_first='', location_second='') }}'.replace(/\/+$/, '');
-                let fullUrl = baseUrl + '/' + counterDualTextIn + '/' + counterDualTextOut;
-                window.open(fullUrl, '_self');
-            });
-
-            /**
-             * On change the radio buttons disable
-             * the other radio buttons with the same name
-             */
-            $('#counterDualText').on('change', function (e) {
-                let opposite = e.target.name === 'counter_in' ? 'counter_out' : 'counter_in';
-                let selectedValue = e.target.value;
-                $('#counterDualText input[name="' + opposite + '"]').each(function () {
-                    this.disabled = this.value === selectedValue;
-                });
-            });
-        });
-    </script>
+    <script src="{{ url_for('static', filename='assets/js/counter-settings-modal.js') }}"></script>
+    <script src="{{ url_for('static', filename='assets/js/dashboard-counters.js') }}"></script>
 {% endblock %}
 
 {% block content %}
-    <!-- Pages -->
-    <div class="row border-bottom py-3">
-        <div class="col-12">
-            <h4>{{ trans('Pages') }}:</h4>
-            <div class="d-grid gap-2 d-md-block ms-0 ms-md-3">
-                <a href="{{ url_for('reports.reports') }}" class="btn btn-secondary m-2">{{ trans('Reports') }}</a>
-                <a href="{{ url_for('main.page', name='help') }}" class="btn btn-secondary m-2">{{ trans('Help') }}</a>
-                <a href="{{ url_for('settings.settings') }}" class="btn btn-secondary m-2">{{ trans('Settings') }}</a>
-                <a href="{{ url_for('settings.system_info') }}" class="btn btn-secondary m-2">{{ trans('System info') }}</a>
-            </div>
-        </div>
-    </div>
+    {% include 'partials/app_nav_cards.html' %}
 
-    <!-- Video -->
-    <div class="row border-bottom py-3">
-        <div class="col-12">
-            <h4>{{ trans('Video') }}:</h4>
-            <div class="d-grid gap-2 d-md-block ms-0 ms-md-3" id="counter_video">
-                {% for k in object_counters %}
-                    <div class="btn-group m-2" role="group" aria-label="" id="counter_video_{{ k }}">
-                        <a href="{{ url_for('counters.counter_video', location=k) }}"
-                           class="btn btn-{{ counter_status_class(k) }}">
-                            {{ object_counters[k]|striptags|title }}
-                        </a>
-                        <div class="btn-group" role="group">
-                            <button type="button" class="btn dropdown-toggle btn-{{ counter_status_class(k) }}"
-                                    data-bs-toggle="dropdown" aria-expanded="false"></button>
-                            <ul class="dropdown-menu">
-                                <li>
-                                    <a class="dropdown-item counter_run {% if counter_status(k) == 'running' %}disabled{% endif %}"
-                                       href="{{ url_for('counters.counter_video', location=k) }}" target="_blank">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
-                                             fill="currentColor"
-                                             class="bi bi-power" viewBox="0 0 18 18">
-                                            <path d="M7.5 1v7h1V1z"></path>
-                                            <path d="M3 8.812a5 5 0 0 1 2.578-4.375l-.485-.874A6 6 0 1 0 11 3.616l-.501.865A5 5 0 1 1 3 8.812"></path>
-                                        </svg>
-                                        {{ trans('Run') }}
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item counter_stop {% if counter_status(k) == 'stopped' %}disabled{% endif %}"
-                                       href="{{ url_for('counters.stop_count', location=k) }}">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
-                                             fill="currentColor"
-                                             class="bi bi-stop-fill" viewBox="0 0 18 18">
-                                            <path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5"></path>
-                                        </svg>
-                                        {{ trans('Stop') }}
-                                    </a>
-                                </li>
-                                <li>
-                                    <hr class="dropdown-divider">
-                                </li>
-                                <li>
-                                    <a class="dropdown-item counter_start {% if counter_status(k) not in ['paused'] %}disabled{% endif %}"
-                                       href="{{ url_for('counters.start_count', location=k) }}">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
-                                             fill="currentColor"
-                                             class="bi bi-play-fill" viewBox="0 0 18 18">
-                                            <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"></path>
-                                        </svg>
-                                        {{ trans('Start') }}
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item counter_pause {% if counter_status(k) in ['paused', 'stopped'] %}disabled{% endif %}"
-                                       href="{{ url_for('counters.pause_count', location=k) }}">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
-                                             fill="currentColor"
-                                             class="bi bi-pause-fill" viewBox="0 0 18 18">
-                                            <path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"></path>
-                                        </svg>
-                                        {{ trans('Pause') }}
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
+    <section class="section-block section-block--compact counter-dashboard-section"
+             data-multi-url="{{ url_for('counters.counter_multi_text') }}">
+        <div class="counter-dashboard-toolbar-row">
+            <div class="counter-dashboard-toolbar">
+                <span class="counter-dashboard-toolbar__label">{{ trans('Counters') }}</span>
+                <input type="search" class="form-control counter-dashboard-toolbar__search" id="counterSearch"
+                       placeholder="{{ trans('Search counters') }}" autocomplete="off" aria-label="{{ trans('Search counters') }}">
+                <div class="counter-filter-pills btn-group" role="group" aria-label="{{ trans('Filter by status') }}">
+                    <input type="radio" class="btn-check" name="counterStatusFilter" id="filterAll" value="all" checked>
+                    <label class="btn btn-outline-secondary" for="filterAll">{{ trans('All') }}</label>
+                    <input type="radio" class="btn-check" name="counterStatusFilter" id="filterRunning" value="running">
+                    <label class="btn btn-outline-secondary" for="filterRunning">{{ trans('Running') }}</label>
+                    <input type="radio" class="btn-check" name="counterStatusFilter" id="filterPaused" value="paused">
+                    <label class="btn btn-outline-secondary" for="filterPaused">{{ trans('Paused') }}</label>
+                    <input type="radio" class="btn-check" name="counterStatusFilter" id="filterStopped" value="stopped">
+                    <label class="btn btn-outline-secondary" for="filterStopped">{{ trans('Stopped') }}</label>
+                </div>
+                <span class="counter-dashboard-stats" id="counterStats" aria-live="polite"></span>
+            </div>
+
+            {% if object_counters %}
+                <div class="counter-dashboard-toolbar counter-dashboard-toolbar--multi">
+                    <span class="counter-dashboard-toolbar__hint text-muted small">{{ trans('Multi counter hint short') }}</span>
+                    <div class="counter-dashboard-toolbar__multi-actions">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="counterMultiSelectVisible">
+                            {{ trans('Select visible') }}
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="counterMultiSelectAll">
+                            {{ trans('Select all') }}
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="counterMultiClear">
+                            {{ trans('Clear selection') }}
+                        </button>
+                        <span class="counter-dashboard-multi-count text-muted small" id="counterMultiCount" aria-live="polite"></span>
+                        <button type="button" class="btn btn-primary btn-sm" id="counterMultiOpen">{{ trans('Open multi view') }}</button>
                     </div>
+                </div>
+            {% endif %}
+        </div>
+
+        {% if object_counters %}
+            <div class="counter-card-grid" id="counter-dashboard">
+                {% for location, label in object_counters.items() %}
+                    {% with status=counter_status(location) %}
+                        {% include 'partials/counter_dashboard_card.html' %}
+                    {% endwith %}
                 {% endfor %}
             </div>
-        </div>
-    </div>
+            <div class="empty-state d-none" id="counterFilterEmpty">{{ trans('No counters match filter') }}</div>
+        {% else %}
+            <div class="empty-state">{{ trans('No detections configured') }}</div>
+        {% endif %}
+    </section>
 
-    <!-- Text -->
-    <div class="row border-bottom py-3">
-        <div class="col-12">
-            <h4>{{ trans('Text') }}:</h4>
-            <div class="d-grid gap-1 d-md-block ms-0 ms-md-3" id="counter_text">
-                {% for k in object_counters %}
-                    <div class="btn-group m-2" role="group" aria-label="" id="counter_text_{{ k }}">
-                        <a href="{{ url_for('counters.counter_text', location=k) }}"
-                           class="btn btn-{{ counter_status_class(k) }}">
-                            {{ object_counters[k]|striptags|title }}
-                        </a>
-                        <div class="btn-group" role="group">
-                            <button type="button"
-                                    class="btn dropdown-toggle btn-{{ counter_status_class(k) }}"
-                                    data-bs-toggle="dropdown" aria-expanded="false"></button>
-                            <ul class="dropdown-menu">
-                                <li>
-                                    <a class="dropdown-item counter_run {% if counter_status(k) == 'running' %}disabled{% endif %}"
-                                       href="{{ url_for('counters.counter_text', location=k) }}"
-                                       target="_blank">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
-                                             fill="currentColor"
-                                             class="bi bi-power" viewBox="0 0 18 18">
-                                            <path d="M7.5 1v7h1V1z"></path>
-                                            <path d="M3 8.812a5 5 0 0 1 2.578-4.375l-.485-.874A6 6 0 1 0 11 3.616l-.501.865A5 5 0 1 1 3 8.812"></path>
-                                        </svg>
-                                        {{ trans('Run') }}
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item counter_stop {% if counter_status(k) == 'stopped' %}disabled{% endif %}"
-                                       href="{{ url_for('counters.stop_count', location=k) }}">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
-                                             fill="currentColor"
-                                             class="bi bi-stop-fill" viewBox="0 0 18 18">
-                                            <path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5"></path>
-                                        </svg>
-                                        {{ trans('Stop') }}
-                                    </a>
-                                </li>
-                                <li>
-                                    <hr class="dropdown-divider">
-                                </li>
-                                <li>
-                                    <a class="dropdown-item counter_start {% if counter_status(k) not in ['paused'] %}disabled{% endif %}"
-                                       href="{{ url_for('counters.start_count', location=k) }}">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
-                                             fill="currentColor"
-                                             class="bi bi-play-fill" viewBox="0 0 18 18">
-                                            <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"></path>
-                                        </svg>
-                                        {{ trans('Start') }}
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item counter_pause {% if counter_status(k) in ['paused', 'stopped'] %}disabled{% endif %}"
-                                       href="{{ url_for('counters.pause_count', location=k) }}">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
-                                             fill="currentColor"
-                                             class="bi bi-pause-fill" viewBox="0 0 18 18">
-                                            <path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"></path>
-                                        </svg>
-                                        {{ trans('Pause') }}
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-
-    <!-- Text double -->
-    <div class="row border-bottom py-3">
-        <div class="col-12">
-            <h4>{{ trans('Text double') }}:</h4>
-            <div class="d-flex justify-content-start flex-wrap ms-0 ms-md-3" id="counterDualText">
-                <div class="m-2 pe-3 border-end">
-                    <div class="mb-1 fw-bold">{{ trans('Counter on the left:') }}</div>
-                    {% for k in object_counters %}
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" value="{{ k }}" name="counter_in"
-                                   id="counterIn{{ k|striptags|slug }}">
-                            <label class="form-check-label" for="counterIn{{ k|striptags|slug }}">
-                                {{ object_counters[k]|striptags|title }}
-                            </label>
-                        </div>
-                    {% endfor %}
-                </div>
-
-                <div class="m-2">
-                    <div class="mb-1 fw-bold">{{ trans('Counter on the right:') }}</div>
-                    {% for k in object_counters %}
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" value="{{ k }}" name="counter_out"
-                                   id="counterOut{{ k|striptags|slug }}">
-                            <label class="form-check-label" for="counterOut{{ k|striptags|slug }}">
-                                {{ object_counters[k]|striptags|title }}
-                            </label>
-                        </div>
-                    {% endfor %}
-                </div>
-
-                <div class="col-12 mt-2">
-                    <button class="btn btn-primary" id="counterDualTextStart">{{ trans('Start counting') }}</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    {% include 'partials/counter_settings_modal.html' %}
 {% endblock %}

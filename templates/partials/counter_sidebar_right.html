@@ -1,20 +1,22 @@
+{# Counter sidebar right #}
+<!-- START: Counter sidebar right -->
 {% import 'partials/forms.html' as forms %}
+{% set counts = initial_counts if initial_counts is defined else {'total': 0, 'current': 0, 'defect': 0, 'correct': 0} %}
 
-<!-- START: Right block -->
 <div class="col-12 col-lg-4 col-xl-3 sidebar-right">
     {% if counter_on_sidebar is not none and counter_on_sidebar %}
         <!-- Counter block -->
-        <div class="bg-warning text-dark rounded position-relative my-2 px-2 user-select-none">
-            <div class="h4 mb-0">{{ trans('Quantity:') }} <span id="total_count">0</span></div>
-            <div id="current_count" class="display-1 lh-1">0</div>
+        <div class="sidebar-counter-tile text-dark position-relative my-2 px-3 py-2 user-select-none">
+            <div class="h4 mb-0">{{ trans('Quantity:') }} <span id="total_count">{{ counts.total }}</span></div>
+            <div id="current_count" class="display-1 lh-1">{{ counts.current }}</div>
 
             {% if form_config.get('defect_show', true) or form_config.get('correct_show', true) %}
                 <div class="h5 d-flex flex-wrap justify-content-between w-100 mt-2 pb-1 border-top border-dark">
                     <div class="{{ 'd-none' if not form_config.get('defect_show', true) }}">
-                        {{ trans('Defective products') }}: <span id="defect_count">0</span>
+                        {{ trans('Defective products') }}: <span id="defect_count">{{ counts.defect }}</span>
                     </div>
                     <div class="{{ 'd-none' if not form_config.get('correct_show', true) }}">
-                        {{ trans('Corr.') }}: <span id="correct_count">0</span>
+                        {{ trans('Corr.') }}: <span id="correct_count">{{ counts.correct }}</span>
                     </div>
                 </div>
             {% endif %}
@@ -23,7 +25,7 @@
 
     {% if form_config.get('defect_show', true) %}
         <!-- Defect keyboard -->
-        <div class="border border-danger-subtle border-2 rounded my-2 p-2">
+        <div class="cv-panel cv-panel--danger my-2">
             <div class="col-12 mb-3">
                 <label for="defect_keyboard" class="form-label h4 user-select-none">{{ trans('Defective products') }}</label>
                 <button class="btn btn-outline-info float-end" data-bs-toggle="collapse" data-bs-target="#collapseDefect"
@@ -98,7 +100,7 @@
 
     {% if form_config.get('correct_show', true) %}
         <!-- Correct keyboard -->
-        <div class="border border-warning-subtle border-2 rounded my-2 p-2">
+        <div class="cv-panel cv-panel--warning my-2">
             <div class="col-12 mb-3">
                 <label for="correct_keyboard" class="form-label h4 user-select-none">{{ trans('Correct count') }}</label>
                 <button class="btn btn-outline-info float-end" data-bs-toggle="collapse" data-bs-target="#collapseСorrect"
@@ -172,7 +174,7 @@
     {% endif %}
 
     {% if custom_fields %}
-        <div class="border border-secondary-subtle border-2 rounded my-2 p-2">
+        <div class="cv-panel cv-panel--accent my-2">
             {% for field in custom_fields %}
                 <div class="{{ 'mb-2' if not loop.last }}">
                     {% if field.label or field.name %}
@@ -198,6 +200,14 @@
 
     <!-- Buttons -->
     <div class="col-12 mb-3 px-2">
+        {#{% if location is defined %}
+            <div class="row mb-2">
+                <a class="btn btn-outline-primary col mb-2 m-1"
+                   href="{{ url_for('counters.counting_area_edit', location=location) }}">
+                    {{ trans('Counting zone') }}
+                </a>
+            </div>
+        {% endif %}#}
         <div class="row mb-2">
             <button class="btn btn-primary col mb-3 m-1" id="btn_reset_current">{{ trans('New batch') }}</button>
         </div>
@@ -235,5 +245,5 @@
     </div>
 </div>
 
-<script src="{{ url_for('static', filename='assets/js/sidebar-keyboard.js') }}"></script>
-<!-- END: Right block -->
+<script src="{{ url_for('static', filename='assets/js/counter-keyboard.js') }}"></script>
+<!-- END: Counter sidebar right -->
