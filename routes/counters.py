@@ -478,7 +478,12 @@ def counter_settings_save(location: str = None):
     _require_detection_location(location)
 
     prefix = f'detections-{location}-'
-    form_data = {key: value for key, value in request.form.items() if key.startswith(prefix)}
+    zone_field_suffixes = ('counting_area', 'counting_area_color')
+    form_data = {
+        key: value
+        for key, value in request.form.items()
+        if key.startswith(prefix) and not key.endswith(zone_field_suffixes)
+    }
 
     if not form_data:
         abort(400, translate('No settings to save'))
