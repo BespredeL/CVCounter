@@ -50,6 +50,7 @@
     "Defective products": "Брак",
     "defects": "Брак кол-во",
     "Description": "Описание",
+    "Detection config not found": "Конфигурация обнаружения не найдена",
     "Detection config not found!": "Конфигурация обнаружения не найдена!",
     "Detection Default": "Обнаружение по умолчанию",
     "Detections": "Обнаружения",

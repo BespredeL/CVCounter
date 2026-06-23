@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 03.12.2025
-# Updated: 03.06.2026
+# Updated: 23.06.2026
 # Website: https://bespredel.name
 
 import time
@@ -59,10 +59,13 @@ def require_location(f):
     def decorated_function(location, *args, **kwargs):
         context = get_app_context()
         object_counters = context['object_counters']
+        locations = context['locations']
 
         location = str(escape(location))
-        if location not in object_counters:
+        if location not in locations:
             abort(400, translate('Detection config not found'))
+        if location not in object_counters:
+            abort(400, translate('Counter not running'))
         return f(location, *args, **kwargs)
 
     return decorated_function
@@ -130,7 +133,7 @@ def _require_detection_location(location: str) -> None:
     """
     context = get_app_context()
     if location not in context['locations']:
-        abort(400, translate('Detection config not found!'))
+        abort(400, translate('Detection config not found'))
 
 
 def _get_editor_snapshot_frame(location: str):

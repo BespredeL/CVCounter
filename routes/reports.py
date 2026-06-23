@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 03.12.2025
-# Updated: 03.06.2026
+# Updated: 23.06.2026
 # Website: https://bespredel.name
 
 import json
@@ -121,6 +121,10 @@ def report_show(location: str, report_id: int) -> str:
     counter = db_manager.get_count(report_id)
 
     if counter is None:
+        abort(404, translate('Page not found'))
+
+    location = str(escape(location))
+    if counter.location != location:
         abort(404, translate('Page not found'))
 
     return render_template(
