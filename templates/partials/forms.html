@@ -19,6 +19,20 @@
             </div>
         </section>
     {% else %}
+        {% if key == 'counting_area_color' and prefix.startswith('detections-') %}
+        {# Zone color is saved only via the visual zone editor #}
+        {% elif key == 'counting_area' and prefix.startswith('detections-') %}
+            {% set detection_location = prefix.replace('detections-', '').rstrip('-') %}
+            <div class="cv-form-field">
+                <span class="cv-form-label">{{ trans(key.replace('_', ' ')|title) }}</span>
+                <p class="cv-form-hint mb-2">{{ trans('Configure the polygon on a live video frame') }}</p>
+                <a class="btn btn-outline-primary btn-sm"
+                   href="{{ url_for('counters.counting_area_edit', location=detection_location) }}"
+                   target="_blank" rel="noopener">
+                    {{ trans('Open zone editor') }}
+                </a>
+            </div>
+        {% else %}
         <div class="cv-form-field">
             <label for="{{ field_id }}" class="cv-form-label">{{ trans(key.replace('_', ' ')|title) }}</label>
             {% if value is string %}
@@ -32,19 +46,6 @@
                     <input type="text" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
                            class="form-control cv-form-control">
                 {% endif %}
-            {% elif key == 'counting_area' and prefix.startswith('detections-') %}
-                {% set detection_location = prefix.replace('detections-', '').rstrip('-') %}
-                <div class="cv-form-field">
-                    {#<span class="cv-form-label">{{ trans(key.replace('_', ' ')|title) }}</span>#}
-                    <input type="text" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
-                           class="form-control cv-form-control">
-                    <p class="cv-form-hint mb-2">{{ trans('Configure the polygon on a live video frame') }}</p>
-                    <a class="btn btn-outline-primary btn-sm"
-                       href="{{ url_for('counters.counting_area_edit', location=detection_location) }}"
-                       target="_blank" rel="noopener">
-                        {{ trans('Open zone editor') }}
-                    </a>
-                </div>
             {% elif value is boolean %}
                 <div class="cv-form-toggle" role="group" aria-label="{{ trans(key.replace('_', ' ')|title) }}">
                     <input type="radio" class="cv-form-toggle__input" value="on" name="{{ field_id }}" id="{{ field_id }}_yes"
@@ -72,6 +73,7 @@
                        class="form-control cv-form-control">
             {% endif %}
         </div>
+        {% endif %}
     {% endif %}
     <!-- END: Generate form fields -->
 {% endmacro %}

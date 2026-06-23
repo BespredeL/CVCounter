@@ -3,9 +3,10 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 26.03.2024
-# Updated: 23.05.2025
+# Updated: 23.06.2026
 # Website: https://bespredel.name
 
+import os
 import time
 
 import cv2
@@ -13,6 +14,11 @@ from imutils.video import VideoStream
 
 from system.utils.exception_handler import StreamConnectionError, StreamSourceError
 from system.utils.logger import Logger
+
+_HLS_FFMPEG_OPTIONS = 'reconnect;1|reconnect_streamed;1|reconnect_delay_max;5'
+_HLS_WARMUP_TIMEOUT_SEC = 15.0
+_HLS_READ_RETRIES = 5
+_HLS_READ_RETRY_DELAY_SEC = 0.2
 
 
 class VideoStreamManager:
@@ -25,6 +31,7 @@ class VideoStreamManager:
             raise StreamSourceError("A video stream source is required")
 
         self.__video_stream: str = video_stream
+        self.__is_hls: bool = self._detect_hls(video_stream)
         self.__cap: cv2.VideoCapture | VideoStream = None
         self.__fps: float = video_fps  # Default FPS
         self.__actual_fps: float = 0  # Calculated FPS based on frame intervals
@@ -60,8 +67,14 @@ class VideoStreamManager:
             None
         """
         try:
-            # Check if the source is a streaming URL or a local video/camera
-            if self.is_stream():
+            if self.is_hls():
+                self._release_capture()
+                self.__cap = self._open_hls_capture()
+                if not self.__cap.isOpened():
+                    self.__logger.error(f"Cannot open HLS stream: {self.__video_stream}")
+                    raise StreamConnectionError(f"Cannot open video stream: {self.__video_stream}")
+                self._warmup_hls_capture()
+            elif self.is_stream():
                 if self.__cap is not None:
                     self.__cap.stop()
                 self.__cap = VideoStream(self.__video_stream).start()
@@ -88,11 +101,7 @@ class VideoStreamManager:
         """
         try:
             if self.__cap is not None:
-                if self.is_stream():
-                    self.__cap.stop()
-                else:
-                    self.__cap.release()
-                self.__cap = None
+                self._release_capture()
             else:
                 print("Stream is not active.")
         except Exception as e:
@@ -111,7 +120,9 @@ class VideoStreamManager:
 
         frame = None
         if self.__cap is not None:
-            if self.is_stream():
+            if self.is_hls():
+                frame = self._read_hls_frame()
+            elif self.is_stream():
                 frame = self.__cap.read()
             else:
                 ret, frame = self.__cap.read()
@@ -138,10 +149,7 @@ class VideoStreamManager:
         """
         self.__logger.warning("Attempting to reconnect to video stream...")
 
-        if self.is_stream():
-            self.__cap.stop()
-        else:
-            self.__cap.release()
+        self._release_capture()
 
         time.sleep(3)
         self.__reconnect_count += 1
@@ -149,13 +157,27 @@ class VideoStreamManager:
         try:
             self.start()
 
-            if (self.is_stream() and self.__cap is not None) or (not self.is_stream() and self.__cap.isOpened()):
+            if self._capture_is_ready():
                 self.__logger.info("Reconnected to video stream successfully")
                 # self.reset_reconnect_count()
             else:
                 self.__logger.error("Failed to reconnect to video stream")
         except Exception as e:
             self.__logger.error(f"Error during reconnect attempt: {e}")
+
+    def is_hls(self) -> bool:
+        """
+        Check if the source is an HTTP Live Streaming playlist (.m3u8).
+
+        Returns:
+            bool: True for HLS URLs, False otherwise
+        """
+        return self.__is_hls
+
+    @staticmethod
+    def _detect_hls(video_stream: str) -> bool:
+        path = video_stream.lower().split('?', 1)[0]
+        return path.endswith('.m3u8')
 
     def is_stream(self) -> bool:
         """
@@ -166,6 +188,55 @@ class VideoStreamManager:
         """
         return isinstance(self.__video_stream, str) and self.__video_stream.lower().startswith(
             ('rtsp://', 'rtmp://', 'http://', 'https://', 'tcp://'))
+
+    def _open_hls_capture(self) -> cv2.VideoCapture:
+        previous_options = os.environ.get('OPENCV_FFMPEG_CAPTURE_OPTIONS')
+        os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = _HLS_FFMPEG_OPTIONS
+        try:
+            return cv2.VideoCapture(self.__video_stream, cv2.CAP_FFMPEG)
+        finally:
+            if previous_options is None:
+                os.environ.pop('OPENCV_FFMPEG_CAPTURE_OPTIONS', None)
+            else:
+                os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = previous_options
+
+    def _warmup_hls_capture(self) -> None:
+        deadline = time.time() + _HLS_WARMUP_TIMEOUT_SEC
+        while time.time() < deadline:
+            ret, frame = self.__cap.read()
+            if ret and frame is not None:
+                return
+            time.sleep(_HLS_READ_RETRY_DELAY_SEC)
+
+        self.__logger.error(f"HLS warmup timed out: {self.__video_stream}")
+        raise StreamConnectionError(f"Cannot open video stream: {self.__video_stream}")
+
+    def _read_hls_frame(self):
+        for _ in range(_HLS_READ_RETRIES):
+            ret, frame = self.__cap.read()
+            if ret and frame is not None:
+                return frame
+            time.sleep(_HLS_READ_RETRY_DELAY_SEC)
+        return None
+
+    def _release_capture(self) -> None:
+        if self.__cap is None:
+            return
+
+        if self.is_hls():
+            self.__cap.release()
+        elif self.is_stream():
+            self.__cap.stop()
+        else:
+            self.__cap.release()
+        self.__cap = None
+
+    def _capture_is_ready(self) -> bool:
+        if self.__cap is None:
+            return False
+        if self.is_hls() or not self.is_stream():
+            return self.__cap.isOpened()
+        return True
 
     def get_actual_fps(self) -> float:
         """

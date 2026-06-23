@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 03.06.2026
+# Updated: 23.06.2026
 # Website: https://bespredel.name
 
 import json
@@ -527,7 +527,7 @@ class ObjectCounter:
         sets the total_count and total_objects attributes and updates the configuration file.
         """
 
-        config_manager.read_config()
+        config_manager.reload_config()
         detector_config = config_manager.get(f"detections.{location}")
         detection_default = config_manager.get("detection_default", {})
 
