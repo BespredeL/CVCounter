@@ -110,7 +110,7 @@ It is perfectly suited for **counting products, people, vehicle tracking, retail
 
 1. **Main view** - a page displaying the counter values and a video with recognition results
 2. **Text view** - a page displaying only the counter values
-3. **Text view with two counters** - a page displaying the values of 2 counters (e.g., at the input and output)
+3. **Text view with N counters** - a page displaying the values of multiple counters (e.g., at the input and output)
 
 After several options, I decided to implement it with Flask, i.e., as a mini website solution, as it allows avoiding the installation of any
 additional software on clients. Moreover, this solution is not resource-intensive for clients (except for the main view with video).
