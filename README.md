@@ -319,6 +319,8 @@ class ObjectDetectionMy(BaseObjectDetectionService):
         video_show_quality: 50,
         // ручная установка FPS (0 - автоматическая установка)
         video_fps: 0,
+        // макс. попыток подключения к камере при старте и после обрыва потока
+        video_reconnect_attempts: 5,
         // порог доверия
         confidence: 0.7,
         // порог iou
@@ -383,6 +385,8 @@ class ObjectDetectionMy(BaseObjectDetectionService):
             video_show_quality: 30,
             // ручная установка FPS (необязательно)
             video_fps: 0,
+            // макс. попыток подключения к камере (необязательно, наследуется из detection_default)
+            video_reconnect_attempts: 5,
             // тип модели: yolo | opencv | opencv_dnn | onnx | onnxruntime
             model_type: "yolo",
             // путь к модели

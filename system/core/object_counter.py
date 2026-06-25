@@ -24,6 +24,7 @@ from system.managers.notification_manager import NotificationManager
 from system.object_detection import load_detector
 from system.core.sort import Sort
 from system.core.timer import Timer
+from system.utils.exception_handler import StreamConnectionError
 from system.utils.i18n import trans
 from system.managers.video_stream_manager import VideoStreamManager
 from system.managers.video_recorder_manager import VideoRecorderManager
@@ -38,10 +39,10 @@ def _placeholder_mjpeg_chunk() -> bytes:
         frame = np.zeros((2, 2, 3), dtype=np.uint8)
         encoded = FrameUtils.encoding_frame(frame, 60, 'jpeg')
         _PLACEHOLDER_MJPEG_CHUNK = (
-            b'--frame\r\n'
-            b'Content-Type: image/jpeg\r\n\r\n'
-            + encoded.tobytes()
-            + b'\r\n'
+                b'--frame\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n'
+                + encoded.tobytes()
+                + b'\r\n'
         )
     return _PLACEHOLDER_MJPEG_CHUNK
 
@@ -66,6 +67,7 @@ class ObjectCounter:
     DEFAULT_RECORDING_PATH: str = "storage/saved_recordings"
     DEFAULT_MJPEG_FPS: float = 15.0
     DEFAULT_PAUSED_SLEEP_TIME: float = 0.1
+    DEFAULT_VIDEO_RECONNECT_ATTEMPTS: int = 5
 
     def __init__(self, location: str, config_manager: ConfigManager, socketio: SocketIO, **kwargs: any) -> None:
         # Init variables
@@ -102,8 +104,13 @@ class ObjectCounter:
         self.notif_manager: NotificationManager = NotificationManager(socketio=socketio, location=location)
 
         # Initialize video stream manager
-        self.vsm: VideoStreamManager = VideoStreamManager(self.video_path, self.video_fps)
-        self.vsm.start()
+        self.vsm: VideoStreamManager = VideoStreamManager(
+            self.video_path,
+            self.video_fps,
+            max_reconnect_attempts=self.video_reconnect_attempts,
+        )
+        if not self.vsm.connect_with_retries():
+            raise StreamConnectionError(f"Cannot open video stream: {self.video_path}")
 
         # Init recorder (async video writer) if enabled for this detection
         self._init_recorder()
@@ -127,7 +134,8 @@ class ObjectCounter:
         )
 
         # Init tracker
-        self.tracker: Sort = Sort(max_age=self.DEFAULT_MAX_AGE, min_hits=self.DEFAULT_MIN_HITS, iou_threshold=self.DEFAULT_TRACKER_IOU)
+        self.tracker: Sort = Sort(max_age=self.DEFAULT_MAX_AGE, min_hits=self.DEFAULT_MIN_HITS,
+                                  iou_threshold=self.DEFAULT_TRACKER_IOU)
 
         # Init Database manager
         self.db_manager: any = kwargs.get('db_manager', None)
@@ -150,6 +158,15 @@ class ObjectCounter:
                 reconnect_count = self.vsm.get_reconnect_count()
                 frame = self.vsm.get_frame()
                 if frame is None:
+                    if self.vsm.reconnect_limit_reached():
+                        self.logger.error(
+                            f"Camera connection failed after {self.video_reconnect_attempts} attempts | {self.location}"
+                        )
+                        self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
+                        self.notif_manager.event('counter_status', {'status': 'error', 'location': self.location})
+                        self.stop()
+                        break
+
                     self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
                     self.notif_manager.event('counter_status', {'status': 'error', 'location': self.location})
                     time.sleep(self.DEFAULT_SLEEP_TIME)
@@ -253,7 +270,8 @@ class ObjectCounter:
             'updated_at': result.updated_at.strftime("%Y-%m-%d %H:%M:%S") if result.updated_at else None
         }
 
-    def save_count(self, location: str, correct_count: int, defect_count: int, custom_fields: str, active: int = 1) -> dict:
+    def save_count(self, location: str, correct_count: int, defect_count: int, custom_fields: str,
+                   active: int = 1) -> dict:
         """
         Save count.
 
@@ -534,22 +552,26 @@ class ObjectCounter:
         self.location: str = location
         self.debug: bool = kwargs.get('debug', config_manager.get('general.debug', False))
         self.model_type = kwargs.get('model_type', detector_config.get('model_type', 'yolo'))
-        self.weights: str = config_manager.resolve_path(
-            kwargs.get('weights', detector_config.get('weights_path'))
-        )
+        self.weights: str = config_manager.resolve_path(kwargs.get('weights', detector_config.get('weights_path')))
         self.device: str = kwargs.get('device', detector_config.get('device', 'cpu'))
-        self.confidence: float = kwargs.get('confidence',
-                                            detector_config.get('confidence', detection_default.get('confidence', self.DEFAULT_CONFIDENCE)))
+        self.confidence: float = kwargs.get('confidence', detector_config.get('confidence',
+                                                                              detection_default.get('confidence',
+                                                                                                    self.DEFAULT_CONFIDENCE)))
         self.iou: float = kwargs.get('iou', detector_config.get('iou', detection_default.get('iou', self.DEFAULT_IOU)))
         self.counting_area: List[Tuple[int, int]] = kwargs.get('counting_area', detector_config.get('counting_area'))
         self.counting_area_color: tuple = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
         self.video_fps: int = detector_config.get('video_fps', detection_default.get("video_fps"))
-        self.video_scale: int = detector_config.get('video_show_scale', detection_default.get("video_show_scale", self.DEFAULT_VIDEO_SCALE))
-        self.video_quality: int = detector_config.get('video_show_quality',
-                                                      detection_default.get("video_show_quality", self.DEFAULT_VIDEO_QUALITY))
-        self.indicator_size: int = detector_config.get('indicator_size',
-                                                       detection_default.get("indicator_size", self.DEFAULT_INDICATOR_SIZE))
-        self.vid_stride: int = detector_config.get('vid_stride', detection_default.get("vid_stride", self.DEFAULT_VID_STRIDE))
+        self.video_reconnect_attempts: int = int(detector_config.get('video_reconnect_attempts',
+                                                                     detection_default.get('video_reconnect_attempts',
+                                                                                           self.DEFAULT_VIDEO_RECONNECT_ATTEMPTS), ))
+        self.video_scale: int = detector_config.get('video_show_scale',
+                                                    detection_default.get("video_show_scale", self.DEFAULT_VIDEO_SCALE))
+        self.video_quality: int = detector_config.get('video_show_quality', detection_default.get("video_show_quality",
+                                                                                                  self.DEFAULT_VIDEO_QUALITY))
+        self.indicator_size: int = detector_config.get('indicator_size', detection_default.get("indicator_size",
+                                                                                               self.DEFAULT_INDICATOR_SIZE))
+        self.vid_stride: int = detector_config.get('vid_stride',
+                                                   detection_default.get("vid_stride", self.DEFAULT_VID_STRIDE))
         self.classes: dict = detector_config.get('classes', {})
         dataset_config = dict(detector_config.get('dataset_create', {}))
         if dataset_config.get('path'):
@@ -570,8 +592,7 @@ class ObjectCounter:
         recording_config = detector_config.get('recording', {})
         self.recording_enabled: bool = bool(recording_config.get('enable', recording_default.get('enable', False)))
         self.recording_base_path = config_manager.resolve_path(
-            recording_config.get('path', recording_default.get('path', self.DEFAULT_RECORDING_PATH))
-        )
+            recording_config.get('path', recording_default.get('path', self.DEFAULT_RECORDING_PATH)))
         self.recording_scale: int = int(recording_config.get('scale', recording_default.get('scale', 100)))
         self.recording_quality: int = int(recording_config.get('quality', recording_default.get('quality', 80)))
 
@@ -841,16 +862,17 @@ class ObjectCounter:
 
             encoded_frame = FrameUtils.encoding_frame(stream_frame, int(self.video_quality), 'jpeg')
             return (
-                b'--frame\r\n'
-                b'Content-Type: image/jpeg\r\n\r\n'
-                + encoded_frame.tobytes()
-                + b'\r\n'
+                    b'--frame\r\n'
+                    b'Content-Type: image/jpeg\r\n\r\n'
+                    + encoded_frame.tobytes()
+                    + b'\r\n'
             )
         except Exception as e:
             self.logger.error(f'Error encoding MJPEG chunk: {e}')
             return None
 
-    def _save_dataset_image(self, frame: np.ndarray, boxes: list | np.ndarray = None, classes_to_save: dict = None) -> None:
+    def _save_dataset_image(self, frame: np.ndarray, boxes: list | np.ndarray = None,
+                            classes_to_save: dict = None) -> None:
         """
         Saves a raw image frame to the dataset path (without overlays or detection marks).
 

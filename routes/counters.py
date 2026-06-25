@@ -158,12 +158,18 @@ def _get_editor_snapshot_frame(location: str):
             return frame
 
     detector_config = config.get(f'detections.{location}', {})
+    detection_default = config.get('detection_default', {})
     video_path = detector_config.get('video_path')
-    video_fps = detector_config.get('video_fps', config.get('detection_default.video_fps', 0))
+    video_fps = detector_config.get('video_fps', detection_default.get('video_fps', 0))
+    max_reconnect_attempts = detector_config.get(
+        'video_reconnect_attempts',
+        detection_default.get('video_reconnect_attempts', VideoStreamManager.DEFAULT_MAX_RECONNECT_ATTEMPTS),
+    )
 
-    vsm = VideoStreamManager(video_path, video_fps)
+    vsm = VideoStreamManager(video_path, video_fps, max_reconnect_attempts=max_reconnect_attempts)
     try:
-        vsm.start()
+        if not vsm.connect_with_retries():
+            return None
         return vsm.get_frame()
     finally:
         vsm.stop()
@@ -730,6 +736,7 @@ def counter_multi_text() -> str:
             'location': loc,
             'slug': slug(loc),
             'label': locations_dict.get(loc, loc),
+            'counts': _live_counter_counts(loc),
         }
         for loc in locations_list
     ]
@@ -748,6 +755,8 @@ def counter_multi_text() -> str:
 def counter_dual_text(location_first: str, location_second: str):
     """
     Legacy dual-counter URL - redirects to the multi-counter view.
+
+    Deprecated 
     """
     location_first = str(escape(location_first))
     location_second = str(escape(location_second))
