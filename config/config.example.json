@@ -81,6 +81,7 @@
         "video_show_scale": 70,
         "video_show_quality": 50,
         "video_fps": 0,
+        "video_reconnect_attempts": 5,
         "counting_area": [
             [
                 0,
@@ -127,6 +128,7 @@
             "video_show_scale": 70,
             "video_show_quality": 30,
             "video_fps": 0,
+            "video_reconnect_attempts": 5,
             "counting_area": [
                 [
                     0,

@@ -249,6 +249,7 @@ Use `train.py` for training and exporting YOLO models (separate from the web app
 | `video_show_scale` | Video display scale on the page (%) | `70` |
 | `video_show_quality` | Video display quality on the page (%) | `50` |
 | `video_fps` | Manual FPS setting (0 = automatic) | `0` |
+| `video_reconnect_attempts` | Max camera connection attempts on start and after stream loss; counter stops when exhausted | `5` |
 | `counting_area` | Counting area (polygon) | `[[0,0],[100,0],[100,100],[0,100]]` |
 | `counting_area_color` | Counting area color (BGR) | `[67, 211, 255]` |
 | `classes` | Detection classes filter | `{}` |
@@ -281,6 +282,7 @@ Each key in `detections` is a counter `location` (Latin characters, used in URLs
 | `video_show_scale` | Video display scale (%) | `70` |
 | `video_show_quality` | Video display quality (%) | `30` |
 | `video_fps` | Manual FPS (0 = automatic) | `0` |
+| `video_reconnect_attempts` | Max connection attempts (inherits from `detection_default` if omitted) | `5` |
 | `counting_area` | Counting area (polygon) | `[[0,0],[100,0],[100,100],[0,100]]` |
 | `counting_area_color` | Counting area color (BGR) | `[255, 64, 0]` |
 | `classes` | Detection classes filter | `{}` |
@@ -331,7 +333,7 @@ http://127.0.0.1:8080/counter/{location}/text
 
 ## Multi-Counter View
 
-Displays N counters simultaneously on one fullscreen page. Replaces the legacy dual-counter view.
+Displays N counters simultaneously on one fullscreen page. Replaces the legacy dual-counter view. Each card shows the current batch and total immediately on load (from live counter state or the last DB record), then updates via Socket.IO.
 
 **URL:**
 ```
@@ -490,7 +492,7 @@ You can also select multiple counters on the dashboard and open them together.
 
 ### 5. What should I do if the video does not display?
 
-Check the camera's functionality and ensure it is correctly connected. Verify `video_path` in the configuration. Check logs at `storage/logs/cvcounter.log`.
+Check the camera's functionality and ensure it is correctly connected. Verify `video_path` in the configuration. If the camera is unreachable, the counter retries up to `video_reconnect_attempts` times (default `5`, set in `detection_default` or per counter) and then stops with an error status. Check logs at `storage/logs/cvcounter.log`.
 
 ### 6. What should I do if Socket.IO does not connect?
 

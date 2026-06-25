@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 26.03.2024
-# Updated: 23.06.2026
+# Updated: 25.06.2026
 # Website: https://bespredel.name
 
 import os
@@ -15,14 +15,21 @@ from imutils.video import VideoStream
 from system.utils.exception_handler import StreamConnectionError, StreamSourceError
 from system.utils.logger import Logger
 
-_HLS_FFMPEG_OPTIONS = 'reconnect;1|reconnect_streamed;1|reconnect_delay_max;5'
-_HLS_WARMUP_TIMEOUT_SEC = 15.0
-_HLS_READ_RETRIES = 5
-_HLS_READ_RETRY_DELAY_SEC = 0.2
-
 
 class VideoStreamManager:
-    def __init__(self, video_stream: str, video_fps: float) -> None:
+    DEFAULT_MAX_RECONNECT_ATTEMPTS: int = 10
+    DEFAULT_RECONNECT_DELAY_SEC: float = 1.0
+    _HLS_FFMPEG_OPTIONS: str = 'reconnect;1|reconnect_streamed;1|reconnect_delay_max;5'
+    _HLS_WARMUP_TIMEOUT_SEC: float = 15.0
+    _HLS_READ_RETRIES: int = 5
+    _HLS_READ_RETRY_DELAY_SEC: float = 0.2
+
+    def __init__(
+            self,
+            video_stream: str,
+            video_fps: float,
+            max_reconnect_attempts: int | None = None,
+    ) -> None:
         # Init logger
         self.__logger: Logger = Logger()
 
@@ -37,7 +44,11 @@ class VideoStreamManager:
         self.__actual_fps: float = 0  # Calculated FPS based on frame intervals
         self.__last_frame_time: float = time.time()  # Time of the last frame capture
         self.__frame_interval: float = 1 / self.__fps if video_fps > 0 else 0  # Interval between frames based on FPS
-        self.__reconnect_count: int = 0  # Count of reconnect attempts
+        self.__reconnect_count: int = 0
+        self.__max_reconnect_attempts: int = max(
+            1,
+            int(max_reconnect_attempts or self.DEFAULT_MAX_RECONNECT_ATTEMPTS),
+        )
 
     @property
     def video_stream(self) -> str:
@@ -58,6 +69,54 @@ class VideoStreamManager:
             cv2.VideoCapture: The video capture object
         """
         return self.__cap
+
+    def connect(self) -> bool:
+        """
+        Open the video stream once.
+
+        Returns:
+            bool: True when the capture is ready, False on failure.
+        """
+        if self.reconnect_limit_reached():
+            return False
+
+        try:
+            self.start()
+            if self._capture_is_ready():
+                return True
+            self.__logger.error(f"Capture opened but is not ready: {self.__video_stream}")
+        except Exception as e:
+            self.__logger.error(f"Connection attempt failed: {e}")
+
+        self._release_capture()
+        self.__reconnect_count += 1
+        if self.reconnect_limit_reached():
+            self.__logger.error(
+                f"Video stream connection limit reached ({self.__max_reconnect_attempts}): {self.__video_stream}"
+            )
+        return False
+
+    def connect_with_retries(self, delay_sec: float | None = None) -> bool:
+        """
+        Try to open the stream within the configured attempt budget.
+
+        Args:
+            delay_sec: Pause between failed attempts.
+
+        Returns:
+            bool: True when connected.
+        """
+        pause = self.DEFAULT_RECONNECT_DELAY_SEC if delay_sec is None else delay_sec
+        while not self.reconnect_limit_reached():
+            if self.connect():
+                return True
+            if not self.reconnect_limit_reached():
+                time.sleep(pause)
+        return False
+
+    def reconnect_limit_reached(self) -> bool:
+        """Whether the configured connection attempt limit has been exhausted."""
+        return self.__reconnect_count >= self.__max_reconnect_attempts
 
     def start(self) -> None:
         """
@@ -119,6 +178,9 @@ class VideoStreamManager:
         #    raise StreamConnectionError("Video stream is not active. Start the stream first.")
 
         frame = None
+        if self.__cap is None and not self.reconnect_limit_reached():
+            self.reconnect()
+
         if self.__cap is not None:
             if self.is_hls():
                 frame = self._read_hls_frame()
@@ -129,7 +191,7 @@ class VideoStreamManager:
                 if not ret:
                     self.__logger.error("Failed to grab frame")
 
-            if frame is None:
+            if frame is None and not self.reconnect_limit_reached():
                 self.__logger.error("Failed to grab frame or frame is None")
                 self.reconnect()
 
@@ -147,23 +209,16 @@ class VideoStreamManager:
         Returns:
             None
         """
+        if self.reconnect_limit_reached():
+            return
+
         self.__logger.warning("Attempting to reconnect to video stream...")
 
         self._release_capture()
+        time.sleep(self.DEFAULT_RECONNECT_DELAY_SEC)
 
-        time.sleep(3)
-        self.__reconnect_count += 1
-
-        try:
-            self.start()
-
-            if self._capture_is_ready():
-                self.__logger.info("Reconnected to video stream successfully")
-                # self.reset_reconnect_count()
-            else:
-                self.__logger.error("Failed to reconnect to video stream")
-        except Exception as e:
-            self.__logger.error(f"Error during reconnect attempt: {e}")
+        if self.connect():
+            self.__logger.info("Reconnected to video stream successfully")
 
     def is_hls(self) -> bool:
         """
@@ -191,7 +246,7 @@ class VideoStreamManager:
 
     def _open_hls_capture(self) -> cv2.VideoCapture:
         previous_options = os.environ.get('OPENCV_FFMPEG_CAPTURE_OPTIONS')
-        os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = _HLS_FFMPEG_OPTIONS
+        os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = self._HLS_FFMPEG_OPTIONS
         try:
             return cv2.VideoCapture(self.__video_stream, cv2.CAP_FFMPEG)
         finally:
@@ -201,22 +256,22 @@ class VideoStreamManager:
                 os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = previous_options
 
     def _warmup_hls_capture(self) -> None:
-        deadline = time.time() + _HLS_WARMUP_TIMEOUT_SEC
+        deadline = time.time() + self._HLS_WARMUP_TIMEOUT_SEC
         while time.time() < deadline:
             ret, frame = self.__cap.read()
             if ret and frame is not None:
                 return
-            time.sleep(_HLS_READ_RETRY_DELAY_SEC)
+            time.sleep(self._HLS_READ_RETRY_DELAY_SEC)
 
         self.__logger.error(f"HLS warmup timed out: {self.__video_stream}")
         raise StreamConnectionError(f"Cannot open video stream: {self.__video_stream}")
 
     def _read_hls_frame(self):
-        for _ in range(_HLS_READ_RETRIES):
+        for _ in range(self._HLS_READ_RETRIES):
             ret, frame = self.__cap.read()
             if ret and frame is not None:
                 return frame
-            time.sleep(_HLS_READ_RETRY_DELAY_SEC)
+            time.sleep(self._HLS_READ_RETRY_DELAY_SEC)
         return None
 
     def _release_capture(self) -> None:

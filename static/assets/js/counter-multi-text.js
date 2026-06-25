@@ -1,7 +1,7 @@
 /**
  * Developed by: Aleksandr Kireev
  * Created: 03.06.2026
- * Updated: 08.06.2026
+ * Updated: 25.06.2026
  * Website: https://bespredel.name
  */
 
@@ -19,6 +19,31 @@ const CounterMultiText = {
     },
 
     /**
+     * Update displayed counts for one counter card
+     *
+     * @param {string} slug - DOM class suffix for this location
+     * @param {object} data - Count payload (current, total)
+     * @returns {void}
+     */
+    applyCounts(slug, data) {
+        if (!slug || !data) {
+            return;
+        }
+
+        const current = Math.max(0, parseInt(data.current, 10) || 0);
+        const total = data.total > 0
+            ? Math.max(0, parseInt(data.total, 10) || 0)
+            : 0;
+
+        document.querySelectorAll(`.current_count_${slug}`).forEach((el) => {
+            el.textContent = current;
+        });
+        document.querySelectorAll(`.total_count_${slug}`).forEach((el) => {
+            el.textContent = total;
+        });
+    },
+
+    /**
      * Bind the socket events
      *
      * @returns {void}
@@ -33,17 +58,7 @@ const CounterMultiText = {
             const slug = item.slug;
 
             window.socket.on(`${location}_count`, (data) => {
-                const current = Math.max(0, parseInt(data.current, 10) || 0);
-                const total = data.total > 0
-                    ? Math.max(0, parseInt(data.total, 10) || 0)
-                    : 0;
-
-                document.querySelectorAll(`.current_count_${slug}`).forEach((el) => {
-                    el.textContent = current;
-                });
-                document.querySelectorAll(`.total_count_${slug}`).forEach((el) => {
-                    el.textContent = total;
-                });
+                CounterMultiText.applyCounts(slug, data);
             });
 
             window.socket.on(`${location}_notification`, (data) => {
@@ -112,6 +127,11 @@ const CounterMultiText = {
      */
     initialize() {
         document.addEventListener("contextmenu", (e) => e.preventDefault());
+
+        this.items().forEach((item) => {
+            this.applyCounts(item.slug, item.counts);
+        });
+
         this.bindSocket();
         this.bindActions();
     },

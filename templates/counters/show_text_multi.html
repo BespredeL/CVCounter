@@ -8,6 +8,7 @@
 {% block content %}
     <div class="multi-counter-view user-select-none" id="multiCounterView">
         {% for item in counters %}
+            {% set counts = item.counts if item.counts is defined else {'total': 0, 'current': 0} %}
             <article class="multi-counter-card" data-location="{{ item.location }}">
                 <header class="multi-counter-card__header">
                     <h2 class="multi-counter-card__title">{{ item.label|title|striptags }}</h2>
@@ -16,12 +17,12 @@
 
                 <div class="multi-counter-card__metric multi-counter-card__metric--current">
                     <span class="multi-counter-card__metric-label">{{ trans('Current batch') }}</span>
-                    <div class="multi-counter-card__value current_count_{{ item.slug }}">0</div>
+                    <div class="multi-counter-card__value current_count_{{ item.slug }}">{{ counts.current }}</div>
                 </div>
 
                 <div class="multi-counter-card__metric multi-counter-card__metric--total">
                     <span class="multi-counter-card__metric-label">{{ trans('Total') }}</span>
-                    <div class="multi-counter-card__value multi-counter-card__value--total total_count_{{ item.slug }}">0</div>
+                    <div class="multi-counter-card__value multi-counter-card__value--total total_count_{{ item.slug }}">{{ counts.total }}</div>
                 </div>
 
                 <footer class="multi-counter-card__actions">

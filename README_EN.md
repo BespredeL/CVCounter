@@ -320,6 +320,8 @@ class ObjectDetectionMy(BaseObjectDetectionService):
         video_show_quality: 50,
         // manual FPS setting (0 - automatic installation)
         video_fps: 0,
+        // max camera connection attempts on start and after stream loss
+        video_reconnect_attempts: 5,
         // confidence threshold
         confidence: 0.7,
         // iou threshold
@@ -385,6 +387,8 @@ class ObjectDetectionMy(BaseObjectDetectionService):
             // quality of video preview
             video_fps: 0,
             // manual FPS setting (optional)
+            // max camera connection attempts (optional, inherits from detection_default)
+            video_reconnect_attempts: 5,
             // model type: yolo | opencv | opencv_dnn | onnx | onnxruntime
             model_type: "yolo",
             // path to model Yolov8
