@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 23.06.2026
+# Updated: 09.07.2026
 # Website: https://bespredel.name
 
 import json
@@ -76,6 +76,8 @@ class ObjectCounter:
         self.current_count: int = 0
         self.defect_count: int = 0
         self.correct_count: int = 0
+        self.pending_defect_count: int = 0
+        self.pending_correct_count: int = 0
         self.frame: Optional[np.ndarray] = None
         self._mjpeg_chunk: bytes | None = None
         self._mjpeg_viewers: int = 0
@@ -237,14 +239,49 @@ class ObjectCounter:
         Return in-memory counts in the same shape as the Socket.IO payload.
 
         Returns:
-            dict: total, current, defect, correct
+            dict: total, current, defect, correct, pending_defect, pending_correct
         """
         return {
             'total': self.total_count - self.defect_count + self.correct_count,
             'current': self.current_count,
             'defect': self.defect_count,
             'correct': self.correct_count,
+            'pending_defect': self.pending_defect_count,
+            'pending_correct': self.pending_correct_count,
         }
+
+    def emit_live_counts(self, force: bool = False) -> None:
+        """
+        Broadcast current counts to all connected clients.
+
+        Args:
+            force (bool): Emit even when the payload is unchanged.
+        """
+        payload = self.get_live_counts()
+        if force or payload != self._last_count_payload:
+            self.notif_manager.emit(f'{self.location}_count', payload)
+            self._last_count_payload = payload
+
+    def set_pending_counts(self, pending_defect: int, pending_correct: int) -> dict:
+        """
+        Update unsaved defect / correct keyboard values and broadcast them.
+
+        Args:
+            pending_defect (int): Pending defect count.
+            pending_correct (int): Pending correct count adjustment.
+
+        Returns:
+            dict: Current live counts payload.
+        """
+        self.pending_defect_count = max(int(pending_defect), 0)
+        self.pending_correct_count = int(pending_correct)
+        self.emit_live_counts(force=True)
+        return self.get_live_counts()
+
+    def clear_pending_counts(self) -> None:
+        """Reset pending keyboard values to zero."""
+        self.pending_defect_count = 0
+        self.pending_correct_count = 0
 
     def get_current_count(self) -> dict:
         """
@@ -286,8 +323,8 @@ class ObjectCounter:
             dict: The total count.
         """
         total_count = int(self.total_count)
-        defect_count = int(defect_count)
-        correct_count = int(correct_count)
+        defect_count = int(self.pending_defect_count)
+        correct_count = int(self.pending_correct_count)
 
         self.defect_count += defect_count
         self.correct_count += correct_count
@@ -317,6 +354,9 @@ class ObjectCounter:
         else:
             self.notif_manager.notify(trans('Save error!'), 'danger')
 
+        self.clear_pending_counts()
+        self.emit_live_counts(force=True)
+
         return dict(total=total_count, defect=defect_count, correct=correct_count)
 
     def reset_count(self, location: str) -> None:
@@ -335,6 +375,7 @@ class ObjectCounter:
         self.current_count = 0
         self.defect_count = 0
         self.correct_count = 0
+        self.clear_pending_counts()
         self._last_count_payload = None
 
         self.db_manager.close_current_count(location)
@@ -344,6 +385,7 @@ class ObjectCounter:
             self.recorder.stop()
 
         self.notif_manager.notify(trans('Counting completed successfully!'), 'primary')
+        self.emit_live_counts(force=True)
 
     def reset_count_current(self, location: str, correct_count: int, defect_count: int) -> None:
         """
@@ -359,8 +401,8 @@ class ObjectCounter:
         """
         current_count = int(self.current_count)
         total_count = int(self.total_count)
-        defect_count = int(defect_count)
-        correct_count = int(correct_count)
+        defect_count = int(self.pending_defect_count)
+        correct_count = int(self.pending_correct_count)
         try:
             self.db_manager.save_part_result(
                 location=location,
@@ -376,9 +418,9 @@ class ObjectCounter:
         self.current_count = 0
         self.defect_count += defect_count
         self.correct_count += correct_count
-        self._last_count_payload = None
+        self.clear_pending_counts()
+        self.emit_live_counts(force=True)
 
-        self.notif_manager.emit(f'{location}_count', {'total': total_count, 'current': 0})
         self.notif_manager.notify(trans('The counter has been reset!'), 'primary')
 
     def start(self) -> None:
@@ -755,15 +797,7 @@ class ObjectCounter:
 
             self.total_count = len(self.total_objects)
 
-        payload = {
-            'total': self.total_count - self.defect_count + self.correct_count,
-            'current': self.current_count,
-            'defect': self.defect_count,
-            'correct': self.correct_count,
-        }
-        if payload != self._last_count_payload:
-            self.notif_manager.emit(f'{self.location}_count', payload)
-            self._last_count_payload = payload
+        self.emit_live_counts()
 
         return image
 

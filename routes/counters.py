@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 03.12.2025
-# Updated: 23.06.2026
+# Updated: 09.07.2026
 # Website: https://bespredel.name
 
 import time
@@ -25,6 +25,7 @@ from system.utils.utils import is_ajax, slug
 from system.utils.validators import (
     ValidationError,
     validate_counting_area_payload,
+    validate_pending_counts_request,
     validate_reset_count_current_request,
     validate_save_count_request,
 )
@@ -308,7 +309,7 @@ def _live_counter_counts(location: str) -> dict:
     if counter is not None:
         return counter.get_live_counts()
 
-    zeros = {'total': 0, 'current': 0, 'defect': 0, 'correct': 0}
+    zeros = {'total': 0, 'current': 0, 'defect': 0, 'correct': 0, 'pending_defect': 0, 'pending_correct': 0}
     row = context['db_manager'].get_current_count(location)
     if row is None:
         return zeros
@@ -324,6 +325,8 @@ def _live_counter_counts(location: str) -> dict:
         'current': 0,
         'defect': _as_int(row.defects_count),
         'correct': _as_int(row.correct_count),
+        'pending_defect': 0,
+        'pending_correct': 0,
     }
 
 
@@ -785,7 +788,7 @@ def save_count(location: str = None) -> dict:
         # Validate request data
         validated_data = validate_save_count_request(location, locations)
 
-        result = object_counters[location].save_count(
+        object_counters[location].save_count(
             location=validated_data['location'],
             correct_count=validated_data['correct_count'],
             defect_count=validated_data['defect_count'],
@@ -793,11 +796,7 @@ def save_count(location: str = None) -> dict:
             active=1
         )
 
-        return {
-            'total_count': result['total'],
-            'defect_count': result['defect'],
-            'correct_count': result['correct']
-        }
+        return object_counters[location].get_live_counts()
     except ValidationError as e:
         abort(400, str(e))
     except KeyError as e:
@@ -805,6 +804,36 @@ def save_count(location: str = None) -> dict:
     except Exception as e:
         from system.utils.logger import Logger
         Logger().error(f"Error in save_count: {e}")
+        abort(500, "Internal server error")
+
+
+@counters_bp.route('/update_pending_counts/<string:location>', methods=['POST'])
+@require_location
+def update_pending_counts(location: str = None) -> dict:
+    """
+    Update unsaved defect / correct keyboard values for a counter.
+
+    Args:
+        location (str): The identifier for the detection location
+
+    Returns:
+        dict: Current live counts payload
+    """
+    context = get_app_context()
+    locations = context['locations']
+    object_counters = context['object_counters']
+
+    try:
+        validated_data = validate_pending_counts_request(location, locations)
+        return object_counters[location].set_pending_counts(
+            validated_data['defect_count'],
+            validated_data['correct_count'],
+        )
+    except ValidationError as e:
+        abort(400, str(e))
+    except Exception as e:
+        from system.utils.logger import Logger
+        Logger().error(f"Error in update_pending_counts: {e}")
         abort(500, "Internal server error")
 
 
@@ -824,7 +853,7 @@ def reset_count(location: str = None) -> dict:
     object_counters = context['object_counters']
 
     object_counters[location].reset_count(location=location)
-    return {'total_count': 0, 'defect_count': 0, 'correct_count': 0}
+    return object_counters[location].get_live_counts()
 
 
 @counters_bp.route('/reset_count_current/<string:location>', methods=['POST'])
@@ -852,7 +881,7 @@ def reset_count_current(location: str = None) -> dict:
             correct_count=validated_data['correct_count'],
             defect_count=validated_data['defect_count']
         )
-        return {'current_count': 0}
+        return object_counters[location].get_live_counts()
     except ValidationError as e:
         abort(400, str(e))
     except KeyError as e:

@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 22.01.2026
-# Updated: 03.06.2026
+# Updated: 09.07.2026
 # Website: https://bespredel.name
 
 import json
@@ -221,7 +221,8 @@ def validate_save_count_request(location: str, available_locations: list[str]) -
     correct_count = validator.validate_integer(
         request.form.get('correct_count'),
         'correct_count',
-        min_value=0,
+        min_value=-9999999,
+        max_value=9999999,
         required=True
     )
 
@@ -229,6 +230,7 @@ def validate_save_count_request(location: str, available_locations: list[str]) -
         request.form.get('defect_count'),
         'defect_count',
         min_value=0,
+        max_value=9999999,
         required=True
     )
 
@@ -271,7 +273,8 @@ def validate_reset_count_current_request(location: str, available_locations: lis
     correct_count = validator.validate_integer(
         request.form.get('correct_count'),
         'correct_count',
-        min_value=0,
+        min_value=-9999999,
+        max_value=9999999,
         required=True
     )
 
@@ -279,6 +282,7 @@ def validate_reset_count_current_request(location: str, available_locations: lis
         request.form.get('defect_count'),
         'defect_count',
         min_value=0,
+        max_value=9999999,
         required=True
     )
 
@@ -286,6 +290,50 @@ def validate_reset_count_current_request(location: str, available_locations: lis
         'location': validated_location,
         'correct_count': correct_count,
         'defect_count': defect_count
+    }
+
+
+def validate_pending_counts_request(location: str, available_locations: list[str]) -> dict[str, Any]:
+    """
+    Validate request data for update_pending_counts endpoint.
+
+    Args:
+        location: Location identifier
+        available_locations: List of available locations
+
+    Returns:
+        dict: Validated data with keys: location, correct_count, defect_count
+
+    Raises:
+        ValidationError: If validation fails
+    """
+    validator = RequestValidator()
+
+    validated_location = validator.validate_location(location, available_locations)
+
+    if not request.form:
+        raise ValidationError("Request must contain form data")
+
+    correct_count = validator.validate_integer(
+        request.form.get('correct_count'),
+        'correct_count',
+        min_value=-9999999,
+        max_value=9999999,
+        required=True
+    )
+
+    defect_count = validator.validate_integer(
+        request.form.get('defect_count'),
+        'defect_count',
+        min_value=0,
+        max_value=9999999,
+        required=True
+    )
+
+    return {
+        'location': validated_location,
+        'correct_count': correct_count,
+        'defect_count': defect_count,
     }
 
 

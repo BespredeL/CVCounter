@@ -43,22 +43,21 @@
 {% endblock %}
 
 {% block footer_assets %}
-    <script src="{{ url_for('static', filename='assets/js/cvcounter-page.js') }}"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            CounterPage.init({
-                location: {{ location|tojson }},
-                isPaused: {{ is_paused|tojson }},
-                counts: {{ initial_counts|tojson }},
-                urls: {
-                    save: {{ url_for('counters.save_count', location=location)|tojson }},
-                    reset: {{ url_for('counters.reset_count', location=location)|tojson }},
-                    resetCurrent: {{ url_for('counters.reset_count_current', location=location)|tojson }},
-                    start: {{ url_for('counters.start_count', location=location)|tojson }},
-                    pause: {{ url_for('counters.pause_count', location=location)|tojson }},
-                    capture: {{ url_for('counters.save_capture', location=location)|tojson }},
-                },
-            });
-        });
+        window.COUNTER_PAGE_OPTIONS = {
+            location: {{ location|tojson }},
+            isPaused: {{ is_paused|tojson }},
+            counts: {{ initial_counts|tojson }},
+            urls: {
+                save: {{ url_for('counters.save_count', location=location)|tojson }},
+                reset: {{ url_for('counters.reset_count', location=location)|tojson }},
+                resetCurrent: {{ url_for('counters.reset_count_current', location=location)|tojson }},
+                pending: {{ url_for('counters.update_pending_counts', location=location)|tojson }},
+                start: {{ url_for('counters.start_count', location=location)|tojson }},
+                pause: {{ url_for('counters.pause_count', location=location)|tojson }},
+                capture: {{ url_for('counters.save_capture', location=location)|tojson }},
+            },
+        };
     </script>
+    <script src="{{ url_for('static', filename='assets/js/cvcounter-page.js') }}"></script>
 {% endblock %}
