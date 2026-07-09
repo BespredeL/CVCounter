@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 08.06.2026
-# Updated: 08.06.2026
+# Updated: 09.07.2026
 # Website: https://bespredel.name
 
 import json
@@ -11,6 +11,23 @@ import os
 from typing import Any
 
 _translations_cache: dict[str, tuple[float, dict]] = {}
+_DEFAULT_LANGUAGE = 'ru'
+
+
+def _get_default_language() -> str:
+    """
+    Return language from config, falling back to 'ru' if config is unavailable.
+
+    Returns:
+        str: The default language code.
+    """
+    try:
+        from system.managers.config_manager import config
+        if config is not None:
+            return config.get('general.default_language', _DEFAULT_LANGUAGE) or _DEFAULT_LANGUAGE
+    except (ImportError, AttributeError):
+        pass
+    return _DEFAULT_LANGUAGE
 
 
 def load_translations(language_code: str) -> dict:
@@ -48,7 +65,7 @@ def trans(text: str, **kwargs: Any) -> str:
 
     Args:
         text: The text to be translated (English key).
-        **kwargs: Language code via 'lang' (default: 'ru') and placeholder replacements.
+        **kwargs: Language code via optional 'lang' override and placeholder replacements.
 
     Returns:
         Translated text with placeholders replaced.
@@ -60,7 +77,7 @@ def trans(text: str, **kwargs: Any) -> str:
         >>> trans('The weather is {weather}', weather='sunny')
         'Погода солнечная'
     """
-    lang = kwargs.pop('lang', 'ru')
+    lang = kwargs.pop('lang', None) or _get_default_language()
 
     lang_list = load_translations(lang)
     if text in lang_list:
