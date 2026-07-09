@@ -1506,6 +1506,46 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
     gap: 0.85rem;
 }
 
+@media (min-width: 992px) {
+    @supports selector(:has(*)) {
+        .settings-layout__form .cv-form-panel,
+        .counter-settings-form__panel {
+            display: block;
+            column-gap: 0.85rem;
+        }
+
+        .settings-layout__form .cv-form-panel > .cv-form-section,
+        .counter-settings-form__panel > .cv-form-section {
+            break-inside: avoid;
+            margin-bottom: 0.85rem;
+            width: 100%;
+        }
+
+        .settings-layout__form .cv-form-section__body:has(> .cv-form-section),
+        .counter-settings-form__panel .cv-form-section__body:has(> .cv-form-section) {
+            display: block;
+            columns: 2;
+            column-gap: 1rem;
+        }
+
+        .settings-layout__form .cv-form-section__body:has(> .cv-form-section) > .cv-form-section,
+        .settings-layout__form .cv-form-section__body:has(> .cv-form-section) > .cv-form-field,
+        .counter-settings-form__panel .cv-form-section__body:has(> .cv-form-section) > .cv-form-section,
+        .counter-settings-form__panel .cv-form-section__body:has(> .cv-form-section) > .cv-form-field {
+            break-inside: avoid;
+            margin-bottom: 0.75rem;
+            width: 100%;
+        }
+
+        .settings-layout__form .cv-form-section__body:has(> .cv-form-section) > .cv-form-field:has(textarea),
+        .settings-layout__form .cv-form-section__body:has(> .cv-form-section) > .cv-form-field:has(.cv-form-toggle),
+        .counter-settings-form__panel .cv-form-section__body:has(> .cv-form-section) > .cv-form-field:has(textarea),
+        .counter-settings-form__panel .cv-form-section__body:has(> .cv-form-section) > .cv-form-field:has(.cv-form-toggle) {
+            column-span: all;
+        }
+    }
+}
+
 .cv-form-section {
     border: 1px solid var(--cv-border);
     border-radius: var(--cv-radius);
@@ -1562,6 +1602,7 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
+    margin-bottom: 0.75rem;
 }
 
 .cv-form-label {
@@ -1736,21 +1777,41 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
 }
 
 @media (min-width: 992px) {
-    .settings-layout__form .cv-form-section__body {
+    .settings-layout__form .cv-form-section__body:not(:has(> .cv-form-section)),
+    .counter-settings-form__panel .cv-form-section__body:not(:has(> .cv-form-section)) {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 0.75rem 1rem;
         align-items: start;
     }
 
-    .settings-layout__form .cv-form-section--nested .cv-form-section__body {
+    .settings-layout__form .cv-form-section--nested .cv-form-section__body,
+    .counter-settings-form__panel .cv-form-section--nested .cv-form-section__body {
         display: flex;
         flex-direction: column;
     }
 
-    .cv-form-field:has(textarea),
-    .cv-form-field:has(.cv-form-toggle) {
+    .settings-layout__form .cv-form-section__body:not(:has(> .cv-form-section)) .cv-form-field:has(textarea),
+    .settings-layout__form .cv-form-section__body:not(:has(> .cv-form-section)) .cv-form-field:has(.cv-form-toggle),
+    .counter-settings-form__panel .cv-form-section__body:not(:has(> .cv-form-section)) .cv-form-field:has(textarea),
+    .counter-settings-form__panel .cv-form-section__body:not(:has(> .cv-form-section)) .cv-form-field:has(.cv-form-toggle) {
         grid-column: 1 / -1;
+    }
+
+    @supports not selector(:has(*)) {
+        .settings-layout__form .cv-form-section__body,
+        .counter-settings-form__panel .cv-form-section__body {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.75rem 1rem;
+            align-items: start;
+        }
+
+        .settings-layout__form .cv-form-section--nested .cv-form-section__body,
+        .counter-settings-form__panel .cv-form-section--nested .cv-form-section__body {
+            display: flex;
+            flex-direction: column;
+        }
     }
 }
 
