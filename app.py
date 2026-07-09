@@ -225,8 +225,6 @@ def register_template_helpers(app: Flask, context: dict):
         Returns:
             str: Translated string
         """
-        if kwargs.get('lang') is None:
-            kwargs['lang'] = config.get('general.default_language', 'ru')
         return translate(string, **kwargs)
 
     @app.template_global()
