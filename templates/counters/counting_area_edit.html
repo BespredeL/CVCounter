@@ -32,6 +32,17 @@
          data-video-url="{{ url_for('counters.counter_video', location=location) }}">
 
         <div class="counting-area-toolbar cv-card p-3 mb-3">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                <div class="btn-group btn-group-sm" role="group" aria-label="{{ trans('Zones') }}">
+                    <button type="button" class="btn btn-outline-primary" id="ca-btn-add-zone" title="{{ trans('Add zone') }}">
+                        {{ trans('Add zone') }}
+                    </button>
+                    <button type="button" class="btn btn-outline-danger" id="ca-btn-delete-zone" title="{{ trans('Delete zone') }}">
+                        {{ trans('Delete zone') }}
+                    </button>
+                </div>
+                <div class="counting-area-zone-list btn-group btn-group-sm flex-wrap" role="group" id="ca-zone-list"></div>
+            </div>
             <div class="d-flex flex-wrap align-items-center gap-2">
                 <div class="btn-group btn-group-sm" role="group">
                     <button type="button" class="btn btn-outline-secondary" id="ca-btn-undo" title="{{ trans('Undo last point') }}">

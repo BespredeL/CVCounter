@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 09.07.2026
+# Updated: 25.07.2026
 # Website: https://bespredel.name
 
 import json
@@ -24,6 +24,11 @@ from system.managers.notification_manager import NotificationManager
 from system.object_detection import load_detector
 from system.core.sort import Sort
 from system.core.timer import Timer
+from system.utils.counting_area import (
+    DEFAULT_COUNTING_AREA_COLOR,
+    areas_to_runtime,
+    normalize_counting_areas,
+)
 from system.utils.exception_handler import StreamConnectionError
 from system.utils.i18n import trans
 from system.managers.video_stream_manager import VideoStreamManager
@@ -264,9 +269,9 @@ class ObjectCounter:
     def _by_class_payload(self) -> list[dict]:
         """Build sorted per-class breakdown for live UI / Socket.IO."""
         class_ids = (
-            set(self.class_counts.keys())
-            | set(self.current_class_counts.keys())
-            | self._configured_class_ids()
+                set(self.class_counts.keys())
+                | set(self.current_class_counts.keys())
+                | self._configured_class_ids()
         )
         return [
             {
@@ -554,24 +559,53 @@ class ObjectCounter:
             self.logger.error(f'Error reading source frame: {e}')
             return None
 
-    def update_counting_area(
-            self,
-            counting_area: List[Tuple[int, int]],
-            counting_area_color: tuple | None = None,
-    ) -> None:
+    def update_counting_areas(self, counting_areas: list | None) -> None:
         """
-        Update counting polygon and invalidate the point-in-polygon mask.
+        Replace all counting zones and invalidate the point-in-polygon mask.
 
         Args:
-            counting_area: Polygon vertices as (x, y) in frame pixel coordinates.
-            counting_area_color: Optional BGR color tuple for the overlay.
+            counting_areas: List of zones ``{'points': [...], 'color': [...]}``.
         """
-        if len(counting_area) < 3:
-            raise ValueError('counting_area must have at least 3 points')
-        self.counting_area = [(int(p[0]), int(p[1])) for p in counting_area]
-        if counting_area_color is not None:
-            self.counting_area_color = tuple(int(c) for c in counting_area_color)
+        normalized = normalize_counting_areas({'counting_areas': counting_areas or []})
+        runtime = areas_to_runtime(normalized)
+        if not runtime:
+            raise ValueError('counting_areas must contain at least one zone with 3+ points')
+
+        self.counting_areas = runtime
+        self.counting_area = list(runtime[0]['points'])
+        self.counting_area_color = tuple(runtime[0]['color'])
         self._counting_mask = None
+
+    def update_counting_area(
+            self,
+            counting_area: List[Tuple[int, int]] | None = None,
+            counting_area_color: tuple | None = None,
+            counting_areas: list | None = None,
+    ) -> None:
+        """
+        Update counting polygon(s) and invalidate the point-in-polygon mask.
+
+        Args:
+            counting_area: Legacy single polygon vertices as (x, y).
+            counting_area_color: Optional BGR color tuple for the first/legacy zone.
+            counting_areas: Preferred multi-zone payload.
+        """
+        if counting_areas is not None:
+            self.update_counting_areas(counting_areas)
+            return
+
+        if counting_area is None or len(counting_area) < 3:
+            raise ValueError('counting_area must have at least 3 points')
+
+        color = (
+            tuple(int(c) for c in counting_area_color)
+            if counting_area_color is not None
+            else tuple(self.counting_area_color or DEFAULT_COUNTING_AREA_COLOR)
+        )
+        self.update_counting_areas([{
+            'points': [(int(p[0]), int(p[1])) for p in counting_area],
+            'color': list(color),
+        }])
 
     def save_capture(self) -> None:
         """
@@ -628,8 +662,9 @@ class ObjectCounter:
             - self.confidence (float): The confidence threshold for object detection.
             - self.iou (float): The IoU threshold for object detection.
             - self.video_fps (int): The frame rate of the video.
-            - self.counting_area (list): The coordinates of the counting area.
-            - self.counting_area_color (tuple): The color of the counting area.
+            - self.counting_areas (list): Counting zones with points and colors.
+            - self.counting_area (list): Legacy alias of the first zone points.
+            - self.counting_area_color (tuple): Legacy alias of the first zone color.
             - self.video_scale (int): The scale of the video.
             - self.video_quality (int): The quality of the video.
             - self.indicator_size (int): The size of the indicator.
@@ -661,8 +696,21 @@ class ObjectCounter:
                                                                               detection_default.get('confidence',
                                                                                                     self.DEFAULT_CONFIDENCE)))
         self.iou: float = kwargs.get('iou', detector_config.get('iou', detection_default.get('iou', self.DEFAULT_IOU)))
-        self.counting_area: List[Tuple[int, int]] = kwargs.get('counting_area', detector_config.get('counting_area'))
-        self.counting_area_color: tuple = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
+        counting_areas = normalize_counting_areas(
+            detector_config,
+            counting_areas=kwargs.get('counting_areas'),
+            counting_area=kwargs.get('counting_area'),
+            counting_area_color=kwargs.get('counting_area_color'),
+        )
+        runtime_areas = areas_to_runtime(counting_areas)
+        if not runtime_areas:
+            runtime_areas = [{
+                'points': [(0, 0), (100, 0), (100, 100), (0, 100)],
+                'color': tuple(DEFAULT_COUNTING_AREA_COLOR),
+            }]
+        self.counting_areas: list[dict] = runtime_areas
+        self.counting_area: List[Tuple[int, int]] = list(runtime_areas[0]['points'])
+        self.counting_area_color: tuple = tuple(runtime_areas[0]['color'])
         self.video_fps: int = detector_config.get('video_fps', detection_default.get("video_fps"))
         self.video_reconnect_attempts: int = int(detector_config.get('video_reconnect_attempts',
                                                                      detection_default.get('video_reconnect_attempts',
@@ -765,7 +813,7 @@ class ObjectCounter:
 
     def _draw_counting_area(self, image: np.ndarray) -> np.ndarray:
         """
-        Draws a counting area on the given image.
+        Draws all counting zones on the given image.
 
         Args:
             image (numpy.ndarray): The image on which the counting area should be drawn.
@@ -774,10 +822,18 @@ class ObjectCounter:
             numpy.ndarray: The image with the counting area drawn on it.
         """
         overlay = image.copy()
+        zones = self.counting_areas or [{
+            'points': self.counting_area,
+            'color': self.counting_area_color,
+        }]
 
-        # Polygon corner points coordinates
-        pts = np.array(self.counting_area, np.int32).reshape((-1, 1, 2))
-        cv2.fillPoly(overlay, [pts], self.counting_area_color)
+        for zone in zones:
+            points = zone.get('points') or []
+            if len(points) < 3:
+                continue
+            pts = np.array(points, np.int32).reshape((-1, 1, 2))
+            color = tuple(zone.get('color') or self.counting_area_color or DEFAULT_COUNTING_AREA_COLOR)
+            cv2.fillPoly(overlay, [pts], color)
 
         return cv2.addWeighted(overlay, self.DEFAULT_POLYGON_ALPHA, image, 1 - self.DEFAULT_POLYGON_ALPHA, 0)
 
@@ -808,8 +864,18 @@ class ObjectCounter:
 
         height, width = frame_shape[:2]
         mask: np.ndarray = np.zeros((height, width), dtype=np.uint8)
-        pts: np.ndarray = np.asarray(self.counting_area, dtype=np.int32).reshape((-1, 1, 2))
-        cv2.fillPoly(mask, [pts], 1)
+        zones = self.counting_areas or [{
+            'points': self.counting_area,
+            'color': self.counting_area_color,
+        }]
+
+        for zone in zones:
+            points = zone.get('points') or []
+            if len(points) < 3:
+                continue
+            pts = np.asarray(points, dtype=np.int32).reshape((-1, 1, 2))
+            cv2.fillPoly(mask, [pts], 1)
+
         self._counting_mask = mask.astype(bool)
 
     def _detect_count(self, image: np.ndarray, boxes: list | np.ndarray) -> np.ndarray:

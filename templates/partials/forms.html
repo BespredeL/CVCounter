@@ -19,12 +19,12 @@
             </div>
         </section>
     {% else %}
-        {% if key == 'counting_area_color' and prefix.startswith('detections-') %}
-        {# Zone color is saved only via the visual zone editor #}
+        {% if key in ('counting_area_color', 'counting_areas') and prefix.startswith('detections-') %}
+        {# Zones are saved only via the visual zone editor #}
         {% elif key == 'counting_area' and prefix.startswith('detections-') %}
             {% set detection_location = prefix.replace('detections-', '').rstrip('-') %}
             <div class="cv-form-field">
-                <span class="cv-form-label">{{ trans(key.replace('_', ' ')|title) }}</span>
+                <span class="cv-form-label">{{ trans('Counting zone') }}</span>
                 <p class="cv-form-hint mb-2">{{ trans('Configure the polygon on a live video frame') }}</p>
                 <a class="btn btn-outline-primary btn-sm"
                    href="{{ url_for('counters.counting_area_edit', location=detection_location) }}"

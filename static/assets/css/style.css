@@ -1189,6 +1189,14 @@ body.app-body--counter {
     z-index: 3;
 }
 
+.counting-area-zone-list {
+    gap: 0.25rem;
+}
+
+.counting-area-zone-list .btn {
+    border-radius: 0.375rem !important;
+}
+
 .img-container img {
     max-width: 100%;
     max-height: 100%;
