@@ -15,11 +15,12 @@ It is perfectly suited for **counting products, people, vehicle tracking, retail
 ## ✨ Features
 
 - 🎯 Real-time object detection
-- 🔢 Object counting (in zone)
+- 🔢 Object counting in one or more zones
+- 🏷️ Per-class count breakdown (current batch / total)
 - 🧠 Object tracking (multi-object tracking)
 - 🎥 Support for video streams (RTSP, webcam, files)
 - ⚡ Optimized for real-time performance
-- 📊 Analytics-ready output
+- 📊 Analytics-ready output and reports with per-class totals
 - 🧩 Modular architecture with a detector registry
 - 🧠 Multiple backends: Ultralytics YOLO, OpenCV DNN, ONNX Runtime
 
@@ -41,8 +42,8 @@ It is perfectly suited for **counting products, people, vehicle tracking, retail
 1. Video stream is captured
 2. Object detection model processes frames
 3. Tracker assigns IDs to objects
-4. Objects crossing a defined zone are counted
-5. Results are stored or displayed
+4. Objects entering any counting zone are counted
+5. Totals, batches, and per-class breakdown are shown and can be saved to reports
 
 ---
 
@@ -205,7 +206,7 @@ yolo export model=config/ultralytics/models/yolov8n.pt format=onnx
 | `confidence`, `iou` | all            | Detection thresholds                                    |
 | `device`            | YOLO, ONNX     | Device (`0`, `cpu`, etc.)                               |
 | `vid_stride`        | YOLO           | Frame stride during inference                           |
-| `classes`           | all            | Class filter `{ "0": "person" }`                        |
+| `classes`           | all            | Class filter and UI labels `{ "0": "person" }` (shown in "By class") |
 
 ### Adding a custom detector
 
@@ -332,32 +333,18 @@ class ObjectDetectionMy(BaseObjectDetectionService):
         vid_stride: 1,
         // size of indicator
         indicator_size: 10,
-        // counting area polygon
-        counting_area: [
-            [
-                0,
-                0
-            ],
-            [
-                100,
-                0
-            ],
-            [
-                100,
-                100
-            ],
-            [
-                0,
-                100
-            ],
+        // counting zones (preferred; one or more polygons)
+        counting_areas: [
+            {
+                points: [[0, 0], [100, 0], [100, 100], [0, 100]],
+                color: [67, 211, 255], // BGR
+            },
         ],
-        // color of counting area
-        counting_area_color: [
-            67,
-            211,
-            255
-        ],
-        // classes to detect (leave empty for all classes)
+        // legacy: first zone (kept in sync when saving from the zone editor)
+        counting_area: [[0, 0], [100, 0], [100, 100], [0, 100]],
+        counting_area_color: [67, 211, 255],
+        // classes to detect and labels for the "By class" UI (empty = all classes)
+        // example: { "0": "Product 1", "1": "Product 2" }
         classes: {},
         // video recording configuration for all recognitions
         recording: {
@@ -402,34 +389,17 @@ class ObjectDetectionMy(BaseObjectDetectionService):
             vid_stride: 1,
             // video stream stride
             indicator_size: 10,
-            // size of indicator
-            counting_area: [
-                [
-                    0,
-                    0
-                ],
-                [
-                    100,
-                    0
-                ],
-                [
-                    100,
-                    100
-                ],
-                [
-                    0,
-                    100
-                ],
+            // counting zones (object is counted when entering any zone)
+            counting_areas: [
+                {
+                    points: [[0, 0], [100, 0], [100, 100], [0, 100]],
+                    color: [255, 64, 0],
+                },
             ],
-            // counting area polygon
-            counting_area_color: [
-                255,
-                64,
-                0
-            ],
-            // color of counting area
+            counting_area: [[0, 0], [100, 0], [100, 100], [0, 100]],
+            counting_area_color: [255, 64, 0],
+            // classes to detect and labels for the per-class breakdown
             classes: {},
-            // classes to detect (leave empty for all classes)
             dataset_create: {
                 // automatic dataset creation
                 enable: true,
