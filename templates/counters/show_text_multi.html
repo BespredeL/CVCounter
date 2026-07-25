@@ -25,6 +25,40 @@
                     <div class="multi-counter-card__value multi-counter-card__value--total total_count_{{ item.slug }}">{{ counts.total }}</div>
                 </div>
 
+                {% set by_class = counts.get('by_class', []) %}
+                <div class="multi-counter-card__classes">
+                    <button class="btn btn-sm btn-link text-decoration-none multi-counter-card__classes-toggle"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#byClass_{{ item.slug }}"
+                            aria-expanded="false"
+                            aria-controls="byClass_{{ item.slug }}">
+                        <span>{{ trans('By class') }}</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                             class="bi bi-chevron-down multi-counter-card__classes-chevron" viewBox="0 0 16 16" aria-hidden="true">
+                            <path fill-rule="evenodd"
+                                  d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/>
+                        </svg>
+                    </button>
+                    <div class="collapse" id="byClass_{{ item.slug }}">
+                        <ul class="multi-counter-card__class-list list-unstyled mb-0 by_class_list_{{ item.slug }}">
+                            {% for class_item in by_class %}
+                                <li class="multi-counter-card__class-item d-flex justify-content-between gap-2">
+                                    <span class="text-truncate" title="{{ class_item.name }}">{{ class_item.name }}</span>
+                                    <span class="text-nowrap multi-counter-card__class-values">
+                                        <span>{{ class_item.current }}</span>
+                                        <span class="opacity-75">/</span>
+                                        <span class="opacity-75">{{ class_item.total }}</span>
+                                    </span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                        <div class="multi-counter-card__class-empty small text-muted{{ '' if not by_class else ' d-none' }} by_class_empty_{{ item.slug }}">
+                            {{ trans('No class data') }}
+                        </div>
+                    </div>
+                </div>
+
                 <footer class="multi-counter-card__actions">
                     <div class="multi-counter-card__action-group">
                         <button type="button" class="btn btn-primary btn-lg btn_reset_current"

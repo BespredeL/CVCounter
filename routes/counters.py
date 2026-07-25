@@ -302,14 +302,22 @@ def _live_counter_counts(location: str) -> dict:
         location: Detection location identifier.
 
     Returns:
-        dict: Keys total, current, defect, correct.
+        dict: Keys total, current, defect, correct, by_class.
     """
     context = get_app_context()
     counter = context['object_counters'].get(location)
     if counter is not None:
         return counter.get_live_counts()
 
-    zeros = {'total': 0, 'current': 0, 'defect': 0, 'correct': 0, 'pending_defect': 0, 'pending_correct': 0}
+    zeros = {
+        'total': 0,
+        'current': 0,
+        'defect': 0,
+        'correct': 0,
+        'pending_defect': 0,
+        'pending_correct': 0,
+        'by_class': [],
+    }
     row = context['db_manager'].get_current_count(location)
     if row is None:
         return zeros
@@ -327,6 +335,7 @@ def _live_counter_counts(location: str) -> dict:
         'correct': _as_int(row.correct_count),
         'pending_defect': 0,
         'pending_correct': 0,
+        'by_class': [],
     }
 
 

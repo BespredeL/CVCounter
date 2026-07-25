@@ -12,13 +12,14 @@ const CounterPage = {
     /**
      * Last committed count payload from the server.
      *
-     * @type {{total: number, current: number, defect: number, correct: number}}
+     * @type {{total: number, current: number, defect: number, correct: number, by_class: Array<object>}}
      */
     _baseCounts: {
         total: 0,
         current: 0,
         defect: 0,
         correct: 0,
+        by_class: [],
     },
 
     /**
@@ -300,6 +301,58 @@ const CounterPage = {
         if (correctEl) {
             correctEl.textContent = correctCount + (data.correct || 0);
         }
+
+        this.renderByClass(data.by_class || []);
+    },
+
+    /**
+     * Render per-class breakdown list in the sidebar.
+     *
+     * @param {Array<{name?: string, current?: number, total?: number}>} items - Class counts
+     * @returns {void}
+     */
+    renderByClass(items) {
+        const listEl = document.getElementById("by_class_list");
+        const emptyEl = document.getElementById("by_class_empty");
+        if (!listEl) {
+            return;
+        }
+
+        const rows = Array.isArray(items) ? items : [];
+        listEl.replaceChildren();
+
+        rows.forEach((item) => {
+            const li = document.createElement("li");
+            li.className = "class-count-item d-flex justify-content-between align-items-baseline gap-2";
+
+            const name = document.createElement("span");
+            name.className = "class-count-name text-truncate";
+            name.textContent = item.name || "";
+            name.title = item.name || "";
+
+            const values = document.createElement("span");
+            values.className = "class-count-values text-nowrap";
+
+            const current = document.createElement("span");
+            current.className = "class-count-current";
+            current.textContent = String(item.current || 0);
+
+            const sep = document.createElement("span");
+            sep.className = "class-count-sep opacity-75";
+            sep.textContent = " / ";
+
+            const total = document.createElement("span");
+            total.className = "class-count-total opacity-75";
+            total.textContent = String(item.total || 0);
+
+            values.append(current, sep, total);
+            li.append(name, values);
+            listEl.append(li);
+        });
+
+        if (emptyEl) {
+            emptyEl.classList.toggle("d-none", rows.length > 0);
+        }
     },
 
     /**
@@ -318,6 +371,7 @@ const CounterPage = {
             current: data.current || 0,
             defect: data.defect || 0,
             correct: data.correct || 0,
+            by_class: data.by_class || [],
         };
 
         this._setInputValueSilently("#defect_keyboard input", data.pending_defect ?? 0);

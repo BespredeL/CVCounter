@@ -63,6 +63,27 @@
             </div>
         </div>
 
+        {% set class_counts = json.loads(counter.class_counts) if counter.class_counts else [] %}
+        {% if class_counts %}
+            <div class="cv-card p-3 p-md-4 mb-4">
+                <h2 class="section-block__title">{{ trans('By class') }}</h2>
+                <div class="detail-list">
+                    {% for item in class_counts %}
+                        <div class="detail-list__row">
+                            <div class="detail-list__label">{{ item.name|striptags }}</div>
+                            <div class="detail-list__value">
+                                {% if item.current is defined %}
+                                    {{ item.current }} / {{ item.total }}
+                                {% else %}
+                                    {{ item.total if item.total is defined else item.count }}
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
         {% if counter.custom_fields %}
             <div class="cv-card p-3 p-md-4 mb-4">
                 <h2 class="section-block__title">{{ trans('Secondary information') }}</h2>
@@ -86,9 +107,28 @@
                     <div class="report-parts-block">
                         <div class="detail-list__label mb-2">{{ trans('Part {index}', index=loop.index) }}</div>
                         <ul class="list-unstyled mb-0 ps-0">
-                            {% for field, value in part.items() %}
-                                <li class="mb-1"><span class="text-body-secondary">{{ trans(field) }}:</span> {{ value | striptags }}</li>
+                            {% for field, value in part.items() if field != 'by_class' %}
+                                <li class="mb-1">
+                                    <span class="text-body-secondary">{{ trans(field) }}:</span> {{ value | striptags }}
+                                </li>
                             {% endfor %}
+                            {% if part.get('by_class') %}
+                                <li class="mb-1 mt-2">
+                                    <span class="text-body-secondary">{{ trans('By class') }}:</span>
+                                    <ul class="list-unstyled ms-3 mb-0 mt-1">
+                                        {% for item in part.by_class %}
+                                            <li class="mb-1">
+                                                {{ item.name|striptags }} —
+                                                {% if item.current is defined %}
+                                                    {{ item.current }} / {{ item.total }}
+                                                {% else %}
+                                                    {{ item.total if item.total is defined else item.count }}
+                                                {% endif %}
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </li>
+                            {% endif %}
                         </ul>
                     </div>
                 {% endfor %}
