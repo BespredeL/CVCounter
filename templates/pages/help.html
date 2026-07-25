@@ -203,15 +203,35 @@
                         <td class="align-middle">
                             <div class="sidebar-counter-tile text-dark position-relative my-2 px-3 py-2"
                                  style="width: 100%; max-width: 250px">
-                                <div class="h4 mb-0">{{ trans('Quantity:') }} <span>1000</span></div>
-                                <div class="display-1 lh-1">9999</div>
+                                <div class="h4 mb-0">{{ trans('Quantity:') }} <span>300</span></div>
+                                <div class="display-1 lh-1">50</div>
                                 <div class="h5 d-flex flex-wrap justify-content-between w-100 mt-2 pb-1 border-top border-dark">
                                     <div>{{ trans('Defective products') }}: <span>0</span></div>
                                     <div>{{ trans('Corr.') }}: <span>0</span></div>
                                 </div>
+                                <div class="class-count-panel mt-2 pt-1 border-top border-dark">
+                                    <div class="d-flex justify-content-between align-items-center small fw-semibold">
+                                        <span>{{ trans('By class') }}</span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                                             class="bi bi-chevron-down" viewBox="0 0 16 16" aria-hidden="true">
+                                            <path fill-rule="evenodd"
+                                                  d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/>
+                                        </svg>
+                                    </div>
+                                    <ul class="class-count-list list-unstyled mb-0 mt-1 small">
+                                        <li class="d-flex justify-content-between gap-2">
+                                            <span>{{ trans('Help class example 1') }}</span>
+                                            <span class="text-nowrap"><span>30</span><span class="opacity-75"> / 200</span></span>
+                                        </li>
+                                        <li class="d-flex justify-content-between gap-2">
+                                            <span>{{ trans('Help class example 2') }}</span>
+                                            <span class="text-nowrap"><span>20</span><span class="opacity-75"> / 100</span></span>
+                                        </li>
+                                    </ul>
+                                </div>
                             </div>
                         </td>
-                        <td>{{ trans('Show the current and total count') }}</td>
+                        <td>{{ trans('Help counter totals') }}</td>
                     </tr>
                     <tr>
                         <td class="align-middle">
@@ -423,6 +443,12 @@
                     <tbody>
                     <tr>
                         <td class="align-middle">
+                            <div class="d-flex flex-wrap gap-1 mb-2">
+                                <span class="btn btn-outline-primary btn-sm">{{ trans('Add zone') }}</span>
+                                <span class="btn btn-outline-danger btn-sm">{{ trans('Delete zone') }}</span>
+                                <span class="btn btn-primary btn-sm">{{ trans('Zone {index}', index=1) }}</span>
+                                <span class="btn btn-outline-secondary btn-sm">{{ trans('Zone {index}', index=2) }}</span>
+                            </div>
                             <div class="d-flex flex-wrap gap-1">
                                 <span class="btn btn-outline-secondary btn-sm">{{ trans('Undo') }}</span>
                                 <span class="btn btn-outline-secondary btn-sm">{{ trans('Clear') }}</span>
@@ -462,6 +488,26 @@
                                 <div class="multi-counter-card__metric multi-counter-card__metric--total">
                                     <span class="multi-counter-card__metric-label">{{ trans('Total') }}</span>
                                     <div class="multi-counter-card__value multi-counter-card__value--total">1000</div>
+                                </div>
+                                <div class="multi-counter-card__classes">
+                                    <div class="multi-counter-card__classes-toggle small">
+                                        <span>{{ trans('By class') }}</span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                                             class="bi bi-chevron-down" viewBox="0 0 16 16" aria-hidden="true">
+                                            <path fill-rule="evenodd"
+                                                  d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/>
+                                        </svg>
+                                    </div>
+                                    <ul class="multi-counter-card__class-list list-unstyled mb-0">
+                                        <li class="multi-counter-card__class-item d-flex justify-content-between gap-2">
+                                            <span>{{ trans('Help class example 1') }}</span>
+                                            <span class="multi-counter-card__class-values">20 / 600</span>
+                                        </li>
+                                        <li class="multi-counter-card__class-item d-flex justify-content-between gap-2">
+                                            <span>{{ trans('Help class example 2') }}</span>
+                                            <span class="multi-counter-card__class-values">22 / 400</span>
+                                        </li>
+                                    </ul>
                                 </div>
                                 <footer class="multi-counter-card__actions">
                                     <div class="multi-counter-card__action-group">
