@@ -209,26 +209,26 @@
                                     <div>{{ trans('Defective products') }}: <span>0</span></div>
                                     <div>{{ trans('Corr.') }}: <span>0</span></div>
                                 </div>
-                                <div class="class-count-panel mt-2 pt-1 border-top border-dark">
-                                    <div class="d-flex justify-content-between align-items-center small fw-semibold">
-                                        <span>{{ trans('By class') }}</span>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
-                                             class="bi bi-chevron-down" viewBox="0 0 16 16" aria-hidden="true">
-                                            <path fill-rule="evenodd"
-                                                  d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/>
-                                        </svg>
-                                    </div>
-                                    <ul class="class-count-list list-unstyled mb-0 mt-1 small">
-                                        <li class="d-flex justify-content-between gap-2">
-                                            <span>{{ trans('Help class example 1') }}</span>
-                                            <span class="text-nowrap"><span>30</span><span class="opacity-75"> / 200</span></span>
-                                        </li>
-                                        <li class="d-flex justify-content-between gap-2">
-                                            <span>{{ trans('Help class example 2') }}</span>
-                                            <span class="text-nowrap"><span>20</span><span class="opacity-75"> / 100</span></span>
-                                        </li>
-                                    </ul>
+                            </div>
+                            <div class="cv-panel class-count-panel my-2" style="max-width: 250px">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="h5 mb-0">{{ trans('By class') }}</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                                         class="bi bi-chevron-down" viewBox="0 0 16 16" aria-hidden="true">
+                                        <path fill-rule="evenodd"
+                                              d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/>
+                                    </svg>
                                 </div>
+                                <ul class="class-count-list list-unstyled mb-0 mt-2 small">
+                                    <li class="d-flex justify-content-between gap-2">
+                                        <span>{{ trans('Help class example 1') }}</span>
+                                        <span class="text-nowrap"><span>30</span><span class="opacity-75"> / 200</span></span>
+                                    </li>
+                                    <li class="d-flex justify-content-between gap-2">
+                                        <span>{{ trans('Help class example 2') }}</span>
+                                        <span class="text-nowrap"><span>20</span><span class="opacity-75"> / 100</span></span>
+                                    </li>
+                                </ul>
                             </div>
                         </td>
                         <td>{{ trans('Help counter totals') }}</td>

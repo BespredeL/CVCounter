@@ -1013,30 +1013,30 @@ body.app-body--counter-dual .app-topbar {
     font-variant-numeric: tabular-nums;
 }
 
-.sidebar-counter-tile .class-count-toggle {
-    font-size: 0.95rem;
+.sidebar-right .class-count-panel .class-count-toggle {
     font-weight: 600;
+    color: inherit;
 }
 
-.sidebar-counter-tile .class-count-toggle[aria-expanded="true"] .class-count-chevron {
+.sidebar-right .class-count-panel .class-count-toggle[aria-expanded="true"] .class-count-chevron {
     transform: rotate(180deg);
 }
 
-.sidebar-counter-tile .class-count-chevron {
+.sidebar-right .class-count-panel .class-count-chevron {
     transition: transform 0.15s ease;
     flex-shrink: 0;
 }
 
-.sidebar-counter-tile .class-count-list {
+.sidebar-right .class-count-panel .class-count-list {
     font-size: 0.95rem;
     line-height: 1.35;
 }
 
-.sidebar-counter-tile .class-count-item + .class-count-item {
+.sidebar-right .class-count-panel .class-count-item + .class-count-item {
     margin-top: 0.2rem;
 }
 
-.sidebar-counter-tile .class-count-values {
+.sidebar-right .class-count-panel .class-count-values {
     font-family: var(--cv-font-mono);
     font-variant-numeric: tabular-nums;
     font-weight: 600;

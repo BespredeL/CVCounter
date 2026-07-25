@@ -301,7 +301,7 @@
     "Help numpad description": "Physical NumPad on the correction field: digits 0–9 build a value, + confirms, − undoes the last digit.",
     "Help counting zone editor": "Add several zones if needed, switch the active zone, draw polygons (points, drag, rectangle), set a color per zone, then save. Objects are counted in any zone.",
     "Help multi counter card": "Shared fullscreen view: current batch, total, and expandable per-class counts; reset current batch or full total.",
-    "Help counter totals": "Total quantity, current batch, defect/correction adjustments, and an expandable By class list (batch / total for each detection class).",
+    "Help counter totals": "Total quantity and current batch on the counter tile. Expandable By class list sits in the right sidebar above the defect pad (batch / total for each detection class).",
     "Help class example 1": "Product 1",
     "Help class example 2": "Product 2",
     "Help toolbar": "Bottom toolbar"
