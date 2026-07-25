@@ -82,28 +82,16 @@
         "video_show_quality": 50,
         "video_fps": 0,
         "video_reconnect_attempts": 5,
-        "counting_area": [
-            [
-                0,
-                0
-            ],
-            [
-                100,
-                0
-            ],
-            [
-                100,
-                100
-            ],
-            [
-                0,
-                100
-            ]
-        ],
-        "counting_area_color": [
-            67,
-            211,
-            255
+        "counting_areas": [
+            {
+                "points": [
+                    [0, 0],
+                    [100, 0],
+                    [100, 100],
+                    [0, 100]
+                ],
+                "color": [67, 211, 255]
+            }
         ],
         "classes": {},
         "recording": {
@@ -129,28 +117,16 @@
             "video_show_quality": 30,
             "video_fps": 0,
             "video_reconnect_attempts": 5,
-            "counting_area": [
-                [
-                    0,
-                    0
-                ],
-                [
-                    100,
-                    0
-                ],
-                [
-                    100,
-                    100
-                ],
-                [
-                    0,
-                    100
-                ]
-            ],
-            "counting_area_color": [
-                255,
-                64,
-                0
+            "counting_areas": [
+                {
+                    "points": [
+                        [0, 0],
+                        [100, 0],
+                        [100, 100],
+                        [0, 100]
+                    ],
+                    "color": [255, 64, 0]
+                }
             ],
             "classes": {},
             "dataset_create": {

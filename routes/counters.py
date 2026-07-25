@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 03.12.2025
-# Updated: 09.07.2026
+# Updated: 25.07.2026
 # Website: https://bespredel.name
 
 import time
@@ -17,6 +17,7 @@ from markupsafe import escape
 
 from system.core.object_counter import ObjectCounter
 from system.managers.video_stream_manager import VideoStreamManager
+from system.utils.counting_area import DEFAULT_COUNTING_AREA_COLOR, areas_for_config, normalize_counting_areas
 from system.utils.counter_preview import get_preview_path, save_counter_preview
 from system.utils.frame_utils import FrameUtils
 from system.utils.i18n import trans as translate
@@ -105,8 +106,11 @@ def object_detector_init(location: str):
             video_path=detector_config['video_path'],
             db_manager=db_manager,
             weights=detector_config['weights_path'],
-            counting_area=detector_config['counting_area'],
-            counting_area_color=tuple(detector_config['counting_area_color']),
+            counting_areas=detector_config.get('counting_areas'),
+            counting_area=detector_config.get('counting_area'),
+            counting_area_color=tuple(
+                detector_config.get('counting_area_color', DEFAULT_COUNTING_AREA_COLOR)
+            ),
         )
     except Exception:
         if counter is not None:
@@ -302,14 +306,22 @@ def _live_counter_counts(location: str) -> dict:
         location: Detection location identifier.
 
     Returns:
-        dict: Keys total, current, defect, correct.
+        dict: Keys total, current, defect, correct, by_class.
     """
     context = get_app_context()
     counter = context['object_counters'].get(location)
     if counter is not None:
         return counter.get_live_counts()
 
-    zeros = {'total': 0, 'current': 0, 'defect': 0, 'correct': 0, 'pending_defect': 0, 'pending_correct': 0}
+    zeros = {
+        'total': 0,
+        'current': 0,
+        'defect': 0,
+        'correct': 0,
+        'pending_defect': 0,
+        'pending_correct': 0,
+        'by_class': [],
+    }
     row = context['db_manager'].get_current_count(location)
     if row is None:
         return zeros
@@ -327,6 +339,7 @@ def _live_counter_counts(location: str) -> dict:
         'correct': _as_int(row.correct_count),
         'pending_defect': 0,
         'pending_correct': 0,
+        'by_class': [],
     }
 
 
@@ -417,9 +430,12 @@ def counting_area_data(location: str = None):
     _require_detection_location(location)
 
     detector_config = config.get(f'detections.{location}', {})
+    areas = normalize_counting_areas(detector_config)
+    legacy = areas_for_config(areas)
     return jsonify({
-        'counting_area': detector_config.get('counting_area', []),
-        'counting_area_color': detector_config.get('counting_area_color', [67, 211, 255]),
+        'counting_areas': legacy['counting_areas'],
+        'counting_area': legacy['counting_area'],
+        'counting_area_color': legacy['counting_area_color'],
     })
 
 
@@ -487,7 +503,7 @@ def counter_settings_save(location: str = None):
     _require_detection_location(location)
 
     prefix = f'detections-{location}-'
-    zone_field_suffixes = ('counting_area', 'counting_area_color')
+    zone_field_suffixes = ('counting_area', 'counting_area_color', 'counting_areas')
     form_data = {
         key: value
         for key, value in request.form.items()
@@ -501,13 +517,10 @@ def counter_settings_save(location: str = None):
 
     counter = object_counters.get(location)
     if counter is not None:
-        counting_area = config.get(f'detections.{location}.counting_area')
-        counting_area_color = config.get(f'detections.{location}.counting_area_color')
-        if counting_area is not None:
-            if counting_area_color is not None:
-                counter.update_counting_area(counting_area, tuple(counting_area_color))
-            else:
-                counter.update_counting_area(counting_area)
+        detector_config = config.get(f'detections.{location}', {})
+        areas = normalize_counting_areas(detector_config)
+        if areas:
+            counter.update_counting_areas(areas)
 
     if is_ajax():
         return jsonify({
@@ -579,26 +592,21 @@ def counting_area_save(location: str = None):
     except ValidationError as e:
         abort(400, str(e))
 
-    counting_area = payload['counting_area']
-    config.set(f'detections.{location}.counting_area', counting_area)
-    if 'counting_area_color' in payload:
-        config.set(f'detections.{location}.counting_area_color', payload['counting_area_color'])
+    counting_areas = payload['counting_areas']
+    legacy = areas_for_config(counting_areas)
+    config.set(f'detections.{location}.counting_areas', legacy['counting_areas'])
+    config.set(f'detections.{location}.counting_area', legacy['counting_area'])
+    config.set(f'detections.{location}.counting_area_color', legacy['counting_area_color'])
     config.save_config()
 
     if location in object_counters:
-        color = payload.get('counting_area_color')
-        if color is not None:
-            object_counters[location].update_counting_area(counting_area, tuple(color))
-        else:
-            object_counters[location].update_counting_area(counting_area)
+        object_counters[location].update_counting_areas(counting_areas)
 
     return jsonify({
         'status': 'saved',
-        'counting_area': counting_area,
-        'counting_area_color': payload.get(
-            'counting_area_color',
-            config.get(f'detections.{location}.counting_area_color'),
-        ),
+        'counting_areas': legacy['counting_areas'],
+        'counting_area': legacy['counting_area'],
+        'counting_area_color': legacy['counting_area_color'],
     })
 
 

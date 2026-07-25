@@ -1,7 +1,7 @@
 /**
  * Developed by: Aleksandr Kireev
  * Created: 03.06.2026
- * Updated: 04.06.2026
+ * Updated: 25.07.2026
  * Website: https://bespredel.name
  */
 
@@ -19,6 +19,20 @@ const COUNTING_AREA_HIT_RADIUS = 12;
  * @type {number}
  */
 const COUNTING_AREA_MIN_POINTS = 3;
+
+/**
+ * Default BGR palette for newly added zones
+ *
+ * @type {number[][]}
+ */
+const COUNTING_AREA_ZONE_COLORS = [
+    [67, 211, 255],
+    [0, 200, 90],
+    [255, 64, 0],
+    [255, 0, 200],
+    [0, 140, 255],
+    [180, 80, 255],
+];
 
 /**
  * Utility functions for counting area color conversion
@@ -53,7 +67,7 @@ const CountingAreaColorUtil = {
 };
 
 /**
- * Canvas editor for detection counting_area polygon
+ * Canvas editor for one or more detection counting_area polygons
  */
 class CountingAreaEditor {
     /**
@@ -73,13 +87,14 @@ class CountingAreaEditor {
         this.statusEl = document.getElementById("ca-status");
         this.loadingEl = document.getElementById("ca-loading");
         this.colorInput = document.getElementById("ca-color");
+        this.zoneListEl = document.getElementById("ca-zone-list");
 
         this.frameWidth = 0;
         this.frameHeight = 0;
         this.displayWidth = 0;
         this.displayHeight = 0;
-        this.points = [];
-        this.areaColorBgr = [67, 211, 255];
+        this.zones = [this.createZone(COUNTING_AREA_ZONE_COLORS[0])];
+        this.activeZoneIndex = 0;
 
         this.dragIndex = -1;
         this.rectMode = false;
@@ -87,7 +102,52 @@ class CountingAreaEditor {
 
         this.bindToolbar();
         this.bindCanvas();
+        this.renderZoneList();
+        this.syncColorInput();
         this.load();
+    }
+
+    /**
+     * Create an empty zone object
+     *
+     * @param {number[]} colorBgr
+     * @returns {{points: Array<{x: number, y: number}>, colorBgr: number[]}}
+     */
+    createZone(colorBgr) {
+        return {
+            points: [],
+            colorBgr: [...(colorBgr || COUNTING_AREA_ZONE_COLORS[0])],
+        };
+    }
+
+    /**
+     * Active zone getter
+     *
+     * @returns {{points: Array<{x: number, y: number}>, colorBgr: number[]}}
+     */
+    get activeZone() {
+        if (!this.zones[this.activeZoneIndex]) {
+            this.activeZoneIndex = 0;
+        }
+        return this.zones[this.activeZoneIndex];
+    }
+
+    /**
+     * Active zone points shortcut
+     *
+     * @returns {Array<{x: number, y: number}>}
+     */
+    get points() {
+        return this.activeZone.points;
+    }
+
+    /**
+     * Replace active zone points
+     *
+     * @param {Array<{x: number, y: number}>} value
+     */
+    set points(value) {
+        this.activeZone.points = value;
     }
 
     /**
@@ -102,9 +162,85 @@ class CountingAreaEditor {
     }
 
     /**
+     * Sync color picker with the active zone
+     */
+    syncColorInput() {
+        const color = this.activeZone.colorBgr;
+        this.colorInput.value = CountingAreaColorUtil.bgrToHex(color[0], color[1], color[2]);
+    }
+
+    /**
+     * Render zone selection buttons
+     */
+    renderZoneList() {
+        if (!this.zoneListEl) {
+            return;
+        }
+
+        this.zoneListEl.replaceChildren();
+        this.zones.forEach((zone, index) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = `btn btn-sm ${index === this.activeZoneIndex ? "btn-primary" : "btn-outline-secondary"}`;
+            button.textContent = window.trans("Zone {index}", {index: index + 1});
+            button.title = window.trans("Zone {index}", {index: index + 1});
+            button.addEventListener("click", () => this.selectZone(index));
+            this.zoneListEl.append(button);
+        });
+    }
+
+    /**
+     * Select a zone by index
+     *
+     * @param {number} index
+     */
+    selectZone(index) {
+        if (index < 0 || index >= this.zones.length) {
+            return;
+        }
+        this.activeZoneIndex = index;
+        this.dragIndex = -1;
+        this.rectMode = false;
+        this.rectStart = null;
+        document.getElementById("ca-btn-rect")?.classList.remove("active");
+        this.syncColorInput();
+        this.renderZoneList();
+        this.redraw();
+    }
+
+    /**
+     * Add a new empty zone and select it
+     */
+    addZone() {
+        const color = COUNTING_AREA_ZONE_COLORS[this.zones.length % COUNTING_AREA_ZONE_COLORS.length];
+        this.zones.push(this.createZone(color));
+        this.selectZone(this.zones.length - 1);
+        this.setStatus(window.trans("Click to add points. Drag vertices to adjust. Double-click a vertex to remove."));
+    }
+
+    /**
+     * Delete the active zone
+     */
+    deleteZone() {
+        if (this.zones.length <= 1) {
+            showToast(window.trans("At least one zone required"), "warning");
+            return;
+        }
+
+        this.zones.splice(this.activeZoneIndex, 1);
+        this.activeZoneIndex = Math.min(this.activeZoneIndex, this.zones.length - 1);
+        this.syncColorInput();
+        this.renderZoneList();
+        this.redraw();
+    }
+
+    /**
      * Bind the toolbar events
      */
     bindToolbar() {
+        document.getElementById("ca-btn-add-zone")?.addEventListener("click", () => this.addZone());
+        document.getElementById("ca-btn-delete-zone")?.addEventListener("click", () => this.deleteZone());
+
         document.getElementById("ca-btn-undo")?.addEventListener("click", () => {
             if (this.points.length > 0) {
                 this.points.pop();
@@ -132,7 +268,10 @@ class CountingAreaEditor {
         document.getElementById("ca-btn-refresh")?.addEventListener("click", () => this.loadSnapshot(true));
         document.getElementById("ca-btn-save")?.addEventListener("click", () => this.save());
 
-        this.colorInput.addEventListener("input", () => this.redraw());
+        this.colorInput.addEventListener("input", () => {
+            this.activeZone.colorBgr = CountingAreaColorUtil.hexToBgr(this.colorInput.value);
+            this.redraw();
+        });
         window.addEventListener("resize", () => this.resizeCanvas());
     }
 
@@ -185,22 +324,46 @@ class CountingAreaEditor {
             }
 
             const data = await response.json();
-
-            this.points = (data.counting_area || []).map((p) => ({x: p[0], y: p[1]}));
-            if (data.counting_area_color?.length === 3) {
-                this.areaColorBgr = data.counting_area_color;
-                this.colorInput.value = CountingAreaColorUtil.bgrToHex(
-                    this.areaColorBgr[0],
-                    this.areaColorBgr[1],
-                    this.areaColorBgr[2]
-                );
-            }
+            this.zones = this.zonesFromPayload(data);
+            this.activeZoneIndex = 0;
+            this.syncColorInput();
+            this.renderZoneList();
             await this.loadSnapshot(false);
         } catch (err) {
             this.setStatus(err.message || "Load failed", true);
         } finally {
             this.loadingEl.classList.add("d-none");
         }
+    }
+
+    /**
+     * Build zones from API payload
+     *
+     * @param {object} data
+     * @returns {Array<{points: Array<{x: number, y: number}>, colorBgr: number[]}>}
+     */
+    zonesFromPayload(data) {
+        const areas = Array.isArray(data.counting_areas) ? data.counting_areas : [];
+        if (areas.length > 0) {
+            return areas.map((area, index) => {
+                const color = Array.isArray(area.color) && area.color.length === 3
+                    ? area.color
+                    : (COUNTING_AREA_ZONE_COLORS[index % COUNTING_AREA_ZONE_COLORS.length]);
+                return {
+                    points: (area.points || []).map((p) => ({x: p[0], y: p[1]})),
+                    colorBgr: [...color],
+                };
+            });
+        }
+
+        const fallbackColor = Array.isArray(data.counting_area_color) && data.counting_area_color.length === 3
+            ? data.counting_area_color
+            : COUNTING_AREA_ZONE_COLORS[0];
+
+        return [{
+            points: (data.counting_area || []).map((p) => ({x: p[0], y: p[1]})),
+            colorBgr: [...fallbackColor],
+        }];
     }
 
     /**
@@ -282,7 +445,6 @@ class CountingAreaEditor {
      * Convert event coordinates to display coordinates
      *
      * @param {PointerEvent} e - The pointer event
-     * @returns {{x: number, y: number}} - The display coordinates
      * @returns {{x: number, y: number}}
      */
     eventToDisplay(e) {
@@ -294,11 +456,11 @@ class CountingAreaEditor {
     }
 
     /**
-     * Test if a point is within the hit radius of a point
+     * Test if a point is within the hit radius of an active-zone vertex
      *
-     * @param {number} dx - The x coordinate of the point to test
-     * @param {number} dy - The y coordinate of the point to test
-     * @returns {number} - The index of the point if it is within the hit radius, otherwise -1
+     * @param {number} dx
+     * @param {number} dy
+     * @returns {number}
      */
     hitTest(dx, dy) {
         for (let i = 0; i < this.points.length; i++) {
@@ -316,8 +478,8 @@ class CountingAreaEditor {
     /**
      * Clamp a point to the frame
      *
-     * @param {{x: number, y: number}} point - The point to clamp
-     * @returns {{x: number, y: number}} - The clamped point
+     * @param {{x: number, y: number}} point
+     * @returns {{x: number, y: number}}
      */
     clampNative(point) {
         return {
@@ -329,8 +491,7 @@ class CountingAreaEditor {
     /**
      * Handle pointer down event
      *
-     * @param {{x: number, y: number}} pt - The point to clamp
-     * @param {PointerEvent} e - The pointer event
+     * @param {{x: number, y: number}} pt
      * @param {PointerEvent} e
      */
     onPointerDown(pt, e) {
@@ -354,8 +515,7 @@ class CountingAreaEditor {
     /**
      * Handle pointer move event
      *
-     * @param {{x: number, y: number}} pt - The point to clamp
-     * @param {PointerEvent} e - The pointer event
+     * @param {{x: number, y: number}} pt
      * @param {PointerEvent} e
      */
     onPointerMove(pt, e) {
@@ -405,7 +565,7 @@ class CountingAreaEditor {
     }
 
     /**
-     * Set the full frame
+     * Set the full frame polygon on the active zone
      */
     setFullFrame() {
         if (!this.frameWidth) {
@@ -423,28 +583,80 @@ class CountingAreaEditor {
     }
 
     /**
-     * Get the fill color rgba
+     * Build rgba fill color from BGR
      *
-     * @param {number} alpha - The alpha value
+     * @param {number[]} colorBgr
+     * @param {number} alpha
      * @returns {string}
      */
-    fillColorRgba(alpha) {
-        const hex = this.colorInput.value;
-        const value = hex.replace("#", "");
-        const r = parseInt(value.slice(0, 2), 16);
-        const g = parseInt(value.slice(2, 4), 16);
-        const b = parseInt(value.slice(4, 6), 16);
-
+    fillColorRgba(colorBgr, alpha) {
+        const [b, g, r] = colorBgr;
         return `rgba(${r},${g},${b},${alpha})`;
     }
 
     /**
-     * Get the stroke color
+     * Build hex stroke color from BGR
      *
-     * @returns {string} - The stroke color
+     * @param {number[]} colorBgr
+     * @returns {string}
      */
-    strokeColor() {
-        return this.colorInput.value;
+    strokeColor(colorBgr) {
+        return CountingAreaColorUtil.bgrToHex(colorBgr[0], colorBgr[1], colorBgr[2]);
+    }
+
+    /**
+     * Draw one polygon zone
+     *
+     * @param {{points: Array<{x: number, y: number}>, colorBgr: number[]}} zone
+     * @param {boolean} isActive
+     */
+    drawZone(zone, isActive) {
+        const points = zone.points || [];
+        const colorBgr = zone.colorBgr || COUNTING_AREA_ZONE_COLORS[0];
+        const fillAlpha = isActive ? 0.35 : 0.18;
+        const lineWidth = isActive ? 2.5 : 1.5;
+
+        if (points.length >= 3) {
+            this.ctx.beginPath();
+            const first = this.nativeToDisplay(points[0].x, points[0].y);
+            this.ctx.moveTo(first.x, first.y);
+
+            for (let i = 1; i < points.length; i++) {
+                const p = this.nativeToDisplay(points[i].x, points[i].y);
+                this.ctx.lineTo(p.x, p.y);
+            }
+
+            this.ctx.closePath();
+            this.ctx.fillStyle = this.fillColorRgba(colorBgr, fillAlpha);
+            this.ctx.fill();
+            this.ctx.strokeStyle = this.strokeColor(colorBgr);
+            this.ctx.lineWidth = lineWidth;
+            this.ctx.stroke();
+        } else if (points.length === 2) {
+            this.ctx.beginPath();
+            const a = this.nativeToDisplay(points[0].x, points[0].y);
+            const b = this.nativeToDisplay(points[1].x, points[1].y);
+            this.ctx.moveTo(a.x, a.y);
+            this.ctx.lineTo(b.x, b.y);
+            this.ctx.strokeStyle = this.strokeColor(colorBgr);
+            this.ctx.lineWidth = lineWidth;
+            this.ctx.stroke();
+        }
+
+        if (!isActive) {
+            return;
+        }
+
+        points.forEach((pt, i) => {
+            const d = this.nativeToDisplay(pt.x, pt.y);
+            this.ctx.beginPath();
+            this.ctx.arc(d.x, d.y, 6, 0, Math.PI * 2);
+            this.ctx.fillStyle = i === this.dragIndex ? "#fff" : this.strokeColor(colorBgr);
+            this.ctx.fill();
+            this.ctx.strokeStyle = "#000";
+            this.ctx.lineWidth = 1.5;
+            this.ctx.stroke();
+        });
     }
 
     /**
@@ -457,46 +669,15 @@ class CountingAreaEditor {
 
         this.ctx.clearRect(0, 0, this.displayWidth, this.displayHeight);
 
-        if (this.points.length >= 3) {
-            this.ctx.beginPath();
-            const first = this.nativeToDisplay(this.points[0].x, this.points[0].y);
-            this.ctx.moveTo(first.x, first.y);
-
-            for (let i = 1; i < this.points.length; i++) {
-                const p = this.nativeToDisplay(this.points[i].x, this.points[i].y);
-                this.ctx.lineTo(p.x, p.y);
+        this.zones.forEach((zone, index) => {
+            if (index !== this.activeZoneIndex) {
+                this.drawZone(zone, false);
             }
-
-            this.ctx.closePath();
-            this.ctx.fillStyle = this.fillColorRgba(0.35);
-            this.ctx.fill();
-            this.ctx.strokeStyle = this.strokeColor();
-            this.ctx.lineWidth = 2;
-            this.ctx.stroke();
-        } else if (this.points.length === 2) {
-            this.ctx.beginPath();
-            const a = this.nativeToDisplay(this.points[0].x, this.points[0].y);
-            const b = this.nativeToDisplay(this.points[1].x, this.points[1].y);
-            this.ctx.moveTo(a.x, a.y);
-            this.ctx.lineTo(b.x, b.y);
-            this.ctx.strokeStyle = this.strokeColor();
-            this.ctx.lineWidth = 2;
-            this.ctx.stroke();
-        }
-
-        this.points.forEach((pt, i) => {
-            const d = this.nativeToDisplay(pt.x, pt.y);
-            this.ctx.beginPath();
-            this.ctx.arc(d.x, d.y, 6, 0, Math.PI * 2);
-            this.ctx.fillStyle = i === this.dragIndex ? "#fff" : this.strokeColor();
-            this.ctx.fill();
-            this.ctx.strokeStyle = "#000";
-            this.ctx.lineWidth = 1.5;
-            this.ctx.stroke();
         });
+        this.drawZone(this.activeZone, true);
 
         const ptsLabel = this.points.length;
-        let status = `${window.trans("Points")}: ${ptsLabel}`;
+        let status = `${window.trans("Zone {index}", {index: this.activeZoneIndex + 1})}: ${ptsLabel} ${window.trans("Points").toLowerCase()}`;
 
         if (ptsLabel < COUNTING_AREA_MIN_POINTS) {
             status += ` - ${window.trans("need at least 3 points")}`;
@@ -506,17 +687,21 @@ class CountingAreaEditor {
     }
 
     /**
-     * Save the counting area
+     * Save all counting zones
      */
     async save() {
-        if (this.points.length < COUNTING_AREA_MIN_POINTS) {
+        const incomplete = this.zones.findIndex((zone) => zone.points.length < COUNTING_AREA_MIN_POINTS);
+        if (incomplete >= 0) {
+            this.selectZone(incomplete);
             showToast(window.trans("At least 3 points required"), "warning");
             return;
         }
 
         const body = {
-            counting_area: this.points.map((p) => [p.x, p.y]),
-            counting_area_color: CountingAreaColorUtil.hexToBgr(this.colorInput.value),
+            counting_areas: this.zones.map((zone) => ({
+                points: zone.points.map((p) => [p.x, p.y]),
+                color: zone.colorBgr,
+            })),
         };
 
         const saveBtn = document.getElementById("ca-btn-save");

@@ -21,5 +21,6 @@ class CVCounter(Base):
     correct_count = Column(Integer, default=0)
     parts = Column(Text, nullable=True)
     custom_fields = Column(Text, nullable=True)
+    class_counts = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)

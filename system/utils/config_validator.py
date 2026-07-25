@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 22.01.2026
-# Updated: 08.06.2026
+# Updated: 25.07.2026
 # Website: https://bespredel.name
 
 import os
@@ -370,7 +370,7 @@ class ConfigValidator:
             elif device < 0:
                 self.warnings.append(f"'{prefix}.device' is {device}, negative values may cause issues")
 
-        # Validate counting_area
+        # Validate counting_area (legacy single polygon)
         if 'counting_area' in config:
             counting_area = config['counting_area']
             if not isinstance(counting_area, list):
@@ -388,9 +388,47 @@ class ConfigValidator:
         if 'counting_area_color' in config:
             color = config['counting_area_color']
             if not isinstance(color, list) or len(color) != 3:
-                self.errors.append(f"'{prefix}.counting_area_color' must be a list of 3 integers (RGB)")
+                self.errors.append(f"'{prefix}.counting_area_color' must be a list of 3 integers (BGR)")
             elif not all(isinstance(c, int) and 0 <= c <= 255 for c in color):
                 self.errors.append(f"'{prefix}.counting_area_color' values must be integers between 0 and 255")
+
+        # Validate counting_areas (multi-zone)
+        if 'counting_areas' in config:
+            counting_areas = config['counting_areas']
+            if not isinstance(counting_areas, list):
+                self.errors.append(f"'{prefix}.counting_areas' must be a list")
+            elif len(counting_areas) < 1:
+                self.errors.append(f"'{prefix}.counting_areas' must contain at least one zone")
+            else:
+                for i, zone in enumerate(counting_areas):
+                    zone_prefix = f"'{prefix}.counting_areas[{i}]'"
+                    if isinstance(zone, dict):
+                        points = zone.get('points')
+                        if not isinstance(points, list) or len(points) < 3:
+                            self.errors.append(f"{zone_prefix}.points must have at least 3 points")
+                        else:
+                            for j, point in enumerate(points):
+                                if not isinstance(point, list) or len(point) != 2:
+                                    self.errors.append(f"{zone_prefix}.points[{j}] must be a list of 2 numbers")
+                                elif not all(isinstance(coord, (int, float)) for coord in point):
+                                    self.errors.append(f"{zone_prefix}.points[{j}] coordinates must be numbers")
+                        if 'color' in zone:
+                            color = zone['color']
+                            if not isinstance(color, list) or len(color) != 3:
+                                self.errors.append(f"{zone_prefix}.color must be a list of 3 integers (BGR)")
+                            elif not all(isinstance(c, int) and 0 <= c <= 255 for c in color):
+                                self.errors.append(
+                                    f"{zone_prefix}.color values must be integers between 0 and 255"
+                                )
+                    elif isinstance(zone, list):
+                        if len(zone) < 3:
+                            self.errors.append(f"{zone_prefix} must have at least 3 points")
+                        else:
+                            for j, point in enumerate(zone):
+                                if not isinstance(point, list) or len(point) != 2:
+                                    self.errors.append(f"{zone_prefix}[{j}] must be a list of 2 numbers")
+                    else:
+                        self.errors.append(f"{zone_prefix} must be an object or a polygon point list")
 
         # Validate recording
         if 'recording' in config:

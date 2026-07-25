@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 23.06.2026
+# Updated: 25.07.2026
 # Website: https://bespredel.name
 
 import ast
@@ -154,7 +154,9 @@ class ConfigManager:
 
             for key, value in form_data.items():
                 keys = key.split('-')
-                if keys and keys[0] == 'detections' and keys[-1] in ('counting_area', 'counting_area_color'):
+                if keys and keys[0] == 'detections' and keys[-1] in (
+                        'counting_area', 'counting_area_color', 'counting_areas'
+                ):
                     continue
 
                 current_level = current_config

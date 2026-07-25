@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 09.07.2026
+# Updated: 25.07.2026
 # Website: https://bespredel.name
 
 import json
@@ -24,6 +24,11 @@ from system.managers.notification_manager import NotificationManager
 from system.object_detection import load_detector
 from system.core.sort import Sort
 from system.core.timer import Timer
+from system.utils.counting_area import (
+    DEFAULT_COUNTING_AREA_COLOR,
+    areas_to_runtime,
+    normalize_counting_areas,
+)
 from system.utils.exception_handler import StreamConnectionError
 from system.utils.i18n import trans
 from system.managers.video_stream_manager import VideoStreamManager
@@ -78,6 +83,8 @@ class ObjectCounter:
         self.correct_count: int = 0
         self.pending_defect_count: int = 0
         self.pending_correct_count: int = 0
+        self.class_counts: dict[int, int] = {}
+        self.current_class_counts: dict[int, int] = {}
         self.frame: Optional[np.ndarray] = None
         self._mjpeg_chunk: bytes | None = None
         self._mjpeg_viewers: int = 0
@@ -234,12 +241,60 @@ class ObjectCounter:
                 self.get_frames_running = False
                 self._mjpeg_chunk = None
 
+    def _class_label(self, class_id: int) -> str:
+        """Resolve a human-readable label for a detection class id."""
+        if class_id < 0:
+            return trans('Unknown')
+
+        if self.classes:
+            label = self.classes.get(str(class_id), self.classes.get(class_id))
+            if label:
+                return str(label)
+
+        return trans('Class {id}', id=class_id)
+
+    def _configured_class_ids(self) -> set[int]:
+        """Class ids declared in detection config (may be empty)."""
+        ids: set[int] = set()
+        if not self.classes:
+            return ids
+
+        for key in self.classes.keys():
+            try:
+                ids.add(int(key))
+            except (TypeError, ValueError):
+                continue
+        return ids
+
+    def _by_class_payload(self) -> list[dict]:
+        """Build sorted per-class breakdown for live UI / Socket.IO."""
+        class_ids = (
+                set(self.class_counts.keys())
+                | set(self.current_class_counts.keys())
+                | self._configured_class_ids()
+        )
+        return [
+            {
+                'id': class_id,
+                'name': self._class_label(class_id),
+                'total': int(self.class_counts.get(class_id, 0)),
+                'current': int(self.current_class_counts.get(class_id, 0)),
+            }
+            for class_id in sorted(class_ids)
+        ]
+
+    def _increment_class_count(self, class_id: int) -> None:
+        """Increment total and current-batch counts for a class."""
+        key = int(class_id)
+        self.class_counts[key] = self.class_counts.get(key, 0) + 1
+        self.current_class_counts[key] = self.current_class_counts.get(key, 0) + 1
+
     def get_live_counts(self) -> dict:
         """
         Return in-memory counts in the same shape as the Socket.IO payload.
 
         Returns:
-            dict: total, current, defect, correct, pending_defect, pending_correct
+            dict: total, current, defect, correct, pending_defect, pending_correct, by_class
         """
         return {
             'total': self.total_count - self.defect_count + self.correct_count,
@@ -248,6 +303,7 @@ class ObjectCounter:
             'correct': self.correct_count,
             'pending_defect': self.pending_defect_count,
             'pending_correct': self.pending_correct_count,
+            'by_class': self._by_class_payload(),
         }
 
     def emit_live_counts(self, force: bool = False) -> None:
@@ -303,6 +359,7 @@ class ObjectCounter:
             'correct_count': result.correct_count,
             'parts': json.loads(result.parts) if result.parts else [],
             'custom_fields': json.loads(result.custom_fields) if result.custom_fields else [],
+            'class_counts': json.loads(result.class_counts) if result.class_counts else [],
             'created_at': result.created_at.strftime("%Y-%m-%d %H:%M:%S") if result.created_at else None,
             'updated_at': result.updated_at.strftime("%Y-%m-%d %H:%M:%S") if result.updated_at else None
         }
@@ -338,7 +395,8 @@ class ObjectCounter:
             correct_count=self.correct_count,
             defects_count=self.defect_count,
             custom_fields=custom_fields,
-            active=active
+            active=active,
+            class_counts=self._by_class_payload(),
         )
 
         if result:
@@ -370,15 +428,19 @@ class ObjectCounter:
             None
         """
 
+        final_class_counts = self._by_class_payload()
+
         self.total_objects.clear()
         self.total_count = 0
         self.current_count = 0
         self.defect_count = 0
         self.correct_count = 0
+        self.class_counts.clear()
+        self.current_class_counts.clear()
         self.clear_pending_counts()
         self._last_count_payload = None
 
-        self.db_manager.close_current_count(location)
+        self.db_manager.close_current_count(location, class_counts=final_class_counts)
 
         # Stop the current recording video
         if self.recording_enabled and self.recorder is not None:
@@ -403,19 +465,23 @@ class ObjectCounter:
         total_count = int(self.total_count)
         defect_count = int(self.pending_defect_count)
         correct_count = int(self.pending_correct_count)
+        by_class = self._by_class_payload()
         try:
             self.db_manager.save_part_result(
                 location=location,
                 current_count=current_count,
                 total_count=total_count,
                 defects_count=defect_count,
-                correct_count=correct_count
+                correct_count=correct_count,
+                by_class=by_class,
+                class_counts=by_class,
             )
         except Exception as e:
             print(e)
             self.logger.error(e)
 
         self.current_count = 0
+        self.current_class_counts.clear()
         self.defect_count += defect_count
         self.correct_count += correct_count
         self.clear_pending_counts()
@@ -493,24 +559,53 @@ class ObjectCounter:
             self.logger.error(f'Error reading source frame: {e}')
             return None
 
-    def update_counting_area(
-            self,
-            counting_area: List[Tuple[int, int]],
-            counting_area_color: tuple | None = None,
-    ) -> None:
+    def update_counting_areas(self, counting_areas: list | None) -> None:
         """
-        Update counting polygon and invalidate the point-in-polygon mask.
+        Replace all counting zones and invalidate the point-in-polygon mask.
 
         Args:
-            counting_area: Polygon vertices as (x, y) in frame pixel coordinates.
-            counting_area_color: Optional BGR color tuple for the overlay.
+            counting_areas: List of zones ``{'points': [...], 'color': [...]}``.
         """
-        if len(counting_area) < 3:
-            raise ValueError('counting_area must have at least 3 points')
-        self.counting_area = [(int(p[0]), int(p[1])) for p in counting_area]
-        if counting_area_color is not None:
-            self.counting_area_color = tuple(int(c) for c in counting_area_color)
+        normalized = normalize_counting_areas({'counting_areas': counting_areas or []})
+        runtime = areas_to_runtime(normalized)
+        if not runtime:
+            raise ValueError('counting_areas must contain at least one zone with 3+ points')
+
+        self.counting_areas = runtime
+        self.counting_area = list(runtime[0]['points'])
+        self.counting_area_color = tuple(runtime[0]['color'])
         self._counting_mask = None
+
+    def update_counting_area(
+            self,
+            counting_area: List[Tuple[int, int]] | None = None,
+            counting_area_color: tuple | None = None,
+            counting_areas: list | None = None,
+    ) -> None:
+        """
+        Update counting polygon(s) and invalidate the point-in-polygon mask.
+
+        Args:
+            counting_area: Legacy single polygon vertices as (x, y).
+            counting_area_color: Optional BGR color tuple for the first/legacy zone.
+            counting_areas: Preferred multi-zone payload.
+        """
+        if counting_areas is not None:
+            self.update_counting_areas(counting_areas)
+            return
+
+        if counting_area is None or len(counting_area) < 3:
+            raise ValueError('counting_area must have at least 3 points')
+
+        color = (
+            tuple(int(c) for c in counting_area_color)
+            if counting_area_color is not None
+            else tuple(self.counting_area_color or DEFAULT_COUNTING_AREA_COLOR)
+        )
+        self.update_counting_areas([{
+            'points': [(int(p[0]), int(p[1])) for p in counting_area],
+            'color': list(color),
+        }])
 
     def save_capture(self) -> None:
         """
@@ -567,8 +662,9 @@ class ObjectCounter:
             - self.confidence (float): The confidence threshold for object detection.
             - self.iou (float): The IoU threshold for object detection.
             - self.video_fps (int): The frame rate of the video.
-            - self.counting_area (list): The coordinates of the counting area.
-            - self.counting_area_color (tuple): The color of the counting area.
+            - self.counting_areas (list): Counting zones with points and colors.
+            - self.counting_area (list): Legacy alias of the first zone points.
+            - self.counting_area_color (tuple): Legacy alias of the first zone color.
             - self.video_scale (int): The scale of the video.
             - self.video_quality (int): The quality of the video.
             - self.indicator_size (int): The size of the indicator.
@@ -600,8 +696,21 @@ class ObjectCounter:
                                                                               detection_default.get('confidence',
                                                                                                     self.DEFAULT_CONFIDENCE)))
         self.iou: float = kwargs.get('iou', detector_config.get('iou', detection_default.get('iou', self.DEFAULT_IOU)))
-        self.counting_area: List[Tuple[int, int]] = kwargs.get('counting_area', detector_config.get('counting_area'))
-        self.counting_area_color: tuple = kwargs.get('counting_area_color', detector_config.get('counting_area_color'))
+        counting_areas = normalize_counting_areas(
+            detector_config,
+            counting_areas=kwargs.get('counting_areas'),
+            counting_area=kwargs.get('counting_area'),
+            counting_area_color=kwargs.get('counting_area_color'),
+        )
+        runtime_areas = areas_to_runtime(counting_areas)
+        if not runtime_areas:
+            runtime_areas = [{
+                'points': [(0, 0), (100, 0), (100, 100), (0, 100)],
+                'color': tuple(DEFAULT_COUNTING_AREA_COLOR),
+            }]
+        self.counting_areas: list[dict] = runtime_areas
+        self.counting_area: List[Tuple[int, int]] = list(runtime_areas[0]['points'])
+        self.counting_area_color: tuple = tuple(runtime_areas[0]['color'])
         self.video_fps: int = detector_config.get('video_fps', detection_default.get("video_fps"))
         self.video_reconnect_attempts: int = int(detector_config.get('video_reconnect_attempts',
                                                                      detection_default.get('video_reconnect_attempts',
@@ -693,21 +802,18 @@ class ObjectCounter:
         """
         xyxy, conf, cls = self.model.detect(image=image)
 
+        if xyxy is None or len(xyxy) == 0:
+            return self.tracker.update(np.empty((0, 6)))
+
         # Prepare detections for the tracker: [x1, y1, x2, y2, conf, class]
         detections = np.concatenate((xyxy, conf.reshape(-1, 1), cls.reshape(-1, 1)), axis=1)
 
-        # Update tracker and get tracked boxes: [x1, y1, x2, y2, conf]
-        tracked_boxes = self.tracker.update(detections[:, :5])
-
-        # Attach class IDs to tracked boxes if sizes match
-        if len(tracked_boxes) > 0 and len(cls) == len(tracked_boxes):
-            tracked_boxes = np.concatenate((tracked_boxes, cls.reshape(-1, 1)), axis=1)
-
-        return tracked_boxes
+        # Tracked boxes: [x1, y1, x2, y2, track_id, class_id]
+        return self.tracker.update(detections)
 
     def _draw_counting_area(self, image: np.ndarray) -> np.ndarray:
         """
-        Draws a counting area on the given image.
+        Draws all counting zones on the given image.
 
         Args:
             image (numpy.ndarray): The image on which the counting area should be drawn.
@@ -716,10 +822,18 @@ class ObjectCounter:
             numpy.ndarray: The image with the counting area drawn on it.
         """
         overlay = image.copy()
+        zones = self.counting_areas or [{
+            'points': self.counting_area,
+            'color': self.counting_area_color,
+        }]
 
-        # Polygon corner points coordinates
-        pts = np.array(self.counting_area, np.int32).reshape((-1, 1, 2))
-        cv2.fillPoly(overlay, [pts], self.counting_area_color)
+        for zone in zones:
+            points = zone.get('points') or []
+            if len(points) < 3:
+                continue
+            pts = np.array(points, np.int32).reshape((-1, 1, 2))
+            color = tuple(zone.get('color') or self.counting_area_color or DEFAULT_COUNTING_AREA_COLOR)
+            cv2.fillPoly(overlay, [pts], color)
 
         return cv2.addWeighted(overlay, self.DEFAULT_POLYGON_ALPHA, image, 1 - self.DEFAULT_POLYGON_ALPHA, 0)
 
@@ -750,8 +864,18 @@ class ObjectCounter:
 
         height, width = frame_shape[:2]
         mask: np.ndarray = np.zeros((height, width), dtype=np.uint8)
-        pts: np.ndarray = np.asarray(self.counting_area, dtype=np.int32).reshape((-1, 1, 2))
-        cv2.fillPoly(mask, [pts], 1)
+        zones = self.counting_areas or [{
+            'points': self.counting_area,
+            'color': self.counting_area_color,
+        }]
+
+        for zone in zones:
+            points = zone.get('points') or []
+            if len(points) < 3:
+                continue
+            pts = np.asarray(points, dtype=np.int32).reshape((-1, 1, 2))
+            cv2.fillPoly(mask, [pts], 1)
+
         self._counting_mask = mask.astype(bool)
 
     def _detect_count(self, image: np.ndarray, boxes: list | np.ndarray) -> np.ndarray:
@@ -776,7 +900,9 @@ class ObjectCounter:
             self._ensure_counting_mask((h, w))
 
         for result in boxes:
-            x1, y1, x2, y2, rid = map(int, result[:5])
+            values = list(map(int, result[:6]))
+            x1, y1, x2, y2, rid = values[:5]
+            class_id = values[5] if len(values) > 5 else -1
             cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
 
             # Draw indicator on the image
@@ -792,6 +918,7 @@ class ObjectCounter:
             ):
                 self.total_objects.add(rid)
                 self.current_count += 1
+                self._increment_class_count(class_id)
                 # Start recording as soon as the first object is detected
                 self._start_recording_if_needed()
 

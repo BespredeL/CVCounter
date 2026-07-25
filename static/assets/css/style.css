@@ -1013,6 +1013,35 @@ body.app-body--counter-dual .app-topbar {
     font-variant-numeric: tabular-nums;
 }
 
+.sidebar-counter-tile .class-count-toggle {
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.sidebar-counter-tile .class-count-toggle[aria-expanded="true"] .class-count-chevron {
+    transform: rotate(180deg);
+}
+
+.sidebar-counter-tile .class-count-chevron {
+    transition: transform 0.15s ease;
+    flex-shrink: 0;
+}
+
+.sidebar-counter-tile .class-count-list {
+    font-size: 0.95rem;
+    line-height: 1.35;
+}
+
+.sidebar-counter-tile .class-count-item + .class-count-item {
+    margin-top: 0.2rem;
+}
+
+.sidebar-counter-tile .class-count-values {
+    font-family: var(--cv-font-mono);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Counter view (video / text)                                                */
 /* -------------------------------------------------------------------------- */
@@ -1158,6 +1187,14 @@ body.app-body--counter {
     position: sticky;
     top: 0.5rem;
     z-index: 3;
+}
+
+.counting-area-zone-list {
+    gap: 0.25rem;
+}
+
+.counting-area-zone-list .btn {
+    border-radius: 0.375rem !important;
 }
 
 .img-container img {
@@ -2004,6 +2041,48 @@ body.app-body--counter-dual {
 .multi-counter-card__value--total {
     font-size: clamp(1.1rem, 5vw, 2.5rem);
     color: var(--bs-secondary-color);
+}
+
+.multi-counter-card__classes {
+    flex-shrink: 0;
+    padding: 0.35rem 0.75rem 0.55rem;
+    border-top: 1px solid var(--cv-border);
+}
+
+.multi-counter-card__classes-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    color: var(--bs-secondary-color);
+    font-weight: 600;
+    padding: 0.15rem 0;
+}
+
+.multi-counter-card__classes-toggle[aria-expanded="true"] .multi-counter-card__classes-chevron {
+    transform: rotate(180deg);
+}
+
+.multi-counter-card__classes-chevron {
+    transition: transform 0.15s ease;
+    flex-shrink: 0;
+}
+
+.multi-counter-card__class-list {
+    margin-top: 0.35rem;
+    font-size: 0.9rem;
+    line-height: 1.35;
+}
+
+.multi-counter-card__class-item + .multi-counter-card__class-item {
+    margin-top: 0.15rem;
+}
+
+.multi-counter-card__class-values {
+    font-family: var(--cv-font-mono);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
 }
 
 .multi-counter-card__actions {

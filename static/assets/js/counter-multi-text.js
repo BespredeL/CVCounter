@@ -1,7 +1,7 @@
 /**
  * Developed by: Aleksandr Kireev
  * Created: 03.06.2026
- * Updated: 25.06.2026
+ * Updated: 25.07.2026
  * Website: https://bespredel.name
  */
 
@@ -19,10 +19,60 @@ const CounterMultiText = {
     },
 
     /**
+     * Render per-class breakdown for one counter card.
+     *
+     * @param {string} slug - DOM class suffix for this location
+     * @param {Array<{name?: string, current?: number, total?: number}>} items - Class counts
+     * @returns {void}
+     */
+    renderByClass(slug, items) {
+        const listEl = document.querySelector(`.by_class_list_${slug}`);
+        const emptyEl = document.querySelector(`.by_class_empty_${slug}`);
+        if (!listEl) {
+            return;
+        }
+
+        const rows = Array.isArray(items) ? items : [];
+        listEl.replaceChildren();
+
+        rows.forEach((item) => {
+            const li = document.createElement("li");
+            li.className = "multi-counter-card__class-item d-flex justify-content-between gap-2";
+
+            const name = document.createElement("span");
+            name.className = "text-truncate";
+            name.textContent = item.name || "";
+            name.title = item.name || "";
+
+            const values = document.createElement("span");
+            values.className = "text-nowrap multi-counter-card__class-values";
+
+            const current = document.createElement("span");
+            current.textContent = String(item.current || 0);
+
+            const sep = document.createElement("span");
+            sep.className = "opacity-75";
+            sep.textContent = " / ";
+
+            const total = document.createElement("span");
+            total.className = "opacity-75";
+            total.textContent = String(item.total || 0);
+
+            values.append(current, sep, total);
+            li.append(name, values);
+            listEl.append(li);
+        });
+
+        if (emptyEl) {
+            emptyEl.classList.toggle("d-none", rows.length > 0);
+        }
+    },
+
+    /**
      * Update displayed counts for one counter card
      *
      * @param {string} slug - DOM class suffix for this location
-     * @param {object} data - Count payload (current, total)
+     * @param {object} data - Count payload (current, total, by_class)
      * @returns {void}
      */
     applyCounts(slug, data) {
@@ -41,6 +91,7 @@ const CounterMultiText = {
         document.querySelectorAll(`.total_count_${slug}`).forEach((el) => {
             el.textContent = total;
         });
+        this.renderByClass(slug, data.by_class || []);
     },
 
     /**
@@ -91,10 +142,7 @@ const CounterMultiText = {
                 })
                     .then((r) => r.json())
                     .then((data) => {
-                        const value = data?.current_count ?? 0;
-                        document.querySelectorAll(`.current_count_${slug}`).forEach((el) => {
-                            el.textContent = value;
-                        });
+                        CounterMultiText.applyCounts(slug, data);
                     });
             });
         });
@@ -111,10 +159,7 @@ const CounterMultiText = {
                 fetch(`/reset_count/${encodeURIComponent(location)}`)
                     .then((r) => r.json())
                     .then((data) => {
-                        const value = data?.total_count ?? 0;
-                        document.querySelectorAll(`.total_count_${slug}`).forEach((el) => {
-                            el.textContent = value;
-                        });
+                        CounterMultiText.applyCounts(slug, data);
                     });
             });
         });

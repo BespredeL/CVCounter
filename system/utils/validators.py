@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 22.01.2026
-# Updated: 09.07.2026
+# Updated: 25.07.2026
 # Website: https://bespredel.name
 
 import json
@@ -337,15 +337,75 @@ def validate_pending_counts_request(location: str, available_locations: list[str
     }
 
 
+def _validate_polygon_points(area: Any, label: str) -> list[list[int]]:
+    """
+    Validate a single polygon point list.
+
+    Args:
+        area: The area to validate.
+        label: The label to use for error messages.
+
+    Returns:
+        The validated area.
+    """
+    if not isinstance(area, list) or len(area) < 3:
+        raise ValidationError(f'{label} must be a list of at least 3 points')
+
+    validated_area: list[list[int]] = []
+    for i, point in enumerate(area):
+        if not isinstance(point, (list, tuple)) or len(point) != 2:
+            raise ValidationError(f'{label}[{i}] must be [x, y]')
+
+        try:
+            x, y = int(point[0]), int(point[1])
+        except (TypeError, ValueError):
+            raise ValidationError(f'{label}[{i}] coordinates must be integers')
+
+        if x < 0 or y < 0:
+            raise ValidationError(f'{label}[{i}] coordinates must be non-negative')
+
+        validated_area.append([x, y])
+    return validated_area
+
+
+def _validate_bgr_color(color: Any, label: str = 'counting_area_color') -> list[int]:
+    """
+    Validate a BGR color list.
+
+    Args:
+        color: The color to validate.
+        label: The label to use for error messages.
+
+    Returns:
+        The validated color.
+
+    Raises:
+        ValidationError: If validation fails.
+    """
+    if not isinstance(color, (list, tuple)) or len(color) != 3:
+        raise ValidationError(f'{label} must be a list of 3 integers (BGR)')
+
+    try:
+        bgr = [int(color[0]), int(color[1]), int(color[2])]
+    except (TypeError, ValueError):
+        raise ValidationError(f'{label} values must be integers')
+
+    if not all(0 <= c <= 255 for c in bgr):
+        raise ValidationError(f'{label} values must be between 0 and 255')
+    return bgr
+
+
 def validate_counting_area_payload(data: dict[str, Any]) -> dict[str, Any]:
     """
     Validate JSON payload for counting area save.
+
+    Accepts multi-zone ``counting_areas`` and/or legacy single ``counting_area``.
 
     Args:
         data: Parsed JSON body.
 
     Returns:
-        dict: Validated counting_area and optional counting_area_color (BGR).
+        dict: Validated counting_areas plus legacy counting_area / counting_area_color.
 
     Raises:
         ValidationError: If validation fails.
@@ -353,43 +413,43 @@ def validate_counting_area_payload(data: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValidationError('Request body must be a JSON object')
 
-    area = data.get('counting_area')
-    if not isinstance(area, list) or len(area) < 3:
-        raise ValidationError('counting_area must be a list of at least 3 points')
+    areas_raw = data.get('counting_areas')
+    validated_areas: list[dict[str, Any]] = []
 
-    validated_area: list[list[int]] = []
-    for i, point in enumerate(area):
-        if not isinstance(point, (list, tuple)) or len(point) != 2:
-            raise ValidationError(f'counting_area[{i}] must be [x, y]')
+    if isinstance(areas_raw, list) and areas_raw:
+        for index, item in enumerate(areas_raw):
+            label = f'counting_areas[{index}]'
+            if isinstance(item, dict):
+                points = _validate_polygon_points(item.get('points'), f'{label}.points')
+                color = item.get('color', data.get('counting_area_color'))
+                if color is None:
+                    color = [67, 211, 255]
+                validated_areas.append({
+                    'points': points,
+                    'color': _validate_bgr_color(color, f'{label}.color'),
+                })
+            else:
+                points = _validate_polygon_points(item, label)
+                color = data.get('counting_area_color', [67, 211, 255])
+                validated_areas.append({
+                    'points': points,
+                    'color': _validate_bgr_color(color, 'counting_area_color'),
+                })
+    else:
+        area = data.get('counting_area')
+        points = _validate_polygon_points(area, 'counting_area')
+        color = data.get('counting_area_color', [67, 211, 255])
+        validated_areas.append({
+            'points': points,
+            'color': _validate_bgr_color(color, 'counting_area_color'),
+        })
 
-        try:
-            x, y = int(point[0]), int(point[1])
-        except (TypeError, ValueError):
-            raise ValidationError(f'counting_area[{i}] coordinates must be integers')
-
-        if x < 0 or y < 0:
-            raise ValidationError(f'counting_area[{i}] coordinates must be non-negative')
-
-        validated_area.append([x, y])
-
-    result: dict[str, Any] = {'counting_area': validated_area}
-
-    if 'counting_area_color' in data and data['counting_area_color'] is not None:
-        color = data['counting_area_color']
-        if not isinstance(color, (list, tuple)) or len(color) != 3:
-            raise ValidationError('counting_area_color must be a list of 3 integers (BGR)')
-
-        try:
-            bgr = [int(color[0]), int(color[1]), int(color[2])]
-        except (TypeError, ValueError):
-            raise ValidationError('counting_area_color values must be integers')
-
-        if not all(0 <= c <= 255 for c in bgr):
-            raise ValidationError('counting_area_color values must be between 0 and 255')
-
-        result['counting_area_color'] = bgr
-
-    return result
+    first = validated_areas[0]
+    return {
+        'counting_areas': validated_areas,
+        'counting_area': first['points'],
+        'counting_area_color': first['color'],
+    }
 
 
 def validate_report_list_request() -> dict[str, Any]:

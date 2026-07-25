@@ -99,6 +99,7 @@ class KalmanBoxTracker(object):
     def __init__(self, bbox):
         """
         Initialises a tracker using initial bounding box.
+        Optional 6th value is the detection class id.
         """
         # define constant velocity model
         self.kf = KalmanFilter(dim_x=7, dim_z=4)
@@ -121,6 +122,7 @@ class KalmanBoxTracker(object):
         self.hits = 0
         self.hit_streak = 0
         self.age = 0
+        self.class_id = int(bbox[5]) if len(bbox) > 5 else -1
 
     def update(self, bbox):
         """
@@ -131,6 +133,8 @@ class KalmanBoxTracker(object):
         self.hits += 1
         self.hit_streak += 1
         self.kf.update(convert_bbox_to_z(bbox))
+        if len(bbox) > 5:
+            self.class_id = int(bbox[5])
 
     def predict(self):
         """
@@ -212,9 +216,11 @@ class Sort(object):
     def update(self, dets=np.empty((0, 5))):
         """
         Params:
-          dets - a numpy array of detections in the format [[x1,y1,x2,y2,score],[x1,y1,x2,y2,score],...]
-        Requires: this method must be called once for each frame even with empty detections (use np.empty((0, 5)) for frames without detections).
-        Returns the a similar array, where the last column is the object ID.
+          dets - a numpy array of detections in the format
+                 [[x1,y1,x2,y2,score],...] or [[x1,y1,x2,y2,score,class_id],...]
+        Requires: this method must be called once for each frame even with empty detections
+                  (use np.empty((0, 5)) or np.empty((0, 6)) for frames without detections).
+        Returns an array [[x1,y1,x2,y2,track_id,class_id], ...].
 
         NOTE: The number of objects returned may differ from the number of detections provided.
         """
@@ -245,14 +251,15 @@ class Sort(object):
         for trk in reversed(self.trackers):
             d = trk.get_state()[0]
             if (trk.time_since_update < 1) and (trk.hit_streak >= self.min_hits or self.frame_count <= self.min_hits):
-                ret.append(np.concatenate((d, [trk.id + 1])).reshape(1, -1))  # +1 as MOT benchmark requires positive
+                # +1 as MOT benchmark requires positive IDs; class_id is preserved per track
+                ret.append(np.concatenate((d, [trk.id + 1, trk.class_id])).reshape(1, -1))
             i -= 1
             # remove dead tracklet
             if (trk.time_since_update > self.max_age):
                 self.trackers.pop(i)
         if (len(ret) > 0):
             return np.concatenate(ret)
-        return np.empty((0, 5))
+        return np.empty((0, 6))
 
 
 def parse_args():
