@@ -15,12 +15,13 @@ This solution does not require additional client-side software and works on any 
 - Video view with recognition results (MJPEG stream)
 - Text-only modes for simplicity and resource-saving
 - Multi-counter display for monitoring N locations simultaneously (e.g., entry and exit)
-- Visual counting area (polygon zone) editor
+- Visual editor for **one or more** counting zones (polygons), each with its own color
+- Per-class count breakdown (current batch / total) on counter pages, multi-view, and reports
 - Per-counter settings modal on the dashboard
-- Reports on saved counts
+- Reports on saved counts (including class totals and per-batch class data)
 - System information page (GPU/CUDA/PyTorch)
 - Modular architecture with pluggable detection backends
-- SORT multi-object tracking and polygon zone counting
+- SORT multi-object tracking and union-zone counting
 - Support for RTSP streams, USB cameras, and video files
 
 ### Architecture
@@ -155,7 +156,7 @@ Detectors are registered via a plugin registry (`system/object_detection/registr
 | `confidence`, `iou` | all | Detection thresholds |
 | `device` | YOLO, ONNX | Compute device (`0`, `cpu`, etc.) |
 | `vid_stride` | YOLO | Frame stride during inference |
-| `classes` | all | Class filter, e.g. `{ "0": "person" }` |
+| `classes` | all | Class filter and UI labels, e.g. `{ "0": "person" }` (shown in "By class") |
 
 ### Export YOLO to ONNX
 
@@ -250,9 +251,10 @@ Use `train.py` for training and exporting YOLO models (separate from the web app
 | `video_show_quality` | Video display quality on the page (%) | `50` |
 | `video_fps` | Manual FPS setting (0 = automatic) | `0` |
 | `video_reconnect_attempts` | Max camera connection attempts on start and after stream loss; counter stops when exhausted | `5` |
-| `counting_area` | Counting area (polygon) | `[[0,0],[100,0],[100,100],[0,100]]` |
-| `counting_area_color` | Counting area color (BGR) | `[67, 211, 255]` |
-| `classes` | Detection classes filter | `{}` |
+| `counting_areas` | Preferred list of counting zones (`points` + optional BGR `color`) | see `config.example.json` |
+| `counting_area` | Legacy single polygon (alias of the first zone) | `[[0,0],[100,0],[100,100],[0,100]]` |
+| `counting_area_color` | Legacy first-zone color (BGR) | `[67, 211, 255]` |
+| `classes` | Detection class filter and labels for "By class" UI | `{}` |
 
 ## Default Video Recording `detection_default`.`recording`
 
@@ -283,9 +285,10 @@ Each key in `detections` is a counter `location` (Latin characters, used in URLs
 | `video_show_quality` | Video display quality (%) | `30` |
 | `video_fps` | Manual FPS (0 = automatic) | `0` |
 | `video_reconnect_attempts` | Max connection attempts (inherits from `detection_default` if omitted) | `5` |
-| `counting_area` | Counting area (polygon) | `[[0,0],[100,0],[100,100],[0,100]]` |
-| `counting_area_color` | Counting area color (BGR) | `[255, 64, 0]` |
-| `classes` | Detection classes filter | `{}` |
+| `counting_areas` | Counting zones list (union mask; object counted in any zone) | see `config.example.json` |
+| `counting_area` | Legacy single polygon (alias of the first zone) | `[[0,0],[100,0],[100,100],[0,100]]` |
+| `counting_area_color` | Legacy first-zone color (BGR) | `[255, 64, 0]` |
+| `classes` | Detection class filter and labels for "By class" UI | `{}` |
 | `dataset_create.enable` | Enable dataset creation | `true` |
 | `dataset_create.probability` | Probability of image saving (0.01–1) | `0.05` |
 | `dataset_create.path` | Path for saving dataset images | `storage/saved_images/ExampleCam` |
@@ -311,7 +314,7 @@ http://127.0.0.1:8080/
 
 ## Main View (Video)
 
-Displays the video feed with counters showing detected objects. Primary interface for real-time monitoring.
+Displays the video feed with counters showing detected objects. Primary interface for real-time monitoring. The sidebar includes totals, current batch, and an expandable **By class** list (`current / total` per detection class).
 
 **URL:**
 ```
@@ -324,7 +327,7 @@ http://127.0.0.1:8080/counter/{location}/video
 
 ## Text View
 
-Shows only counter values without video. Suitable for low-resource devices.
+Shows only counter values without video. Suitable for low-resource devices. Shares the same sidebar with the **By class** breakdown.
 
 **URL:**
 ```
@@ -333,7 +336,7 @@ http://127.0.0.1:8080/counter/{location}/text
 
 ## Multi-Counter View
 
-Displays N counters simultaneously on one fullscreen page. Replaces the legacy dual-counter view. Each card shows the current batch and total immediately on load (from live counter state or the last DB record), then updates via Socket.IO.
+Displays N counters simultaneously on one fullscreen page. Replaces the legacy dual-counter view. Each card shows the current batch, total, and an expandable per-class list; values update via Socket.IO.
 
 **URL:**
 ```
@@ -344,7 +347,14 @@ http://127.0.0.1:8080/counter_multi/text?locations=Cam1,Cam2
 
 ## Counting Area Editor
 
-Visual polygon editor for the counting zone. Uses a snapshot from the live stream as background.
+Visual editor for **one or more** counting polygons. Uses a snapshot from the live stream as background.
+
+- **Add zone** / **Delete zone** — manage multiple areas
+- Switch active zone with **Zone 1**, **Zone 2**, …
+- Draw / edit the active polygon (click points, drag vertices, rectangle, full frame)
+- Each zone has its own color; inactive zones are shown dimmed
+- Objects are counted when their center enters **any** zone (union mask)
+- On save, `counting_areas` is written and legacy `counting_area` / `counting_area_color` are synced from the first zone
 
 **URL:**
 ```
@@ -353,7 +363,7 @@ http://127.0.0.1:8080/counter/{location}/counting_area
 
 ## Reports
 
-View saved count records with pagination.
+View saved count records with pagination. Report detail shows session-level **By class** totals and, for each batch (part), its class breakdown when available.
 
 **URL:**
 ```
@@ -401,9 +411,9 @@ Counter control and data endpoints (no auth required unless noted):
 | GET | `/counter/{location}/preview` | Dashboard thumbnail JPEG |
 | GET | `/counter/{location}/settings/form` | HTML partial for settings modal |
 | POST | `/counter/{location}/settings` | Save per-counter detection settings |
-| GET | `/counter/{location}/counting_area/data` | JSON: current polygon and color |
+| GET | `/counter/{location}/counting_area/data` | JSON: `counting_areas` (+ legacy `counting_area` / color) |
 | GET | `/counter/{location}/counting_area/snapshot` | Single JPEG frame for editor |
-| POST | `/counter/{location}/counting_area` | Save polygon (JSON body) |
+| POST | `/counter/{location}/counting_area` | Save zones (`counting_areas` JSON body; legacy fields synced) |
 | POST | `/settings_save` | Save global config (**auth required**) |
 
 ---
@@ -427,7 +437,7 @@ The server emits events to connected clients (no client-to-server handlers):
 
 | Event | Source | Payload |
 |-------|--------|---------|
-| `{location}_count` | ObjectCounter | `{total, current, ...}` |
+| `{location}_count` | ObjectCounter | `{total, current, defect, correct, pending_*, by_class: [{id, name, total, current}, ...]}` |
 | `{location}_notification` | NotificationManager | `{type, message}` |
 | `counter_status_event` | NotificationManager | `{data: {status, location}}` |
 
