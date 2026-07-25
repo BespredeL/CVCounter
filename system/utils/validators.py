@@ -338,7 +338,16 @@ def validate_pending_counts_request(location: str, available_locations: list[str
 
 
 def _validate_polygon_points(area: Any, label: str) -> list[list[int]]:
-    """Validate a single polygon point list."""
+    """
+    Validate a single polygon point list.
+
+    Args:
+        area: The area to validate.
+        label: The label to use for error messages.
+
+    Returns:
+        The validated area.
+    """
     if not isinstance(area, list) or len(area) < 3:
         raise ValidationError(f'{label} must be a list of at least 3 points')
 
@@ -360,7 +369,19 @@ def _validate_polygon_points(area: Any, label: str) -> list[list[int]]:
 
 
 def _validate_bgr_color(color: Any, label: str = 'counting_area_color') -> list[int]:
-    """Validate a BGR color list."""
+    """
+    Validate a BGR color list.
+
+    Args:
+        color: The color to validate.
+        label: The label to use for error messages.
+
+    Returns:
+        The validated color.
+
+    Raises:
+        ValidationError: If validation fails.
+    """
     if not isinstance(color, (list, tuple)) or len(color) != 3:
         raise ValidationError(f'{label} must be a list of 3 integers (BGR)')
 
