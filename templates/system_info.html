@@ -21,6 +21,44 @@
     {% include 'partials/inner_page_nav.html' %}
 
     <div class="page-content">
+        <div class="cv-card overflow-hidden mb-3">
+            <div class="p-3 border-bottom">
+                <h2 class="h5 mb-2">{{ trans('Diagnostics and telemetry') }}</h2>
+                <p class="text-body-secondary small mb-2">
+                    {{ trans('Telemetry privacy note') }}
+                </p>
+                <p class="small mb-3">
+                    <span class="text-body-secondary">{{ trans('App version') }}:</span>
+                    {{ app_version }}
+                    &middot;
+                    <span class="text-body-secondary">{{ trans('Automatic telemetry') }}:</span>
+                    {% if telemetry_enabled %}{{ trans('On') }}{% else %}{{ trans('Off') }}{% endif %}
+                </p>
+                {% if telemetry_last_send %}
+                    <p class="small mb-3">
+                        <span class="text-body-secondary">{{ trans('Last telemetry send') }}:</span>
+                        {{ telemetry_last_send.sent_at | default('—') }}
+                        —
+                        {% if telemetry_last_send.ok %}{{ trans('Success') }}{% else %}{{ trans('Failed') }}{% endif %}
+                        {% if telemetry_last_send.message %}
+                            ({{ telemetry_last_send.message }})
+                        {% endif %}
+                    </p>
+                {% endif %}
+                <div class="d-flex flex-wrap gap-2">
+                    <form method="POST" action="{{ url_for('settings.telemetry_send') }}">
+                        <button type="submit" class="btn btn-outline-primary btn-sm">
+                            {{ trans('Send diagnostics now') }}
+                        </button>
+                    </form>
+                    <a class="btn btn-outline-secondary btn-sm"
+                       href="{{ url_for('settings.telemetry_download') }}">
+                        {{ trans('Download diagnostics JSON') }}
+                    </a>
+                </div>
+            </div>
+        </div>
+
         <div class="cv-card overflow-hidden">
             <div class="table-responsive">
                 <table class="table table-modern mb-0">

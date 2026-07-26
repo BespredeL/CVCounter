@@ -226,6 +226,26 @@ Use `train.py` for training and exporting YOLO models (separate from the web app
 | `uri` | Database connection URI | `sqlite:///system/db/database.sqlite` |
 | `prefix` | Table prefix | `""` |
 
+## Telemetry `telemetry`
+
+Optional anonymized diagnostics sent to your HTTP API. See [telemetry_api.md](telemetry_api.md).
+
+| Parameter | Description | Default Value |
+|-----------|-------------|---------------|
+| `enabled` | Enable automatic usage/error sending | `false` |
+| `endpoint` | HTTPS endpoint URL | `https://bespredel.name/api/cvcounter/telemetry` |
+| `send_errors` | Include exception events | `true` |
+| `send_usage` | Include usage events | `true` |
+| `flush_interval_sec` | Background flush interval | `300` |
+| `max_batch_size` | Max events per POST | `50` |
+| `max_queue_size` | In-memory queue capacity (drop on full) | `200` |
+| `max_stack_chars` | Max stack trace length | `8000` |
+| `error_dedup_sec` | Dedup window for noisy events | `120` |
+| `timeout_sec` | HTTP timeout | `5` |
+| `hmac_secret` | Optional shared secret for `X-CVCounter-Signature` | `""` |
+
+Manual send and JSON download are available on the System Info page even when `enabled` is `false`.
+
 ## Form Parameters `form`
 
 | Parameter | Description | Default Value |
@@ -376,10 +396,14 @@ http://127.0.0.1:8080/reports/{location}/{report_id}
 
 Global configuration editor and GPU/system information. **Requires HTTP Basic Auth.**
 
+On System Info you can send anonymized diagnostics to the configured telemetry endpoint or download a local JSON report. See [telemetry_api.md](telemetry_api.md).
+
 **URL:**
 ```
 http://127.0.0.1:8080/settings
 http://127.0.0.1:8080/system_info
+http://127.0.0.1:8080/settings/telemetry/send   (POST)
+http://127.0.0.1:8080/settings/telemetry/download
 ```
 
 ## Help

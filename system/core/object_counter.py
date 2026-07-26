@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 25.07.2026
+# Updated: 26.07.2026
 # Website: https://bespredel.name
 
 import json
@@ -33,6 +33,7 @@ from system.utils.exception_handler import StreamConnectionError
 from system.utils.i18n import trans
 from system.managers.video_stream_manager import VideoStreamManager
 from system.managers.video_recorder_manager import VideoRecorderManager
+from system.utils.telemetry import get_telemetry
 
 _PLACEHOLDER_MJPEG_CHUNK: bytes | None = None
 
@@ -171,11 +172,13 @@ class ObjectCounter:
                         self.logger.error(
                             f"Camera connection failed after {self.video_reconnect_attempts} attempts | {self.location}"
                         )
+                        get_telemetry().track('stream_lost', {'location': self.location, 'reason': 'reconnect_limit'})
                         self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
                         self.notif_manager.event('counter_status', {'status': 'error', 'location': self.location})
                         self.stop()
                         break
 
+                    get_telemetry().track('stream_lost', {'location': self.location, 'reason': 'frame_none'})
                     self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
                     self.notif_manager.event('counter_status', {'status': 'error', 'location': self.location})
                     time.sleep(self.DEFAULT_SLEEP_TIME)
@@ -183,6 +186,7 @@ class ObjectCounter:
 
                 if reconnect_count > 0:
                     self.vsm.reset_reconnect_count()
+                    get_telemetry().track('stream_reconnected', {'location': self.location})
                     self.notif_manager.notify(trans('Connection to camera restored!'), 'success')
                     self.notif_manager.event('counter_status', {'status': 'started', 'location': self.location})
 
@@ -199,6 +203,7 @@ class ObjectCounter:
             except Exception as e:
                 self.logger.error(f"Lost connection to camera! | {self.location}: {e}")
                 self.logger.log_exception()
+                get_telemetry().track('stream_lost', {'location': self.location, 'reason': 'exception'})
                 self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
                 self.notif_manager.event('counter_status', {'status': 'error', 'location': self.location})
 

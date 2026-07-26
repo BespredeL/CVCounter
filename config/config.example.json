@@ -34,6 +34,19 @@
         "uri": "sqlite:///system/db/database.sqlite",
         "prefix": ""
     },
+    "telemetry": {
+        "enabled": false,
+        "endpoint": "https://bespredel.name/api/cvcounter/telemetry",
+        "send_errors": true,
+        "send_usage": true,
+        "flush_interval_sec": 300,
+        "max_batch_size": 50,
+        "max_queue_size": 200,
+        "max_stack_chars": 8000,
+        "error_dedup_sec": 120,
+        "timeout_sec": 5,
+        "hmac_secret": ""
+    },
     "form": {
         "defect_show": true,
         "correct_show": true,

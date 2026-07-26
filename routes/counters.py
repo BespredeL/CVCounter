@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 03.12.2025
-# Updated: 25.07.2026
+# Updated: 26.07.2026
 # Website: https://bespredel.name
 
 import time
@@ -22,6 +22,7 @@ from system.utils.counter_preview import get_preview_path, save_counter_preview
 from system.utils.frame_utils import FrameUtils
 from system.utils.i18n import trans as translate
 from system.utils.logger import Logger
+from system.utils.telemetry import get_telemetry
 from system.utils.utils import is_ajax, slug
 from system.utils.validators import (
     ValidationError,
@@ -803,6 +804,7 @@ def save_count(location: str = None) -> dict:
             custom_fields=validated_data['custom_fields'],
             active=1
         )
+        get_telemetry().track('report_created', {'location': location})
 
         return object_counters[location].get_live_counts()
     except ValidationError as e:
@@ -861,6 +863,7 @@ def reset_count(location: str = None) -> dict:
     object_counters = context['object_counters']
 
     object_counters[location].reset_count(location=location)
+    get_telemetry().track('counter_reset', {'location': location})
     return object_counters[location].get_live_counts()
 
 
@@ -970,6 +973,7 @@ def start_count(location: str = None) -> dict[str, str] | Response:
     object_counters = context['object_counters']
 
     object_counters[location].start()
+    get_telemetry().track('counter_started', {'location': location})
 
     if is_ajax():
         return jsonify({'status': 'started'})
@@ -1022,6 +1026,8 @@ def stop_count(location: str = None) -> dict[str, str] | Response:
     with lock:
         if location in object_counters:
             del object_counters[location]
+
+    get_telemetry().track('counter_stopped', {'location': location})
 
     if is_ajax():
         return jsonify({'status': 'stopped'})

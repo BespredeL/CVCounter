@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 22.01.2026
-# Updated: 25.07.2026
+# Updated: 26.07.2026
 # Website: https://bespredel.name
 
 import os
@@ -40,6 +40,7 @@ class ConfigValidator:
         self._validate_server(config.get('server', {}))
         self._validate_users(config.get('users', {}))
         self._validate_db(config.get('db', {}), config_path)
+        self._validate_telemetry(config.get('telemetry', {}))
         self._validate_form(config.get('form', {}))
         self._validate_detection_default(config.get('detection_default', {}), config_path)
         self._validate_detections(config.get('detections', {}), config_path)
@@ -178,6 +179,52 @@ class ConfigValidator:
                 self.errors.append(f"Invalid password hash for user '{username}'")
             elif not password_hash.startswith(('pbkdf2:', 'scrypt:', 'argon2:')):
                 self.warnings.append(f"Password hash for user '{username}' may not be in a recognized format")
+
+    def _validate_telemetry(self, telemetry: Dict[str, Any]) -> None:
+        """
+        Validate optional telemetry configuration section.
+
+        Args:
+            telemetry (dict): Telemetry configuration section
+
+        Returns:
+            None
+        """
+        if not telemetry:
+            return
+
+        if 'enabled' in telemetry and not isinstance(telemetry['enabled'], bool):
+            self.errors.append("'telemetry.enabled' must be a boolean")
+
+        if 'endpoint' in telemetry:
+            endpoint = telemetry['endpoint']
+            if not isinstance(endpoint, str):
+                self.errors.append("'telemetry.endpoint' must be a string")
+            elif endpoint and not endpoint.startswith(('http://', 'https://')):
+                self.errors.append("'telemetry.endpoint' must start with http:// or https://")
+
+        for bool_key in ('send_errors', 'send_usage'):
+            if bool_key in telemetry and not isinstance(telemetry[bool_key], bool):
+                self.errors.append(f"'telemetry.{bool_key}' must be a boolean")
+
+        for int_key in (
+                'flush_interval_sec',
+                'max_batch_size',
+                'max_queue_size',
+                'max_stack_chars',
+                'error_dedup_sec',
+                'timeout_sec',
+        ):
+            if int_key not in telemetry:
+                continue
+            value = telemetry[int_key]
+            if not isinstance(value, int) or isinstance(value, bool):
+                self.errors.append(f"'telemetry.{int_key}' must be an integer")
+            elif value < 1:
+                self.errors.append(f"'telemetry.{int_key}' must be >= 1")
+
+        if 'hmac_secret' in telemetry and not isinstance(telemetry['hmac_secret'], str):
+            self.errors.append("'telemetry.hmac_secret' must be a string")
 
     def _validate_db(self, db: Dict[str, Any], config_path: Optional[str] = None) -> None:
         """

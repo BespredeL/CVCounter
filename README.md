@@ -22,6 +22,7 @@ CVCounter - это гибкая и масштабируемая система �
 - 📊 Подготовка данных для аналитики и отчётов с разбивкой по классам
 - 🧩 Модульная архитектура с реестром детекторов
 - 🧠 Несколько бэкендов: Ultralytics YOLO, OpenCV DNN, ONNX Runtime
+- 📡 Опциональная обезличенная телеметрия (ошибки/использование) и ручная диагностика
 
 ---
 
@@ -283,6 +284,27 @@ class ObjectDetectionMy(BaseObjectDetectionService):
         // префикс таблиц
         prefix: "",
     },
+    telemetry: {
+        // автоотправка выключена по умолчанию
+        enabled: false,
+        // URL приёмника на вашем сайте
+        endpoint: "https://bespredel.name/api/cvcounter/telemetry",
+        // отправлять исключения
+        send_errors: true,
+        // отправлять события использования
+        send_usage: true,
+        // интервал фоновой отправки (сек)
+        flush_interval_sec: 300,
+        // лимиты очереди/пакета (чтобы не нагружать систему)
+        max_batch_size: 50,
+        max_queue_size: 200,
+        max_stack_chars: 8000,
+        error_dedup_sec: 120,
+        // таймаут HTTP (сек)
+        timeout_sec: 5,
+        // опциональный HMAC-секрет для подписи тела запроса
+        hmac_secret: "",
+    },
     form: {
         // показать форму брака
         defect_show: true,
@@ -424,6 +446,11 @@ class ObjectDetectionMy(BaseObjectDetectionService):
 }
 ```
 
+> **Помогите развитию CVCounter**  
+> Если можете — включите телеметрию (`telemetry.enabled: true` в настройках).  
+> Обезличенные данные об ошибках и использовании помогают быстрее находить проблемы и улучшать приложение. Спасибо!  
+> Кадры, URL камер и полный config **не отправляются**. Ручная диагностика доступна на странице **Информация о системе** (Basic Auth). Подробнее: [`docs/telemetry_api.md`](docs/telemetry_api.md).
+
 ---
 
 ## 📸 Скриншоты
@@ -457,6 +484,8 @@ GitHub: [https://github.com/BespredeL](https://github.com/BespredeL)
 
 ## 🔗 Ссылки
 
+Документация телеметрии: [docs/telemetry_api.md](docs/telemetry_api.md)<br>
+Wiki (RU): [docs/wiki_ru.md](docs/wiki_ru.md)<br>
 Ultralytics: [https://github.com/ultralytics](https://github.com/ultralytics)<br>
 OpenCV: [https://opencv.org/](https://opencv.org/)<br>
 ONNX Runtime: [https://onnxruntime.ai/](https://onnxruntime.ai/)

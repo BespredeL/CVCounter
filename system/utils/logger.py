@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 09.06.2026
+# Updated: 26.07.2026
 # Website: https://bespredel.name
 
 import logging
@@ -113,6 +113,7 @@ class Logger:
             exception_info = ''.join(traceback.format_exception(*exc_info))
         self._logger.error("Exception occurred:\n%s", exception_info)
         self._flush_handlers()
+        self._notify_telemetry(exc_info=exc_info)
 
     def exception(self, msg: str, exc_info=None) -> None:
         if exc_info is None:
@@ -120,6 +121,14 @@ class Logger:
         else:
             self._logger.error(msg, exc_info=exc_info)
         self._flush_handlers()
+        self._notify_telemetry(exc_info=exc_info)
+
+    def _notify_telemetry(self, exc_info=None) -> None:
+        try:
+            from system.utils.telemetry import get_telemetry
+            get_telemetry().capture_exception(exc_info=exc_info)
+        except Exception:
+            pass
 
     def _flush_handlers(self) -> None:
         for handler in self._logger.handlers:
