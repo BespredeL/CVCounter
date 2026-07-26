@@ -1,5 +1,6 @@
 /config/ultralytics/
 /config/config.json
 /system/database.sqlite
-/storage/telemetry/
+/storage/
 /.idea/
+/venv/
