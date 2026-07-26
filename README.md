@@ -1,5 +1,6 @@
 # CVCounter - Система детекции и подсчёта объектов
 
+[![Website](https://img.shields.io/badge/website-bespredel.github.io-4dabf7.svg)](https://bespredel.github.io/cvcounter/)
 [![Readme EN](https://img.shields.io/badge/README-EN-blue.svg)](https://github.com/BespredeL/CVCounter/blob/master/README_EN.md)
 [![Readme RU](https://img.shields.io/badge/README-RU-blue.svg)](https://github.com/BespredeL/CVCounter/blob/master/README.md)
 [![GitHub license](https://img.shields.io/badge/license-AGPL--3.0-458a7b.svg)](https://github.com/BespredeL/CVCounter/blob/master/LICENSE)
@@ -484,6 +485,7 @@ GitHub: [https://github.com/BespredeL](https://github.com/BespredeL)
 
 ## 🔗 Ссылки
 
+Сайт: [https://cvcounter.github.io/](https://cvcounter.github.io/)<br>
 Документация телеметрии: [docs/telemetry_api.md](docs/telemetry_api.md)<br>
 Wiki (RU): [docs/wiki_ru.md](docs/wiki_ru.md)<br>
 Ultralytics: [https://github.com/ultralytics](https://github.com/ultralytics)<br>
