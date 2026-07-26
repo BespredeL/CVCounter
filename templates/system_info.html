@@ -22,7 +22,7 @@
 
     <div class="page-content">
         <div class="cv-card overflow-hidden mb-3">
-            <div class="p-3 border-bottom">
+            <div class="p-3 border-start border-warning border-3">
                 <h2 class="h5 mb-2">{{ trans('Diagnostics and telemetry') }}</h2>
                 <p class="text-body-secondary small mb-2">
                     {{ trans('Telemetry privacy note') }}
@@ -47,11 +47,11 @@
                 {% endif %}
                 <div class="d-flex flex-wrap gap-2">
                     <form method="POST" action="{{ url_for('settings.telemetry_send') }}">
-                        <button type="submit" class="btn btn-outline-primary btn-sm">
+                        <button type="submit" class="btn btn-outline-warning btn-sm">
                             {{ trans('Send diagnostics now') }}
                         </button>
                     </form>
-                    <a class="btn btn-outline-secondary btn-sm"
+                    <a class="btn btn-outline-primary btn-sm"
                        href="{{ url_for('settings.telemetry_download') }}">
                         {{ trans('Download diagnostics JSON') }}
                     </a>

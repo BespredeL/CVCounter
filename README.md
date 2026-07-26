@@ -4,7 +4,7 @@
 [![Readme RU](https://img.shields.io/badge/README-RU-blue.svg)](https://github.com/BespredeL/CVCounter/blob/master/README.md)
 [![GitHub license](https://img.shields.io/badge/license-AGPL--3.0-458a7b.svg)](https://github.com/BespredeL/CVCounter/blob/master/LICENSE)
 
-🧠 Готовая к продакшену система компьютерного зрения для детекции, трекинга и подсчёта объектов в реальном времени
+🧠 Готовая система компьютерного зрения для детекции, трекинга и подсчёта объектов в реальном времени
 
 CVCounter - это гибкая и масштабируемая система компьютерного зрения, предназначенная для анализа видеопотока с возможностью подсчёта
 объектов.

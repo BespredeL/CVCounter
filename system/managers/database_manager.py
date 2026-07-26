@@ -163,7 +163,7 @@ class DatabaseManager:
                 if by_class is not None:
                     part_entry['by_class'] = by_class
                 parts.append(part_entry)
-                parts = sorted(parts, key=lambda x: x['created_at'], reverse=True)
+                parts = sorted(parts, key=lambda x: x['created_at'], reverse=False)
                 result.parts = json.dumps(parts)
                 if class_counts is not None:
                     result.class_counts = self._serialize_class_counts(class_counts)
@@ -262,7 +262,7 @@ class DatabaseManager:
         """
         session = self.create_session()
         try:
-            query = session.query(CVCounter).filter_by(location=key)
+            query = session.query(CVCounter).filter_by(location=key).order_by(CVCounter.created_at.desc())
             total = query.count()  # Getting the total number of records
             results = query.offset((page - 1) * per_page).limit(per_page).all()  # Applying offset and limit
 
