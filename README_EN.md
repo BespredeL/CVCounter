@@ -25,6 +25,11 @@ It is perfectly suited for **counting products, people, vehicle tracking, retail
 - 🧠 Multiple backends: Ultralytics YOLO, OpenCV DNN, ONNX Runtime
 - 📡 Optional anonymized telemetry (errors/usage) and manual diagnostics
 
+> **Help improve CVCounter**  
+> If you can, please enable telemetry (`telemetry.enabled: true` in Settings).  
+> Anonymized error and usage data helps find issues faster and improve the app. Thank you!  
+> Frames, camera URLs, and the full config are **never sent**. Manual diagnostics are available on the **System info** page (Basic Auth). Details: [`docs/telemetry_api.md`](docs/telemetry_api.md).
+
 ---
 
 ## 🚀 Use Cases
@@ -446,11 +451,6 @@ class ObjectDetectionMy(BaseObjectDetectionService):
     },
 }
 ```
-
-> **Help improve CVCounter**  
-> If you can, please enable telemetry (`telemetry.enabled: true` in Settings).  
-> Anonymized error and usage data helps find issues faster and improve the app. Thank you!  
-> Frames, camera URLs, and the full config are **never sent**. Manual diagnostics are available on the **System info** page (Basic Auth). Details: [`docs/telemetry_api.md`](docs/telemetry_api.md).
 
 ---
 
