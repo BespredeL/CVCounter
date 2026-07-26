@@ -226,6 +226,26 @@ yolo export model=config/ultralytics/models/yolov8n.pt format=onnx
 | `uri` | Подключение к базе данных | `sqlite:///system/db/database.sqlite` |
 | `prefix` | Префикс таблиц | `""` |
 
+## Телеметрия `telemetry`
+
+Опциональная обезличенная диагностика на ваш HTTP API. См. [telemetry_api.md](telemetry_api.md).
+
+| Параметр | Описание | Значение по умолчанию |
+|----------|----------|----------------------|
+| `enabled` | Автоотправка usage/errors | `false` |
+| `endpoint` | URL HTTPS endpoint | `https://bespredel.name/api/cvcounter/telemetry` |
+| `send_errors` | Отправлять исключения | `true` |
+| `send_usage` | Отправлять события использования | `true` |
+| `flush_interval_sec` | Интервал фоновой отправки | `300` |
+| `max_batch_size` | Макс. событий в POST | `50` |
+| `max_queue_size` | Ёмкость очереди в памяти (drop при переполнении) | `200` |
+| `max_stack_chars` | Макс. длина stack | `8000` |
+| `error_dedup_sec` | Окно дедупликации шумных событий | `120` |
+| `timeout_sec` | Таймаут HTTP | `5` |
+| `hmac_secret` | Опциональный секрет для `X-CVCounter-Signature` | `""` |
+
+Ручная отправка и скачивание JSON доступны на странице «Информация о системе», даже если `enabled` = `false`.
+
 ## Параметры форм `form`
 
 | Параметр | Описание | Значение по умолчанию |
@@ -376,10 +396,14 @@ http://127.0.0.1:8080/reports/{location}/{report_id}
 
 Редактор глобальной конфигурации и информация о GPU/системе. **Требует HTTP Basic Auth.**
 
+На странице системной информации можно отправить обезличенную диагностику на endpoint телеметрии или скачать локальный JSON. См. [telemetry_api.md](telemetry_api.md).
+
 **URL:**
 ```
 http://127.0.0.1:8080/settings
 http://127.0.0.1:8080/system_info
+http://127.0.0.1:8080/settings/telemetry/send   (POST)
+http://127.0.0.1:8080/settings/telemetry/download
 ```
 
 ## Справка

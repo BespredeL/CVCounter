@@ -23,6 +23,7 @@ It is perfectly suited for **counting products, people, vehicle tracking, retail
 - 📊 Analytics-ready output and reports with per-class totals
 - 🧩 Modular architecture with a detector registry
 - 🧠 Multiple backends: Ultralytics YOLO, OpenCV DNN, ONNX Runtime
+- 📡 Optional anonymized telemetry (errors/usage) and manual diagnostics
 
 ---
 
@@ -284,6 +285,27 @@ class ObjectDetectionMy(BaseObjectDetectionService):
         // table prefix
         prefix: "",
     },
+    telemetry: {
+        // automatic sending is off by default
+        enabled: false,
+        // receiver URL on your website
+        endpoint: "https://bespredel.name/api/cvcounter/telemetry",
+        // include exception events
+        send_errors: true,
+        // include usage events
+        send_usage: true,
+        // background flush interval (sec)
+        flush_interval_sec: 300,
+        // queue/batch limits (keep telemetry off the hot path)
+        max_batch_size: 50,
+        max_queue_size: 200,
+        max_stack_chars: 8000,
+        error_dedup_sec: 120,
+        // HTTP timeout (sec)
+        timeout_sec: 5,
+        // optional HMAC secret for request body signature
+        hmac_secret: "",
+    },
     form: {
         // show defect form
         defect_show: true,
@@ -425,6 +447,11 @@ class ObjectDetectionMy(BaseObjectDetectionService):
 }
 ```
 
+> **Help improve CVCounter**  
+> If you can, please enable telemetry (`telemetry.enabled: true` in Settings).  
+> Anonymized error and usage data helps find issues faster and improve the app. Thank you!  
+> Frames, camera URLs, and the full config are **never sent**. Manual diagnostics are available on the **System info** page (Basic Auth). Details: [`docs/telemetry_api.md`](docs/telemetry_api.md).
+
 ---
 
 ## 📸 Screenshots
@@ -458,6 +485,8 @@ GitHub: [https://github.com/BespredeL](https://github.com/BespredeL)
 
 ## 🔗 Links
 
+Telemetry API docs: [docs/telemetry_api.md](docs/telemetry_api.md)<br>
+Wiki (EN): [docs/wiki.md](docs/wiki.md)<br>
 Ultralytics: [https://github.com/ultralytics](https://github.com/ultralytics)<br>
 OpenCV: [https://opencv.org/](https://opencv.org/)<br>
 ONNX Runtime: [https://onnxruntime.ai/](https://onnxruntime.ai/)

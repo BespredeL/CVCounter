@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 08.06.2026
+# Updated: 26.07.2026
 # Website: https://bespredel.name
 
 import os
@@ -163,6 +163,12 @@ def create_app(config_path: str = "config/config.json", test_config: dict = None
 
     # Store app_context in app config for access in blueprints
     _app.config['APP_CONTEXT'] = app_context
+
+    # Telemetry (opt-in; no-op when disabled)
+    from system.utils.telemetry import get_telemetry
+    telemetry = get_telemetry()
+    telemetry.configure(_config, runtime_context=app_context)
+    telemetry.track('app_started')
 
     # Register template filters and globals
     register_template_helpers(_app, app_context)
@@ -337,6 +343,13 @@ def register_error_handlers(app: Flask, context: dict):
 
     logger = Logger()
 
+    def _telemetry_capture(exc) -> None:
+        try:
+            from system.utils.telemetry import get_telemetry
+            get_telemetry().capture_exception(exc)
+        except Exception:
+            pass
+
     @app.errorhandler(400)
     def bad_request(error):
         """Handle 400 Bad Request errors."""
@@ -372,6 +385,7 @@ def register_error_handlers(app: Flask, context: dict):
     def config_not_found_error(error):
         """Handle configuration file not found errors."""
         logger.error(f"Configuration error: {error.message}")
+        _telemetry_capture(error)
         return render_template('errors/config_error.html', error=error, error_type="Configuration File Not Found"), 500
 
     @app.errorhandler(InvalidConfigError)
@@ -380,12 +394,14 @@ def register_error_handlers(app: Flask, context: dict):
         logger.error(f"Invalid configuration: {error.message}")
         if hasattr(error, 'details') and error.details and 'validation_errors' in error.details:
             logger.error(f"Validation errors: {error.details['validation_errors']}")
+        _telemetry_capture(error)
         return render_template('errors/config_error.html', error=error, error_type="Invalid Configuration"), 500
 
     @app.errorhandler(ConfigError)
     def config_error(error):
         """Handle general configuration errors."""
         logger.error(f"Configuration error: {error.message}")
+        _telemetry_capture(error)
         return render_template('errors/config_error.html', error=error, error_type="Configuration Error"), 500
 
     @app.errorhandler(ObjectDetectionError)
@@ -476,6 +492,14 @@ def register_signal_handlers(context: dict):
                 db_manager.close()
         except Exception as e:
             logger.error(f"Error closing database: {e}")
+
+        try:
+            from system.utils.telemetry import get_telemetry
+            telemetry = get_telemetry()
+            telemetry.track('app_stopped')
+            telemetry.shutdown(timeout=2.0)
+        except Exception as e:
+            logger.error(f"Error during telemetry shutdown: {e}")
 
         logger.info("Shutdown completed.")
         sys.exit(0)
