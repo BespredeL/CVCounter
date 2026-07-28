@@ -31,6 +31,16 @@ class ObjectDetectionYOLO(BaseObjectDetectionService):
         settings.update({'sync': False})
 
     def detect(self, image: ndarray, **kwargs) -> DetectionResult:
+        """
+        Detect objects in an image.
+
+        Args:
+            image: ndarray - The image to detect objects in.
+            kwargs: dict - Additional keyword arguments.
+
+        Returns:
+            DetectionResult - The detection result.
+        """
         if self.model is None:
             raise ModelNotFoundError('Model is not loaded')
 
@@ -52,6 +62,16 @@ class ObjectDetectionYOLO(BaseObjectDetectionService):
         return boxes_xyxy, confidences, classes
 
     def load_model(self, weights: str, **kwargs) -> None:
+        """
+        Load a model from a weights file.
+        
+        Args:
+            weights: str - The path to the model weights.
+            kwargs: dict - Additional keyword arguments.
+        
+        Returns:
+            None
+        """
         if not weights:
             raise ModelNotFoundError('Model is not found')
 
@@ -68,6 +88,15 @@ class ObjectDetectionYOLO(BaseObjectDetectionService):
             raise ModelLoadingError(f"Error loading model: {e}")
 
     def cleanup(self) -> None:
+        """
+        Cleanup the model.
+        
+        Args:
+            None
+
+        Returns:
+            None
+        """
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
             gc.collect()

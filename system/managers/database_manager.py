@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 22.01.2026
+# Updated: 28.07.2026
 # Website: https://bespredel.name
 
 import json
@@ -45,14 +45,25 @@ class DatabaseManager:
         """
         Creates and returns a new session.
 
+        Args:
+            None
+
         Returns:
-            Session: A new session.
+            any: A new session.
         """
         return self.__sessionmaker()
 
     @staticmethod
     def _serialize_class_counts(class_counts: Optional[list | dict] = None) -> str | None:
-        """Serialize class counts for Text storage."""
+        """
+        Serialize class counts for Text storage.
+        
+        Args:
+            class_counts (Optional[list | dict], optional): The class counts. Defaults to None.
+
+        Returns:
+            str | None: The serialized class counts.
+        """
         if class_counts is None:
             return None
         return json.dumps(class_counts)

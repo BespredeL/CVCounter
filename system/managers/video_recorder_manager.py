@@ -66,6 +66,12 @@ class VideoRecorderManager:
     def start(self) -> None:
         """
         Start a background recording thread.
+        
+        Args:
+            None
+
+        Returns:
+            None
         """
         if self._thread is not None and self._thread.is_alive():
             return
@@ -77,6 +83,12 @@ class VideoRecorderManager:
     def stop(self) -> None:
         """
         Stop recording and save the current file.
+        
+        Args:
+            None
+
+        Returns:
+            None
         """
         self._stop_event.set()
         if self._thread is not None:
@@ -90,6 +102,12 @@ class VideoRecorderManager:
         """
         Non-blocking sending of a frame to the queue.
         If the queue is full, the frame is quietly discarded so as not to slow down the counting.
+        
+        Args:
+            frame (np.ndarray): The frame to push.
+
+        Returns:
+            None
         """
         if frame is None:
             return
@@ -106,6 +124,12 @@ class VideoRecorderManager:
     def _run(self) -> None:
         """
         The main loop of the background write thread.
+        
+        Args:
+            None
+
+        Returns:
+            None
         """
         while not self._stop_event.is_set() or not self._queue.empty():
             try:
@@ -128,6 +152,12 @@ class VideoRecorderManager:
     def _prepare_frame(self, frame: np.ndarray) -> np.ndarray:
         """
         Preparing a frame for recording (changing the resolution by scale).
+        
+        Args:
+            frame (np.ndarray): The frame to prepare.
+
+        Returns:
+            np.ndarray: The prepared frame.
         """
         if frame is None:
             return frame
@@ -147,6 +177,12 @@ class VideoRecorderManager:
     def _ensure_writer(self, frame: np.ndarray) -> None:
         """
         Initialize VideoWriter on the first frame.
+        
+        Args:
+            frame (np.ndarray): The frame to initialize the writer on.
+
+        Returns:
+            None
         """
         if self._writer is not None:
             return
@@ -178,6 +214,15 @@ class VideoRecorderManager:
             self._logger.error(f"Error creating VideoWriter: {e}")
 
     def _ensure_recording_dir(self) -> str:
+        """
+        Ensure the recording directory exists.
+        
+        Args:
+            None
+
+        Returns:
+            str: The recording directory
+        """
         base_dir = self.base_path or self.DEFAULT_RECORDING_PATH
         safe_location = re.sub('[^A-Za-z0-9-_]+', '', self.location)
         full_dir = os.path.join(base_dir, safe_location)
@@ -185,6 +230,15 @@ class VideoRecorderManager:
         return full_dir
 
     def _release_writer(self) -> None:
+        """
+        Release the VideoWriter.
+        
+        Args:
+            None
+
+        Returns:
+            None
+        """
         if self._writer is not None:
             try:
                 self._writer.release()

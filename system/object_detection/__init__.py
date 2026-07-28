@@ -14,9 +14,9 @@ from system.object_detection.registry import (
 )
 
 # Import backends to populate the registry.
-from system.object_detection import object_detection_onnx  # noqa: F401
-from system.object_detection import object_detection_opencv  # noqa: F401
-from system.object_detection import object_detection_yolo  # noqa: F401
+from system.object_detection import object_detection_onnx
+from system.object_detection import object_detection_opencv
+from system.object_detection import object_detection_yolo
 
 __all__ = [
     'create_detector',

@@ -55,6 +55,9 @@ class VideoStreamManager:
         """
         Get the video stream source.
 
+        Args:
+            None
+
         Returns:
             str: The video stream source
         """
@@ -65,6 +68,9 @@ class VideoStreamManager:
         """
         Get the video capture object.
 
+        Args:
+            None
+
         Returns:
             cv2.VideoCapture: The video capture object
         """
@@ -73,6 +79,9 @@ class VideoStreamManager:
     def connect(self) -> bool:
         """
         Open the video stream once.
+
+        Args:
+            None
 
         Returns:
             bool: True when the capture is ready, False on failure.
@@ -115,12 +124,23 @@ class VideoStreamManager:
         return False
 
     def reconnect_limit_reached(self) -> bool:
-        """Whether the configured connection attempt limit has been exhausted."""
+        """
+        Whether the configured connection attempt limit has been exhausted.
+        
+        Args:
+            None
+
+        Returns:
+            bool: True if the reconnect limit has been reached, False otherwise
+        """
         return self.__reconnect_count >= self.__max_reconnect_attempts
 
     def start(self) -> None:
         """
         Starts the video stream.
+
+        Args:
+            None
 
         Returns:
             None
@@ -155,6 +175,9 @@ class VideoStreamManager:
         """
         A method to stop the video capture, if it's currently active.
 
+        Args:
+            None
+
         Returns:
             None
         """
@@ -170,6 +193,9 @@ class VideoStreamManager:
     def get_frame(self) -> cv2.Mat:
         """
         A method to retrieve a frame using the 'cap' attribute.
+
+        Args:
+            None
 
         Returns:
             frame: A frame from the video stream
@@ -206,6 +232,9 @@ class VideoStreamManager:
         """
         Reconnects to the video stream
 
+        Args:
+            None
+
         Returns:
             None
         """
@@ -224,6 +253,9 @@ class VideoStreamManager:
         """
         Check if the source is an HTTP Live Streaming playlist (.m3u8).
 
+        Args:
+            None
+
         Returns:
             bool: True for HLS URLs, False otherwise
         """
@@ -238,6 +270,9 @@ class VideoStreamManager:
         """
         Check if the video stream is a valid stream by verifying if it starts with common protocols.
 
+        Args:
+            None
+
         Returns:
             bool: True if the video stream is a valid stream, False otherwise
         """
@@ -245,6 +280,15 @@ class VideoStreamManager:
             ('rtsp://', 'rtmp://', 'http://', 'https://', 'tcp://'))
 
     def _open_hls_capture(self) -> cv2.VideoCapture:
+        """
+        Open an HLS capture.
+        
+        Args:
+            None
+
+        Returns:
+            cv2.VideoCapture: The HLS capture
+        """
         previous_options = os.environ.get('OPENCV_FFMPEG_CAPTURE_OPTIONS')
         os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = self._HLS_FFMPEG_OPTIONS
         try:
@@ -256,6 +300,15 @@ class VideoStreamManager:
                 os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = previous_options
 
     def _warmup_hls_capture(self) -> None:
+        """
+        Warm up the HLS capture.
+        
+        Args:
+            None
+
+        Returns:
+            None
+        """
         deadline = time.time() + self._HLS_WARMUP_TIMEOUT_SEC
         while time.time() < deadline:
             ret, frame = self.__cap.read()
@@ -267,6 +320,15 @@ class VideoStreamManager:
         raise StreamConnectionError(f"Cannot open video stream: {self.__video_stream}")
 
     def _read_hls_frame(self):
+        """
+        Read an HLS frame.
+        
+        Args:
+            None
+
+        Returns:
+            cv2.Mat: The HLS frame
+        """
         for _ in range(self._HLS_READ_RETRIES):
             ret, frame = self.__cap.read()
             if ret and frame is not None:
@@ -275,6 +337,15 @@ class VideoStreamManager:
         return None
 
     def _release_capture(self) -> None:
+        """
+        Release the capture.
+        
+        Args:
+            None
+
+        Returns:
+            None
+        """
         if self.__cap is None:
             return
 
@@ -287,6 +358,15 @@ class VideoStreamManager:
         self.__cap = None
 
     def _capture_is_ready(self) -> bool:
+        """
+        Check if the capture is ready.
+        
+        Args:
+            None
+
+        Returns:
+            bool: True if the capture is ready, False otherwise
+        """
         if self.__cap is None:
             return False
         if self.is_hls() or not self.is_stream():
@@ -297,6 +377,9 @@ class VideoStreamManager:
         """
         A method to get the actual calculated FPS.
 
+        Args:
+            None
+
         Returns:
             float: The actual calculated FPS
         """
@@ -306,6 +389,9 @@ class VideoStreamManager:
         """
         A method to get the FPS of the video stream.
 
+        Args:
+            None
+
         Returns:
             float: The FPS of the video stream
         """
@@ -314,6 +400,9 @@ class VideoStreamManager:
     def calculate_fps(self) -> None:
         """
         A method to calculate the actual FPS based on time intervals between frames.
+
+        Args:
+            None
 
         Returns:
             None
@@ -326,11 +415,23 @@ class VideoStreamManager:
     def get_reconnect_count(self) -> int:
         """
         Returns the number of reconnect attempts.
+
+        Args:
+            None
+
+        Returns:
+            int: The number of reconnect attempts
         """
         return self.__reconnect_count
 
     def reset_reconnect_count(self) -> None:
         """
         Resets the reconnect attempt count after a successful connection.
+        
+        Args:
+            None
+
+        Returns:
+            None
         """
         self.__reconnect_count = 0

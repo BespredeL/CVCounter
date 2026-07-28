@@ -42,6 +42,9 @@ class ThreadManager:
             target (Callable): Target function to execute in the thread
             daemon (bool): Whether the thread should be a daemon thread. Defaults to False.
             
+        Returns:
+            None
+            
         Note:
             If a thread for the specified location already exists, a new thread will not be created.
         """
@@ -188,6 +191,9 @@ class ThreadManager:
         """
         Returns the number of active threads.
         
+        Args:
+            None
+
         Returns:
             int: Number of active threads
         """
@@ -198,6 +204,9 @@ class ThreadManager:
         """
         Returns a list of all active location identifiers.
         
+        Args:
+            None
+
         Returns:
             list[str]: List of active location identifiers
         """

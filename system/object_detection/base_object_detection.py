@@ -21,6 +21,10 @@ class BaseObjectDetectionService(ABC):
         """
         Detect objects in an image.
 
+        Args:
+            image (ndarray): The image to detect objects in.
+            **kwargs: Additional keyword arguments.
+
         Returns:
             tuple: (boxes_xyxy, confidences, classes)
                 - boxes_xyxy: ndarray (N, 4)
@@ -30,7 +34,24 @@ class BaseObjectDetectionService(ABC):
 
     @abstractmethod
     def load_model(self, weights: str, **kwargs) -> None:
-        """Load model weights and apply runtime settings from kwargs."""
+        """
+        Load model weights and apply runtime settings from kwargs.
+        
+        Args:
+            weights (str): The path to the model weights.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            None
+        """
 
     def cleanup(self) -> None:
-        """Release backend resources."""
+        """
+        Release backend resources.
+        
+        Args:
+            None
+
+        Returns:
+            None
+        """

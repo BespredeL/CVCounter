@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 26.07.2026
+# Updated: 28.07.2026
 # Website: https://bespredel.name
 
 import json
@@ -39,7 +39,15 @@ _PLACEHOLDER_MJPEG_CHUNK: bytes | None = None
 
 
 def _placeholder_mjpeg_chunk() -> bytes:
-    """Minimal multipart JPEG chunk so Werkzeug commits headers before the first real frame."""
+    """
+    Minimal multipart JPEG chunk so Werkzeug commits headers before the first real frame.
+    
+    Args:
+        None
+
+    Returns:
+        bytes: The placeholder JPEG chunk
+    """
     global _PLACEHOLDER_MJPEG_CHUNK
     if _PLACEHOLDER_MJPEG_CHUNK is None:
         frame = np.zeros((2, 2, 3), dtype=np.uint8)
@@ -76,6 +84,19 @@ class ObjectCounter:
     DEFAULT_VIDEO_RECONNECT_ATTEMPTS: int = 5
 
     def __init__(self, location: str, config_manager: ConfigManager, socketio: SocketIO, **kwargs: any) -> None:
+        """
+        Initialize the ObjectCounter.
+        
+        Args:
+            location (str): The location of the object.
+            config_manager (ConfigManager): The config manager.
+            socketio (SocketIO): The socketio instance.
+            **kwargs: Arbitrary keyword arguments
+
+        Returns:
+            None
+        """
+
         # Init variables
         self.total_objects: set = set()
         self.total_count: int = 0
@@ -247,7 +268,15 @@ class ObjectCounter:
                 self._mjpeg_chunk = None
 
     def _class_label(self, class_id: int) -> str:
-        """Resolve a human-readable label for a detection class id."""
+        """
+        Resolve a human-readable label for a detection class id.
+        
+        Args:
+            class_id (int): The class id.
+
+        Returns:
+            str: The human-readable label
+        """
         if class_id < 0:
             return trans('Unknown')
 
@@ -259,7 +288,15 @@ class ObjectCounter:
         return trans('Class {id}', id=class_id)
 
     def _configured_class_ids(self) -> set[int]:
-        """Class ids declared in detection config (may be empty)."""
+        """
+        Class ids declared in detection config (may be empty).
+        
+        Args:
+            None
+
+        Returns:
+            set[int]: The set of class ids
+        """
         ids: set[int] = set()
         if not self.classes:
             return ids
@@ -272,7 +309,15 @@ class ObjectCounter:
         return ids
 
     def _by_class_payload(self) -> list[dict]:
-        """Build sorted per-class breakdown for live UI / Socket.IO."""
+        """
+        Build sorted per-class breakdown for live UI / Socket.IO.
+        
+        Args:
+            None
+
+        Returns:
+            list[dict]: The list of class payloads
+        """
         class_ids = (
                 set(self.class_counts.keys())
                 | set(self.current_class_counts.keys())
@@ -289,7 +334,15 @@ class ObjectCounter:
         ]
 
     def _increment_class_count(self, class_id: int) -> None:
-        """Increment total and current-batch counts for a class."""
+        """
+        Increment total and current-batch counts for a class.
+        
+        Args:
+            class_id (int): The class id.
+
+        Returns:
+            None
+        """
         key = int(class_id)
         self.class_counts[key] = self.class_counts.get(key, 0) + 1
         self.current_class_counts[key] = self.current_class_counts.get(key, 0) + 1
@@ -498,6 +551,9 @@ class ObjectCounter:
         """
         Start counting.
 
+        Args:
+            None
+
         Returns:
             None
         """
@@ -510,6 +566,9 @@ class ObjectCounter:
     def stop(self) -> None:
         """
         Stop counting.
+
+        Args:
+            None
 
         Returns:
             None
@@ -527,6 +586,9 @@ class ObjectCounter:
         """
         Pause counting.
 
+        Args:
+            None
+
         Returns:
             None
         """
@@ -539,8 +601,11 @@ class ObjectCounter:
         """
         Check if the counting is paused.
 
-        Returns:
+        Args:
             None
+
+        Returns:
+            bool: True if the counting is paused, False otherwise
         """
         return self.paused
 
@@ -550,6 +615,9 @@ class ObjectCounter:
 
         Reuses the latest frame from the counter loop to avoid a second
         read/decode from the same capture device.
+
+        Args:
+            None
 
         Returns:
             Optional[np.ndarray]: BGR frame or None if unavailable.
@@ -570,6 +638,9 @@ class ObjectCounter:
 
         Args:
             counting_areas: List of zones ``{'points': [...], 'color': [...]}``.
+
+        Returns:
+            None
         """
         normalized = normalize_counting_areas({'counting_areas': counting_areas or []})
         runtime = areas_to_runtime(normalized)
@@ -594,6 +665,9 @@ class ObjectCounter:
             counting_area: Legacy single polygon vertices as (x, y).
             counting_area_color: Optional BGR color tuple for the first/legacy zone.
             counting_areas: Preferred multi-zone payload.
+
+        Returns:
+            None
         """
         if counting_areas is not None:
             self.update_counting_areas(counting_areas)
@@ -616,6 +690,9 @@ class ObjectCounter:
         """
         Save a captured image.
 
+        Args:
+            None
+
         Returns:
             None
         """
@@ -630,6 +707,12 @@ class ObjectCounter:
     def cleanup(self) -> None:
         """
         Cleaning resources
+
+        Args:
+            None
+
+        Returns:
+            None
         """
         self.stop()
         if hasattr(self, 'recorder') and self.recording_enabled:
@@ -763,6 +846,12 @@ class ObjectCounter:
     def _init_recorder(self) -> None:
         """
         Initializing the asynchronous recorder for current recognition.
+
+        Args:
+            None
+
+        Returns:
+            None
         """
         if not self.recording_enabled:
             return
@@ -784,6 +873,12 @@ class ObjectCounter:
         """
         Start recording if it is enabled and not yet started.
         This method is safe to call multiple times.
+
+        Args:
+            None
+
+        Returns:
+            None
         """
         if not self.recording_enabled or self.recorder is None:
             return
@@ -850,6 +945,9 @@ class ObjectCounter:
             image (numpy.ndarray): The image on which the indicator should be drawn.
             center (tuple[int, int]): The center coordinates of the indicator.
             rid (int): The ID of the indicator.
+
+        Returns:
+            None
         """
         color = (0, 255, 0) if rid in self.total_objects else (255, 0, 255)
         cv2.circle(image, center, self.indicator_size, color, cv2.FILLED)
@@ -934,17 +1032,41 @@ class ObjectCounter:
         return image
 
     def _work_frame(self, frame: np.ndarray) -> np.ndarray:
-        """One owned contiguous frame per iteration (safe for async recorder/encode)."""
+        """
+        One owned contiguous frame per iteration (safe for async recorder/encode).
+        
+        Args:
+            frame (numpy.ndarray): The frame to process.
+
+        Returns:
+            numpy.ndarray: The processed frame.
+        """
         return np.ascontiguousarray(frame).copy()
 
     def _mjpeg_encode_interval(self) -> float:
-        """Minimum seconds between MJPEG encodes for the browser stream."""
+        """
+        Minimum seconds between MJPEG encodes for the browser stream.
+        
+        Args:
+            None
+
+        Returns:
+            float: The minimum seconds between MJPEG encodes
+        """
         if self.video_fps and self.video_fps > 0:
             return 1.0 / float(self.video_fps)
         return 1.0 / self.DEFAULT_MJPEG_FPS
 
     def _maybe_encode_mjpeg(self, frame: np.ndarray) -> None:
-        """Encode MJPEG only when the stream interval has elapsed."""
+        """
+        Encode MJPEG only when the stream interval has elapsed.
+        
+        Args:
+            frame (numpy.ndarray): The frame to process.
+
+        Returns:
+            None
+        """
         now = time.monotonic()
         if now - self._last_mjpeg_encode_time < self._mjpeg_encode_interval():
             return
@@ -1046,6 +1168,9 @@ class ObjectCounter:
             frame (numpy.ndarray): Original BGR frame to be saved.
             boxes: Detected objects used only for optional class filtering.
             classes_to_save: Optional class filter from dataset config.
+
+        Returns:
+            None
         """
         if frame is None:
             return

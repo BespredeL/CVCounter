@@ -3,32 +3,24 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 22.01.2026
-# Updated: 22.01.2026
+# Updated: 28.07.2026
 # Website: https://bespredel.name
 
 from functools import wraps
 
-from flask import current_app, g
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.security import check_password_hash as werkzeug_check_password_hash, generate_password_hash as werkzeug_generate_password_hash
 
-
-def get_app_context():
-    """
-    Get application context from g or current_app.
-    
-    Returns:
-        dict: Application context dictionary
-    """
-    if not hasattr(g, 'app_context'):
-        g.app_context = current_app.config.get('APP_CONTEXT')
-    return g.app_context
+from system.utils.app_context import get_app_context
 
 
 def get_auth() -> HTTPBasicAuth:
     """
     Get auth instance from app context.
     
+    Args:
+        None
+
     Returns:
         HTTPBasicAuth: HTTPBasicAuth instance
     """
@@ -121,6 +113,16 @@ def login_required(f):
 
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        """
+        Decorated function that requires authentication.
+        
+        Args:
+            *args: Variable length argument list
+            **kwargs: Arbitrary keyword arguments
+        
+        Returns:
+            function: Decorated function that requires authentication
+        """
         auth = setup_auth()
 
         @auth.login_required

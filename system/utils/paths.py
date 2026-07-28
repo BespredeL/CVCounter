@@ -31,6 +31,9 @@ def set_project_root(project_root: str) -> None:
 
     Args:
         project_root (str): The project root.
+
+    Returns:
+        None
     """
     global _PROJECT_ROOT
     _PROJECT_ROOT = os.path.abspath(project_root)
@@ -39,6 +42,9 @@ def set_project_root(project_root: str) -> None:
 def get_project_root() -> str:
     """
     Get the project root.
+
+    Args:
+        None
 
     Returns:
         str: The project root.
@@ -81,6 +87,9 @@ def ensure_dir(path: Optional[str]) -> None:
 
     Args:
         path (str): The path to ensure.
+
+    Returns:
+        None
     """
     if not path:
         return
@@ -93,6 +102,9 @@ def ensure_parent_dir(path: Optional[str]) -> None:
 
     Args:
         path (str): The path to ensure.
+
+    Returns:
+        None
     """
     if not path:
         return
@@ -130,6 +142,9 @@ def ensure_storage_layout(project_root: Optional[str] = None) -> None:
 
     Args:
         project_root (str, optional): The project root.
+
+    Returns:
+        None
     """
     root = project_root or get_project_root()
     for relative_dir in (

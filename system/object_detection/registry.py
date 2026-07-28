@@ -29,6 +29,15 @@ def register(model_type: str) -> Callable[[Type[BaseObjectDetectionService]], Ty
     normalized_type = model_type.strip().lower()
 
     def decorator(cls: Type[BaseObjectDetectionService]) -> Type[BaseObjectDetectionService]:
+        """
+        Decorator to register an object detection backend.
+        
+        Args:
+            cls: Type[BaseObjectDetectionService] - The class to register.
+        
+        Returns:
+            Type[BaseObjectDetectionService]: The registered class.
+        """
         if normalized_type in _REGISTRY:
             raise ValueError(f"Detector '{normalized_type}' is already registered")
         _REGISTRY[normalized_type] = cls
@@ -40,6 +49,9 @@ def register(model_type: str) -> Callable[[Type[BaseObjectDetectionService]], Ty
 def supported_model_types() -> list[str]:
     """
     Get a list of supported model types.
+
+    Args:
+        None
 
     Returns:
         list[str]: A list of supported model types.

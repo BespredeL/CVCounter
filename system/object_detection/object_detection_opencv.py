@@ -56,6 +56,16 @@ class ObjectDetectionOpenCV(BaseObjectDetectionService):
         self.output_layer_names: list[str] = []
 
     def detect(self, image: ndarray, **kwargs) -> DetectionResult:
+        """
+        Detect objects in an image.
+
+        Args:
+            image: ndarray - The image to detect objects in.
+            kwargs: dict - Additional keyword arguments.
+
+        Returns:
+            DetectionResult - The detection result.
+        """
         if self.net is None:
             raise ModelNotFoundError('Model is not loaded')
 
@@ -72,6 +82,16 @@ class ObjectDetectionOpenCV(BaseObjectDetectionService):
         )
 
     def load_model(self, weights: str, **kwargs) -> None:
+        """
+        Load a model from a weights file.
+        
+        Args:
+            weights: str - The path to the model weights.
+            kwargs: dict - Additional keyword arguments.
+        
+        Returns:
+            None
+        """
         if not weights:
             raise ModelNotFoundError('Model is not found')
         if not os.path.exists(weights):
@@ -112,11 +132,31 @@ class ObjectDetectionOpenCV(BaseObjectDetectionService):
         self.output_layer_names = self.net.getUnconnectedOutLayersNames()
 
     def cleanup(self) -> None:
+        """
+        Cleanup the model.
+        
+        Args:
+            None
+
+        Returns:
+            None
+        """
         self.net = None
         self.output_layer_names = []
 
     @classmethod
     def _resolve_dnn_option(cls, value: Optional[str], mapping: dict, option_name: str) -> Optional[int]:
+        """
+        Resolve the DNN option for the model.
+        
+        Args:
+            value: Optional[str] - The value to resolve.
+            mapping: dict - The mapping of the options.
+            option_name: str - The name of the option.
+        
+        Returns:
+            Optional[int] - The resolved option.
+        """
         if value is None:
             return None
         if isinstance(value, int):

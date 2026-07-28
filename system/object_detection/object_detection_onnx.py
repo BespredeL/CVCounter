@@ -38,6 +38,16 @@ class ObjectDetectionONNX(BaseObjectDetectionService):
         self.providers: list[str] = []
 
     def detect(self, image: ndarray, **kwargs) -> DetectionResult:
+        """
+        Detect objects in an image.
+
+        Args:
+            image: ndarray - The image to detect objects in.
+            kwargs: dict - Additional keyword arguments.
+
+        Returns:
+            DetectionResult - The detection result.
+        """
         if self.session is None or self.input_name is None:
             raise ModelNotFoundError('Model is not loaded')
 
@@ -53,6 +63,16 @@ class ObjectDetectionONNX(BaseObjectDetectionService):
         )
 
     def load_model(self, weights: str, **kwargs) -> None:
+        """
+        Load a model from a weights file.
+        
+        Args:
+            weights: str - The path to the model weights.
+            kwargs: dict - Additional keyword arguments.
+
+        Returns:
+            None
+        """
         if not weights:
             raise ModelNotFoundError('Model is not found')
 
@@ -90,12 +110,31 @@ class ObjectDetectionONNX(BaseObjectDetectionService):
         self.output_names = [output.name for output in outputs]
 
     def cleanup(self) -> None:
+        """
+        Cleanup the model.
+        
+        Args:
+            None
+
+        Returns:
+            None
+        """
         self.session = None
         self.input_name = None
         self.output_names = []
 
     @staticmethod
     def _resolve_providers(providers: Optional[list], device) -> list[str]:
+        """
+        Resolve the providers for the model.
+
+        Args:
+            providers: Optional[list] - The providers to use.
+            device: str - The device to use.
+
+        Returns:
+            list[str] - The providers to use.
+        """
         if providers:
             return list(providers)
 

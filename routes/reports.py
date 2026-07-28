@@ -3,30 +3,19 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 03.12.2025
-# Updated: 23.06.2026
+# Updated: 28.07.2026
 # Website: https://bespredel.name
 
 import json
 
 from flask import Blueprint, abort, render_template
-from flask import current_app, g
 from markupsafe import escape
 
+from system.utils.app_context import get_app_context
 from system.utils.i18n import trans as translate
 from system.utils.validators import ValidationError, validate_report_list_request
 
 reports_bp = Blueprint('reports', __name__)
-
-
-def get_app_context():
-    """Get application context from g or current_app.
-    
-    Returns:
-        dict: Application context
-    """
-    if not hasattr(g, 'app_context'):
-        g.app_context = current_app.config.get('APP_CONTEXT')
-    return g.app_context
 
 
 @reports_bp.route('/reports')

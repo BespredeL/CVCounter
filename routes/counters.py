@@ -3,20 +3,21 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 03.12.2025
-# Updated: 26.07.2026
+# Updated: 28.07.2026
 # Website: https://bespredel.name
 
 import time
 from functools import wraps
 from threading import Thread
 
-from flask import Blueprint, Response, abort, jsonify, redirect, render_template, request, send_file, \
+from flask import Blueprint, Response, abort, current_app, jsonify, redirect, render_template, request, send_file, \
     stream_with_context, url_for
-from flask import current_app, g
 from markupsafe import escape
 
+from system.auth import login_required
 from system.core.object_counter import ObjectCounter
 from system.managers.video_stream_manager import VideoStreamManager
+from system.utils.app_context import get_app_context
 from system.utils.counting_area import DEFAULT_COUNTING_AREA_COLOR, areas_for_config, normalize_counting_areas
 from system.utils.counter_preview import get_preview_path, save_counter_preview
 from system.utils.frame_utils import FrameUtils
@@ -33,18 +34,6 @@ from system.utils.validators import (
 )
 
 counters_bp = Blueprint('counters', __name__)
-
-
-def get_app_context():
-    """
-    Get application context from g or current_app.
-    
-    Returns:
-        dict: Application context
-    """
-    if not hasattr(g, 'app_context'):
-        g.app_context = current_app.config.get('APP_CONTEXT')
-    return g.app_context
 
 
 def require_location(f):
@@ -486,6 +475,7 @@ def counter_settings_form(location: str = None) -> str:
 
 
 @counters_bp.route('/counter/<string:location>/settings', methods=['POST'])
+@login_required
 def counter_settings_save(location: str = None):
     """
     Save detection settings from the dashboard modal.
@@ -569,6 +559,7 @@ def counting_area_snapshot(location: str = None) -> Response:
 
 
 @counters_bp.route('/counter/<string:location>/counting_area', methods=['POST'])
+@login_required
 def counting_area_save(location: str = None):
     """Save counting area polygon to config and apply to a running counter.
     
@@ -778,6 +769,7 @@ def counter_dual_text(location_first: str, location_second: str):
 
 
 @counters_bp.route('/save_count/<string:location>', methods=['POST'])
+@login_required
 @require_location
 def save_count(location: str = None) -> dict:
     """
@@ -848,6 +840,7 @@ def update_pending_counts(location: str = None) -> dict:
 
 
 @counters_bp.route('/reset_count/<string:location>')
+@login_required
 @require_location
 def reset_count(location: str = None) -> dict:
     """
@@ -868,6 +861,7 @@ def reset_count(location: str = None) -> dict:
 
 
 @counters_bp.route('/reset_count_current/<string:location>', methods=['POST'])
+@login_required
 @require_location
 def reset_count_current(location: str = None) -> dict:
     """
@@ -926,6 +920,7 @@ def save_capture(location: str = None) -> dict[str, str] | Response:
 
 
 @counters_bp.route('/counter/<string:location>/bootstrap')
+@login_required
 def counter_bootstrap(location: str = None):
     """
     Start counter thread in the background without opening the UI.
@@ -958,6 +953,7 @@ def counter_bootstrap(location: str = None):
 
 
 @counters_bp.route('/start_count/<string:location>')
+@login_required
 @require_location
 def start_count(location: str = None) -> dict[str, str] | Response:
     """
@@ -1003,6 +999,7 @@ def pause_count(location: str = None) -> dict[str, str] | Response:
 
 
 @counters_bp.route('/stop_count/<string:location>')
+@login_required
 @require_location
 def stop_count(location: str = None) -> dict[str, str] | Response:
     """

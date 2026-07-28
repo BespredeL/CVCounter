@@ -19,7 +19,15 @@ from flask import request
 
 
 def is_ajax() -> bool:
-    """Check if the request is an AJAX request."""
+    """
+    Check if the request is an AJAX request.
+
+    Args:
+        None
+
+    Returns:
+        bool: True if the request is an AJAX request.
+    """
     return str(request.headers.get('X-Requested-With')).lower() == 'XMLHttpRequest'.lower()
 
 
@@ -108,7 +116,15 @@ def format_bytes(size: int) -> str:
 
 
 def _nvidia_smi_query(field: str) -> str | None:
-    """Read one GPU field via the stable nvidia-smi CSV query interface."""
+    """
+    Read one GPU field via the stable nvidia-smi CSV query interface.
+
+    Args:
+        field: str - The field to read.
+
+    Returns:
+        str | None: The value of the field.
+    """
     try:
         result = subprocess.run(
             ['nvidia-smi', f'--query-gpu={field}', '--format=csv,noheader,nounits'],
@@ -136,8 +152,13 @@ def _nvidia_smi_query(field: str) -> str | None:
 def _parse_nvidia_smi_text(stdout: str) -> dict[str, str | None]:
     """
     Parse human-readable nvidia-smi output.
-
     Driver 6xx renamed header fields to KMD Version / CUDA UMD Version.
+
+    Args:
+        stdout: str - The output of the nvidia-smi command.
+
+    Returns:
+        dict[str, str | None]: The parsed information.
     """
     merged = stdout.replace('\n', ' ')
 
@@ -153,7 +174,15 @@ def _parse_nvidia_smi_text(stdout: str) -> dict[str, str | None]:
 
 
 def _cuda_runtime_ok() -> bool:
-    """True when PyTorch can see at least one CUDA device."""
+    """
+    True when PyTorch can see at least one CUDA device.
+
+    Args:
+        None
+
+    Returns:
+        bool: True when PyTorch can see at least one CUDA device.
+    """
     if not torch.cuda.is_available():
         return False
     try:
@@ -257,6 +286,12 @@ def should_run_startup_system_check() -> bool:
     Werkzeug's debug reloader imports the application twice: a file-watcher
     parent and the worker child (WERKZEUG_RUN_MAIN=true). Running GPU checks
     in both processes duplicates console output.
+
+    Args:
+        None
+
+    Returns:
+        bool: True when startup hooks should run in the current process.
     """
     run_main = os.environ.get("WERKZEUG_RUN_MAIN")
     if run_main == "true":
@@ -276,12 +311,24 @@ def system_check() -> None:
     """
     System check
 
+    Args:
+        None
+
     Returns:
         None
     """
     sys_info = get_system_info()
 
-    def colored_value(value):
+    def colored_value(value: str) -> str:
+        """
+        Colored value
+
+        Args:
+            value: str - The value to be colored.
+
+        Returns:
+            str: Colored value.
+        """
         if value == "N/A":
             return colored_text(value, 'red')
         else:

@@ -3,29 +3,18 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 03.12.2025
-# Updated: 26.07.2026
+# Updated: 28.07.2026
 # Website: https://bespredel.name
 
 from flask import Blueprint, Response, flash, redirect, render_template, request, url_for
-from flask import current_app, g
 
 from system.auth import login_required, generate_password_hash
 from system.__version__ import APP_VERSION
+from system.utils.app_context import get_app_context, refresh_app_context
 from system.utils.i18n import trans as translate
 from system.utils.telemetry import get_telemetry
 
 settings_bp = Blueprint('settings', __name__)
-
-
-def get_app_context():
-    """Get application context from g or current_app.
-    
-    Returns:
-        dict: Application context
-    """
-    if not hasattr(g, 'app_context'):
-        g.app_context = current_app.config.get('APP_CONTEXT')
-    return g.app_context
 
 
 @settings_bp.route('/settings')
@@ -72,6 +61,7 @@ def settings_save():
 
     # Saving updated form data to a configuration file
     config.save_from_request(form_data)
+    refresh_app_context(context)
 
     # Re-apply telemetry settings after save
     get_telemetry().configure(config, runtime_context=context)

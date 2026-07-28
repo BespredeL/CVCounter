@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 26.07.2026
+# Updated: 28.07.2026
 # Website: https://bespredel.name
 
 import os
@@ -36,6 +36,13 @@ def _normalize_socketio_transports(transports, async_mode: str) -> list[str]:
 
     Werkzeug's development server (threading mode) requires HTTP long-polling
     for the Engine.IO handshake; websocket-only fails with write() before start_response.
+
+    Args:
+        transports (list[str]): The list of transports to normalize
+        async_mode (str): The async mode to use
+
+    Returns:
+        list[str]: The normalized list of transports
     """
     if not transports:
         normalized = ["polling", "websocket"]
@@ -442,6 +449,12 @@ def register_error_handlers(app: Flask, context: dict):
 def register_signal_handlers(context: dict):
     """
     Register signal handlers for shutdown.
+
+    Args:
+        context (dict): Application context dictionary
+
+    Returns:
+        None
     """
 
     thread_manager = context['thread_manager']

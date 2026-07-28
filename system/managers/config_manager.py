@@ -3,10 +3,11 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 25.07.2026
+# Updated: 28.07.2026
 # Website: https://bespredel.name
 
 import ast
+import copy
 import json
 import logging
 import os
@@ -148,7 +149,12 @@ class ConfigManager:
 
         Returns:
             None
+
+        Raises:
+            InvalidConfigError: If the merged configuration fails validation.
+            ConfigError: If the configuration cannot be saved.
         """
+        previous_config = copy.deepcopy(self._config)
         try:
             current_config = self.read_config()
 
@@ -175,14 +181,34 @@ class ConfigManager:
                         value = value.lower() in ['true', 'on']
                 current_level[keys[-1]] = value
 
+            validate_config(current_config, self._config_path, raise_on_error=True)
             self._config = current_config
-            self.save_config()
+            try:
+                self.save_config()
+            except Exception:
+                self._config = previous_config
+                raise
+        except InvalidConfigError:
+            self._config = previous_config
+            raise
+        except ConfigError:
+            self._config = previous_config
+            raise
         except Exception as e:
+            self._config = previous_config
             logging.error(f"Error saving configuration: {str(e)}")
             raise ConfigError(f"Failed to save configuration: {str(e)}")
 
     def resolve_path(self, relative_path: Optional[str]) -> Optional[str]:
-        """Resolve a project-relative path from config.json."""
+        """
+        Resolve a project-relative path from config.json.
+        
+        Args:
+            relative_path (Optional[str]): The relative path to resolve.
+
+        Returns:
+            Optional[str]: The resolved path
+        """
         return resolve_project_path(relative_path, self.project_root)
 
     def reload_config(self, validate: bool = True) -> None:
