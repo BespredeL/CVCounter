@@ -384,6 +384,8 @@ class ObjectDetectionMy(BaseObjectDetectionService):
             scale: 100,
             // video quality
             quality: 80,
+            // seconds without detections before stopping recording (0 = keep until counter reset)
+            idle_timeout: 30,
         },
     },
     detections: {
@@ -447,6 +449,8 @@ class ObjectDetectionMy(BaseObjectDetectionService):
                 scale: 100,
                 // video quality
                 quality: 80,
+                // seconds without detections before stopping recording (0 = until reset)
+                idle_timeout: 15,
             },
         },
     },

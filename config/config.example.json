@@ -111,7 +111,8 @@
             "enable": false,
             "path": "storage/saved_recordings",
             "scale": 50,
-            "quality": 70
+            "quality": 70,
+            "idle_timeout": 30
         }
     },
     "detections": {
@@ -150,7 +151,8 @@
             "recording": {
                 "enable": true,
                 "scale": 80,
-                "quality": 60
+                "quality": 60,
+                "idle_timeout": 15
             }
         }
     }

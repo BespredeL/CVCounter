@@ -496,6 +496,12 @@ class ConfigValidator:
                                 os.makedirs(path, exist_ok=True)
                             except OSError:
                                 self.warnings.append(f"Recording directory '{path}' cannot be created")
+                if 'idle_timeout' in recording:
+                    idle_timeout = recording['idle_timeout']
+                    if not isinstance(idle_timeout, (int, float)) or isinstance(idle_timeout, bool):
+                        self.errors.append(f"'{prefix}.recording.idle_timeout' must be a number")
+                    elif idle_timeout < 0:
+                        self.errors.append(f"'{prefix}.recording.idle_timeout' must be >= 0")
 
 
 def validate_config(config: Dict[str, Any], config_path: Optional[str] = None, raise_on_error: bool = True) -> tuple[

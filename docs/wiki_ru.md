@@ -284,6 +284,7 @@ yolo export model=config/ultralytics/models/yolov8n.pt format=onnx
 | `path` | Путь сохранения видео | `storage/saved_recordings` |
 | `scale` | Размер видео (в процентах) | `50` |
 | `quality` | Качество видео | `70` |
+| `idle_timeout` | Секунды без распознаваний до остановки записи (`0` — писать до сброса счётчика) | `30` |
 
 ## Конфигурации обнаружения `detections`.`ExampleCam`
 
@@ -316,6 +317,7 @@ yolo export model=config/ultralytics/models/yolov8n.pt format=onnx
 | `recording.path` | Путь сохранения видео (наследуется из `detection_default`, если не указан) | `storage/saved_recordings` |
 | `recording.scale` | Размер видео (в процентах) | `80` |
 | `recording.quality` | Качество видео | `60` |
+| `recording.idle_timeout` | Секунды без распознаваний до остановки записи (`0` — до сброса) | `15` |
 
 ---
 

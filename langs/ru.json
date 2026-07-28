@@ -76,6 +76,7 @@
     "Home": "Главная",
     "Host": "Хост",
     "How to fix": "Как исправить",
+    "Idle Timeout": "Таймаут простоя",
     "Impossible to save! There is no connection to the database.": "Невозможно сохранить! Соединение с базой данных отсутствует.",
     "Indicator Size": "Размер индикатора",
     "Input": "Вход:",

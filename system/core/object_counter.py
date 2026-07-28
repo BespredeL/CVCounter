@@ -120,6 +120,8 @@ class ObjectCounter:
         self.recording_base_path: str | None = None
         self.recording_scale: int = 100
         self.recording_quality: int = 80
+        self.recording_idle_timeout: float = 0.0
+        self._last_recording_activity: float = 0.0
         self.recorder: VideoRecorderManager | None = None
 
         # Mask for fast point-in-polygon check (generated on first frame)
@@ -501,8 +503,7 @@ class ObjectCounter:
         self.db_manager.close_current_count(location, class_counts=final_class_counts)
 
         # Stop the current recording video
-        if self.recording_enabled and self.recorder is not None:
-            self.recorder.stop()
+        self._stop_recording()
 
         self.notif_manager.notify(trans('Counting completed successfully!'), 'primary')
         self.emit_live_counts(force=True)
@@ -579,8 +580,7 @@ class ObjectCounter:
         self.running = False
 
         # Stop the current recording video
-        if self.recording_enabled and self.recorder is not None:
-            self.recorder.stop()
+        self._stop_recording()
 
     def pause(self) -> None:
         """
@@ -715,8 +715,7 @@ class ObjectCounter:
             None
         """
         self.stop()
-        if hasattr(self, 'recorder') and self.recording_enabled:
-            self.recorder.stop()
+        self._stop_recording()
         if hasattr(self, 'vsm'):
             self.vsm.stop()
         if hasattr(self, 'model'):
@@ -764,6 +763,7 @@ class ObjectCounter:
             - self.recording_base_path (str): The base path for recording.
             - self.recording_scale (int): The scale of the recording video.
             - self.recording_quality (int): The quality of the recording video.
+            - self.recording_idle_timeout (float): Seconds without detections before stopping recording (0 = until reset).
             - self.total_count (int): The total count of objects.
             - self.total_objects (set): The set of total objects.
 
@@ -834,6 +834,11 @@ class ObjectCounter:
             recording_config.get('path', recording_default.get('path', self.DEFAULT_RECORDING_PATH)))
         self.recording_scale: int = int(recording_config.get('scale', recording_default.get('scale', 100)))
         self.recording_quality: int = int(recording_config.get('quality', recording_default.get('quality', 80)))
+        self.recording_idle_timeout: float = float(
+            recording_config.get('idle_timeout', recording_default.get('idle_timeout', 0))
+        )
+        if self.recording_idle_timeout < 0:
+            self.recording_idle_timeout = 0.0
 
         # Started counter value from config
         start_count: int = int(detector_config.get('start_total_count', 0))
@@ -887,6 +892,62 @@ class ObjectCounter:
         except Exception as e:
             self.logger.error(f"Error starting VideoRecorderManager: {e}")
             self.recording_enabled = False
+
+    def _stop_recording(self) -> None:
+        """
+        Stop the current recording session and clear idle activity tracking.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+        self._last_recording_activity = 0.0
+        if self.recorder is None:
+            return
+        try:
+            self.recorder.stop()
+        except Exception as e:
+            self.logger.error(f"Error stopping VideoRecorderManager: {e}")
+
+    def _on_detection_activity(self) -> None:
+        """
+        Mark detection activity and start recording when objects are present in the frame.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+        if not self.recording_enabled or self.recorder is None:
+            return
+        self._last_recording_activity = time.monotonic()
+        self._start_recording_if_needed()
+
+    def _stop_recording_if_idle(self) -> None:
+        """
+        Stop recording when no objects were detected for recording_idle_timeout seconds.
+        When idle_timeout is 0 or less, recording continues until reset/stop.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+        if (
+                not self.recording_enabled
+                or self.recorder is None
+                or self.recording_idle_timeout <= 0
+                or not self.recorder.is_recording()
+                or self._last_recording_activity <= 0
+        ):
+            return
+
+        if time.monotonic() - self._last_recording_activity >= self.recording_idle_timeout:
+            self._stop_recording()
 
     def _detect(self, image: np.ndarray) -> np.ndarray:
         """
@@ -1022,8 +1083,6 @@ class ObjectCounter:
                 self.total_objects.add(rid)
                 self.current_count += 1
                 self._increment_class_count(class_id)
-                # Start recording as soon as the first object is detected
-                self._start_recording_if_needed()
 
             self.total_count = len(self.total_objects)
 
@@ -1103,6 +1162,9 @@ class ObjectCounter:
             work_frame = self._work_frame(frame)
             boxes = self._detect(work_frame)
 
+            if boxes is not None and len(boxes) > 0:
+                self._on_detection_activity()
+
             if self.get_frames_running:
                 area_source = work_frame.copy() if dataset_enabled else work_frame
                 display_frame = self._draw_counting_area(area_source)
@@ -1121,9 +1183,11 @@ class ObjectCounter:
                             self.DEFAULT_FPS_POSITION, cv2.FONT_HERSHEY_SIMPLEX,
                             self.DEFAULT_FPS_FONT_SCALE, self.DEFAULT_FPS_COLOR, self.DEFAULT_FPS_THICKNESS)
 
-            # Sending a frame to an asynchronous recorder
-            if self.recording_enabled and self.recorder is not None:
+            # Sending a frame to an asynchronous recorder while an active session is running
+            if self.recording_enabled and self.recorder is not None and self.recorder.is_recording():
                 self.recorder.push_frame(display_frame)
+
+            self._stop_recording_if_idle()
 
             if self.get_frames_running:
                 self._maybe_encode_mjpeg(display_frame)

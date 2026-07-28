@@ -284,6 +284,7 @@ Manual send and JSON download are available on the System Info page even when `e
 | `path` | Video saving path | `storage/saved_recordings` |
 | `scale` | Video size (in percent) | `50` |
 | `quality` | Video quality | `70` |
+| `idle_timeout` | Seconds without detections before stopping recording (`0` = keep recording until counter reset) | `30` |
 
 ## Detection Configurations `detections`.`ExampleCam`
 
@@ -316,6 +317,7 @@ Each key in `detections` is a counter `location` (Latin characters, used in URLs
 | `recording.path` | Video save path (inherits from `detection_default` if omitted) | `storage/saved_recordings` |
 | `recording.scale` | Video size (in percent) | `80` |
 | `recording.quality` | Video quality | `60` |
+| `recording.idle_timeout` | Seconds without detections before stopping recording (`0` = until reset) | `15` |
 
 ---
 

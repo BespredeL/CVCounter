@@ -383,6 +383,8 @@ class ObjectDetectionMy(BaseObjectDetectionService):
             scale: 100,
             // качество видео
             quality: 80,
+            // секунды без распознаваний до остановки записи (0 — писать до сброса счётчика)
+            idle_timeout: 30,
         },
     },
     detections: {
@@ -446,6 +448,8 @@ class ObjectDetectionMy(BaseObjectDetectionService):
                 scale: 100,
                 // качество видео
                 quality: 80,
+                // секунды без распознаваний до остановки записи (0 — до сброса)
+                idle_timeout: 15,
             },
         },
     },
