@@ -190,8 +190,7 @@ body.app-body {
 
 /* Counter pages: no top bar */
 body.app-body--counter .app-topbar,
-body.app-body--counter-multi .app-topbar,
-body.app-body--counter-dual .app-topbar {
+body.app-body--counter-multi .app-topbar {
     display: none;
 }
 
@@ -820,37 +819,6 @@ body.app-body--counter-dual .app-topbar {
     font-size: 0.8125rem;
 }
 
-.dual-counter-panel--compact {
-    padding: 0.5rem 0.65rem;
-}
-
-.dual-counter-panel__row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.35rem;
-}
-
-.dual-counter-panel__row .form-select {
-    flex: 1 1 7rem;
-    min-width: 6rem;
-    min-height: 2.25rem;
-    font-size: 0.875rem;
-}
-
-.dual-counter-panel__row .btn-primary {
-    min-height: 2.25rem;
-    padding-left: 1rem;
-    padding-right: 1rem;
-    font-weight: 600;
-}
-
-.dual-counter-panel__arrow {
-    font-size: 0.85rem;
-    color: var(--bs-secondary-color);
-    line-height: 1;
-}
-
 @media (max-width: 727.98px) {
     .counter-dashboard-toolbar-row {
         flex-wrap: wrap;
@@ -947,19 +915,6 @@ body.app-body--counter-dual .app-topbar {
 .counter-chip-grid .counter-chip .dropdown-item svg {
     flex-shrink: 0;
     margin-right: 0;
-}
-
-.dual-counter-panel {
-    background: var(--cv-surface-elevated);
-    border: 1px solid var(--cv-border);
-    border-radius: var(--cv-radius-lg);
-    padding: 1.25rem 1.5rem;
-    box-shadow: var(--cv-shadow-sm);
-}
-
-.dual-counter-panel .form-check-input:checked {
-    background-color: var(--cv-accent);
-    border-color: var(--cv-accent);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1938,13 +1893,11 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
 }
 
 /* Multi-counter fullscreen view */
-body.app-body--counter-multi,
-body.app-body--counter-dual {
+body.app-body--counter-multi {
     overflow: hidden;
 }
 
-.app-shell--counter-multi,
-.app-shell--counter-dual {
+.app-shell--counter-multi {
     max-width: none;
     padding: 0 0 var(--cv-toolbar-height);
     height: calc(100vh - var(--cv-toolbar-height));
@@ -1953,8 +1906,7 @@ body.app-body--counter-dual {
     flex-direction: column;
 }
 
-.app-shell--counter-multi > .multi-counter-view,
-.app-shell--counter-dual > .multi-counter-view {
+.app-shell--counter-multi > .multi-counter-view {
     flex: 1 1 auto;
     min-height: 0;
 }

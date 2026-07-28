@@ -356,14 +356,12 @@ http://127.0.0.1:8080/counter/{location}/text
 
 ## Multi-Counter View
 
-Displays N counters simultaneously on one fullscreen page. Replaces the legacy dual-counter view. Each card shows the current batch, total, and an expandable per-class list; values update via Socket.IO.
+Displays N counters simultaneously on one fullscreen page. Each card shows the current batch, total, and an expandable per-class list; values update via Socket.IO.
 
 **URL:**
 ```
 http://127.0.0.1:8080/counter_multi/text?locations=Cam1,Cam2
 ```
-
-> **Legacy:** `/counter_dual/text/{location_first}/{location_second}` redirects to the multi-counter view.
 
 ## Counting Area Editor
 

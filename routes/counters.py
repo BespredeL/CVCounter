@@ -753,23 +753,7 @@ def counter_multi_text() -> str:
     )
 
 
-@counters_bp.route('/counter_dual/<string:location_first>/<string:location_second>')
-@counters_bp.route('/counter_dual/text/<string:location_first>/<string:location_second>')
-def counter_dual_text(location_first: str, location_second: str):
-    """
-    Legacy dual-counter URL - redirects to the multi-counter view.
-
-    Deprecated 
-    """
-    location_first = str(escape(location_first))
-    location_second = str(escape(location_second))
-    locations_param = ','.join([location_first, location_second])
-
-    return redirect(url_for('counters.counter_multi_text', locations=locations_param))
-
-
 @counters_bp.route('/save_count/<string:location>', methods=['POST'])
-@login_required
 @require_location
 def save_count(location: str = None) -> dict:
     """
@@ -840,7 +824,6 @@ def update_pending_counts(location: str = None) -> dict:
 
 
 @counters_bp.route('/reset_count/<string:location>')
-@login_required
 @require_location
 def reset_count(location: str = None) -> dict:
     """
@@ -861,7 +844,6 @@ def reset_count(location: str = None) -> dict:
 
 
 @counters_bp.route('/reset_count_current/<string:location>', methods=['POST'])
-@login_required
 @require_location
 def reset_count_current(location: str = None) -> dict:
     """
@@ -920,7 +902,6 @@ def save_capture(location: str = None) -> dict[str, str] | Response:
 
 
 @counters_bp.route('/counter/<string:location>/bootstrap')
-@login_required
 def counter_bootstrap(location: str = None):
     """
     Start counter thread in the background without opening the UI.
@@ -953,7 +934,6 @@ def counter_bootstrap(location: str = None):
 
 
 @counters_bp.route('/start_count/<string:location>')
-@login_required
 @require_location
 def start_count(location: str = None) -> dict[str, str] | Response:
     """
@@ -999,7 +979,6 @@ def pause_count(location: str = None) -> dict[str, str] | Response:
 
 
 @counters_bp.route('/stop_count/<string:location>')
-@login_required
 @require_location
 def stop_count(location: str = None) -> dict[str, str] | Response:
     """
