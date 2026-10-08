@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ trans('Counting zone editor') }} - {{ title }}{% endblock %}
+{% block title %}{{ trans('Counting zone editor') }} — {{ title }}{% endblock %}
 
 {% block header %}
     {% with page_title=trans('Counting zone editor'), page_subtitle=title %}
@@ -10,7 +10,7 @@
 
 {% block breadcrumb %}
     <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
+        <ol class="breadcrumb mb-0">
             <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">{{ trans('Home') }}</a></li>
             <li class="breadcrumb-item">
                 <a href="{{ url_for('counters.counter_video', location=location) }}">{{ title }}</a>
@@ -21,8 +21,6 @@
 {% endblock %}
 
 {% block content %}
-    {% include 'partials/inner_page_nav.html' %}
-
     <div class="page-content counting-area-page"
          id="counting-area-app"
          data-location="{{ location }}"
@@ -31,60 +29,382 @@
          data-save-url="{{ url_for('counters.counting_area_save', location=location) }}"
          data-video-url="{{ url_for('counters.counter_video', location=location) }}">
 
-        <div class="counting-area-toolbar cv-card p-3 mb-3">
-            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                <div class="btn-group btn-group-sm" role="group" aria-label="{{ trans('Zones') }}">
-                    <button type="button" class="btn btn-outline-primary" id="ca-btn-add-zone" title="{{ trans('Add zone') }}">
-                        {{ trans('Add zone') }}
+        <!-- Top Command Bar -->
+        <div class="ca-command-bar cv-card p-2 p-md-3 mb-3 shadow-sm">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <!-- Left: Navigation & Info -->
+                <div class="d-flex align-items-center gap-2">
+                    <a href="{{ url_for('counters.counter_video', location=location) }}"
+                       class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
+                       title="{{ trans('Back to counter') }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-arrow-left" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+                        </svg>
+                        <span class="d-none d-sm-inline">{{ trans('Back to counter') }}</span>
+                    </a>
+                    <span class="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle d-none d-md-inline-block" id="ca-frame-res-badge">
+                        --- &times; ---
+                    </span>
+                </div>
+
+                <!-- Center: Tool Switcher -->
+                <div class="ca-tools-switcher d-flex align-items-center gap-2">
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Editor Tools">
+                        <input type="radio" class="btn-check" name="ca-tool-mode" id="ca-tool-edit" value="edit" checked autocomplete="off">
+                        <label class="btn btn-outline-primary d-inline-flex align-items-center gap-1" for="ca-tool-edit" title="V · {{ trans('Select & Edit') }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-cursor-fill" viewBox="0 0 16 16">
+                                <path d="m14.082 2.182a.5.5 0 0 1 .103.557L8.528 15.467a.5.5 0 0 1-.917-.007L5.57 10.694.803 8.652a.5.5 0 0 1-.006-.916l12.728-5.657a.5.5 0 0 1 .556.103z"/>
+                            </svg>
+                            <span class="d-none d-md-inline">{{ trans('Select & Edit') }}</span>
+                        </label>
+
+                        <input type="radio" class="btn-check" name="ca-tool-mode" id="ca-tool-draw" value="draw" autocomplete="off">
+                        <label class="btn btn-outline-primary d-inline-flex align-items-center gap-1" for="ca-tool-draw" title="P · {{ trans('Draw polygon') }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-vector-pen" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M10.646.646a.5.5 0 0 1 .708 0l4 4a.5.5 0 0 1 0 .708l-1.902 1.902-.829 3.313a1.5 1.5 0 0 1-.954 1.058L1 16l4.373-6.669a1.5 1.5 0 0 1 1.057-.954l3.313-.83 1.903-1.901zm-1.804 7.372L7.29 11.238 2.11 15.11l3.872-5.179 3.246-1.552a.5.5 0 0 0 .148-.098l1.397-1.398-3.796-.759-.759 3.796a.5.5 0 0 0 .098.148z"/>
+                            </svg>
+                            <span class="d-none d-md-inline">{{ trans('Draw polygon') }}</span>
+                        </label>
+
+                        <input type="radio" class="btn-check" name="ca-tool-mode" id="ca-tool-rect" value="rect" autocomplete="off">
+                        <label class="btn btn-outline-primary d-inline-flex align-items-center gap-1" for="ca-tool-rect" title="R · {{ trans('Draw rectangle') }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-bounding-box-circles" viewBox="0 0 16 16">
+                                <path d="M2 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM0 2a2 2 0 0 1 3.937-.5h8.126A2 2 0 1 1 14.5 3.937v8.126a2 2 0 1 1-2.437 2.437H3.937A2 2 0 1 1 1.5 12.063V3.937A2 2 0 0 1 0 2zm2.5 1.5v9h9v-9h-9zm11.5 11a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-12 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm12-12a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+                            </svg>
+                            <span class="d-none d-md-inline">{{ trans('Draw rectangle') }}</span>
+                        </label>
+                    </div>
+
+                    <!-- History (Undo / Redo) -->
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-secondary" id="ca-btn-undo" title="Ctrl+Z · {{ trans('Undo') }}" disabled>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-arrow-counterclockwise" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2z"/>
+                                <path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466"/>
+                            </svg>
+                            <span class="d-none d-lg-inline ms-1">{{ trans('Undo') }}</span>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="ca-btn-redo" title="Ctrl+Y · {{ trans('Redo') }}" disabled>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+                                <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192L10.77 2.308a.25.25 0 0 1 0 .384l-2.36 1.966A.25.25 0 0 1 8 4.466"/>
+                            </svg>
+                            <span class="d-none d-lg-inline ms-1">{{ trans('Redo') }}</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right: Utilities & Primary Save -->
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-info d-inline-flex align-items-center gap-1" id="ca-btn-refresh" title="{{ trans('Refresh frame') }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-camera" viewBox="0 0 16 16">
+                            <path d="M15 12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h1.172a3 3 0 0 0 2.12-.879l.83-.828A1 1 0 0 1 7.829 3h.342a1 1 0 0 1 .707.293l.828.828A3 3 0 0 0 11.828 5H13a1 1 0 0 1 1 1v6zM2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 9.172 2H6.828a2 2 0 0 0-1.414.586l-.828.828A2 2 0 0 1 3.172 4H2z"/>
+                            <path d="M8 11a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5zm0 1a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM3 6.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0z"/>
+                        </svg>
+                        <span class="d-none d-xl-inline">{{ trans('Refresh frame') }}</span>
                     </button>
-                    <button type="button" class="btn btn-outline-danger" id="ca-btn-delete-zone" title="{{ trans('Delete zone') }}">
-                        {{ trans('Delete zone') }}
+
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#ca-shortcuts-modal" title="{{ trans('Keyboard shortcuts') }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-keyboard" viewBox="0 0 16 16">
+                            <path d="M14 5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h12zM2 4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H2z"/>
+                            <path d="M13 10.25a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm0-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5 0A.25.25 0 0 1 8.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 8 8.75zm2 0a.25.25 0 0 1 .25-.25h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5a.25.25 0 0 1-.25-.25zm1 2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5-2A.25.25 0 0 1 6.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 6 8.75zm-2 0A.25.25 0 0 1 4.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 4 8.75zm-2 0A.25.25 0 0 1 2.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 2 8.75zm11-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0A.25.25 0 0 1 9.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 9 6.75zm-2 0A.25.25 0 0 1 7.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 7 6.75zm-2 0A.25.25 0 0 1 5.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 5 6.75zm-3 0A.25.25 0 0 1 2.25 6h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5A.25.25 0 0 1 2 6.75zm0 4a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm2 0a.25.25 0 0 1 .25-.25h5.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-5.5a.25.25 0 0 1-.25-.25z"/>
+                        </svg>
+                    </button>
+
+                    <button type="button" class="btn btn-sm btn-primary ca-btn-save d-inline-flex align-items-center gap-1 shadow-sm" id="ca-btn-save" title="Ctrl+S · {{ trans('Save zone') }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-check2-circle" viewBox="0 0 16 16">
+                            <path d="M2.5 8a5.5 5.5 0 0 1 8.25-4.764.5.5 0 0 0 .5-.866A6.5 6.5 0 1 0 14.5 8a.5.5 0 0 0-1 0 5.5 5.5 0 1 1-11 0z"/>
+                            <path d="M15.354 3.354a.5.5 0 0 0-.708-.708L8 9.293 5.354 6.646a.5.5 0 1 0-.708.708l3 3a.5.5 0 0 0 .708 0l7-7z"/>
+                        </svg>
+                        <span>{{ trans('Save zone') }}</span>
                     </button>
                 </div>
-                <div class="counting-area-zone-list btn-group btn-group-sm flex-wrap" role="group" id="ca-zone-list"></div>
             </div>
-            <div class="d-flex flex-wrap align-items-center gap-2">
-                <div class="btn-group btn-group-sm" role="group">
-                    <button type="button" class="btn btn-outline-secondary" id="ca-btn-undo" title="{{ trans('Undo last point') }}">
-                        {{ trans('Undo') }}
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary" id="ca-btn-clear" title="{{ trans('Reset polygon') }}">
-                        {{ trans('Clear') }}
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary" id="ca-btn-full" title="{{ trans('Full frame') }}">
-                        {{ trans('Full frame') }}
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary" id="ca-btn-rect" title="{{ trans('Draw rectangle') }}">
-                        {{ trans('Rectangle') }}
-                    </button>
-                </div>
-                <button type="button" class="btn btn-sm btn-outline-info" id="ca-btn-refresh">
-                    {{ trans('Refresh frame') }}
-                </button>
-
-                <span class="text-body-secondary small me-2 d-none d-md-inline">{{ trans('Editor hint') }}</span>
-
-                <label class="counting-area-color-picker ms-md-auto mb-0">
-                    <span class="small text-body-secondary me-1">{{ trans('Zone color') }}</span>
-                    <input type="color" id="ca-color" value="#43d3ff" aria-label="{{ trans('Zone color') }}">
-                </label>
-                <a href="{{ url_for('counters.counter_video', location=location) }}" class="btn btn-sm btn-outline-secondary">
-                    {{ trans('Back to counter') }}
-                </a>
-                <button type="button" class="btn btn-sm btn-primary" id="ca-btn-save">
-                    {{ trans('Save zone') }}
-                </button>
-            </div>
-            <div class="small text-body-secondary mt-2" id="ca-status">{{ trans('Loading video frame...') }}</div>
         </div>
 
-        <div class="counting-area-stage cv-card">
-            <div class="counting-area-canvas-wrap" id="ca-canvas-wrap">
-                <img id="ca-frame" class="counting-area-frame" alt="" hidden>
-                <canvas id="ca-canvas" class="counting-area-canvas"></canvas>
-                <div class="counting-area-loading" id="ca-loading">
-                    <div class="spinner-border text-primary" role="status"></div>
-                    <span class="ms-2">{{ trans('Loading video frame...') }}</span>
+        <!-- Main Workspace (Stage + Sidebar) -->
+        <div class="row g-3 ca-workspace">
+            <!-- Stage / Canvas Area -->
+            <div class="col-12 col-lg-8 col-xl-9">
+                <div class="counting-area-stage cv-card position-relative p-0 overflow-hidden shadow-sm">
+                    <div class="counting-area-canvas-wrap" id="ca-canvas-wrap">
+                        <!-- Top-Left Floating HUD: Active Tool & Live Hint -->
+                        <div class="ca-hud ca-hud-top-left" id="ca-hud-mode">
+                            <span class="ca-hud-pill badge bg-dark bg-opacity-75 text-light border border-secondary-subtle">
+                                <span class="ca-hud-icon me-1" id="ca-hud-mode-icon">🖱️</span>
+                                <span class="ca-hud-text" id="ca-hud-mode-text">{{ trans('Select & Edit') }}</span>
+                            </span>
+                            <span class="ca-hud-hint text-light-emphasis small d-none d-sm-inline" id="ca-hud-hint-text">
+                                {{ trans('Edit mode hint') }}
+                            </span>
+                        </div>
+
+                        <!-- Top-Right Floating HUD: Zoom & Fullscreen -->
+                        <div class="ca-hud ca-hud-top-right btn-group btn-group-sm bg-dark bg-opacity-75 p-1 rounded-3 border border-secondary-subtle">
+                            <button type="button" class="btn btn-dark btn-sm text-light border-0" id="ca-zoom-out" title="− · {{ trans('Zoom out') }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-dash" viewBox="0 0 16 16">
+                                    <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8z"/>
+                                </svg>
+                            </button>
+                            <button type="button" class="btn btn-dark btn-sm text-light border-0 fw-medium font-monospace" id="ca-zoom-label" title="100% · {{ trans('Reset zoom') }}">
+                                100%
+                            </button>
+                            <button type="button" class="btn btn-dark btn-sm text-light border-0" id="ca-zoom-in" title="+ · {{ trans('Zoom in') }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-plus" viewBox="0 0 16 16">
+                                    <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                                </svg>
+                            </button>
+                            <button type="button" class="btn btn-dark btn-sm text-light border-0" id="ca-zoom-fit" title="F · {{ trans('Fit to view') }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-aspect-ratio" viewBox="0 0 16 16">
+                                    <path d="M0 3.5A1.5 1.5 0 0 1 1.5 2h13A1.5 1.5 0 0 1 16 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 12.5v-9zM1.5 3a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5h-13z"/>
+                                    <path d="M2 4.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1H3v2.5a.5.5 0 0 1-1 0v-3zm12 7a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1 0-1H13V8.5a.5.5 0 0 1 1 0v3z"/>
+                                </svg>
+                            </button>
+                            <button type="button" class="btn btn-dark btn-sm text-light border-0" id="ca-fullscreen" title="{{ trans('Fullscreen') }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-arrows-fullscreen" viewBox="0 0 16 16">
+                                    <path fill-rule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707zm4.344 0a.5.5 0 0 1 .707 0l4.096 4.096V11.5a.5.5 0 1 1 1 0v3.975a.5.5 0 0 1-.5.5H11.5a.5.5 0 0 1 0-1h2.768l-4.096-4.096a.5.5 0 0 1 0-.707zm0-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707zm-4.344 0a.5.5 0 0 1-.707 0L1.031 1.732V4.5a.5.5 0 0 1-1 0V.525a.5.5 0 0 1 .5-.5H4.5a.5.5 0 0 1 0 1H1.732l4.096 4.096a.5.5 0 0 1 0 .707z"/>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Canvas Viewport (Transformed for pan/zoom) -->
+                        <div class="ca-viewport" id="ca-viewport">
+                            <img id="ca-frame" class="counting-area-frame" alt="" hidden>
+                            <canvas id="ca-canvas" class="counting-area-canvas"></canvas>
+                        </div>
+
+                        <!-- Bottom-Left Floating HUD: Coordinates & Navigation Help -->
+                        <div class="ca-hud ca-hud-bottom-left font-monospace small bg-dark bg-opacity-75 text-light px-2 py-1 rounded-2 border border-secondary-subtle">
+                            <span id="ca-cursor-coords">X: --- &nbsp; Y: ---</span>
+                        </div>
+
+                        <!-- Bottom-Right Floating HUD: Active Zone Stats -->
+                        <div class="ca-hud ca-hud-bottom-right small bg-dark bg-opacity-75 text-light px-2 py-1 rounded-2 border border-secondary-subtle" id="ca-zone-stats-hud">
+                            <span id="ca-status">{{ trans('Loading video frame...') }}</span>
+                        </div>
+
+                        <!-- Loading Indicator Overlay -->
+                        <div class="counting-area-loading" id="ca-loading">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <span class="ms-2 fw-medium">{{ trans('Loading video frame...') }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar / Inspector -->
+            <div class="col-12 col-lg-4 col-xl-3">
+                <div class="d-flex flex-column gap-3">
+                    <!-- Zones List Card -->
+                    <div class="cv-card p-3 shadow-sm ca-sidebar-card">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <h6 class="fw-semibold mb-0">{{ trans('Counting zone') }}</h6>
+                                <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle" id="ca-zones-count-badge">1</span>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" id="ca-btn-add-zone" title="{{ trans('Add zone') }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
+                                    <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2z"/>
+                                </svg>
+                                <span>{{ trans('Add zone') }}</span>
+                            </button>
+                        </div>
+
+                        <!-- Interactive Zone Items List -->
+                        <div class="ca-zone-cards-list d-flex flex-column gap-2" id="ca-zone-cards-list">
+                            <!-- Populated dynamically by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Active Zone Properties & Presets Card -->
+                    <div class="cv-card p-3 shadow-sm ca-sidebar-card" id="ca-active-zone-panel">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h6 class="fw-semibold mb-0" id="ca-active-zone-title">{{ trans('Active zone') }}</h6>
+                            <span class="badge bg-secondary-subtle text-secondary-emphasis" id="ca-active-zone-pts">0 {{ trans('Points')|lower }}</span>
+                        </div>
+
+                        <!-- Shape Presets -->
+                        <div class="mb-3">
+                            <label class="form-label small text-body-secondary fw-semibold text-uppercase tracking-wider mb-2">
+                                {{ trans('Shape presets') }}
+                            </label>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary w-100 d-inline-flex align-items-center justify-content-center gap-1" id="ca-btn-rect-preset" title="{{ trans('Draw rectangle') }}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-square" viewBox="0 0 16 16">
+                                            <path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
+                                        </svg>
+                                        <span>{{ trans('Rectangle') }}</span>
+                                    </button>
+                                </div>
+                                <div class="col-6">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary w-100 d-inline-flex align-items-center justify-content-center gap-1" id="ca-btn-full" title="{{ trans('Full frame') }}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-fullscreen" viewBox="0 0 16 16">
+                                            <path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1h-4zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5zM.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5zm15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5z"/>
+                                        </svg>
+                                        <span>{{ trans('Full frame') }}</span>
+                                    </button>
+                                </div>
+                                <div class="col-6">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary w-100 d-inline-flex align-items-center justify-content-center gap-1" id="ca-btn-center" title="{{ trans('Center box') }}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-crosshair" viewBox="0 0 16 16">
+                                            <path d="M8.5.5a.5.5 0 0 0-1 0v.518A7.001 7.001 0 0 0 1.018 7.5H.5a.5.5 0 0 0 0 1h.518A7.001 7.001 0 0 0 7.5 14.982v.518a.5.5 0 0 0 1 0v-.518A7.001 7.001 0 0 0 14.982 8.5h.518a.5.5 0 0 0 0-1h-.518A7.001 7.001 0 0 0 8.5 1.018V.5zm-.5 1.518A6 6 0 0 1 13.982 8 6 6 0 0 1 8 13.982 6 6 0 0 1 2.018 8 6 6 0 0 1 8 2.018z"/>
+                                        </svg>
+                                        <span>{{ trans('Center box') }}</span>
+                                    </button>
+                                </div>
+                                <div class="col-6">
+                                    <button type="button" class="btn btn-sm btn-outline-danger w-100 d-inline-flex align-items-center justify-content-center gap-1" id="ca-btn-clear" title="{{ trans('Clear') }}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-trash3" viewBox="0 0 16 16">
+                                            <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5h9.916Zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47ZM8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z"/>
+                                        </svg>
+                                        <span>{{ trans('Clear') }}</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Color Customization -->
+                        <div class="mb-2">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <label class="form-label small text-body-secondary fw-semibold text-uppercase tracking-wider mb-0">
+                                    {{ trans('Zone color') }}
+                                </label>
+                                <label class="counting-area-color-picker mb-0" title="{{ trans('Custom color') }}">
+                                    <input type="color" id="ca-color" value="#43d3ff" aria-label="{{ trans('Zone color') }}">
+                                </label>
+                            </div>
+                            <!-- Fast Palette Chips -->
+                            <div class="ca-palette-chips d-flex flex-wrap gap-2" id="ca-palette-chips">
+                                <button type="button" class="ca-color-chip" data-color="#43d3ff" style="--chip-color:#43d3ff" title="Cyan"></button>
+                                <button type="button" class="ca-color-chip" data-color="#00e676" style="--chip-color:#00e676" title="Green"></button>
+                                <button type="button" class="ca-color-chip" data-color="#ff5252" style="--chip-color:#ff5252" title="Coral"></button>
+                                <button type="button" class="ca-color-chip" data-color="#ff4081" style="--chip-color:#ff4081" title="Pink"></button>
+                                <button type="button" class="ca-color-chip" data-color="#ffab00" style="--chip-color:#ffab00" title="Amber"></button>
+                                <button type="button" class="ca-color-chip" data-color="#448aff" style="--chip-color:#448aff" title="Blue"></button>
+                                <button type="button" class="ca-color-chip" data-color="#b388ff" style="--chip-color:#b388ff" title="Purple"></button>
+                                <button type="button" class="ca-color-chip" data-color="#1de9b6" style="--chip-color:#1de9b6" title="Teal"></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Shortcuts Cheatsheet Card -->
+                    <div class="cv-card p-3 shadow-sm ca-sidebar-card">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <h6 class="fw-semibold mb-0 small text-body-secondary text-uppercase tracking-wider">
+                                {{ trans('Shortcuts & gestures') }}
+                            </h6>
+                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" data-bs-toggle="modal" data-bs-target="#ca-shortcuts-modal">
+                                {{ trans('Help') }} &rarr;
+                            </button>
+                        </div>
+                        <ul class="list-unstyled small mb-0 d-flex flex-column gap-1 text-body-secondary">
+                            <li class="d-flex justify-content-between align-items-center">
+                                <span>{{ trans('Select & Edit') }}</span>
+                                <kbd>V</kbd>
+                            </li>
+                            <li class="d-flex justify-content-between align-items-center">
+                                <span>{{ trans('Draw polygon') }}</span>
+                                <kbd>P</kbd>
+                            </li>
+                            <li class="d-flex justify-content-between align-items-center">
+                                <span>{{ trans('Draw rectangle') }}</span>
+                                <kbd>R</kbd>
+                            </li>
+                            <li class="d-flex justify-content-between align-items-center">
+                                <span>{{ trans('Undo') }} / {{ trans('Redo') }}</span>
+                                <span><kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd></span>
+                            </li>
+                            <li class="d-flex justify-content-between align-items-center">
+                                <span>{{ trans('Move entire zone') }}</span>
+                                <span><kbd>Alt + ЛКМ</kbd></span>
+                            </li>
+                            <li class="d-flex justify-content-between align-items-center">
+                                <span>{{ trans('Wheel to zoom, Space+drag to pan') }}</span>
+                                <span><kbd>Space</kbd></span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Keyboard Shortcuts Modal -->
+        <div class="modal fade" id="ca-shortcuts-modal" tabindex="-1" aria-labelledby="caShortcutsLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content cv-card border">
+                    <div class="modal-header border-bottom">
+                        <h5 class="modal-title d-flex align-items-center gap-2" id="caShortcutsLabel">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-keyboard" viewBox="0 0 16 16">
+                                <path d="M14 5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h12zM2 4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H2z"/>
+                            </svg>
+                            <span>{{ trans('Keyboard shortcuts') }}</span>
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                                <tbody>
+                                    <tr>
+                                        <td class="ps-3"><kbd>V</kbd> / <kbd>1</kbd></td>
+                                        <td>{{ trans('Select & Edit') }} (тяните вершины, кликайте на грань)</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="ps-3"><kbd>P</kbd> / <kbd>2</kbd></td>
+                                        <td>{{ trans('Draw polygon') }} (кликайте точки, замкните на первой)</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="ps-3"><kbd>R</kbd> / <kbd>3</kbd></td>
+                                        <td>{{ trans('Draw rectangle') }} (зажмите и растяните область)</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="ps-3"><kbd>Ctrl</kbd> + <kbd>Z</kbd></td>
+                                        <td>{{ trans('Undo') }} (отменить последнее действие)</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="ps-3"><kbd>Ctrl</kbd> + <kbd>Y</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td>
+                                        <td>{{ trans('Redo') }} (повторить отмененное действие)</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="ps-3"><kbd>Ctrl</kbd> + <kbd>S</kbd></td>
+                                        <td>{{ trans('Save zone') }} (сохранить настройки в конфигурацию)</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="ps-3"><kbd>Alt</kbd> + Перетаскивание</td>
+                                        <td>{{ trans('Move entire zone') }} (сдвинуть весь полигон целиком)</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="ps-3"><kbd>Пробел</kbd> + ЛКМ / СКМ</td>
+                                        <td>Панорамирование (перемещение холста)</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="ps-3">Колёсико мыши</td>
+                                        <td>Плавный зум в точку курсора (25% &mdash; 500%)</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="ps-3"><kbd>F</kbd></td>
+                                        <td>{{ trans('Fit to view') }} (вписать изображение в экран)</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="ps-3">Двойной клик по вершине</td>
+                                        <td>Удалить вершину (если точек &gt; 3)</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="ps-3"><kbd>Del</kbd> / <kbd>Backspace</kbd></td>
+                                        <td>Удалить выбранную вершину или активную зону</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="ps-3"><kbd>Esc</kbd></td>
+                                        <td>Сброс рисования / возврат к режиму правки</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top py-2">
+                        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">{{ trans('Close') }}</button>
+                    </div>
                 </div>
             </div>
         </div>

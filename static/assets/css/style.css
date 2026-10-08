@@ -2563,8 +2563,27 @@ body.app-body--counter-multi {
 }
 
 /* Counting zone editor */
+.counting-area-page {
+    padding-bottom: 2rem;
+}
+
+.ca-command-bar {
+    position: sticky;
+    top: 0.5rem;
+    z-index: 10;
+    backdrop-filter: blur(12px);
+    background: rgba(22, 24, 29, 0.92);
+    border: 1px solid var(--cv-border);
+}
+
+[data-bs-theme="light"] .ca-command-bar {
+    background: rgba(255, 255, 255, 0.94);
+}
+
 .counting-area-page .counting-area-stage {
-    padding: 0.75rem;
+    background: #0b0c10;
+    border: 1px solid var(--cv-border);
+    border-radius: var(--cv-radius);
     overflow: hidden;
 }
 
@@ -2573,41 +2592,217 @@ body.app-body--counter-multi {
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 280px;
-    background: #000;
-    border-radius: calc(var(--cv-radius) - 4px);
+    height: clamp(480px, calc(100vh - 220px), 820px);
+    background: #08090c;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+    background-size: 24px 24px;
+    border-radius: calc(var(--cv-radius) - 2px);
     overflow: hidden;
+    user-select: none;
+}
+
+/* Fullscreen mode */
+.counting-area-canvas-wrap.ca-fullscreen-active {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    z-index: 1050 !important;
+    border-radius: 0 !important;
+}
+
+.ca-viewport {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform-origin: 0 0;
+    will-change: transform;
 }
 
 .counting-area-frame {
     position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
+    left: 0;
+    top: 0;
     pointer-events: none;
     user-select: none;
+    image-rendering: auto;
 }
 
 .counting-area-canvas {
-    position: relative;
+    position: absolute;
+    left: 0;
+    top: 0;
     z-index: 2;
     cursor: crosshair;
     touch-action: none;
 }
 
+.counting-area-canvas.cursor-grab {
+    cursor: grab !important;
+}
+
+.counting-area-canvas.cursor-grabbing {
+    cursor: grabbing !important;
+}
+
+.counting-area-canvas.cursor-move {
+    cursor: move !important;
+}
+
+.counting-area-canvas.cursor-pointer {
+    cursor: pointer !important;
+}
+
+/* Floating HUDs */
+.ca-hud {
+    position: absolute;
+    z-index: 5;
+    pointer-events: auto;
+    backdrop-filter: blur(8px);
+}
+
+.ca-hud-top-left {
+    top: 0.75rem;
+    left: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.ca-hud-pill {
+    font-size: 0.8rem;
+    padding: 0.35rem 0.65rem;
+    letter-spacing: 0.02em;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.ca-hud-hint {
+    background: rgba(15, 17, 23, 0.75);
+    padding: 0.3rem 0.65rem;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.ca-hud-top-right {
+    top: 0.75rem;
+    right: 0.75rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+.ca-hud-top-right .btn {
+    padding: 0.25rem 0.5rem;
+}
+
+.ca-hud-bottom-left {
+    bottom: 0.75rem;
+    left: 0.75rem;
+    font-size: 0.78rem;
+    letter-spacing: 0.03em;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.ca-hud-bottom-right {
+    bottom: 0.75rem;
+    right: 0.75rem;
+    font-size: 0.8rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
 .counting-area-loading {
     position: absolute;
     inset: 0;
-    z-index: 3;
+    z-index: 6;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.55);
+    background: rgba(10, 12, 16, 0.78);
+    backdrop-filter: blur(4px);
     color: var(--bs-body-color);
 }
 
 .counting-area-loading.d-none {
     display: none !important;
+}
+
+/* Sidebar & Zone Cards */
+.ca-sidebar-card {
+    border: 1px solid var(--cv-border);
+    background: var(--cv-surface-elevated);
+    border-radius: var(--cv-radius);
+}
+
+.ca-zone-cards-list {
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.ca-zone-cards-list::-webkit-scrollbar {
+    width: 5px;
+}
+
+.ca-zone-cards-list::-webkit-scrollbar-thumb {
+    background: var(--cv-border-strong);
+    border-radius: 4px;
+}
+
+.ca-zone-card {
+    padding: 0.65rem 0.75rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--cv-border);
+    border-radius: 8px;
+    transition: all 0.15s ease-in-out;
+    cursor: pointer;
+}
+
+.ca-zone-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--cv-border-strong);
+}
+
+.ca-zone-card.active {
+    background: rgba(var(--cv-accent-rgb), 0.08);
+    border-color: var(--zone-card-color, var(--cv-accent));
+    box-shadow: 0 0 10px rgba(var(--cv-accent-rgb), 0.15);
+}
+
+.ca-zone-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+    border: 1.5px solid rgba(255, 255, 255, 0.9);
+    flex-shrink: 0;
+}
+
+.ca-zone-card.is-hidden {
+    opacity: 0.55;
+}
+
+.ca-color-chip {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    background-color: var(--chip-color);
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.ca-color-chip:hover {
+    transform: scale(1.18);
+    border-color: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.ca-color-chip.active {
+    border-color: #fff;
+    transform: scale(1.15);
+    box-shadow: 0 0 0 2px var(--chip-color);
 }
 
 .counting-area-color-picker input[type="color"] {
@@ -2618,13 +2813,21 @@ body.app-body--counter-multi {
     border-radius: 8px;
     cursor: pointer;
     vertical-align: middle;
+    background: transparent;
 }
 
-#ca-btn-rect.active {
-    background: rgba(var(--cv-accent-rgb), 0.2);
+.ca-btn-save {
+    background: linear-gradient(135deg, var(--cv-accent), #339af0);
     border-color: var(--cv-accent);
-    color: var(--cv-accent);
+    box-shadow: 0 2px 10px rgba(var(--cv-accent-rgb), 0.35);
+    transition: all 0.15s ease;
 }
+
+.ca-btn-save:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 4px 14px rgba(var(--cv-accent-rgb), 0.5);
+}
+
 
 /* -------------------------------------------------------------------------- */
 /* Datasets hub / detail / annotator                                          */

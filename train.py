@@ -37,7 +37,7 @@ CONFIG_DIR = PROJECT_ROOT / 'config'
 ULTRA_DIR = CONFIG_DIR / 'ultralytics'
 DATASETS_DIR = PROJECT_ROOT / 'storage' / 'datasets'
 
-DEFAULT_BASE_MODEL = 'yolo11n.pt'
+DEFAULT_BASE_MODEL = 'yolo26n.pt'
 DEFAULT_TASK = 'detect'
 DEFAULT_IMG_SIZE = 640
 DEFAULT_EPOCHS = 100
