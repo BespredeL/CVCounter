@@ -45,7 +45,7 @@ def _valid_location(location: str | None) -> str:
     locations = context['locations']
     if location is None:
         abort(404, translate('Page not found'))
-    location = str(escape(location))
+    location = str(location).strip()
     if location not in locations:
         abort(404, translate('Page not found'))
     return location
@@ -121,8 +121,14 @@ def report_list(location: str = None) -> str:
         total_items = pagination['total']
         total_pages = (total_items + per_page - 1) // per_page
 
-        images_page = int(request.args.get('images_page', 1) or 1)
-        videos_page = int(request.args.get('videos_page', 1) or 1)
+        try:
+            images_page = int(request.args.get('images_page', 1) or 1)
+        except (ValueError, TypeError):
+            images_page = 1
+        try:
+            videos_page = int(request.args.get('videos_page', 1) or 1)
+        except (ValueError, TypeError):
+            videos_page = 1
         images_page = max(1, images_page)
         videos_page = max(1, videos_page)
 
@@ -279,7 +285,7 @@ def report_show(location: str, report_id: int) -> str:
     if counter is None:
         abort(404, translate('Page not found'))
 
-    location = str(escape(location))
+    location = str(location).strip()
     if counter.location != location:
         abort(404, translate('Page not found'))
 

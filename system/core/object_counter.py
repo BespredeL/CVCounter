@@ -229,6 +229,7 @@ class ObjectCounter:
                 get_telemetry().track('stream_lost', {'location': self.location, 'reason': 'exception'})
                 self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
                 self.notif_manager.event('counter_status', {'status': 'error', 'location': self.location})
+                time.sleep(self.DEFAULT_PAUSED_SLEEP_TIME)
 
     def get_frames(self) -> Generator:
         """
@@ -445,8 +446,8 @@ class ObjectCounter:
             dict: The total count.
         """
         total_count = int(self.total_count)
-        defect_count = int(self.pending_defect_count)
-        correct_count = int(self.pending_correct_count)
+        defect_count = int(defect_count if defect_count is not None and defect_count != 0 else self.pending_defect_count)
+        correct_count = int(correct_count if correct_count is not None and correct_count != 0 else self.pending_correct_count)
 
         self.defect_count += defect_count
         self.correct_count += correct_count
@@ -465,14 +466,6 @@ class ObjectCounter:
         )
 
         if result:
-            # Uncomment to reset counters
-            # self.total_objects = []
-            # self.total_count = 0
-            # self.current_count = 0
-            # Stop the current recording video
-            # if self.recording_enabled and self.recorder is not None:
-            #     self.recorder.stop()
-
             self.notif_manager.notify(trans('Saved successfully!'), 'success')
         else:
             self.notif_manager.notify(trans('Save error!'), 'danger')
@@ -505,6 +498,13 @@ class ObjectCounter:
         self.clear_pending_counts()
         self._last_count_payload = None
 
+        # Reset active tracker state so old tracks don't instantly re-trigger
+        self.tracker = Sort(
+            max_age=self.DEFAULT_MAX_AGE,
+            min_hits=self.DEFAULT_MIN_HITS,
+            iou_threshold=self.DEFAULT_TRACKER_IOU
+        )
+
         self.db_manager.close_current_count(location, class_counts=final_class_counts)
 
         # Stop the current recording video
@@ -527,8 +527,8 @@ class ObjectCounter:
         """
         current_count = int(self.current_count)
         total_count = int(self.total_count)
-        defect_count = int(self.pending_defect_count)
-        correct_count = int(self.pending_correct_count)
+        defect_count = int(defect_count if defect_count is not None and defect_count != 0 else self.pending_defect_count)
+        correct_count = int(correct_count if correct_count is not None and correct_count != 0 else self.pending_correct_count)
         by_class = self._by_class_payload()
         try:
             self.db_manager.save_part_result(
@@ -1086,10 +1086,11 @@ class ObjectCounter:
                     and rid not in self.total_objects
             ):
                 self.total_objects.add(rid)
+                self.total_count += 1
                 self.current_count += 1
                 self._increment_class_count(class_id)
-
-            self.total_count = len(self.total_objects)
+                if len(self.total_objects) > 50000:
+                    self.total_objects = set(sorted(self.total_objects)[-25000:])
 
         self.emit_live_counts()
 
@@ -1258,7 +1259,7 @@ class ObjectCounter:
             os.makedirs(dataset_path, exist_ok=True)
 
             location_clean = re.sub('[^A-Za-z0-9-_]+', '', self.location)
-            create_time = int(time.time())
+            create_time = int(time.time() * 1000)
 
             image_path = f'{dataset_path}/{location_clean}_{create_time}.jpg'
             success = cv2.imwrite(

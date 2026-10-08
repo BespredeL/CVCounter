@@ -28,13 +28,22 @@ from system.utils.i18n import trans as translate
 from system.utils.paths import get_project_root, resolve_project_path
 from system.utils.utils import is_ajax
 
-try:
-    from ultralytics import YOLO as UltralyticsYOLO
+_ultralytics_class = None
+_ultralytics_import_error: Exception | None = None
 
-    _ultralytics_import_error: Exception | None = None
-except ImportError as exc:
-    UltralyticsYOLO = None
-    _ultralytics_import_error = exc
+
+def _get_ultralytics_yolo():
+    global _ultralytics_class, _ultralytics_import_error
+    if _ultralytics_class is not None:
+        return _ultralytics_class
+    try:
+        from ultralytics import YOLO
+        _ultralytics_class = YOLO
+        return _ultralytics_class
+    except Exception as exc:
+        _ultralytics_import_error = exc
+        return None
+
 
 try:
     import cv2
@@ -199,6 +208,7 @@ def _detector_class_names(detector: str | None = None) -> tuple[list[str], str |
         return [], None, location
 
     try:
+        UltralyticsYOLO = _get_ultralytics_yolo()
         if UltralyticsYOLO is None:
             return [], None, location
         model = UltralyticsYOLO(str(path))
@@ -319,13 +329,6 @@ def datasets_index():
         str: The rendered template
     """
     svc = _service()
-    for item in svc.list_datasets():
-        try:
-            svc.ensure_layout(item['name'])
-            if not (svc.root(item['name']) / 'meta.json').is_file():
-                svc.adopt_existing(item['name'])
-        except Exception:
-            pass
     datasets = svc.list_datasets()
     return render_template(
         'datasets/list.html',
@@ -451,9 +454,11 @@ def api_create():
     name = (data.get('name') or '').strip()
     classes_raw = data.get('classes') or 'object'
     if isinstance(classes_raw, str):
-        classes = [c.strip() for c in classes_raw.replace(';', ',').split(',') if c.strip()]
+        parsed = [c.strip() for c in classes_raw.replace(';', ',').split(',') if c.strip()]
     else:
-        classes = list(classes_raw)
+        parsed = [str(c).strip() for c in list(classes_raw) if str(c).strip()]
+    seen = set()
+    classes = [c for c in parsed if not (c in seen or seen.add(c))] or ['object']
     task = (data.get('task') or 'detect').strip()
     try:
         summary = _service().create(name, classes=classes, task=task, display_name=data.get('display_name') or name)
@@ -622,12 +627,15 @@ def api_import_recording(name: str):
         JSON response
     """
     data = request.get_json(silent=True) or {}
-    path = data.get('path') or ''
+    path = (data.get('path') or '').strip()
+    clean_path = path.replace('\\', '/')
+    if not clean_path or '..' in clean_path or clean_path.startswith('/'):
+        return _json_error(translate('Invalid recording path'))
     every_n = int(data.get('every_n') or 10)
     max_frames = int(data.get('max_frames') or 500)
     split = (data.get('split') or 'inbox').strip()
     try:
-        result = _service().import_recording_frames(name, path, every_n=every_n, max_frames=max_frames, split=split)
+        result = _service().import_recording_frames(name, clean_path, every_n=every_n, max_frames=max_frames, split=split)
     except Exception as exc:
         return _json_error(str(exc))
     if not result.get('imported') and not result.get('skipped'):
@@ -758,8 +766,30 @@ def api_list_images(name: str):
     elif labeled == '0':
         labeled_bool = False
     class_filter = request.args.get('class') or None
-    images = _service().list_images(name, split=split, labeled=labeled_bool, class_filter=class_filter)
-    return jsonify({'status': 'ok', 'images': images})
+
+    try:
+        page = int(request.args.get('page', 0) or 0)
+        per_page = int(request.args.get('per_page', 0) or 0)
+    except (ValueError, TypeError):
+        page, per_page = 0, 0
+
+    svc = _service()
+    images = svc.list_images(name, split=split, labeled=labeled_bool, class_filter=class_filter)
+    total = len(images)
+
+    if per_page > 0:
+        offset = max(0, (page - 1) * per_page) if page > 0 else 0
+        paged = images[offset:offset + per_page]
+        return jsonify({
+            'status': 'ok',
+            'images': paged,
+            'total': total,
+            'page': max(1, page),
+            'per_page': per_page,
+            'total_pages': (total + per_page - 1) // per_page if per_page else 1,
+        })
+
+    return jsonify({'status': 'ok', 'images': images, 'total': total})
 
 
 @datasets_bp.route('/datasets/api/<name>/annotations/<path:image_name>', methods=['GET', 'POST'])
@@ -913,6 +943,27 @@ def api_export(name: str):
     except Exception as exc:
         return _json_error(str(exc))
     return jsonify({'status': 'ok', **result})
+
+
+@datasets_bp.route('/datasets/api/<name>/export-zip')
+@login_required
+def api_export_zip(name: str):
+    """
+    Download complete YOLO dataset as a ZIP archive.
+    """
+    try:
+        zip_path = _service().export_zip(name)
+        if not zip_path.is_file():
+            return _json_error('Failed to create archive', 500)
+        return send_file(
+            zip_path,
+            as_attachment=True,
+            download_name=f'{name}_yolo.zip',
+            mimetype='application/zip',
+            max_age=0,
+        )
+    except Exception as exc:
+        return _json_error(str(exc), 500)
 
 
 @datasets_bp.route('/datasets/api/training/status')
@@ -1078,6 +1129,7 @@ def api_autolabel(name: str):
     if not weights_path or not weights_path.is_file():
         return _json_error(translate('Model weights not found'))
 
+    UltralyticsYOLO = _get_ultralytics_yolo()
     if UltralyticsYOLO is None:
         return _json_error(str(_ultralytics_import_error or 'Ultralytics not available'))
     if cv2 is None:
@@ -1190,6 +1242,7 @@ def api_active_learning(name: str):
     weights_path = _resolve_autolabel_weights(meta, explicit_weights=weights, detector=location)
     if not weights_path or not weights_path.is_file():
         return _json_error(translate('Model weights not found'))
+    UltralyticsYOLO = _get_ultralytics_yolo()
     if UltralyticsYOLO is None:
         return _json_error(str(_ultralytics_import_error or 'Ultralytics not available'))
     model = UltralyticsYOLO(str(weights_path))

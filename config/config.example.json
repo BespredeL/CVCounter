@@ -70,8 +70,8 @@
                 "type": "datetime-local"
             },
             "field_four": {
-                "name": "field_two",
-                "label": "Field Two Textarea",
+                "name": "field_four",
+                "label": "Field Four Textarea",
                 "type": "textarea"
             },
             "field_five": {

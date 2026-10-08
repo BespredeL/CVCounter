@@ -12,11 +12,15 @@ import glob
 from pathlib import Path
 from typing import Callable, Iterable, Optional
 
-import torch
 import yaml
-from ultralytics import YOLO
 
 from system.utils.paths import ensure_dir, get_project_root, set_project_root
+
+
+class TrainingCancelledError(RuntimeError):
+    """Raised when training is cancelled by the user."""
+    pass
+
 
 DEFAULT_BASE_MODEL = 'yolo11n.pt'
 DEFAULT_TASK = 'detect'
@@ -101,10 +105,16 @@ def resolve_device(device: Optional[str]) -> str | int:
     Returns:
         str | int: The resolved device
     """
+    try:
+        import torch
+        cuda_ok = torch.cuda.is_available()
+    except ImportError:
+        cuda_ok = False
+
     if device is None:
-        return 0 if torch.cuda.is_available() else 'cpu'
+        return 0 if cuda_ok else 'cpu'
     if str(device).lower() == 'auto':
-        return 0 if torch.cuda.is_available() else 'cpu'
+        return 0 if cuda_ok else 'cpu'
     if str(device).isdigit():
         return int(device)
     return device
@@ -192,7 +202,7 @@ def best_weights_path(config_name: str, task: str = DEFAULT_TASK) -> Path:
     return RUNS_DIR / task / name / 'weights' / 'best.pt'
 
 
-def load_model(model_path: Path) -> YOLO:
+def load_model(model_path: Path):
     """
     Load a model.
     
@@ -200,10 +210,11 @@ def load_model(model_path: Path) -> YOLO:
         model_path (Path): The path to the model
     
     Returns:
-        YOLO: The loaded model
+        The loaded model instance
     """
     if not model_path.is_file():
         raise FileNotFoundError(f'Model not found: {model_path}')
+    from ultralytics import YOLO
     return YOLO(str(model_path))
 
 
@@ -272,6 +283,7 @@ def train_model(
         export_format: Optional[str] = None,
         dedupe_val: bool = False,
         progress_callback: Optional[Callable[[dict], None]] = None,
+        cancel_check: Optional[Callable[[], bool]] = None,
         project_root: Optional[Path | str] = None,
 ) -> Path:
     """
@@ -288,6 +300,7 @@ def train_model(
         export_format: Optional post-train export format.
         dedupe_val: Remove train duplicates of val files.
         progress_callback: Optional callback receiving progress dicts.
+        cancel_check: Optional callback returning True when cancel was requested.
         project_root: Optional project root override.
 
     Returns:
@@ -327,6 +340,19 @@ def train_model(
         model.add_callback('on_fit_epoch_end', _on_fit_epoch_end)
         callbacks_attached = True
 
+    if cancel_check is not None:
+        def _on_batch_cancel(trainer) -> None:
+            if cancel_check():
+                trainer.stop = True
+
+        def _on_epoch_cancel(trainer) -> None:
+            if cancel_check():
+                trainer.stop = True
+
+        model.add_callback('on_train_batch_end', _on_batch_cancel)
+        model.add_callback('on_fit_epoch_end', _on_epoch_cancel)
+        callbacks_attached = True
+
     if progress_callback is not None:
         progress_callback({
             'event': 'start',
@@ -347,6 +373,9 @@ def train_model(
         project=str(RUNS_DIR / task),
         exist_ok=True,
     )
+
+    if cancel_check is not None and cancel_check():
+        raise TrainingCancelledError('Training was cancelled by user')
 
     weights = best_weights_path(run_name, task)
     if not weights.is_file():

@@ -31,9 +31,20 @@ class DatabaseManager:
         """
         self.__logger: Logger = Logger()
         try:
-            self.__engine: any = create_engine(uri)
+            connect_args = {}
+            if uri.startswith('sqlite'):
+                connect_args['timeout'] = 15
+
+            self.__engine: any = create_engine(uri, connect_args=connect_args)
             self.__prefix: str = prefix
-            self.__sessionmaker: any = sessionmaker(bind=self.__engine)
+            self.__sessionmaker: any = sessionmaker(bind=self.__engine, expire_on_commit=False)
+
+            if uri.startswith('sqlite'):
+                try:
+                    with self.__engine.connect() as conn:
+                        conn.execute(text("PRAGMA journal_mode=WAL;"))
+                except Exception as wal_err:
+                    self.__logger.warning(f"Could not enable WAL mode: {wal_err}")
 
             # Create tables if they don't exist yet
             Base.metadata.create_all(self.__engine)

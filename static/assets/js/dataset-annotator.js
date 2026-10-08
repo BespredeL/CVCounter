@@ -79,6 +79,8 @@
             this.panY = 0;
             this.panning = null;
             this.editDrag = null;
+            this.undoStack = [];
+            this.maxUndo = 30;
 
             this.fillClassSelect();
             this.bindUi();
@@ -91,6 +93,34 @@
                 }
                 this.openImage(this.currentName || this.imageNames[0]);
             });
+        }
+
+        pushUndo() {
+            const snapshot = JSON.stringify(this.doc.shapes || []);
+            if (this.undoStack.length > 0 && this.undoStack[this.undoStack.length - 1] === snapshot) {
+                return;
+            }
+            this.undoStack.push(snapshot);
+            if (this.undoStack.length > this.maxUndo) {
+                this.undoStack.shift();
+            }
+        }
+
+        undo() {
+            if (!this.undoStack.length) {
+                this.setStatus(t('Nothing to undo'), 'info');
+                return;
+            }
+            const prev = this.undoStack.pop();
+            try {
+                this.doc.shapes = JSON.parse(prev);
+                this.selectedId = null;
+                this.markDirty();
+                this.renderShapesList();
+                this.renderAttrs();
+                this.redraw();
+                this.setStatus(t('Undo applied'), 'info');
+            } catch (_) {}
         }
 
         fillClassSelect() {
@@ -196,6 +226,7 @@
             document.getElementById('ann-prev').addEventListener('click', () => this.navigate(-1));
             document.getElementById('ann-next').addEventListener('click', () => this.navigate(1));
             document.getElementById('ann-skip').addEventListener('click', () => this.navigate(1, true));
+            document.getElementById('ann-undo')?.addEventListener('click', () => this.undo());
             document.getElementById('ann-save').addEventListener('click', () => this.save());
             document.getElementById('ann-delete').addEventListener('click', () => this.deleteSelected());
             document.getElementById('ann-delete-image')?.addEventListener('click', () => this.deleteCurrentImage());
@@ -211,7 +242,15 @@
                 btn.addEventListener('click', () => this.setMode(btn.dataset.mode));
             });
 
-            document.getElementById('ann-filter').addEventListener('change', () => this.renderQueue());
+            document.getElementById('ann-filter').addEventListener('change', () => {
+                this.renderQueue();
+                this.updateIndex();
+            });
+
+            document.getElementById('ann-search')?.addEventListener('input', () => {
+                this.renderQueue();
+                this.updateIndex();
+            });
 
             this.imageLabelSelect?.addEventListener('change', () => {
                 this.doc.image_label = this.imageLabelSelect.value || null;
@@ -309,26 +348,45 @@
             this.renderQueue();
         }
 
+        getFilteredImageNames() {
+            const filter = document.getElementById('ann-filter')?.value || 'all';
+            const query = (document.getElementById('ann-search')?.value || '').trim().toLowerCase();
+            return this.imageNames.filter((name) => {
+                const meta = this.imageMeta[name] || {};
+                if (filter === 'unlabeled' && meta.labeled) return false;
+                if (filter === 'labeled' && !meta.labeled) return false;
+                if (query && !name.toLowerCase().includes(query)) return false;
+                return true;
+            });
+        }
+
         updateIndex() {
-            const idx = this.imageNames.indexOf(this.currentName);
-            this.indexEl.textContent = idx >= 0
-                ? `${idx + 1} / ${this.imageNames.length}`
-                : `— / ${this.imageNames.length}`;
+            const list = this.getFilteredImageNames();
+            const filter = document.getElementById('ann-filter')?.value || 'all';
+            const idx = list.indexOf(this.currentName);
+            const total = list.length;
+            const fullTotal = this.imageNames.length;
+            if (filter !== 'all' || document.getElementById('ann-search')?.value?.trim()) {
+                this.indexEl.textContent = idx >= 0
+                    ? `${idx + 1} / ${total} (${fullTotal})`
+                    : `— / ${total} (${fullTotal})`;
+            } else {
+                this.indexEl.textContent = idx >= 0
+                    ? `${idx + 1} / ${fullTotal}`
+                    : `— / ${fullTotal}`;
+            }
             this.filenameEl.textContent = this.currentName || '';
             this.filenameEl.title = this.currentName || '';
         }
 
         renderQueue() {
             if (!this.queueEl) return;
-            const filter = document.getElementById('ann-filter')?.value || 'all';
+            const filteredNames = this.getFilteredImageNames();
             this.queueEl.innerHTML = '';
-            let shown = 0;
             let activeBtn = null;
-            this.imageNames.forEach((name, idx) => {
+            filteredNames.forEach((name) => {
+                const idx = this.imageNames.indexOf(name);
                 const meta = this.imageMeta[name] || {};
-                if (filter === 'unlabeled' && meta.labeled) return;
-                if (filter === 'labeled' && !meta.labeled) return;
-                shown += 1;
                 const a = document.createElement('button');
                 a.type = 'button';
                 a.className = `list-group-item list-group-item-action py-2 px-2 ${name === this.currentName ? 'active' : ''}`;
@@ -343,7 +401,7 @@
                 this.queueEl.appendChild(a);
                 if (name === this.currentName) activeBtn = a;
             });
-            if (!shown) {
+            if (!filteredNames.length) {
                 const empty = document.createElement('div');
                 empty.className = 'list-group-item small text-body-secondary';
                 empty.textContent = t('No images');
@@ -380,6 +438,7 @@
             this.polyPoints = [];
             this.drawing = null;
             this.editDrag = null;
+            this.undoStack = [];
             this.setLoading(true);
             this.emptyEl?.classList.add('d-none');
             this.setStatus(t('Loading…'));
@@ -423,13 +482,20 @@
         }
 
         async navigate(delta, skipSave) {
-            const idx = this.imageNames.indexOf(this.currentName);
-            const next = idx + delta;
-            if (next < 0 || next >= this.imageNames.length) return;
+            const list = this.getFilteredImageNames();
+            if (!list.length) return;
+            const idx = list.indexOf(this.currentName);
+            let next;
+            if (idx === -1) {
+                next = delta > 0 ? 0 : list.length - 1;
+            } else {
+                next = idx + delta;
+            }
+            if (next < 0 || next >= list.length) return;
             if (!skipSave && this.dirty) {
                 await this.save();
             }
-            await this.openImage(this.imageNames[next]);
+            await this.openImage(list[next]);
         }
 
         resetView(redraw = true) {
@@ -722,6 +788,7 @@
                         return;
                     }
                 }
+                this.pushUndo();
                 this.markDirty();
                 this.renderShapesList();
                 this.renderAttrs();
@@ -736,6 +803,7 @@
                 this.redraw();
                 return;
             }
+            this.pushUndo();
             const shape = this.newShape('rectangle', [x0, y0, x1, y1]);
             this.doc.shapes.push(shape);
             this.selectedId = shape.id;
@@ -747,6 +815,7 @@
 
         finishPolygon() {
             if (this.mode !== 'poly' || this.polyPoints.length < 6) return;
+            this.pushUndo();
             const shape = this.newShape('polygon', [...this.polyPoints]);
             this.doc.shapes.push(shape);
             this.selectedId = shape.id;
@@ -1033,6 +1102,7 @@
 
         deleteSelected() {
             if (!this.selectedId) return;
+            this.pushUndo();
             this.doc.shapes = this.doc.shapes.filter((s) => s.id !== this.selectedId);
             this.selectedId = null;
             this.markDirty();
@@ -1235,7 +1305,10 @@
 
         onKey(e) {
             if (e.target.matches('input, textarea, select')) return;
-            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+                e.preventDefault();
+                this.undo();
+            } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
                 e.preventDefault();
                 this.autoLabelCurrent();
             } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {

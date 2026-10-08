@@ -19,6 +19,7 @@ from system.training.yolo_trainer import (
     DEFAULT_EPOCHS,
     DEFAULT_IMG_SIZE,
     DEFAULT_TASK,
+    TrainingCancelledError,
     best_weights_path,
     export_weights,
     list_base_models,
@@ -138,6 +139,7 @@ class TrainingJobManager:
                         export_format=export_format.strip() or None,
                         dedupe_val=dedupe_val,
                         progress_callback=self._on_progress,
+                        cancel_check=self._cancel.is_set,
                     )
                     with self._lock:
                         if self._job and self._job['id'] == job_id:
@@ -147,17 +149,36 @@ class TrainingJobManager:
                             self._history.append(dict(self._job))
                     self._append_log(f'Training complete: {weights}')
                     self._emit({'event': 'job_complete', 'job': self.status().get('job')})
-                except Exception as exc:
-                    self.logger.error(f'Training job failed: {exc}')
-                    self.logger.log_exception()
+                except TrainingCancelledError:
+                    self.logger.info(f'Training job {job_id} cancelled by user')
                     with self._lock:
                         if self._job and self._job['id'] == job_id:
-                            self._job['status'] = 'failed'
-                            self._job['error'] = str(exc)
+                            self._job['status'] = 'cancelled'
                             self._job['finished_at'] = time.time()
                             self._history.append(dict(self._job))
-                    self._append_log(f'Error: {exc}')
-                    self._emit({'event': 'job_failed', 'error': str(exc), 'job': self.status().get('job')})
+                    self._append_log('Training cancelled by user')
+                    self._emit({'event': 'job_cancelled', 'job': self.status().get('job')})
+                except Exception as exc:
+                    if self._cancel.is_set():
+                        self.logger.info(f'Training job {job_id} stopped after cancel request: {exc}')
+                        with self._lock:
+                            if self._job and self._job['id'] == job_id:
+                                self._job['status'] = 'cancelled'
+                                self._job['finished_at'] = time.time()
+                                self._history.append(dict(self._job))
+                        self._append_log('Training cancelled by user')
+                        self._emit({'event': 'job_cancelled', 'job': self.status().get('job')})
+                    else:
+                        self.logger.error(f'Training job failed: {exc}')
+                        self.logger.log_exception()
+                        with self._lock:
+                            if self._job and self._job['id'] == job_id:
+                                self._job['status'] = 'failed'
+                                self._job['error'] = str(exc)
+                                self._job['finished_at'] = time.time()
+                                self._history.append(dict(self._job))
+                        self._append_log(f'Error: {exc}')
+                        self._emit({'event': 'job_failed', 'error': str(exc), 'job': self.status().get('job')})
 
             self._thread = threading.Thread(target=_run, daemon=True, name=f'TrainJob-{job_id}')
             self._thread.start()

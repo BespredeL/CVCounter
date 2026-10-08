@@ -74,6 +74,22 @@
                 setBusy(submitBtn, false);
             }
         });
+
+        const searchInput = document.getElementById('dataset-search-input');
+        const emptyResults = document.getElementById('no-search-results');
+        searchInput?.addEventListener('input', (e) => {
+            const query = (e.target.value || '').trim().toLowerCase();
+            let visibleCount = 0;
+            document.querySelectorAll('.dataset-item-col').forEach((col) => {
+                const searchData = col.dataset.search || '';
+                const match = !query || searchData.includes(query);
+                col.style.display = match ? '' : 'none';
+                if (match) visibleCount += 1;
+            });
+            if (emptyResults) {
+                emptyResults.classList.toggle('d-none', visibleCount > 0);
+            }
+        });
     }
 
     // ---- detail page ----
@@ -83,7 +99,7 @@
     const name = detail.dataset.name;
 
     function selectedImages() {
-        return Array.from(document.querySelectorAll('.img-check:checked')).map((el) => el.value);
+        return Array.from(new Set(Array.from(document.querySelectorAll('.img-check:checked')).map((el) => el.value)));
     }
 
     function withBusy(btn, fn) {
@@ -99,10 +115,44 @@
         };
     }
 
+    function updateSelectionState() {
+        const selected = selectedImages();
+        const counterEl = document.getElementById('selected-counter');
+        const counterNum = document.getElementById('selected-counter-num');
+        const autolabelText = document.getElementById('btn-autolabel-text');
+
+        if (counterEl && counterNum) {
+            counterNum.textContent = String(selected.length);
+            counterEl.classList.toggle('d-none', selected.length === 0);
+        }
+        if (autolabelText) {
+            autolabelText.textContent = selected.length > 0
+                ? t('Auto-label selected ({n})', { n: selected.length })
+                : t('Auto-label');
+        }
+    }
+
+    // Sync checkboxes across table and grid view
+    document.addEventListener('change', (e) => {
+        if (e.target && e.target.classList.contains('img-check')) {
+            const val = e.target.value;
+            const state = e.target.checked;
+            document.querySelectorAll(`.img-check[value="${CSS.escape(val)}"]`).forEach((cb) => {
+                if (cb !== e.target) cb.checked = state;
+            });
+            updateSelectionState();
+        }
+    });
+
     document.getElementById('check-all-images')?.addEventListener('change', (e) => {
+        const checked = e.target.checked;
         document.querySelectorAll('#images-tbody tr:not([style*="display: none"]) .img-check').forEach((c) => {
-            c.checked = e.target.checked;
+            c.checked = checked;
+            document.querySelectorAll(`.img-check[value="${CSS.escape(c.value)}"]`).forEach((other) => {
+                other.checked = checked;
+            });
         });
+        updateSelectionState();
     });
 
     function formatImportResult(data) {
@@ -212,6 +262,9 @@
     });
     document.getElementById('btn-move-val')?.addEventListener('click', () => {
         moveSelected('val').catch((err) => toast(err.message, 'danger'));
+    });
+    document.getElementById('btn-move-inbox')?.addEventListener('click', () => {
+        moveSelected('inbox').catch((err) => toast(err.message, 'danger'));
     });
 
     document.getElementById('btn-delete-images')?.addEventListener('click', async () => {
@@ -353,10 +406,14 @@
     document.getElementById('btn-autolabel')?.addEventListener('click', withBusy(
         document.getElementById('btn-autolabel'),
         async () => {
+            const selected = selectedImages();
+            const payload = selected.length > 0
+                ? { images: selected }
+                : { limit: 100, only_unlabeled: true };
             toast(t('Auto-label running…'), 'info');
             const data = await api(`/datasets/api/${name}/autolabel`, {
                 method: 'POST',
-                json: { limit: 100, only_unlabeled: true },
+                json: payload,
             });
             toast(`${t('Labeled')}: ${data.labeled}/${data.processed}`, 'success');
             setTimeout(() => window.location.reload(), 700);
@@ -367,7 +424,17 @@
         document.getElementById('btn-run-qa'),
         async () => {
             const data = await api(`/datasets/api/${name}/qa`);
-            document.getElementById('qa-output').textContent = JSON.stringify(data.report, null, 2);
+            const rep = data.report || {};
+            document.getElementById('qa-output').textContent = JSON.stringify(rep, null, 2);
+
+            const summary = document.getElementById('qa-cards-summary');
+            const statImages = document.getElementById('qa-stat-images');
+            const statLabels = document.getElementById('qa-stat-labels');
+            const statUnlabeled = document.getElementById('qa-stat-unlabeled');
+            if (summary) summary.classList.remove('d-none');
+            if (statImages) statImages.textContent = rep.total_images ?? '0';
+            if (statLabels) statLabels.textContent = rep.labeled_images ?? '0';
+            if (statUnlabeled) statUnlabeled.textContent = rep.unlabeled_images ?? '0';
         },
     ));
 
@@ -380,14 +447,55 @@
         },
     ));
 
+    document.getElementById('btn-quick-split')?.addEventListener('click', () => {
+        document.querySelector('[data-bs-target="#tab-import"]')?.click();
+        const splitBtn = document.getElementById('btn-auto-split');
+        if (splitBtn) {
+            splitBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            splitBtn.classList.add('btn-warning');
+            setTimeout(() => splitBtn.classList.remove('btn-warning'), 1500);
+        }
+    });
+
+    const fillBestWeightsBtn = document.getElementById('btn-fill-best-weights');
+    fillBestWeightsBtn?.addEventListener('click', () => {
+        const w = detail.dataset.bestWeights;
+        if (w) {
+            const applyInput = document.getElementById('apply-weights');
+            if (applyInput) applyInput.value = w;
+            toast(t('Weights applied'), 'info');
+        }
+    });
+
+    function setKnownBestWeights(weights) {
+        if (!weights) return;
+        detail.dataset.bestWeights = weights;
+        if (fillBestWeightsBtn) fillBestWeightsBtn.classList.remove('d-none');
+    }
+
     // ---- training ----
     const logEl = document.getElementById('training-log');
     const statusBadge = document.getElementById('train-status-badge');
+    const progressBar = document.getElementById('train-progress-bar');
+    const epochBadge = document.getElementById('train-epoch-badge');
+
+    function updateTrainProgress(epoch, epochs) {
+        if (!epoch || !epochs) return;
+        if (epochBadge) {
+            epochBadge.textContent = `${t('Epoch')} ${epoch}/${epochs}`;
+            epochBadge.classList.remove('d-none');
+        }
+        if (progressBar) {
+            const pct = Math.min(100, Math.max(0, Math.round((Number(epoch) / Number(epochs)) * 100)));
+            progressBar.style.width = `${pct}%`;
+        }
+    }
 
     function appendLog(line) {
         if (!logEl) return;
+        const atBottom = logEl.scrollHeight - logEl.scrollTop <= logEl.clientHeight + 40;
         logEl.textContent += `${line}\n`;
-        logEl.scrollTop = logEl.scrollHeight;
+        if (atBottom) logEl.scrollTop = logEl.scrollHeight;
     }
 
     function setTrainStatus(text, tone) {
@@ -408,15 +516,28 @@
         try {
             const data = await api('/datasets/api/training/status');
             if (data.log && logEl) {
-                logEl.textContent = `${data.log.join('\n')}${data.log.length ? '\n' : ''}`;
-                logEl.scrollTop = logEl.scrollHeight;
+                const nextLog = `${data.log.join('\n')}${data.log.length ? '\n' : ''}`;
+                if (logEl.textContent !== nextLog) {
+                    const atBottom = logEl.scrollHeight - logEl.scrollTop <= logEl.clientHeight + 40;
+                    logEl.textContent = nextLog;
+                    if (atBottom) logEl.scrollTop = logEl.scrollHeight;
+                }
             }
             if (data.job) {
                 const tone = data.job.status === 'completed' ? 'success'
                     : data.job.status === 'failed' ? 'danger'
                         : data.job.status === 'running' ? 'running' : undefined;
                 setTrainStatus(t(data.job.status), tone);
+                if (data.job.epoch && data.job.epochs) {
+                    updateTrainProgress(data.job.epoch, data.job.epochs);
+                }
+                if (data.job.status === 'completed' && progressBar) {
+                    progressBar.style.width = '100%';
+                    progressBar.classList.remove('progress-bar-animated');
+                    progressBar.classList.add('bg-success');
+                }
                 if (data.job.weights) {
+                    setKnownBestWeights(data.job.weights);
                     const applyInput = document.getElementById('apply-weights');
                     if (applyInput && !applyInput.value) applyInput.value = data.job.weights;
                 }
@@ -484,16 +605,30 @@
     if (window.io && window.SOCKETIO_OPTIONS) {
         const socket = window.io(window.SOCKETIO_OPTIONS);
         socket.on('training_progress', (payload) => {
-            appendLog(JSON.stringify(payload));
-            if (payload.event === 'job_complete' && payload.job?.weights) {
-                const applyInput = document.getElementById('apply-weights');
-                if (applyInput) applyInput.value = payload.job.weights;
+            if (typeof payload === 'string') {
+                appendLog(payload);
+            } else if (payload.message) {
+                appendLog(payload.message);
+            } else {
+                appendLog(JSON.stringify(payload));
+            }
+            if (payload.event === 'job_complete') {
+                if (payload.job?.weights) {
+                    const applyInput = document.getElementById('apply-weights');
+                    if (applyInput) applyInput.value = payload.job.weights;
+                }
+                if (progressBar) {
+                    progressBar.style.width = '100%';
+                    progressBar.classList.remove('progress-bar-animated');
+                    progressBar.classList.add('bg-success');
+                }
                 setTrainStatus('completed', 'success');
             }
             if (payload.event === 'job_failed') {
                 setTrainStatus('failed', 'danger');
             }
             if (payload.event === 'epoch_end') {
+                updateTrainProgress(payload.epoch, payload.epochs);
                 setTrainStatus(`epoch ${payload.epoch}/${payload.epochs}`, 'running');
             }
         });
@@ -506,19 +641,129 @@
         document.getElementById('train-tab-btn')?.click();
     }
 
+    // ---- view mode (table vs grid) ----
+    const btnViewTable = document.getElementById('btn-view-table');
+    const btnViewGrid = document.getElementById('btn-view-grid');
+    const tableView = document.getElementById('images-table-view');
+    const gridView = document.getElementById('images-grid-view');
+
+    function setViewMode(mode) {
+        const isGrid = mode === 'grid';
+        btnViewTable?.classList.toggle('active', !isGrid);
+        btnViewGrid?.classList.toggle('active', isGrid);
+        tableView?.classList.toggle('d-none', isGrid);
+        gridView?.classList.toggle('d-none', !isGrid);
+        try {
+            localStorage.setItem('cv_dataset_view', isGrid ? 'grid' : 'table');
+        } catch (_) {}
+    }
+
+    btnViewTable?.addEventListener('click', () => setViewMode('table'));
+    btnViewGrid?.addEventListener('click', () => setViewMode('grid'));
+
+    const savedView = (() => {
+        try { return localStorage.getItem('cv_dataset_view'); } catch (_) { return null; }
+    })();
+    if (savedView === 'grid') {
+        setViewMode('grid');
+    }
+
+    // ---- filters & pagination ----
+    let currentPage = 1;
+    const pageSize = 48;
+
     function applyImageFilters() {
         const split = document.getElementById('filter-split')?.value || '';
         const labeled = document.getElementById('filter-labeled')?.value || '';
-        document.querySelectorAll('#images-tbody tr[data-name]').forEach((tr) => {
+        const classFilter = document.getElementById('filter-class')?.value || '';
+        const searchVal = (document.getElementById('images-search-input')?.value || '').trim().toLowerCase();
+
+        const tableRows = Array.from(document.querySelectorAll('#images-tbody tr[data-name]'));
+        const gridCols = Array.from(document.querySelectorAll('#images-grid-cards .grid-card-col[data-name]'));
+
+        const visibleNames = [];
+
+        tableRows.forEach((tr) => {
+            const name = tr.dataset.name;
             const sp = tr.dataset.split || '';
             const isLab = tr.dataset.labeled === '1';
+            const rawLabels = tr.dataset.labels || '';
+            const labels = rawLabels ? rawLabels.split(',') : [];
+
             let show = true;
             if (split && sp !== split) show = false;
             if (labeled === '1' && !isLab) show = false;
             if (labeled === '0' && isLab) show = false;
-            tr.style.display = show ? '' : 'none';
+            if (classFilter && !labels.includes(classFilter)) show = false;
+            if (searchVal && !name.toLowerCase().includes(searchVal)) show = false;
+
+            if (show) visibleNames.push(name);
         });
+
+        const totalMatching = visibleNames.length;
+        const totalPages = Math.max(1, Math.ceil(totalMatching / pageSize));
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        const pageNames = new Set(visibleNames.slice(startIndex, endIndex));
+
+        tableRows.forEach((tr) => {
+            tr.style.display = pageNames.has(tr.dataset.name) ? '' : 'none';
+        });
+
+        gridCols.forEach((col) => {
+            col.style.display = pageNames.has(col.dataset.name) ? '' : 'none';
+        });
+
+        const paginationInfo = document.getElementById('pagination-info');
+        const pageNum = document.getElementById('page-current-num');
+        const prevBtn = document.getElementById('btn-page-prev');
+        const nextBtn = document.getElementById('btn-page-next');
+
+        if (paginationInfo) {
+            if (totalMatching === 0) {
+                paginationInfo.textContent = `0 ${t('images')}`;
+            } else {
+                const end = Math.min(endIndex, totalMatching);
+                paginationInfo.textContent = `${startIndex + 1}–${end} / ${totalMatching} ${t('images')}`;
+            }
+        }
+        if (pageNum) {
+            pageNum.textContent = `${currentPage} / ${totalPages}`;
+        }
+        if (prevBtn) prevBtn.disabled = currentPage <= 1;
+        if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
     }
-    document.getElementById('filter-split')?.addEventListener('change', applyImageFilters);
-    document.getElementById('filter-labeled')?.addEventListener('change', applyImageFilters);
+
+    document.getElementById('filter-split')?.addEventListener('change', () => {
+        currentPage = 1;
+        applyImageFilters();
+    });
+    document.getElementById('filter-labeled')?.addEventListener('change', () => {
+        currentPage = 1;
+        applyImageFilters();
+    });
+    document.getElementById('filter-class')?.addEventListener('change', () => {
+        currentPage = 1;
+        applyImageFilters();
+    });
+    document.getElementById('images-search-input')?.addEventListener('input', () => {
+        currentPage = 1;
+        applyImageFilters();
+    });
+
+    document.getElementById('btn-page-prev')?.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage -= 1;
+            applyImageFilters();
+        }
+    });
+    document.getElementById('btn-page-next')?.addEventListener('click', () => {
+        currentPage += 1;
+        applyImageFilters();
+    });
+
+    applyImageFilters();
 })();

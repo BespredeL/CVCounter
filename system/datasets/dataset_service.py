@@ -12,6 +12,7 @@ import json
 import random
 import re
 import shutil
+import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -224,7 +225,7 @@ class DatasetService:
             if not path.is_dir() or path.name.startswith('.'):
                 continue
             try:
-                summary = self.get_summary(path.name)
+                summary = self.get_summary(path.name, fast=True)
                 items.append(summary)
             except Exception:
                 items.append({
@@ -328,6 +329,8 @@ class DatasetService:
             split: Optional[str] = None,
             labeled: Optional[bool] = None,
             class_filter: Optional[str] = None,
+            offset: Optional[int] = None,
+            limit: Optional[int] = None,
     ) -> list[dict[str, Any]]:
         """
         List the images in a dataset.
@@ -337,6 +340,8 @@ class DatasetService:
             split (Optional[str]): The split to list
             labeled (Optional[bool]): Whether to list labeled images
             class_filter (Optional[str]): The class filter
+            offset (Optional[int]): Pagination start offset
+            limit (Optional[int]): Pagination item limit
         
         Returns:
             list[dict[str, Any]]: The list of images
@@ -373,27 +378,67 @@ class DatasetService:
                     'labels': labels,
                     'mtime': path.stat().st_mtime,
                 })
+
+        if offset is not None or limit is not None:
+            start = offset or 0
+            end = (start + limit) if limit is not None else None
+            return result[start:end]
         return result
 
-    def get_summary(self, name: str) -> dict[str, Any]:
+    def get_summary(self, name: str, fast: bool = False) -> dict[str, Any]:
         """
         Get the summary of a dataset.
         
         Args:
             name (str): The name of the dataset
+            fast (bool): If True, computes split/labeled counts without parsing all annotation JSON files.
         
         Returns:
             dict[str, Any]: The summary of the dataset
         """
         meta = self.load_meta(name)
+        root = self.root(name)
+        by_split = {s: 0 for s in SPLITS}
+        for sp in SPLITS:
+            images_dir = root / 'images' / sp
+            if images_dir.is_dir():
+                by_split[sp] = sum(1 for p in images_dir.iterdir() if p.suffix.lower() in IMAGE_EXTENSIONS)
+        total = sum(by_split.values())
+
+        if fast:
+            ann_dir = root / 'annotations'
+            ann_count = 0
+            if ann_dir.is_dir():
+                ann_count = sum(1 for p in ann_dir.glob('*.json') if p.is_file())
+            labeled = min(total, ann_count)
+            unlabeled = max(0, total - labeled)
+            labeled_pct = round(100.0 * labeled / total, 1) if total else 0.0
+            per_class: dict[str, int] = {c: 0 for c in meta.get('classes') or []}
+            return {
+                'name': meta.get('name', name),
+                'display_name': meta.get('display_name', name),
+                'task': meta.get('task', 'detect'),
+                'classes': meta.get('classes', []),
+                'attributes': meta.get('attributes', []),
+                'keypoints_schema': meta.get('keypoints_schema', []),
+                'autolabel_detector': meta.get('autolabel_detector') or '',
+                'total': total,
+                'labeled': labeled,
+                'unlabeled': unlabeled,
+                'labeled_pct': labeled_pct,
+                'by_split': by_split,
+                'per_class': per_class,
+                'inbox_path': str((self.root(name) / 'images' / 'inbox').resolve()),
+                'created_at': meta.get('created_at'),
+                'updated_at': meta.get('updated_at'),
+            }
+
         images = self.list_images(name)
         total = len(images)
         labeled = sum(1 for i in images if i['labeled'])
-        by_split = {s: 0 for s in SPLITS}
-        per_class: dict[str, int] = {c: 0 for c in meta.get('classes') or []}
+        per_class = {c: 0 for c in meta.get('classes') or []}
         store = self.store(name)
         for item in images:
-            by_split[item['split']] = by_split.get(item['split'], 0) + 1
             if not item['labeled']:
                 continue
             doc = store.load(item['name'])
@@ -811,6 +856,36 @@ class DatasetService:
             'task': task,
             'classes': classes,
         }
+
+    def export_zip(self, name: str) -> Path:
+        """
+        Export complete YOLO dataset into a ZIP archive and return archive path.
+        
+        Args:
+            name (str): The name of the dataset
+            
+        Returns:
+            Path: The path to the created ZIP archive
+        """
+        self.export_for_training(name)
+        root = self.root(name)
+        zip_path = root / f'{self._safe_name(name)}_yolo.zip'
+        cfg_path = CFG_DIR / f'{self._safe_name(name)}.yaml'
+
+        with zipfile.ZipFile(zip_path, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+            if cfg_path.is_file():
+                zf.write(cfg_path, 'data.yaml')
+            meta_path = self._meta_path(name)
+            if meta_path.is_file():
+                zf.write(meta_path, 'meta.json')
+            for sub in ('images', 'labels'):
+                sub_dir = root / sub
+                if sub_dir.is_dir():
+                    for file_path in sub_dir.rglob('*'):
+                        if file_path.is_file():
+                            arcname = file_path.relative_to(root).as_posix()
+                            zf.write(file_path, arcname)
+        return zip_path
 
     def get_annotation(self, name: str, image_name: str) -> dict[str, Any]:
         """

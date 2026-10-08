@@ -7,6 +7,7 @@
 # Website: https://bespredel.name
 
 import logging
+from logging.handlers import RotatingFileHandler
 import os
 import traceback
 from typing import Any, Optional
@@ -87,7 +88,7 @@ class Logger:
 
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 
-        file_handler = logging.FileHandler(log_path, encoding='utf-8')
+        file_handler = RotatingFileHandler(log_path, maxBytes=10 * 1024 * 1024, backupCount=5, encoding='utf-8')
         file_handler.setLevel(log_level)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)

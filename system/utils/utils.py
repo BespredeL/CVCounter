@@ -17,6 +17,8 @@ import psutil
 import torch
 from flask import request
 
+from system.utils.paths import get_project_root
+
 
 def is_ajax() -> bool:
     """
@@ -235,7 +237,7 @@ def get_system_info() -> dict[str | Any, str | int | Any]:
     # Extract information from the output
     virtual_memory = psutil.virtual_memory()._asdict()
     swap_memory = psutil.swap_memory()._asdict()
-    disk_usages = disk_usage('/')._asdict()
+    disk_usages = disk_usage(get_project_root())._asdict()
 
     sys_info = {
         "python_version": platform.python_version(),
@@ -245,7 +247,7 @@ def get_system_info() -> dict[str | Any, str | int | Any]:
         "machine": platform.machine(),
         "processor": platform.processor(),
         "cpu_count": psutil.cpu_count(logical=False),
-        "cpu_percent": f"{psutil.cpu_percent(interval=1)} %",
+        "cpu_percent": f"{psutil.cpu_percent(interval=None)} %",
 
         "nvidia_smi_version": nvidia_info["nvidia_smi_version"],
         "driver_version": nvidia_info["driver_version"],

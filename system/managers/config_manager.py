@@ -140,6 +140,29 @@ class ConfigManager:
             logging.error(f"Error saving configuration: {str(e)}")
             raise ConfigError(f"Failed to save configuration: {str(e)}")
 
+    @staticmethod
+    def _split_form_key(key: str, current_config: Dict[str, Any]) -> list[str]:
+        """
+        Split a flattened form key into configuration path segments,
+        preserving identifiers containing hyphens (e.g. detection location IDs, usernames).
+        """
+        detections = current_config.get('detections')
+        if isinstance(detections, dict) and key.startswith('detections-'):
+            rest = key[len('detections-'):]
+            for loc in sorted(detections.keys(), key=len, reverse=True):
+                if rest == loc:
+                    return ['detections', loc]
+                if rest.startswith(f"{loc}-"):
+                    sub_key = rest[len(f"{loc}-"):]
+                    return ['detections', loc] + sub_key.split('-')
+
+        users = current_config.get('users')
+        if isinstance(users, dict) and key.startswith('users-'):
+            username = key[len('users-'):]
+            return ['users', username]
+
+        return key.split('-')
+
     def save_from_request(self, form_data: Dict[str, Any]) -> None:
         """
         Saves the config from the request
@@ -159,7 +182,7 @@ class ConfigManager:
             current_config = self.read_config()
 
             for key, value in form_data.items():
-                keys = key.split('-')
+                keys = self._split_form_key(key, current_config)
                 if keys and keys[0] == 'detections' and keys[-1] in (
                         'counting_area', 'counting_area_color', 'counting_areas'
                 ):

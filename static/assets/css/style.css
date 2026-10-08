@@ -2830,6 +2830,49 @@ body.app-body--counter-multi {
     max-height: 28rem;
 }
 
+.dataset-images-grid {
+    max-height: 28rem;
+    overflow-y: auto;
+}
+
+.dataset-img-card {
+    position: relative;
+    border: 1px solid var(--cv-border);
+    border-radius: var(--cv-radius);
+    background: var(--cv-surface);
+    overflow: hidden;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dataset-img-card:hover {
+    border-color: var(--bs-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.dataset-img-card__thumb {
+    width: 100%;
+    height: 110px;
+    object-fit: cover;
+    background: #111;
+    display: block;
+}
+
+.dataset-img-card__body {
+    padding: 0.45rem 0.6rem;
+    font-size: 0.75rem;
+}
+
+.dataset-img-card__check {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    z-index: 2;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 4px;
+    padding: 2px 4px;
+}
+
 .dataset-images-name {
     max-width: 22rem;
 }

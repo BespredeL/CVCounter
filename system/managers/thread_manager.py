@@ -33,6 +33,12 @@ class ThreadManager:
         self.logger: Logger = Logger()
         self._shutdown_timeout: float = 10.0  # Timeout for thread shutdown in seconds
 
+    def _cleanup_dead_threads_locked(self) -> None:
+        """Removes threads that have terminated from the internal tracking dict."""
+        dead = [loc for loc, t in self.threads.items() if not t.is_alive()]
+        for loc in dead:
+            del self.threads[loc]
+
     def start_thread(self, location: str, target: Callable, daemon: bool = False) -> None:
         """
         Starts a new thread for the specified location.
@@ -46,10 +52,17 @@ class ThreadManager:
             None
             
         Note:
-            If a thread for the specified location already exists, a new thread will not be created.
+            If a thread for the specified location already exists and is alive, a new thread will not be created.
+            Dead/terminated threads are cleaned up and restarted.
         """
         with self.lock:
-            if location not in self.threads:
+            existing = self.threads.get(location)
+            if existing is not None and not existing.is_alive():
+                self.logger.warning(f"Found dead thread for location '{location}', cleaning up before start")
+                del self.threads[location]
+                existing = None
+
+            if existing is None:
                 thread = Thread(target=target, daemon=daemon, name=f"CounterThread-{location}")
                 self.threads[location] = thread
                 thread.start()
@@ -142,16 +155,22 @@ class ThreadManager:
 
     def has_thread(self, location: str) -> bool:
         """
-        Checks if a thread exists for the specified location.
+        Checks if an active running thread exists for the specified location.
         
         Args:
             location (str): Location identifier
             
         Returns:
-            bool: True if the thread exists, False otherwise
+            bool: True if the thread exists and is alive, False otherwise
         """
         with self.lock:
-            return location in self.threads
+            thread = self.threads.get(location)
+            if thread is None:
+                return False
+            if not thread.is_alive():
+                del self.threads[location]
+                return False
+            return True
 
     def stop_all_threads(self, object_counters: Optional[dict] = None, timeout: Optional[float] = None) -> dict[str, bool]:
         """
@@ -198,6 +217,7 @@ class ThreadManager:
             int: Number of active threads
         """
         with self.lock:
+            self._cleanup_dead_threads_locked()
             return len(self.threads)
 
     def get_active_locations(self) -> list[str]:
@@ -211,4 +231,5 @@ class ThreadManager:
             list[str]: List of active location identifiers
         """
         with self.lock:
+            self._cleanup_dead_threads_locked()
             return list(self.threads.keys())

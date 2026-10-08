@@ -53,7 +53,7 @@ def require_location(f):
         object_counters = context['object_counters']
         locations = context['locations']
 
-        location = str(escape(location))
+        location = str(location).strip() if location else ""
         if location not in locations:
             abort(400, translate('Detection config not found'))
         if location not in object_counters:
@@ -282,7 +282,7 @@ def process_custom_fields(form_config: dict, current_count: dict) -> list:
         field_copy['value'] = (
             current_count.get('custom_fields', {}).get(field['name'], "")
             if current_count and current_count.get('custom_fields')
-            else form_config.get('default_value', "")
+            else field.get('default_value', form_config.get('default_value', ""))
         )
         custom_fields.append(field_copy)
     return custom_fields
@@ -354,7 +354,7 @@ def counter_video(location: str = None):
     locations_dict = context['locations_dict']
     object_counters = context['object_counters']
 
-    location = str(escape(location))
+    location = str(location).strip()
     if location not in locations:
         abort(400, translate('Detection config not found'))
 
@@ -392,7 +392,7 @@ def counting_area_edit(location: str = None) -> str:
     context = get_app_context()
     locations_dict = context['locations_dict']
 
-    location = str(escape(location))
+    location = str(location).strip()
     _require_detection_location(location)
 
     return render_template(
@@ -416,7 +416,7 @@ def counting_area_data(location: str = None):
     context = get_app_context()
     config = context['config']
 
-    location = str(escape(location))
+    location = str(location).strip()
     _require_detection_location(location)
 
     detector_config = config.get(f'detections.{location}', {})
@@ -436,7 +436,7 @@ def counter_preview_image(location: str = None) -> Response:
 
     Preview files are written only when the counter thread is first started.
     """
-    location = str(escape(location))
+    location = str(location).strip()
     _require_detection_location(location)
 
     path = get_preview_path(location)
@@ -461,7 +461,7 @@ def counter_settings_form(location: str = None) -> str:
     config = context['config']
     locations_dict = context['locations_dict']
 
-    location = str(escape(location))
+    location = str(location).strip()
     _require_detection_location(location)
 
     detection = config.get(f'detections.{location}', {})
@@ -490,7 +490,7 @@ def counter_settings_save(location: str = None):
     config = context['config']
     object_counters = context['object_counters']
 
-    location = str(escape(location))
+    location = str(location).strip()
     _require_detection_location(location)
 
     prefix = f'detections-{location}-'
@@ -533,7 +533,7 @@ def counting_area_snapshot(location: str = None) -> Response:
     Returns:
         Response: MIME type response containing the JPEG frame
     """
-    location = str(escape(location))
+    location = str(location).strip()
     _require_detection_location(location)
 
     try:
@@ -573,7 +573,7 @@ def counting_area_save(location: str = None):
     config = context['config']
     object_counters = context['object_counters']
 
-    location = str(escape(location))
+    location = str(location).strip()
     _require_detection_location(location)
 
     if not request.is_json:
@@ -648,7 +648,7 @@ def counter_text(location: str = None) -> str:
     locations_dict = context['locations_dict']
     object_counters = context['object_counters']
 
-    location = str(escape(location))
+    location = str(location).strip()
     if location not in locations:
         abort(400, translate('Detection config not found'))
 
@@ -688,7 +688,7 @@ def _parse_multi_locations_param(raw: str | None) -> list[str]:
     result: list[str] = []
 
     for part in raw.split(','):
-        loc = str(escape(part.strip()))
+        loc = str(part).strip()
         if loc and loc not in seen:
             seen.add(loc)
             result.append(loc)
@@ -823,7 +823,7 @@ def update_pending_counts(location: str = None) -> dict:
         abort(500, "Internal server error")
 
 
-@counters_bp.route('/reset_count/<string:location>')
+@counters_bp.route('/reset_count/<string:location>', methods=['GET', 'POST'])
 @require_location
 def reset_count(location: str = None) -> dict:
     """
@@ -879,7 +879,7 @@ def reset_count_current(location: str = None) -> dict:
         abort(500, "Internal server error")
 
 
-@counters_bp.route('/save_capture/<string:location>')
+@counters_bp.route('/save_capture/<string:location>', methods=['GET', 'POST'])
 @require_location
 def save_capture(location: str = None) -> dict[str, str] | Response:
     """
@@ -912,7 +912,7 @@ def counter_bootstrap(location: str = None):
     Returns:
         JSON status response.
     """
-    location = str(escape(location))
+    location = str(location).strip()
     _require_detection_location(location)
 
     try:
@@ -933,7 +933,7 @@ def counter_bootstrap(location: str = None):
     })
 
 
-@counters_bp.route('/start_count/<string:location>')
+@counters_bp.route('/start_count/<string:location>', methods=['GET', 'POST'])
 @require_location
 def start_count(location: str = None) -> dict[str, str] | Response:
     """
@@ -956,7 +956,7 @@ def start_count(location: str = None) -> dict[str, str] | Response:
     return redirect(url_for('main.index'))
 
 
-@counters_bp.route('/pause_count/<string:location>')
+@counters_bp.route('/pause_count/<string:location>', methods=['GET', 'POST'])
 @require_location
 def pause_count(location: str = None) -> dict[str, str] | Response:
     """
@@ -978,7 +978,7 @@ def pause_count(location: str = None) -> dict[str, str] | Response:
     return redirect(url_for('main.index'))
 
 
-@counters_bp.route('/stop_count/<string:location>')
+@counters_bp.route('/stop_count/<string:location>', methods=['GET', 'POST'])
 @require_location
 def stop_count(location: str = None) -> dict[str, str] | Response:
     """

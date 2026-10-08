@@ -207,7 +207,7 @@ class VideoRecorderManager:
             self._fps = float(fps) if fps > 0 else self.DEFAULT_FPS
 
             directory = self._ensure_recording_dir()
-            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")[:23]
             safe_location = re.sub('[^A-Za-z0-9-_]+', '', self.location)
             filename = f"{safe_location}_{timestamp}.mp4"
             file_path = os.path.join(directory, filename)

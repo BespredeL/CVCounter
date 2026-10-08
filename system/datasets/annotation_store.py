@@ -20,6 +20,7 @@ class AnnotationStore:
         self.root = Path(dataset_root)
         self.ann_dir = self.root / 'annotations'
         self.ann_dir.mkdir(parents=True, exist_ok=True)
+        self._cache: dict[str, tuple[float, dict[str, Any]]] = {}
 
     @staticmethod
     def empty_doc(image_name: str, width: int = 0, height: int = 0) -> dict[str, Any]:
@@ -91,15 +92,23 @@ class AnnotationStore:
         path = self.path_for(image_name)
         if not path.is_file():
             return self.empty_doc(image_name)
-        with open(path, encoding='utf-8') as fh:
-            data = json.load(fh) or {}
-        data.setdefault('image', image_name)
-        data.setdefault('width', 0)
-        data.setdefault('height', 0)
-        data.setdefault('image_label', None)
-        data.setdefault('shapes', [])
-        data.setdefault('keypoints', [])
-        return data
+        try:
+            mtime = path.stat().st_mtime
+            cached = self._cache.get(image_name)
+            if cached and cached[0] == mtime:
+                return dict(cached[1])
+            with open(path, encoding='utf-8') as fh:
+                data = json.load(fh) or {}
+            data.setdefault('image', image_name)
+            data.setdefault('width', 0)
+            data.setdefault('height', 0)
+            data.setdefault('image_label', None)
+            data.setdefault('shapes', [])
+            data.setdefault('keypoints', [])
+            self._cache[image_name] = (mtime, data)
+            return dict(data)
+        except Exception:
+            return self.empty_doc(image_name)
 
     def save(self, image_name: str, doc: dict[str, Any]) -> Path:
         """
@@ -119,6 +128,10 @@ class AnnotationStore:
         payload.setdefault('keypoints', [])
         with open(path, 'w', encoding='utf-8') as fh:
             json.dump(payload, fh, ensure_ascii=False, indent=2)
+        try:
+            self._cache[image_name] = (path.stat().st_mtime, dict(payload))
+        except Exception:
+            pass
         return path
 
     def delete(self, image_name: str) -> bool:
@@ -131,6 +144,7 @@ class AnnotationStore:
         Returns:
             bool: True if the annotation file was deleted
         """
+        self._cache.pop(image_name, None)
         path = self.path_for(image_name)
         if path.is_file():
             path.unlink()
