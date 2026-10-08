@@ -12,4 +12,10 @@ venv/
 .idea/
 .vscode/
 *.db
-*.sqlite3 
+*.sqlite*
+storage/
+*.pt
+*.onnx
+*.engine
+*.bin
+*.xml

@@ -32,10 +32,11 @@ def convert_x_to_bbox(x: np.ndarray) -> np.ndarray:
     Takes a bounding box in the center form [x, y, s, r] and returns it in the form
     [x1, y1, x2, y2] where x1, y1 is top-left and x2, y2 is bottom-right.
     """
-    w = np.sqrt(max(1e-4, float(x[2] * x[3])))
-    h = max(1e-2, float(x[2] / max(1e-4, w)))
-    cx = float(x[0])
-    cy = float(x[1])
+    arr = np.asarray(x, dtype=np.float32).ravel()
+    w = np.sqrt(max(1e-4, float(arr[2] * arr[3])))
+    h = max(1e-2, float(arr[2] / max(1e-4, w)))
+    cx = float(arr[0])
+    cy = float(arr[1])
     return np.array([cx - w / 2.0, cy - h / 2.0, cx + w / 2.0, cy + h / 2.0], dtype=np.float32).reshape((1, 4))
 
 
@@ -76,7 +77,7 @@ class KalmanBoxTracker:
     """
     count = 0
 
-    def __init__(self, bbox: np.ndarray, class_id: int = 0):
+    def __init__(self, bbox: np.ndarray, class_id: int = 0, track_id: Optional[int] = None):
         self.kf = KalmanFilter(dim_x=7, dim_z=4)
         self.kf.F = np.array([
             [1, 0, 0, 0, 1, 0, 0],
@@ -104,8 +105,11 @@ class KalmanBoxTracker:
         self.kf.x[:4] = convert_bbox_to_z(bbox)
         self.time_since_update = 0
 
-        KalmanBoxTracker.count += 1
-        self.id = KalmanBoxTracker.count
+        if track_id is not None:
+            self.id = int(track_id)
+        else:
+            KalmanBoxTracker.count += 1
+            self.id = KalmanBoxTracker.count
 
         self.hits = 1
         self.hit_streak = 1
@@ -168,12 +172,18 @@ class BYTETracker:
         self.min_hits = int(min_hits)
         self.trackers: list[KalmanBoxTracker] = []
         self.frame_count: int = 0
+        self._next_id: int = 0
+
+    def next_id(self) -> int:
+        """Allocate next track ID for this tracker instance."""
+        self._next_id += 1
+        return self._next_id
 
     def reset(self):
         """Reset internal tracker state."""
         self.trackers.clear()
         self.frame_count = 0
-        KalmanBoxTracker.count = 0
+        self._next_id = 0
 
     def update(self, dets: np.ndarray = np.empty((0, 6))) -> np.ndarray:
         """
@@ -245,7 +255,7 @@ class BYTETracker:
         # 5. Initialize new trackers from remaining unmatched high-score detections
         for r in unmatched_dets_high:
             cls_id = int(dets_high[r, 5]) if dets_high.shape[1] > 5 else 0
-            self.trackers.append(KalmanBoxTracker(dets_high[r, :4], cls_id))
+            self.trackers.append(KalmanBoxTracker(dets_high[r, :4], cls_id, track_id=self.next_id()))
 
         # 6. Collect confirmed active tracks and purge dead tracks
         ret = []

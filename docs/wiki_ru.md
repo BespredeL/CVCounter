@@ -253,7 +253,7 @@ python train.py export --config road-cam-test --export onnx
 
 | Параметр | Описание                  | Значение по умолчанию                 |
 |----------|---------------------------|---------------------------------------|
-| `uri`    | Подключение к базе данных | `sqlite:///system/db/database.sqlite` |
+| `uri`    | Подключение к базе данных | `sqlite:///config/database.sqlite`  |
 | `prefix` | Префикс таблиц            | `""`                                  |
 
 ## Телеметрия `telemetry`

@@ -253,7 +253,7 @@ For auto-capture into a dataset inbox, set `dataset_create.path` to
 
 | Parameter | Description             | Default Value                         |
 |-----------|-------------------------|---------------------------------------|
-| `uri`     | Database connection URI | `sqlite:///system/db/database.sqlite` |
+| `uri`     | Database connection URI | `sqlite:///config/database.sqlite`  |
 | `prefix`  | Table prefix            | `""`                                  |
 
 ## Telemetry `telemetry`
