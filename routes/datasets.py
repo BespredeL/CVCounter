@@ -82,25 +82,52 @@ def _json_error(message: str, status: int = 400):
 
 def _list_detector_models() -> list[dict]:
     """
-    Detectors that have a weights_path configured (for auto-label model picker).
+    Detectors and standalone model files for auto-label model picker.
     
     Returns:
-        list: List of detector models
+        list: List of detector and model items
     """
     context = get_app_context()
     items = []
+    seen_paths = set()
+
     for location, cfg in (context.get('config').get('detections') or {}).items():
         weights = (cfg or {}).get('weights_path')
         if not weights:
             continue
         resolved = resolve_project_path(weights)
         exists = bool(resolved and Path(resolved).is_file())
+        if resolved:
+            seen_paths.add(str(Path(resolved).resolve()))
         items.append({
             'location': location,
             'weights_path': weights,
             'label': f'{location} ({Path(str(weights)).name})',
             'exists': exists,
         })
+
+    # Also list standalone model weights in models directories
+    try:
+        from system.training.yolo_trainer import MODELS_DIR
+        model_dirs = [MODELS_DIR, Path(get_project_root()) / 'config' / 'models']
+        for mdir in model_dirs:
+            if not mdir or not mdir.is_dir():
+                continue
+            for ext in ('*.onnx', '*.pt', '*.xml', '*.engine', '*.trt'):
+                for p in sorted(mdir.glob(ext)):
+                    abs_p = str(p.resolve())
+                    if abs_p in seen_paths:
+                        continue
+                    seen_paths.add(abs_p)
+                    items.append({
+                        'location': f'model:{p.name}',
+                        'weights_path': str(p),
+                        'label': f'File: {p.name}',
+                        'exists': True,
+                    })
+    except Exception:
+        pass
+
     return items
 
 
@@ -175,6 +202,14 @@ def _resolve_detector_cfg(detector: str | None = None) -> tuple[dict, str | None
     detections = context.get('config').get('detections') or {}
 
     location = (detector or '').strip()
+    if location.startswith('model:'):
+        model_name = location[6:]
+        from system.training.yolo_trainer import MODELS_DIR
+        for mdir in [MODELS_DIR, Path(get_project_root()) / 'config' / 'models']:
+            cand = mdir / model_name
+            if cand.is_file():
+                return {'weights_path': str(cand), 'model_type': 'auto'}, location
+
     if location and location in detections:
         return detections[location] or {}, location
 
@@ -208,12 +243,11 @@ def _detector_class_names(detector: str | None = None) -> tuple[list[str], str |
         return [], None, location
 
     try:
-        UltralyticsYOLO = _get_ultralytics_yolo()
-        if UltralyticsYOLO is None:
-            return [], None, location
-        model = UltralyticsYOLO(str(path))
-        names = getattr(model, 'names', None) or {}
-        return _ordered_class_names(names), 'weights', location
+        from system.object_detection.metadata import extract_model_classes
+        classes_dict, source = extract_model_classes(path)
+        if classes_dict:
+            return _ordered_class_names(classes_dict), source or 'weights', location
+        return [], None, location
     except Exception:
         return [], None, location
 
@@ -286,6 +320,14 @@ def _resolve_autolabel_weights(
     context = get_app_context()
     detections = context.get('config').get('detections') or {}
     location = (detector or meta.get('autolabel_detector') or '').strip()
+    if location.startswith('model:'):
+        model_name = location[6:]
+        from system.training.yolo_trainer import MODELS_DIR
+        for mdir in [MODELS_DIR, Path(get_project_root()) / 'config' / 'models']:
+            cand = mdir / model_name
+            if cand.is_file():
+                return cand
+
     if location and location in detections:
         weights = (detections[location] or {}).get('weights_path')
         if weights:
@@ -1073,8 +1115,9 @@ def api_apply_weights():
     except ValueError:
         rel = str(weights_path).replace('\\', '/')
 
+    from system.object_detection.registry import resolve_model_type
     config.set(f'detections.{location}.weights_path', rel)
-    config.set(f'detections.{location}.model_type', 'yolo')
+    config.set(f'detections.{location}.model_type', resolve_model_type(weights=rel))
     if classes:
         if isinstance(classes, list):
             class_map = {str(i): c for i, c in enumerate(classes)}
@@ -1129,20 +1172,32 @@ def api_autolabel(name: str):
     if not weights_path or not weights_path.is_file():
         return _json_error(translate('Model weights not found'))
 
-    UltralyticsYOLO = _get_ultralytics_yolo()
-    if UltralyticsYOLO is None:
-        return _json_error(str(_ultralytics_import_error or 'Ultralytics not available'))
     if cv2 is None:
         return _json_error(str(_cv2_import_error or 'cv2 not available'))
 
-    model = UltralyticsYOLO(str(weights_path))
-    model_names = getattr(model, 'names', None) or {}
+    from system.object_detection import extract_model_classes, load_detector
     predict_classes = sorted(detector_map.keys()) if detector_map else None
+
+    try:
+        model = load_detector(
+            model_type=(det_cfg or {}).get('model_type', 'auto'),
+            weights=str(weights_path),
+            confidence=confidence,
+            classes_list=predict_classes,
+        )
+    except Exception as exc:
+        return _json_error(f"Failed to load detector: {exc}")
+
+    model_names = model.get_classes()
+    if not model_names:
+        extracted_names, _ = extract_model_classes(weights_path)
+        model_names = extracted_names or {}
 
     if image_filter:
         wanted = set(image_filter)
         images = [i for i in svc.list_images(name) if i['name'] in wanted]
         if not images:
+            model.cleanup()
             return _json_error(translate('No images'))
     else:
         images = svc.list_images(name, labeled=False if only_unlabeled else None)
@@ -1151,26 +1206,22 @@ def api_autolabel(name: str):
     labeled_count = 0
     predictions = []
 
-    for item in images:
-        path = svc.image_path(name, item['name'], item['split'])
-        predict_kwargs = {'conf': confidence, 'verbose': False}
-        if predict_classes is not None:
-            predict_kwargs['classes'] = predict_classes
-        results = model.predict(str(path), **predict_kwargs)
-        if not results:
-            predictions.append({'image': item['name'], 'max_conf': 0.0, 'num_boxes': 0})
-            continue
-        r0 = results[0]
-        img = cv2.imread(str(path))
-        h, w = (img.shape[0], img.shape[1]) if img is not None else (0, 0)
-        shapes = []
-        max_conf = 0.0
-        boxes = getattr(r0, 'boxes', None)
-        if boxes is not None:
-            for box in boxes:
-                conf = float(box.conf[0]) if box.conf is not None else 0.0
+    try:
+        for item in images:
+            path = svc.image_path(name, item['name'], item['split'])
+            img = cv2.imread(str(path))
+            if img is None:
+                predictions.append({'image': item['name'], 'max_conf': 0.0, 'num_boxes': 0})
+                continue
+            h, w = img.shape[:2]
+
+            boxes_xyxy, confidences, classes_ids = model.detect(img)
+            shapes = []
+            max_conf = 0.0
+            for idx in range(len(boxes_xyxy)):
+                conf = float(confidences[idx])
                 max_conf = max(max_conf, conf)
-                cls_id = int(box.cls[0]) if box.cls is not None else 0
+                cls_id = int(classes_ids[idx])
                 label = _autolabel_label_for_cls(
                     cls_id,
                     dataset_classes=dataset_classes,
@@ -1179,9 +1230,9 @@ def api_autolabel(name: str):
                 )
                 if not label:
                     continue
-                xyxy = box.xyxy[0].tolist()
+                xyxy = boxes_xyxy[idx]
                 if w and h:
-                    points = [xyxy[0] / w, xyxy[1] / h, xyxy[2] / w, xyxy[3] / h]
+                    points = [float(xyxy[0]) / w, float(xyxy[1]) / h, float(xyxy[2]) / w, float(xyxy[3]) / h]
                 else:
                     continue
                 shapes.append({
@@ -1195,18 +1246,20 @@ def api_autolabel(name: str):
                     'prelabeled': True,
                     'class_id': cls_id,
                 })
-        predictions.append({
-            'image': item['name'],
-            'max_conf': max_conf,
-            'num_boxes': len(shapes),
-        })
-        if shapes:
-            doc = store.load(item['name'])
-            doc['width'] = w
-            doc['height'] = h
-            doc['shapes'] = shapes
-            store.save(item['name'], doc)
-            labeled_count += 1
+            predictions.append({
+                'image': item['name'],
+                'max_conf': max_conf,
+                'num_boxes': len(shapes),
+            })
+            if shapes:
+                doc = store.load(item['name'])
+                doc['width'] = w
+                doc['height'] = h
+                doc['shapes'] = shapes
+                store.save(item['name'], doc)
+                labeled_count += 1
+    finally:
+        model.cleanup()
 
     ranked = svc.uncertainty_rank(name, predictions)
     return jsonify({
@@ -1242,24 +1295,37 @@ def api_active_learning(name: str):
     weights_path = _resolve_autolabel_weights(meta, explicit_weights=weights, detector=location)
     if not weights_path or not weights_path.is_file():
         return _json_error(translate('Model weights not found'))
-    UltralyticsYOLO = _get_ultralytics_yolo()
-    if UltralyticsYOLO is None:
-        return _json_error(str(_ultralytics_import_error or 'Ultralytics not available'))
-    model = UltralyticsYOLO(str(weights_path))
+
+    if cv2 is None:
+        return _json_error(str(_cv2_import_error or 'cv2 not available'))
+
+    from system.object_detection import load_detector
     predict_classes = sorted(detector_map.keys()) if detector_map else None
+
+    try:
+        model = load_detector(
+            model_type=(det_cfg or {}).get('model_type', 'auto'),
+            weights=str(weights_path),
+            confidence=confidence,
+            classes_list=predict_classes,
+        )
+    except Exception as exc:
+        return _json_error(f"Failed to load detector: {exc}")
+
     predictions = []
-    for item in svc.list_images(name, labeled=False):
-        path = svc.image_path(name, item['name'], item['split'])
-        predict_kwargs = {'conf': confidence, 'verbose': False}
-        if predict_classes is not None:
-            predict_kwargs['classes'] = predict_classes
-        results = model.predict(str(path), **predict_kwargs)
-        max_conf = 0.0
-        num = 0
-        if results and results[0].boxes is not None:
-            num = len(results[0].boxes)
-            if num:
-                max_conf = float(max(float(c) for c in results[0].boxes.conf))
-        predictions.append({'image': item['name'], 'max_conf': max_conf, 'num_boxes': num})
+    try:
+        for item in svc.list_images(name, labeled=False):
+            path = svc.image_path(name, item['name'], item['split'])
+            img = cv2.imread(str(path))
+            if img is None:
+                predictions.append({'image': item['name'], 'max_conf': 0.0, 'num_boxes': 0})
+                continue
+            boxes_xyxy, confidences, _ = model.detect(img)
+            num = len(boxes_xyxy)
+            max_conf = float(max(confidences)) if num > 0 else 0.0
+            predictions.append({'image': item['name'], 'max_conf': max_conf, 'num_boxes': num})
+    finally:
+        model.cleanup()
+
     ranked = svc.uncertainty_rank(name, predictions)
     return jsonify({'status': 'ok', 'uncertainty': ranked})

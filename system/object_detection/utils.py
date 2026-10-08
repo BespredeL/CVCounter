@@ -133,10 +133,11 @@ def parse_yolo_outputs(
         input_size: Tuple[int, int],
         image_shape: Tuple[int, int, int],
         classes_list: Optional[Iterable[int]] = None,
+        is_end2end: Optional[bool] = None,
 ) -> DetectionResult:
     """
-    Parse YOLO-style ONNX/OpenCV outputs into xyxy boxes, scores and class IDs.
-    Supports YOLOv5/v8 ONNX layouts.
+    Parse YOLO/RT-DETR-style ONNX/OpenCV outputs into xyxy boxes, scores and class IDs.
+    Supports YOLOv5/v8/v9/v10/v11 and RT-DETR layouts.
 
     Args:
         outputs (list[ndarray] | ndarray): The outputs to parse.
@@ -145,6 +146,7 @@ def parse_yolo_outputs(
         input_size (Tuple[int, int]): The input size to parse by.
         image_shape (Tuple[int, int, int]): The image shape to parse by.
         classes_list (Optional[Iterable[int]]): The classes list to parse by.
+        is_end2end (Optional[bool]): If True, skips NMS (for YOLOv10, RT-DETR).
 
     Returns:
         DetectionResult: The parsed boxes, confidences and classes.
@@ -164,10 +166,12 @@ def parse_yolo_outputs(
     if prediction.shape[0] in (4, 5, 84, 85) and prediction.shape[0] < prediction.shape[1]:
         prediction = prediction.transpose(1, 0)
 
+    inferred_end2end = False
     if prediction.shape[-1] >= 6 and prediction.shape[0] <= 1000:
         boxes_xyxy = prediction[:, :4].astype(np.float32)
         confidences = prediction[:, 4].astype(np.float32)
         classes = prediction[:, 5].astype(np.int32)
+        inferred_end2end = True
     else:
         boxes_xyxy, confidences, classes = _parse_yolo_matrix(prediction, confidence)
 
@@ -178,7 +182,10 @@ def parse_yolo_outputs(
     confidences = confidences[mask]
     classes = classes[mask]
 
-    boxes_xyxy, confidences, classes = nms_boxes(boxes_xyxy, confidences, classes, iou)
+    skip_nms = is_end2end if is_end2end is not None else inferred_end2end
+    if not skip_nms:
+        boxes_xyxy, confidences, classes = nms_boxes(boxes_xyxy, confidences, classes, iou)
+
     return filter_by_classes(boxes_xyxy, confidences, classes, classes_list)
 
 
@@ -251,14 +258,20 @@ def _scale_boxes_to_image(
         return boxes_xyxy
 
     image_height, image_width = image_shape[:2]
-    input_width, input_height = input_size
-    gain = min(input_width / image_width, input_height / image_height)
-    pad_x = (input_width - image_width * gain) / 2
-    pad_y = (input_height - image_height * gain) / 2
-
     boxes = boxes_xyxy.copy()
-    boxes[:, [0, 2]] = (boxes[:, [0, 2]] - pad_x) / gain
-    boxes[:, [1, 3]] = (boxes[:, [1, 3]] - pad_y) / gain
+
+    # Detect normalized [0..1] coordinates (common in RT-DETR / SSD)
+    if len(boxes) > 0 and float(np.max(boxes)) <= 1.05:
+        boxes[:, [0, 2]] *= image_width
+        boxes[:, [1, 3]] *= image_height
+    else:
+        input_width, input_height = input_size
+        gain = min(input_width / image_width, input_height / image_height)
+        pad_x = (input_width - image_width * gain) / 2
+        pad_y = (input_height - image_height * gain) / 2
+
+        boxes[:, [0, 2]] = (boxes[:, [0, 2]] - pad_x) / gain
+        boxes[:, [1, 3]] = (boxes[:, [1, 3]] - pad_y) / gain
 
     boxes[:, [0, 2]] = np.clip(boxes[:, [0, 2]], 0, image_width)
     boxes[:, [1, 3]] = np.clip(boxes[:, [1, 3]], 0, image_height)

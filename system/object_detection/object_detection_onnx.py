@@ -35,6 +35,8 @@ class ObjectDetectionONNX(BaseObjectDetectionService):
         self.iou = 0.7
         self.input_size = (640, 640)
         self.classes_list = None
+        self.classes_map: dict[int, str] = {}
+        self.is_end2end: Optional[bool] = None
         self.providers: list[str] = []
 
     def detect(self, image: ndarray, **kwargs) -> DetectionResult:
@@ -60,6 +62,7 @@ class ObjectDetectionONNX(BaseObjectDetectionService):
             input_size=self.input_size,
             image_shape=image.shape,
             classes_list=self.classes_list,
+            is_end2end=self.is_end2end,
         )
 
     def load_model(self, weights: str, **kwargs) -> None:
@@ -78,6 +81,7 @@ class ObjectDetectionONNX(BaseObjectDetectionService):
 
         self.confidence = float(kwargs.get('confidence', 0.5))
         self.iou = float(kwargs.get('iou', 0.7))
+        has_custom_size = 'input_size' in kwargs
         self.input_size = normalize_input_size(kwargs.get('input_size', 640))
         self.classes_list = kwargs.get('classes_list', None)
         self.providers = self._resolve_providers(kwargs.get('providers'), kwargs.get('device'))
@@ -108,6 +112,26 @@ class ObjectDetectionONNX(BaseObjectDetectionService):
 
         self.input_name = inputs[0].name
         self.output_names = [output.name for output in outputs]
+
+        # Automatically adapt input size from static tensor shape if not explicitly overridden
+        if not has_custom_size and inputs[0].shape:
+            shape = inputs[0].shape
+            if len(shape) == 4 and isinstance(shape[2], int) and isinstance(shape[3], int):
+                self.input_size = (shape[3], shape[2])
+
+        # Check for end-to-end / NMS-free models (e.g. YOLOv10, RT-DETR)
+        try:
+            meta = self.session.get_modelmeta().custom_metadata_map
+            end2end_val = str(meta.get('end2end', '')).strip().lower()
+            if end2end_val in ('true', '1', 'yes'):
+                self.is_end2end = True
+        except Exception:
+            pass
+
+        # Load class names from model metadata or sidecar files
+        from system.object_detection.metadata import extract_model_classes
+        classes, _ = extract_model_classes(weights)
+        self.classes_map = classes or {}
 
     def cleanup(self) -> None:
         """

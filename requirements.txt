@@ -1,6 +1,12 @@
 #
-# To install requirements run:
+# To install core requirements (Permissive licenses: MIT / Apache-2.0, zero AGPL):
 #   pip install -r requirements.txt
+#
+# Optional plugins:
+#   - Ultralytics YOLO (.pt models & training, AGPL-3.0):
+#       pip install -r requirements-ultralytics.txt
+#   - OpenVINO acceleration (Apache-2.0):
+#       pip install -r requirements-openvino.txt
 #
 # To manually install requirements with CUDA run:
 #   pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu118
@@ -15,7 +21,7 @@
 #   pip install "${TENSORRT_PATH}\python\tensorrt-8.6.1-cp311-none-win_amd64.whl"
 #
 
-# General -------------------------------------
+# Core Web & App -----------------------------
 filterpy==1.4.5
 Flask-SocketIO==5.6.*
 simple-websocket>=1.1.*
@@ -31,16 +37,20 @@ scikit-image==0.22
 shapely==2.0.5
 SQLAlchemy==2.0.37
 mysql-connector-python==9.3
-ultralytics==8.4.*
 Werkzeug==3.1.*
 pyyaml==6.0.3
 
-# Export --------------------------------------
+# Core Inference (MIT License) ----------------
+# Standard CPU / DirectML:
+onnxruntime>=1.17.0
+# Or for NVIDIA CUDA GPU:
+# onnxruntime-gpu==1.20.1
+
+# Export & Optimization -----------------------
 # coremltools>=7.0  # CoreML export
 onnx==1.17  # ONNX export
 onnxsim==0.4.36  # ONNX simplifier
 onnxslim==0.1.57  # ONNX simplifier
-onnxruntime-gpu==1.20.1  # ONNX simplifier
 tensorrt==8.6.1 # TensorRT export
 nvidia-pyindex  # TensorRT export
 # nvidia-tensorrt  # TensorRT export
@@ -48,9 +58,8 @@ nvidia-pyindex  # TensorRT export
 # tensorflow>=2.4.1  # TF exports (-cpu, -aarch64, -macos)
 # tflite-support
 # tensorflowjs>=3.9.0  # TF.js export
-# openvino-dev>=2023.0  # OpenVINO export
 
-# PyTorch and related packages (uncomment or use manual installation)
+# PyTorch and related packages (optional for PyTorch backends)
 # --index-url https://download.pytorch.org/whl/cu118
 # torch==2.3.1
 # torchvision==0.18.1

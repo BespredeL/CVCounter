@@ -23,8 +23,8 @@ CVCounter - это гибкая и масштабируемая система �
 - 📚 Датасеты: импорт, разметка, обучение YOLO и применение весов к счётчику
 - ⚡ Оптимизация под real-time
 - 📊 Подготовка данных для аналитики и отчётов с разбивкой по классам и просмотром сохранённых медиа
-- 🧩 Модульная архитектура с реестром детекторов
-- 🧠 Несколько бэкендов: Ultralytics YOLO, OpenCV DNN, ONNX Runtime
+- 🧩 Модульная архитектура с реестром детекторов и автоопределением по расширению файла (`auto`)
+- 🧠 Несколько бэкендов: ONNX Runtime, OpenVINO, OpenCV DNN, Ultralytics YOLO / TensorRT
 - 🔐 Сессионный вход для настроек, датасетов и админ-действий
 - 📡 Опциональная обезличенная телеметрия (ошибки/использование) и ручная диагностика
 
@@ -82,15 +82,23 @@ CVCounter - это гибкая и масштабируемая система �
       ```bash
       source venv/bin/activate
       ```
-5. **Установите зависимости:**
+5. **Установите базовые зависимости:**
    ```bash
    pip3 install -r requirements.txt
+   ```
+   *(Опционально)* Для работы с моделями `.pt` и обучения через Ultralytics:
+   ```bash
+   pip3 install -r requirements-ultralytics.txt
+   ```
+   *(Опционально)* Для аппаратного ускорения Intel OpenVINO:
+   ```bash
+   pip3 install -r requirements-openvino.txt
    ```
 6. **Переименуйте файл конфигурации:**
    ```bash
    mv config/config.example.json config/config.json
    ```
-7. **Настройте `config/config.json`: укажите видеоисточник, модель и тип детектора (`model_type`).**
+7. **Настройте `config/config.json`: укажите видеоисточник, путь к модели и `model_type` (`auto` по умолчанию).**
 8. **Запустите приложение:**
    ```bash
    python app.py
@@ -180,52 +188,60 @@ python train.py export --config road-cam-test --export onnx
 
 ## 🧠 Системы детекции
 
-Детекторы подключаются через реестр (`system/object_detection/registry.py`). В конфигурации задаётся поле `model_type`.
+Детекторы подключаются через реестр (`system/object_detection/registry.py`). В конфигурации задаётся поле `model_type` (или `"auto"` для автоопределения).
 
-| `model_type`           | Бэкенд                                                         | Форматы моделей                               |
-|------------------------|----------------------------------------------------------------|-----------------------------------------------|
-| `yolo`                 | [Ultralytics YOLO](https://github.com/ultralytics/ultralytics) | `.pt`                                         |
-| `opencv`, `opencv_dnn` | [OpenCV DNN](https://docs.opencv.org)                          | `.onnx`, `.pb`, Darknet (`.weights` + `.cfg`) |
-| `onnx`, `onnxruntime`  | [ONNX Runtime](https://onnxruntime.ai/)                        | `.onnx` (экспорт YOLO)                        |
+| `model_type`             | Бэкенд                                                         | Лицензия    | Форматы моделей                               |
+|--------------------------|----------------------------------------------------------------|-------------|-----------------------------------------------|
+| `auto` (по умолчанию)    | Автоматический выбор бэкенда по расширению файла               | —           | `.onnx`, `.engine`, `.xml`, `.pt`, `.weights` |
+| `onnx`, `onnxruntime`    | [ONNX Runtime](https://onnxruntime.ai/)                        | MIT         | `.onnx` (YOLOv5–v11, YOLOv10, RT-DETR)        |
+| `openvino`, `openvino_dnn`| [Intel OpenVINO](https://www.intel.com/openvino)              | Apache-2.0  | `.xml`/`.bin`, `.onnx`                        |
+| `opencv`, `opencv_dnn`   | [OpenCV DNN](https://docs.opencv.org)                          | Apache-2.0  | `.onnx`, `.pb`, Darknet (`.weights` + `.cfg`) |
+| `yolo`, `ultralytics`    | [Ultralytics YOLO](https://github.com/ultralytics/ultralytics) | AGPL-3.0    | `.pt`, TensorRT `.engine`                     |
 
 ### Примеры конфигурации
 
-**Ultralytics YOLO (по умолчанию):**
+**Автоматический выбор (рекомендуется):**
+
+```json
+"model_type": "auto",
+"weights_path": "config/ultralytics/models/yolo11n.onnx"
+```
+
+**ONNX Runtime (высокая скорость, кроссплатформенность):**
+
+```json
+"model_type": "onnx",
+"weights_path": "config/ultralytics/models/yolo11n.onnx",
+"input_size": 640,
+"providers": [
+  "CUDAExecutionProvider",
+  "CPUExecutionProvider"
+]
+```
+
+**Intel OpenVINO (оптимизация под CPU, iGPU, Arc, NPU):**
+
+```json
+"model_type": "openvino",
+"weights_path": "config/models/yolo11n.onnx",
+"device": "CPU"
+```
+
+**Ultralytics YOLO / TensorRT Engine:**
 
 ```json
 "model_type": "yolo",
-"weights_path": "config/ultralytics/models/yolov8n.pt",
+"weights_path": "config/ultralytics/models/yolo11n.engine",
 "device": 0
 ```
 
-**OpenCV DNN + ONNX:**
-
-```json
-"model_type": "opencv",
-"weights_path": "config/opencv/models/yolov8n.onnx",
-"input_size": 640,
-"backend": "CUDA",
-"target": "CUDA"
-```
-
-**Darknet через OpenCV:**
+**OpenCV DNN + Darknet:**
 
 ```json
 "model_type": "opencv_dnn",
 "weights_path": "config/opencv_dnn/models/yolov4.weights",
 "model_config_path": "config/opencv_dnn/models/yolov4.cfg",
 "input_size": 416
-```
-
-**ONNX Runtime:**
-
-```json
-"model_type": "onnx",
-"weights_path": "config/onnx/models/yolov8n.onnx",
-"input_size": 640,
-"providers": [
-"CUDAExecutionProvider", "CPUExecutionProvider"
-]
 ```
 
 Экспорт модели YOLO в ONNX:
@@ -240,12 +256,12 @@ yolo export model=config/ultralytics/models/yolov8n.pt format=onnx
 |---------------------|----------------|------------------------------------------------------------------------------------|
 | `weights_path`      | все            | Путь к файлу модели                                                                |
 | `model_config_path` | OpenCV Darknet | Путь к `.cfg`                                                                      |
-| `input_size`        | OpenCV, ONNX   | Размер входа: число или `[width, height]`, по умолчанию `640`                      |
+| `input_size`        | OpenCV, ONNX, OpenVINO | Размер входа: число или `[width, height]`, по умолчанию авто из модели или `640` |
 | `backend`           | OpenCV         | `OPENCV`, `CUDA`, `DEFAULT` и др.                                                  |
 | `target`            | OpenCV         | `CPU`, `CUDA`, `CUDA_FP16` и др.                                                   |
-| `providers`         | ONNX           | Список провайдеров ONNX Runtime                                                    |
+| `providers`         | ONNX           | Список провайдеров ONNX Runtime (`CUDAExecutionProvider`, `CPUExecutionProvider`)  |
 | `confidence`, `iou` | все            | Пороги детекции                                                                    |
-| `device`            | YOLO, ONNX     | Устройство (`0`, `cpu` и т.д.)                                                     |
+| `device`            | YOLO, ONNX, OpenVINO | Устройство (`0`, `cpu`, `GPU`, `AUTO` и т.д.)                                |
 | `vid_stride`        | YOLO           | Шаг кадров при инференсе                                                           |
 | `classes`           | все            | Фильтр и подписи классов `{ "0": "person" }` (имена видны в разбивке «По классам») |
 

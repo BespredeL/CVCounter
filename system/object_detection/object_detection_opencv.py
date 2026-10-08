@@ -53,6 +53,7 @@ class ObjectDetectionOpenCV(BaseObjectDetectionService):
         self.iou = 0.7
         self.input_size = (640, 640)
         self.classes_list = None
+        self.classes_map: dict[int, str] = {}
         self.output_layer_names: list[str] = []
 
     def detect(self, image: ndarray, **kwargs) -> DetectionResult:
@@ -130,6 +131,14 @@ class ObjectDetectionOpenCV(BaseObjectDetectionService):
             self.net.setPreferableTarget(target)
 
         self.output_layer_names = self.net.getUnconnectedOutLayersNames()
+
+        from system.object_detection.metadata import extract_model_classes
+        classes, _ = extract_model_classes(weights)
+        self.classes_map = classes or {}
+
+    def get_classes(self) -> dict[int, str]:
+        """Return mapping of class IDs to class names from loaded model or sidecar."""
+        return self.classes_map or {}
 
     def cleanup(self) -> None:
         """

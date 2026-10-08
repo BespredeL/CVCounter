@@ -25,8 +25,8 @@ It is perfectly suited for **counting products, people, vehicle tracking, retail
 - 📚 Datasets: import, annotate, train YOLO, and apply weights to a counter
 - ⚡ Optimized for real-time performance
 - 📊 Analytics-ready reports with per-class totals and saved media playback
-- 🧩 Modular architecture with a detector registry
-- 🧠 Multiple backends: Ultralytics YOLO, OpenCV DNN, ONNX Runtime
+- 🧩 Modular architecture with detector registry and auto-detection by file extension (`auto`)
+- 🧠 Multiple backends: ONNX Runtime, OpenVINO, OpenCV DNN, Ultralytics YOLO / TensorRT
 - 🔐 Session login for settings, datasets, and admin actions
 - 📡 Optional anonymized telemetry (errors/usage) and manual diagnostics
 
@@ -84,15 +84,23 @@ It is perfectly suited for **counting products, people, vehicle tracking, retail
       ```bash
       source venv/bin/activate
       ```
-5. **Install dependencies:**
+5. **Install core dependencies:**
    ```bash
    pip3 install -r requirements.txt
+   ```
+   *(Optional)* For `.pt` models and training with Ultralytics:
+   ```bash
+   pip3 install -r requirements-ultralytics.txt
+   ```
+   *(Optional)* For Intel OpenVINO hardware acceleration:
+   ```bash
+   pip3 install -r requirements-openvino.txt
    ```
 6. **Rename the configuration file:**
    ```bash
    mv config/config.example.json config/config.json
    ```
-7. **Configure `config/config.json`: set the video source, model path, and detector type (`model_type`).**
+7. **Configure `config/config.json`: set video source, model path, and `model_type` (`auto` by default).**
 8. **Run the application:**
    ```bash
    python app.py
@@ -184,32 +192,51 @@ Details: [docs/wiki.md](docs/wiki.md).
 
 ## 🧠 Detection Backends
 
-Detectors are registered via `system/object_detection/registry.py`. Set the `model_type` field in the configuration.
+Detectors are registered via `system/object_detection/registry.py`. Set the `model_type` field in the configuration (or use `"auto"` for automatic format detection).
 
-| `model_type`           | Backend                                                        | Model formats                                 |
-|------------------------|----------------------------------------------------------------|-----------------------------------------------|
-| `yolo`                 | [Ultralytics YOLO](https://github.com/ultralytics/ultralytics) | `.pt`                                         |
-| `opencv`, `opencv_dnn` | [OpenCV DNN](https://docs.opencv.org/)                         | `.onnx`, `.pb`, Darknet (`.weights` + `.cfg`) |
-| `onnx`, `onnxruntime`  | [ONNX Runtime](https://onnxruntime.ai/)                        | `.onnx` (YOLO export)                         |
+| `model_type`             | Backend                                                        | License     | Model formats                                 |
+|--------------------------|----------------------------------------------------------------|-------------|-----------------------------------------------|
+| `auto` (default)         | Automatic backend selection based on file extension            | —           | `.onnx`, `.engine`, `.xml`, `.pt`, `.weights` |
+| `onnx`, `onnxruntime`    | [ONNX Runtime](https://onnxruntime.ai/)                        | MIT         | `.onnx` (YOLOv5–v11, YOLOv10, RT-DETR)        |
+| `openvino`, `openvino_dnn`| [Intel OpenVINO](https://www.intel.com/openvino)              | Apache-2.0  | `.xml`/`.bin`, `.onnx`                        |
+| `opencv`, `opencv_dnn`   | [OpenCV DNN](https://docs.opencv.org/)                         | Apache-2.0  | `.onnx`, `.pb`, Darknet (`.weights` + `.cfg`) |
+| `yolo`, `ultralytics`    | [Ultralytics YOLO](https://github.com/ultralytics/ultralytics) | AGPL-3.0    | `.pt`, TensorRT `.engine`                     |
 
 ### Configuration examples
 
-**Ultralytics YOLO (default):**
+**Automatic selection (recommended):**
+
+```json
+"model_type": "auto",
+"weights_path": "config/ultralytics/models/yolo11n.onnx"
+```
+
+**ONNX Runtime (high performance, cross-platform):**
+
+```json
+"model_type": "onnx",
+"weights_path": "config/ultralytics/models/yolo11n.onnx",
+"input_size": 640,
+"providers": [
+  "CUDAExecutionProvider",
+  "CPUExecutionProvider"
+]
+```
+
+**Intel OpenVINO (optimized for CPU, iGPU, Arc, NPU):**
+
+```json
+"model_type": "openvino",
+"weights_path": "config/models/yolo11n.onnx",
+"device": "CPU"
+```
+
+**Ultralytics YOLO / TensorRT Engine:**
 
 ```json
 "model_type": "yolo",
-"weights_path": "config/ultralytics/models/yolov8n.pt",
+"weights_path": "config/ultralytics/models/yolo11n.engine",
 "device": 0
-```
-
-**OpenCV DNN + ONNX:**
-
-```json
-"model_type": "opencv",
-"weights_path": "config/opencv/models/yolov8n.onnx",
-"input_size": 640,
-"backend": "CUDA",
-"target": "CUDA"
 ```
 
 **Darknet via OpenCV:**
@@ -219,17 +246,6 @@ Detectors are registered via `system/object_detection/registry.py`. Set the `mod
 "weights_path": "config/opencv_dnn/models/yolov4.weights",
 "model_config_path": "config/opencv_dnn/models/yolov4.cfg",
 "input_size": 416
-```
-
-**ONNX Runtime:**
-
-```json
-"model_type": "onnx",
-"weights_path": "config/onnx/models/yolov8n.onnx",
-"input_size": 640,
-"providers": [
-"CUDAExecutionProvider", "CPUExecutionProvider"
-]
 ```
 
 Export YOLO model to ONNX:
@@ -244,12 +260,12 @@ yolo export model=config/ultralytics/models/yolov8n.pt format=onnx
 |---------------------|----------------|----------------------------------------------------------------------|
 | `weights_path`      | all            | Path to the model file                                               |
 | `model_config_path` | OpenCV Darknet | Path to `.cfg`                                                       |
-| `input_size`        | OpenCV, ONNX   | Input size: integer or `[width, height]`, default `640`              |
+| `input_size`        | OpenCV, ONNX, OpenVINO | Input size: integer or `[width, height]`, auto-detected or `640` |
 | `backend`           | OpenCV         | `OPENCV`, `CUDA`, `DEFAULT`, etc.                                    |
 | `target`            | OpenCV         | `CPU`, `CUDA`, `CUDA_FP16`, etc.                                     |
-| `providers`         | ONNX           | ONNX Runtime provider list                                           |
+| `providers`         | ONNX           | ONNX Runtime provider list (`CUDAExecutionProvider`, `CPUExecutionProvider`) |
 | `confidence`, `iou` | all            | Detection thresholds                                                 |
-| `device`            | YOLO, ONNX     | Device (`0`, `cpu`, etc.)                                            |
+| `device`            | YOLO, ONNX, OpenVINO | Device (`0`, `cpu`, `GPU`, `AUTO`, etc.)                        |
 | `vid_stride`        | YOLO           | Frame stride during inference                                        |
 | `classes`           | all            | Class filter and UI labels `{ "0": "person" }` (shown in "By class") |
 

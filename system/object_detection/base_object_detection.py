@@ -55,3 +55,12 @@ class BaseObjectDetectionService(ABC):
         Returns:
             None
         """
+
+    def get_classes(self) -> dict[int, str]:
+        """
+        Return mapping of class IDs to class names if available.
+
+        Returns:
+            dict[int, str]: Mapping of integer class IDs to class names, or empty dict.
+        """
+        return getattr(self, 'classes_map', {}) or {}

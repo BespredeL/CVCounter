@@ -1,0 +1,7 @@
+# Optional dependencies for Intel OpenVINO acceleration (Apache-2.0 License).
+# Provides ultra-fast inference on Intel CPU, GPU (integrated & discrete), and NPU.
+#
+# Install:
+#   pip install -r requirements-openvino.txt
+
+openvino>=2024.0.0

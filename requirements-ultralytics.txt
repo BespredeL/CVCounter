@@ -1,0 +1,14 @@
+# Optional plugin dependencies for Ultralytics YOLO models (.pt) and Ultralytics training.
+#
+# NOTE ON LICENSING:
+# The 'ultralytics' library is licensed under the GNU Affero General Public License v3 (AGPL-3.0).
+# If you run or redistribute this application with 'ultralytics' installed, your deployment
+# is subject to AGPL-3.0 terms unless you hold an enterprise commercial license from Ultralytics.
+#
+# If you wish to keep your application under a permissive license (MIT / Apache-2.0 / Commercial),
+# do NOT install this file. Instead use ONNX Runtime (MIT) with exported .onnx models.
+#
+# Install:
+#   pip install -r requirements-ultralytics.txt
+
+ultralytics==8.4.*

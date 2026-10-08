@@ -782,7 +782,7 @@ class ObjectCounter:
 
         self.location: str = location
         self.debug: bool = kwargs.get('debug', config_manager.get('general.debug', False))
-        self.model_type = kwargs.get('model_type', detector_config.get('model_type', 'yolo'))
+        self.model_type = kwargs.get('model_type', detector_config.get('model_type', 'auto'))
         self.weights: str = config_manager.resolve_path(kwargs.get('weights', detector_config.get('weights_path')))
         self.device: str = kwargs.get('device', detector_config.get('device', 'cpu'))
         self.confidence: float = kwargs.get('confidence', detector_config.get('confidence',
