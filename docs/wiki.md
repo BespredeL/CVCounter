@@ -26,7 +26,7 @@ lightweight and resource-efficient, especially when the video mode is not used.
 - System information page (GPU/CUDA/PyTorch) and manual telemetry diagnostics
 - Session login for settings, datasets, and selected admin actions
 - Modular architecture with pluggable detection backends
-- SORT multi-object tracking and union-zone counting
+- High-accuracy ByteTrack multi-object tracking and union-zone counting
 - Support for RTSP streams, USB cameras, and video files
 
 ### Architecture

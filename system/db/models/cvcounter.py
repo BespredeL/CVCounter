@@ -7,7 +7,7 @@
 # Website: https://bespredel.name
 
 from datetime import datetime
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Index, Integer, String, Text
 from system.db.models.base_model import Base
 
 
@@ -24,3 +24,8 @@ class CVCounter(Base):
     class_counts = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.now, index=True)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+    __table_args__ = (
+        Index('ix_cvcounter_loc_created', 'location', 'created_at'),
+        Index('ix_cvcounter_loc_active', 'location', 'active'),
+    )

@@ -22,7 +22,7 @@ from system.utils.frame_utils import FrameUtils
 from system.utils.logger import Logger
 from system.managers.notification_manager import NotificationManager
 from system.object_detection import load_detector
-from system.core.sort import Sort
+from system.core.byte_tracker import BYTETracker
 from system.core.timer import Timer
 from system.utils.counting_area import (
     DEFAULT_COUNTING_AREA_COLOR,
@@ -166,9 +166,13 @@ class ObjectCounter:
             providers=self.providers,
         )
 
-        # Init tracker
-        self.tracker: Sort = Sort(max_age=self.DEFAULT_MAX_AGE, min_hits=self.DEFAULT_MIN_HITS,
-                                  iou_threshold=self.DEFAULT_TRACKER_IOU)
+        # Init tracker (ByteTrack)
+        self.tracker: BYTETracker = BYTETracker(
+            track_thresh=max(0.2, self.confidence * 0.7),
+            iou_threshold=self.DEFAULT_TRACKER_IOU,
+            max_age=self.DEFAULT_MAX_AGE,
+            min_hits=self.DEFAULT_MIN_HITS,
+        )
 
         # Init Database manager
         self.db_manager: any = kwargs.get('db_manager', None)
@@ -499,10 +503,11 @@ class ObjectCounter:
         self._last_count_payload = None
 
         # Reset active tracker state so old tracks don't instantly re-trigger
-        self.tracker = Sort(
+        self.tracker = BYTETracker(
+            track_thresh=max(0.2, self.confidence * 0.7),
+            iou_threshold=self.DEFAULT_TRACKER_IOU,
             max_age=self.DEFAULT_MAX_AGE,
             min_hits=self.DEFAULT_MIN_HITS,
-            iou_threshold=self.DEFAULT_TRACKER_IOU
         )
 
         self.db_manager.close_current_count(location, class_counts=final_class_counts)
@@ -1090,7 +1095,8 @@ class ObjectCounter:
                 self.current_count += 1
                 self._increment_class_count(class_id)
                 if len(self.total_objects) > 50000:
-                    self.total_objects = set(sorted(self.total_objects)[-25000:])
+                    cutoff_id = max(self.total_objects) - 25000
+                    self.total_objects = {oid for oid in self.total_objects if oid >= cutoff_id}
 
         self.emit_live_counts()
 

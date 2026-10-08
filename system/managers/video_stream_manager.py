@@ -223,8 +223,11 @@ class VideoStreamManager:
 
             self.calculate_fps()  # Calculate actual FPS
 
-            if self.__frame_interval > 0:
-                time.sleep(self.__frame_interval)  # Add delay to control FPS
+            # Only rate limit offline video files to emulate target FPS.
+            # Live streams (RTSP/HLS/webcam) deliver frames in real-time;
+            # sleeping on them causes buffer accumulation and growing delay.
+            if self.__frame_interval > 0 and not self.is_live_source():
+                time.sleep(self.__frame_interval)
 
         return frame
 
@@ -278,6 +281,21 @@ class VideoStreamManager:
         """
         return isinstance(self.__video_stream, str) and self.__video_stream.lower().startswith(
             ('rtsp://', 'rtmp://', 'http://', 'https://', 'tcp://'))
+
+    def is_live_source(self) -> bool:
+        """
+        Check if the video stream is a real-time live source (network stream or local device).
+
+        Returns:
+            bool: True for RTSP/HTTP/HLS or camera index, False for offline files.
+        """
+        if self.is_hls() or self.is_stream():
+            return True
+        if isinstance(self.__video_stream, int):
+            return True
+        if isinstance(self.__video_stream, str) and self.__video_stream.isdigit():
+            return True
+        return False
 
     def _open_hls_capture(self) -> cv2.VideoCapture:
         """

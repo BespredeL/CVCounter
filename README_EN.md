@@ -19,7 +19,7 @@ It is perfectly suited for **counting products, people, vehicle tracking, retail
 - 🎯 Real-time object detection
 - 🔢 Object counting in one or more zones
 - 🏷️ Per-class count breakdown (current batch / total)
-- 🧠 Object tracking (multi-object tracking)
+- 🧠 High-accuracy ByteTrack multi-object tracking
 - 🎥 Support for video streams (RTSP, webcam, files)
 - 🎬 Detection-triggered video recording with `idle_timeout` stop
 - 📚 Datasets: import, annotate, train YOLO, and apply weights to a counter

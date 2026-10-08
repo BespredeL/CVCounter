@@ -28,12 +28,11 @@ simple-websocket>=1.1.*
 Flask==3.1.*
 imutils==0.5.4
 MarkupSafe==2.1.5
-matplotlib==3.8.4
 numpy==1.26.3
 opencv-python==4.10.0.84
 pyodbc==5.1
 psutil==6.1.1
-scikit-image==0.22
+scipy>=1.10.0
 shapely==2.0.5
 SQLAlchemy==2.0.37
 mysql-connector-python==9.3

@@ -14,7 +14,6 @@ import platform
 from typing import Any, Dict
 
 import psutil
-import torch
 from flask import request
 
 from system.utils.paths import get_project_root
@@ -175,6 +174,15 @@ def _parse_nvidia_smi_text(stdout: str) -> dict[str, str | None]:
     }
 
 
+def _get_torch():
+    """Lazily import torch so the application doesn't crash when PyTorch is not installed."""
+    try:
+        import torch
+        return torch
+    except (ImportError, Exception):
+        return None
+
+
 def _cuda_runtime_ok() -> bool:
     """
     True when PyTorch can see at least one CUDA device.
@@ -185,9 +193,12 @@ def _cuda_runtime_ok() -> bool:
     Returns:
         bool: True when PyTorch can see at least one CUDA device.
     """
-    if not torch.cuda.is_available():
+    torch = _get_torch()
+    if torch is None:
         return False
     try:
+        if not torch.cuda.is_available():
+            return False
         return torch.cuda.device_count() > 0
     except Exception:
         return False
@@ -226,9 +237,10 @@ def get_system_info() -> dict[str | Any, str | int | Any]:
     if not nvidia_info['gpu_name']:
         nvidia_info['gpu_name'] = _nvidia_smi_query('name')
 
+    torch = _get_torch()
     cuda_available = _cuda_runtime_ok()
     cuda_device_count = 0
-    if cuda_available:
+    if cuda_available and torch is not None:
         try:
             cuda_device_count = torch.cuda.device_count()
         except Exception:
@@ -255,8 +267,9 @@ def get_system_info() -> dict[str | Any, str | int | Any]:
         "gpu_name": nvidia_info["gpu_name"],
         "cuda_device_count": cuda_device_count,
         "py_torch_cuda_available": "Yes" if cuda_available else None,
-        "py_torch_cuda_version": torch.version.cuda or None,
-        "py_torch_version": torch.__version__,
+        "py_torch_cuda_version": (getattr(torch.version, 'cuda', None) if torch and hasattr(torch, 'version') else None) or None,
+        "py_torch_version": getattr(torch, '__version__', None),
+
 
         "virtual_memory": {
             "total": format_bytes(virtual_memory['total']),

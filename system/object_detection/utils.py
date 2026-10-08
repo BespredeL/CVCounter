@@ -66,12 +66,12 @@ def nms_boxes(
         iou_threshold: float,
 ) -> DetectionResult:
     """
-    Non-maximum suppression for boxes.
+    Fast Non-Maximum Suppression for boxes using OpenCV's vectorized C++ implementation.
 
     Args:
-        boxes_xyxy (ndarray): The boxes to suppress.
-        confidences (ndarray): The confidences to suppress.
-        classes (ndarray): The classes to suppress.
+        boxes_xyxy (ndarray): The boxes to suppress in [x1, y1, x2, y2] format.
+        confidences (ndarray): Confidence scores for each box.
+        classes (ndarray): Class IDs for each box.
         iou_threshold (float): The IoU threshold to suppress by.
 
     Returns:
@@ -80,24 +80,38 @@ def nms_boxes(
     if len(boxes_xyxy) == 0:
         return boxes_xyxy, confidences, classes
 
+    # Convert [x1, y1, x2, y2] to [x, y, w, h] for cv2.dnn.NMSBoxes
+    boxes_xywh = np.empty_like(boxes_xyxy)
+    boxes_xywh[:, 0] = boxes_xyxy[:, 0]
+    boxes_xywh[:, 1] = boxes_xyxy[:, 1]
+    boxes_xywh[:, 2] = np.maximum(0.0, boxes_xyxy[:, 2] - boxes_xyxy[:, 0])
+    boxes_xywh[:, 3] = np.maximum(0.0, boxes_xyxy[:, 3] - boxes_xyxy[:, 1])
+
     keep_indices = []
+    # Class-aware NMS
     for class_id in np.unique(classes):
-        class_mask = classes == class_id
-        class_boxes = boxes_xyxy[class_mask]
-        class_scores = confidences[class_mask]
+        class_mask = (classes == class_id)
         class_indices = np.where(class_mask)[0]
 
-        order = class_scores.argsort()[::-1]
-        while order.size > 0:
-            current = order[0]
-            keep_indices.append(class_indices[current])
-            if order.size == 1:
-                break
+        cls_boxes = boxes_xywh[class_mask].tolist()
+        cls_scores = confidences[class_mask].tolist()
 
-            current_box = class_boxes[current]
-            remaining_boxes = class_boxes[order[1:]]
-            ious = _box_iou(current_box, remaining_boxes)
-            order = order[1:][ious <= iou_threshold]
+        nms_indices = cv2.dnn.NMSBoxes(
+            bboxes=cls_boxes,
+            scores=cls_scores,
+            score_threshold=0.0,
+            nms_threshold=float(iou_threshold),
+        )
+        if len(nms_indices) > 0:
+            flat_indices = np.array(nms_indices).flatten()
+            keep_indices.extend(class_indices[flat_indices])
+
+    if not keep_indices:
+        return (
+            np.empty((0, 4), dtype=boxes_xyxy.dtype),
+            np.empty((0,), dtype=confidences.dtype),
+            np.empty((0,), dtype=classes.dtype),
+        )
 
     keep_indices = np.array(keep_indices, dtype=int)
     return boxes_xyxy[keep_indices], confidences[keep_indices], classes[keep_indices]
