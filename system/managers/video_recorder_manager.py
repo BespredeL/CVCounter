@@ -2,7 +2,7 @@
 # ! python3
 # Developed by: Aleksandr Kireev
 # Created: 03.12.2025
-# Updated: 28.07.2026
+# Updated: 30.07.2026
 # Website: https://bespredel.name
 
 import os
@@ -212,15 +212,27 @@ class VideoRecorderManager:
             filename = f"{safe_location}_{timestamp}.mp4"
             file_path = os.path.join(directory, filename)
 
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            writer = cv2.VideoWriter(file_path, fourcc, self._fps, self._frame_size)
+            fourcc = None
+            writer = None
+            # Prefer codecs browsers can play in <video>; fall back to mp4v.
+            for fourcc_str in ('avc1', 'H264', 'X264', 'mp4v'):
+                candidate = cv2.VideoWriter_fourcc(*fourcc_str)
+                trial = cv2.VideoWriter(file_path, candidate, self._fps, self._frame_size)
+                if trial.isOpened():
+                    fourcc = candidate
+                    writer = trial
+                    break
+                trial.release()
 
-            if not writer.isOpened():
+            if writer is None or not writer.isOpened():
                 self._logger.error(f"Failed to open VideoWriter for {file_path}")
                 return
 
             self._writer = writer
             self._file_path = file_path
+            self._logger.info(
+                f"VideoWriter opened ({file_path}) fourcc={fourcc}"
+            )
         except Exception as e:
             self._logger.error(f"Error creating VideoWriter: {e}")
 

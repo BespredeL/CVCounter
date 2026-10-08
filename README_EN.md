@@ -7,7 +7,8 @@
 
 🧠 Production-ready computer vision system for real-time object detection, tracking, and counting
 
-CVCounter is a flexible and scalable computer vision solution designed to detect, track, and count objects in real time using video streams.
+CVCounter is a flexible and scalable computer vision solution designed to detect, track, and count objects in real time
+using video streams.
 
 It is perfectly suited for **counting products, people, vehicle tracking, retail analytics, and surveillance systems.**
 
@@ -20,16 +21,20 @@ It is perfectly suited for **counting products, people, vehicle tracking, retail
 - 🏷️ Per-class count breakdown (current batch / total)
 - 🧠 Object tracking (multi-object tracking)
 - 🎥 Support for video streams (RTSP, webcam, files)
+- 🎬 Detection-triggered video recording with `idle_timeout` stop
+- 📚 Datasets: import, annotate, train YOLO, and apply weights to a counter
 - ⚡ Optimized for real-time performance
-- 📊 Analytics-ready output and reports with per-class totals
+- 📊 Analytics-ready reports with per-class totals and saved media playback
 - 🧩 Modular architecture with a detector registry
 - 🧠 Multiple backends: Ultralytics YOLO, OpenCV DNN, ONNX Runtime
+- 🔐 Session login for settings, datasets, and admin actions
 - 📡 Optional anonymized telemetry (errors/usage) and manual diagnostics
 
 > **Help improve CVCounter**  
 > If you can, please enable telemetry (`telemetry.enabled: true` in Settings).  
 > Anonymized error and usage data helps find issues faster and improve the app. Thank you!  
-> Frames, camera URLs, and the full config are **never sent**. Manual diagnostics are available on the **System info** page (Basic Auth). Details: [`docs/telemetry_api.md`](docs/telemetry_api.md).
+> Frames, camera URLs, and the full config are **never sent**. Manual diagnostics are available on the **System info**
+> page (account login). Details: [`docs/telemetry_api.md`](docs/telemetry_api.md).
 
 ---
 
@@ -114,14 +119,18 @@ It is perfectly suited for **counting products, people, vehicle tracking, retail
 
 ## 🚀 Usage
 
-**This solution implements 3 types of views:**
+**This solution provides the following modes:**
 
-1. **Main view** - a page displaying the counter values and a video with recognition results
-2. **Text view** - a page displaying only the counter values
-3. **Text view with N counters** - a page displaying the values of multiple counters (e.g., at the input and output)
+1. **Main view** — counter values and video with recognition results
+2. **Text view** — counter values only (lower client load)
+3. **Multi view** — several counters on one page (batch, total, per-class breakdown)
+4. **Datasets** — import frames, annotate, train YOLO, apply `best.pt` to a counter
+5. **Reports** — count history and saved media (frames / recordings)
 
-After several options, I decided to implement it with Flask, i.e., as a mini website solution, as it allows avoiding the installation of any
-additional software on clients. Moreover, this solution is not resource-intensive for clients (except for the main view with video).
+After several options, I decided to implement it with Flask, i.e., as a mini website solution, as it allows avoiding the
+installation of any
+additional software on clients. Moreover, this solution is not resource-intensive for clients (except for the main view
+with video).
 
 I managed to run 6 simultaneous counts (without video output), and 5 counts with video output.
 
@@ -130,17 +139,46 @@ Server specifications:
 - AMD Ryzen 5 3600
 - GeForce GTX 1050 Ti (4GB)
 
-You can run the browser in kiosk mode to prevent exiting it (for example, for Google Chrome, you can specify "--kiosk --start-fullscreen" at
+You can run the browser in kiosk mode to prevent exiting it (for example, for Google Chrome, you can specify "--kiosk
+--start-fullscreen" at
 startup).
 
 **P.S.:**
 
-- Friends, if you don't mind, please don't remove my copyright at the bottom of the page. It doesn't cost you anything, but it makes me
+- Friends, if you don't mind, please don't remove my copyright at the bottom of the page. It doesn't cost you anything,
+  but it makes me
   happy.
-- All of this was implemented without any specifications and nobody believed in success, so there is currently some chaos, but I will try to
+- All of this was implemented without any specifications and nobody believed in success, so there is currently some
+  chaos, but I will try to
   redo everything more correctly =)
 - If this solution helped you, you can sponsor me by sending the word "Thanks". Contact details are below =)
 - If you need help with the implementation, we can discuss it =).
+
+---
+
+## 📚 Datasets and Training
+
+Web **Datasets** section:
+
+1. Create a dataset and import frames (camera / upload / ZIP / recordings)
+2. Annotate with boxes or polygons (optional Track ID and attributes)
+3. Train model from the UI
+4. Apply `best.pt` to the chosen counter
+
+In-app training runs through `system.training` / `TrainingJobManager`.
+
+For auto-capture into a dataset inbox, set `dataset_create.path` to:
+`storage/datasets/<name>/images/inbox` (shown on the dataset page).
+
+Optional offline CLI:
+
+```bash
+python train.py list
+python train.py train --config road-cam-test --epochs 100
+python train.py export --config road-cam-test --export onnx
+```
+
+Details: [docs/wiki.md](docs/wiki.md).
 
 ---
 
@@ -148,11 +186,11 @@ startup).
 
 Detectors are registered via `system/object_detection/registry.py`. Set the `model_type` field in the configuration.
 
-| `model_type`           | Backend                                                                  | Model formats                                 |
-|------------------------|--------------------------------------------------------------------------|-----------------------------------------------|
-| `yolo`                 | [Ultralytics YOLO](https://github.com/ultralytics/ultralytics)           | `.pt`                                         |
-| `opencv`, `opencv_dnn` | [OpenCV DNN](https://docs.opencv.org/) | `.onnx`, `.pb`, Darknet (`.weights` + `.cfg`) |
-| `onnx`, `onnxruntime`  | [ONNX Runtime](https://onnxruntime.ai/)                                  | `.onnx` (YOLO export)                         |
+| `model_type`           | Backend                                                        | Model formats                                 |
+|------------------------|----------------------------------------------------------------|-----------------------------------------------|
+| `yolo`                 | [Ultralytics YOLO](https://github.com/ultralytics/ultralytics) | `.pt`                                         |
+| `opencv`, `opencv_dnn` | [OpenCV DNN](https://docs.opencv.org/)                         | `.onnx`, `.pb`, Darknet (`.weights` + `.cfg`) |
+| `onnx`, `onnxruntime`  | [ONNX Runtime](https://onnxruntime.ai/)                        | `.onnx` (YOLO export)                         |
 
 ### Configuration examples
 
@@ -202,17 +240,17 @@ yolo export model=config/ultralytics/models/yolov8n.pt format=onnx
 
 ### Optional detection parameters
 
-| Parameter           | Applies to     | Description                                             |
-|---------------------|----------------|---------------------------------------------------------|
-| `weights_path`      | all            | Path to the model file                                  |
-| `model_config_path` | OpenCV Darknet | Path to `.cfg`                                          |
-| `input_size`        | OpenCV, ONNX   | Input size: integer or `[width, height]`, default `640` |
-| `backend`           | OpenCV         | `OPENCV`, `CUDA`, `DEFAULT`, etc.                       |
-| `target`            | OpenCV         | `CPU`, `CUDA`, `CUDA_FP16`, etc.                        |
-| `providers`         | ONNX           | ONNX Runtime provider list                              |
-| `confidence`, `iou` | all            | Detection thresholds                                    |
-| `device`            | YOLO, ONNX     | Device (`0`, `cpu`, etc.)                               |
-| `vid_stride`        | YOLO           | Frame stride during inference                           |
+| Parameter           | Applies to     | Description                                                          |
+|---------------------|----------------|----------------------------------------------------------------------|
+| `weights_path`      | all            | Path to the model file                                               |
+| `model_config_path` | OpenCV Darknet | Path to `.cfg`                                                       |
+| `input_size`        | OpenCV, ONNX   | Input size: integer or `[width, height]`, default `640`              |
+| `backend`           | OpenCV         | `OPENCV`, `CUDA`, `DEFAULT`, etc.                                    |
+| `target`            | OpenCV         | `CPU`, `CUDA`, `CUDA_FP16`, etc.                                     |
+| `providers`         | ONNX           | ONNX Runtime provider list                                           |
+| `confidence`, `iou` | all            | Detection thresholds                                                 |
+| `device`            | YOLO, ONNX     | Device (`0`, `cpu`, etc.)                                            |
+| `vid_stride`        | YOLO           | Frame stride during inference                                        |
 | `classes`           | all            | Class filter and UI labels `{ "0": "person" }` (shown in "By class") |
 
 ### Adding a custom detector
@@ -364,13 +402,56 @@ class ObjectDetectionMy(BaseObjectDetectionService):
         // counting zones (preferred; one or more polygons)
         counting_areas: [
             {
-                points: [[0, 0], [100, 0], [100, 100], [0, 100]],
-                color: [67, 211, 255], // BGR
+                points: [
+                    [
+                        0,
+                        0
+                    ],
+                    [
+                        100,
+                        0
+                    ],
+                    [
+                        100,
+                        100
+                    ],
+                    [
+                        0,
+                        100
+                    ]
+                ],
+                color: [
+                    67,
+                    211,
+                    255
+                ],
+                // BGR
             },
         ],
         // legacy: first zone (kept in sync when saving from the zone editor)
-        counting_area: [[0, 0], [100, 0], [100, 100], [0, 100]],
-        counting_area_color: [67, 211, 255],
+        counting_area: [
+            [
+                0,
+                0
+            ],
+            [
+                100,
+                0
+            ],
+            [
+                100,
+                100
+            ],
+            [
+                0,
+                100
+            ]
+        ],
+        counting_area_color: [
+            67,
+            211,
+            255
+        ],
         // classes to detect and labels for the "By class" UI (empty = all classes)
         // example: { "0": "Product 1", "1": "Product 2" }
         classes: {},
@@ -385,6 +466,7 @@ class ObjectDetectionMy(BaseObjectDetectionService):
             // video quality
             quality: 80,
             // seconds without detections before stopping recording (0 = keep until counter reset)
+            // recording starts when objects are detected
             idle_timeout: 30,
         },
     },
@@ -422,12 +504,54 @@ class ObjectDetectionMy(BaseObjectDetectionService):
             // counting zones (object is counted when entering any zone)
             counting_areas: [
                 {
-                    points: [[0, 0], [100, 0], [100, 100], [0, 100]],
-                    color: [255, 64, 0],
+                    points: [
+                        [
+                            0,
+                            0
+                        ],
+                        [
+                            100,
+                            0
+                        ],
+                        [
+                            100,
+                            100
+                        ],
+                        [
+                            0,
+                            100
+                        ]
+                    ],
+                    color: [
+                        255,
+                        64,
+                        0
+                    ],
                 },
             ],
-            counting_area: [[0, 0], [100, 0], [100, 100], [0, 100]],
-            counting_area_color: [255, 64, 0],
+            counting_area: [
+                [
+                    0,
+                    0
+                ],
+                [
+                    100,
+                    0
+                ],
+                [
+                    100,
+                    100
+                ],
+                [
+                    0,
+                    100
+                ]
+            ],
+            counting_area_color: [
+                255,
+                64,
+                0
+            ],
             // classes to detect and labels for the per-class breakdown
             classes: {},
             dataset_create: {
@@ -436,8 +560,8 @@ class ObjectDetectionMy(BaseObjectDetectionService):
                 // enable dataset creation
                 probability: 0.05,
                 // probability of creating a dataset image (number from 0.01 to 1, where 0.01 is 1% and 1 is 100%)
-                path: "storage/saved_images/ExampleCam",
-                // path for saving dataset
+                path: "storage/datasets/ExampleCam/images/inbox",
+                // for Datasets UI inbox: storage/datasets/<name>/images/inbox
             },
             // detection video recording configuration
             recording: {
@@ -450,6 +574,7 @@ class ObjectDetectionMy(BaseObjectDetectionService):
                 // video quality
                 quality: 80,
                 // seconds without detections before stopping recording (0 = until reset)
+                // recording starts on detection, not continuously from counter start
                 idle_timeout: 15,
             },
         },
@@ -501,7 +626,8 @@ ONNX Runtime: [https://onnxruntime.ai/](https://onnxruntime.ai/)
 
 ## 📄 License
 
-**AGPL-3.0 License**: This [OSI-approved](https://opensource.org/licenses/) open-source license is ideal for students and enthusiasts,
+**AGPL-3.0 License**: This [OSI-approved](https://opensource.org/licenses/) open-source license is ideal for students
+and enthusiasts,
 promoting open collaboration and knowledge sharing.
 
 ---

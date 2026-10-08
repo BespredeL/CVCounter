@@ -3,147 +3,219 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 22.01.2026
-# Updated: 28.07.2026
+# Updated: 29.07.2026
 # Website: https://bespredel.name
 
+from __future__ import annotations
 from functools import wraps
-
-from flask_httpauth import HTTPBasicAuth
-from werkzeug.security import check_password_hash as werkzeug_check_password_hash, generate_password_hash as werkzeug_generate_password_hash
-
+from typing import Optional
+from urllib.parse import urljoin, urlparse
+from flask import (
+    flash,
+    current_app,
+    has_app_context,
+    has_request_context,
+    jsonify,
+    redirect,
+    request,
+    session,
+    url_for,
+)
+from werkzeug.security import check_password_hash as werkzeug_check_password_hash
+from werkzeug.security import generate_password_hash as werkzeug_generate_password_hash
 from system.utils.app_context import get_app_context
+from system.utils.i18n import trans as translate
+from system.utils.utils import is_ajax
+
+SESSION_USER_KEY = 'auth_user'
 
 
-def get_auth() -> HTTPBasicAuth:
+def _users() -> dict:
     """
-    Get auth instance from app context.
+    Return the users dictionary from the app context.
     
+    Returns:
+        dict: The users dictionary
+    """
+    try:
+        return dict(get_app_context().get('users') or {})
+    except RuntimeError:
+        return {}
+
+
+def auth_enabled() -> bool:
+    """
+    Return True when at least one user is configured.
+    
+    Returns:
+        bool: True if at least one user is configured
+    """
+    return bool(_users())
+
+
+def setup_auth(context: dict = None, app=None):
+    """
+    Configure session cookie defaults for auth.
+
     Args:
+        context: Application context (optional, kept for API compatibility).
+        app: Flask application instance (optional).
+
+    Returns:
         None
+    """
+    flask_app = app
+    if flask_app is None and has_app_context():
+        flask_app = current_app
+    if flask_app is not None:
+        flask_app.config.setdefault('SESSION_COOKIE_HTTPONLY', True)
+        flask_app.config.setdefault('SESSION_COOKIE_SAMESITE', 'Lax')
+    return None
+
+
+def get_auth():
+    """
+    Deprecated compatibility stub (Basic Auth removed).
+    
+    Returns:
+        None
+    """
+    return None
+
+
+def verify_credentials(username: str, password: str) -> bool:
+    """
+    Verify username/password against config ``users`` hashes.
+
+    Args:
+        username: Login name.
+        password: Plain-text password.
 
     Returns:
-        HTTPBasicAuth: HTTPBasicAuth instance
+        bool: True if credentials are valid.
     """
-    context = get_app_context()
-    return context['auth']
+    if not username or password is None:
+        return False
+    users = _users()
+    stored = users.get(username)
+    if not stored:
+        return False
+    try:
+        return bool(werkzeug_check_password_hash(stored, password))
+    except (ValueError, TypeError):
+        return False
 
 
-def setup_auth(context: dict = None) -> HTTPBasicAuth:
+def login_user(username: str) -> None:
     """
-    Setup and configure authentication.
-    
-    This function configures the password verification callback for HTTPBasicAuth.
-    It should be called once during application initialization.
-    The function is idempotent - it can be called multiple times safely.
+    Store authenticated username in the Flask session.
     
     Args:
-        context (dict, optional): Application context dictionary. If not provided,
-                                 will try to get it from Flask's application context.
+        username (str): The username to store
     
     Returns:
-        HTTPBasicAuth: Configured HTTPBasicAuth instance
+        None
     """
-    # Get auth instance
-    if context is not None:
-        auth = context['auth']
-        users = context['users']
-    else:
-        # Try to get from Flask context (for runtime use)
-        try:
-            auth = get_auth()
-            context = get_app_context()
-            users = context['users']
-        except RuntimeError:
-            # Working outside of application context
-            raise RuntimeError(
-                "setup_auth() called without context and outside Flask application context. "
-                "Provide context parameter during initialization."
-            )
+    session[SESSION_USER_KEY] = username
+    session.permanent = True
 
-    # Check if verify_password is already set to avoid re-registration
-    if not hasattr(auth, '_cvcounter_configured'):
-        @auth.verify_password
-        def verify_password(username: str, password: str) -> str | None:
-            """
-            Verify user credentials for authentication.
-            
-            Args:
-                username (str): The username to verify
-                password (str): The password to verify
-            
-            Returns:
-                str | None: Username if credentials are valid, None otherwise
-            """
-            # Get users from context (may have been updated)
-            if context is not None:
-                current_users = context['users']
-            else:
-                try:
-                    current_context = get_app_context()
-                    current_users = current_context['users']
-                except RuntimeError:
-                    current_users = users
 
-            if username in current_users and werkzeug_check_password_hash(current_users.get(username), password):
-                return username
-            return None
+def logout_user() -> None:
+    """
+    Clear authentication from the Flask session.
+    
+    Returns:
+        None
+    """
+    session.pop(SESSION_USER_KEY, None)
+    session.modified = True
 
-        # Mark as configured to avoid re-registration
-        auth._cvcounter_configured = True
 
-    return auth
+def get_authenticated_username() -> Optional[str]:
+    """
+    Return the logged-in username from the session, if still valid in config.
+
+    Returns:
+        str | None: Username or None.
+    """
+    if not has_request_context():
+        return None
+    if not auth_enabled():
+        return None
+
+    username = session.get(SESSION_USER_KEY)
+    if not username:
+        return None
+    if username not in _users():
+        logout_user()
+        return None
+    return str(username)
+
+
+def _safe_next_url(target: Optional[str]) -> Optional[str]:
+    """
+    Allow only relative same-host redirects.
+    
+    Args:
+        target (Optional[str]): The target URL
+    
+    Returns:
+        Optional[str]: The safe next URL
+    """
+    if not target:
+        return None
+    target = target.strip()
+    if not target.startswith('/') or target.startswith('//'):
+        return None
+    ref = urlparse(request.host_url)
+    test = urlparse(urljoin(request.host_url, target))
+    if test.scheme not in ('http', 'https') or ref.netloc != test.netloc:
+        return None
+    return target
 
 
 def login_required(f):
     """
-    Decorator to require authentication for a route.
-    
-    Usage:
-        @blueprint.route('/protected')
-        @login_required
-        def protected_route():
-            return "This requires authentication"
+    Require a valid session when users are configured.
     
     Args:
         f: The function to decorate
     
     Returns:
-        function: Decorated function that requires authentication
+        function: The decorated function
     """
 
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        """
-        Decorated function that requires authentication.
-        
-        Args:
-            *args: Variable length argument list
-            **kwargs: Arbitrary keyword arguments
-        
-        Returns:
-            function: Decorated function that requires authentication
-        """
-        auth = setup_auth()
-
-        @auth.login_required
-        def _wrapped():
+        if not auth_enabled():
             return f(*args, **kwargs)
 
-        return _wrapped()
+        if get_authenticated_username():
+            return f(*args, **kwargs)
+
+        if is_ajax() or request.accept_mimetypes.best == 'application/json':
+            return jsonify({
+                'status': 'error',
+                'message': translate('Authentication required to access this resource.'),
+            }), 401
+
+        next_url = request.full_path if request.query_string else request.path
+        if next_url.endswith('?'):
+            next_url = next_url[:-1]
+        return redirect(url_for('main.login', next=next_url))
 
     return decorated_function
 
 
-# Re-export werkzeug password functions for convenience
 def generate_password_hash(password: str) -> str:
     """
-    Generate a password hash.
+    Generate a password hash for storage in config ``users``.
     
     Args:
-        password (str): Plain text password
+        password (str): The password to hash
     
     Returns:
-        str: Hashed password
+        str: The generated password hash
     """
     return werkzeug_generate_password_hash(password)
 
@@ -153,10 +225,27 @@ def check_password_hash(pwhash: str, password: str) -> bool:
     Check if a password matches a hash.
     
     Args:
-        pwhash (str): Password hash
-        password (str): Plain text password to check
+        pwhash (str): The password hash to check
+        password (str): The password to check
     
     Returns:
-        bool: True if password matches hash, False otherwise
+        bool: True if the password matches the hash
     """
     return werkzeug_check_password_hash(pwhash, password)
+
+
+# Re-export helper used by login route
+__all__ = [
+    'SESSION_USER_KEY',
+    'auth_enabled',
+    'setup_auth',
+    'get_auth',
+    'verify_credentials',
+    'login_user',
+    'logout_user',
+    'get_authenticated_username',
+    'login_required',
+    'generate_password_hash',
+    'check_password_hash',
+    '_safe_next_url',
+]

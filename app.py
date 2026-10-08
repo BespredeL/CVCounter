@@ -3,18 +3,17 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 28.07.2026
+# Updated: 29.07.2026
 # Website: https://bespredel.name
 
 import os
 import signal
 import sys
+from datetime import timedelta
 from threading import Lock
-
 from flask import Flask
-from flask_httpauth import HTTPBasicAuth
 from flask_socketio import SocketIO
-
+from system.auth import auth_enabled, get_authenticated_username, setup_auth
 from system.managers.config_manager import init_config
 from system.managers.database_manager import DatabaseManager
 from system.core.object_counter import ObjectCounter
@@ -23,7 +22,7 @@ from system.utils.i18n import load_translations, trans as translate
 from system.utils.paths import resolve_sqlite_uri
 from system.utils.utils import slug, system_check, should_run_startup_system_check
 from system.db.models.base_model import TablePrefixBase
-from routes import counters_bp, reports_bp, settings_bp, main_bp
+from routes import counters_bp, reports_bp, settings_bp, main_bp, datasets_bp
 
 
 # --------------------------------------------------------------------------------
@@ -116,6 +115,9 @@ def create_app(config_path: str = "config/config.json", test_config: dict = None
         # Config Flask
         _app.config['SECRET_KEY'] = _config.get("server.secret_key")
         _app.config["TEMPLATES_AUTO_RELOAD"] = True
+        _app.config['SESSION_COOKIE_HTTPONLY'] = True
+        _app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+        _app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=14)
 
     # Configure Socket.IO
     allowed_origins = _config.get("server.allowed_origins", "*")
@@ -135,8 +137,7 @@ def create_app(config_path: str = "config/config.json", test_config: dict = None
         ping_timeout=60,
     )
 
-    # Auth
-    _auth = HTTPBasicAuth()
+    # Auth (session-based; users live in config)
     users = _config.get("users", {})
 
     # Set table prefix
@@ -161,7 +162,6 @@ def create_app(config_path: str = "config/config.json", test_config: dict = None
         'object_counters': _object_counters,
         'thread_manager': _thread_manager,
         'lock': _lock,
-        'auth': _auth,
         'users': users,
         'socketio': _socketio,
         'socketio_transports': socketio_transports,
@@ -180,8 +180,8 @@ def create_app(config_path: str = "config/config.json", test_config: dict = None
     # Register template filters and globals
     register_template_helpers(_app, app_context)
 
-    # Setup authentication
-    setup_authentication(app_context)
+    # Setup authentication (session cookies; users from config)
+    setup_auth(app_context, app=_app)
 
     # Register blueprints
     register_blueprints(_app)
@@ -293,21 +293,9 @@ def register_template_helpers(app: Flask, context: dict):
             translations=load_translations(lang or 'ru'),
             socketio_transports=context.get('socketio_transports', ['polling', 'websocket']),
             socketio_upgrade=context.get('socketio_upgrade', True),
+            auth_enabled=auth_enabled(),
+            auth_user=get_authenticated_username(),
         )
-
-
-def setup_authentication(context: dict):
-    """
-    Setup authentication for the application.
-    
-    Args:
-        context (dict): Application context dictionary
-    
-    Returns:
-        None
-    """
-    from system.auth import setup_auth
-    setup_auth(context)
 
 
 def register_blueprints(app: Flask):
@@ -324,6 +312,7 @@ def register_blueprints(app: Flask):
     app.register_blueprint(counters_bp)
     app.register_blueprint(reports_bp)
     app.register_blueprint(settings_bp)
+    app.register_blueprint(datasets_bp)
 
 
 def register_error_handlers(app: Flask, context: dict):

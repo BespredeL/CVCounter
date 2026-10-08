@@ -145,11 +145,21 @@ function showToast(message, type = "primary") {
     toast.setAttribute("aria-live", "assertive");
     toast.setAttribute("aria-atomic", "true");
 
-    toast.innerHTML = `
-        <div class="d-flex">
-            <div class="toast-body user-select-none">${message}</div>
-            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>`;
+    const body = document.createElement("div");
+    body.className = "toast-body user-select-none";
+    body.textContent = String(message ?? "");
+
+    const closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.className = "btn-close me-2 m-auto";
+    closeBtn.setAttribute("data-bs-dismiss", "toast");
+    closeBtn.setAttribute("aria-label", "Close");
+
+    const row = document.createElement("div");
+    row.className = "d-flex";
+    row.appendChild(body);
+    row.appendChild(closeBtn);
+    toast.appendChild(row);
 
     toastContainer.appendChild(toast);
 
@@ -157,6 +167,106 @@ function showToast(message, type = "primary") {
     bsToast.show();
     toast.addEventListener("hidden.bs.toast", () => toast.remove());
 }
+
+window.showToast = showToast;
+
+/**
+ * App dialog (confirm / alert) on top of Bootstrap Modal.
+ */
+const AppDialog = {
+    _modal: null,
+    _resolver: null,
+    _els: null,
+
+    _ensure() {
+        if (this._modal) return true;
+        const root = document.getElementById("app-dialog");
+        if (!root || typeof bootstrap === "undefined") return false;
+        this._els = {
+            root,
+            title: document.getElementById("app-dialog-title"),
+            message: document.getElementById("app-dialog-message"),
+            cancel: document.getElementById("app-dialog-cancel"),
+            confirm: document.getElementById("app-dialog-confirm"),
+        };
+        this._modal = bootstrap.Modal.getOrCreateInstance(root, {
+            backdrop: "static",
+            keyboard: true,
+        });
+        this._els.confirm.addEventListener("click", () => this._finish(true));
+        this._els.cancel.addEventListener("click", () => this._finish(false));
+        root.addEventListener("hidden.bs.modal", () => {
+            if (this._resolver) this._finish(false);
+        });
+        return true;
+    },
+
+    _finish(result) {
+        const resolve = this._resolver;
+        this._resolver = null;
+        if (resolve) resolve(result);
+        try {
+            this._modal?.hide();
+        } catch (_) {
+            /* already closing */
+        }
+    },
+
+    _open({ title, message, confirmText, cancelText, tone, showCancel }) {
+        if (!this._ensure()) {
+            if (showCancel) return Promise.resolve(window.confirm(String(message ?? "")));
+            window.alert(String(message ?? ""));
+            return Promise.resolve(true);
+        }
+
+        if (this._resolver) this._finish(false);
+
+        const t = (key) => (typeof window.trans === "function" ? window.trans(key) : key);
+        this._els.root.classList.remove("app-dialog--danger", "app-dialog--warning");
+        if (tone === "danger" || tone === "warning") {
+            this._els.root.classList.add(`app-dialog--${tone}`);
+        }
+        this._els.title.textContent = title || t("Confirm");
+        this._els.message.textContent = String(message ?? "");
+        this._els.confirm.textContent = confirmText || t("OK");
+        this._els.confirm.className = `btn ${tone === "danger" ? "btn-danger" : tone === "warning" ? "btn-warning" : "btn-primary"}`;
+        this._els.cancel.textContent = cancelText || t("Cancel");
+        this._els.cancel.classList.toggle("d-none", !showCancel);
+
+        return new Promise((resolve) => {
+            this._resolver = resolve;
+            this._modal.show();
+            requestAnimationFrame(() => this._els.confirm.focus());
+        });
+    },
+
+    confirm(options = {}) {
+        if (typeof options === "string") options = { message: options };
+        return this._open({
+            title: options.title,
+            message: options.message,
+            confirmText: options.confirmText,
+            cancelText: options.cancelText,
+            tone: options.tone || "primary",
+            showCancel: true,
+        });
+    },
+
+    alert(options = {}) {
+        if (typeof options === "string") options = { message: options };
+        return this._open({
+            title: options.title || (typeof window.trans === "function" ? window.trans("Notice") : "Notice"),
+            message: options.message,
+            confirmText: options.okText || options.confirmText,
+            tone: options.tone || "primary",
+            showCancel: false,
+        }).then(() => undefined);
+    },
+};
+
+window.AppDialog = AppDialog;
+window.appConfirm = (opts) => AppDialog.confirm(opts);
+window.appAlert = (opts) => AppDialog.alert(opts);
 
 /**
  * Show flashed toasts rendered server-side
@@ -218,4 +328,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     ThemeManager.initialize();
     FullscreenManager.initialize();
+
+    document.getElementById("btn-logout")?.addEventListener("click", async () => {
+        const btn = document.getElementById("btn-logout");
+        const logoutUrl = btn?.dataset.logoutUrl || "/logout";
+        const t = (key) => (typeof window.trans === "function" ? window.trans(key) : key);
+
+        const ok = typeof window.appConfirm === "function"
+            ? await window.appConfirm({
+                title: t("Log out"),
+                message: t("Log out of the application?"),
+                confirmText: t("Log out"),
+                tone: "warning",
+            })
+            : window.confirm(t("Log out of the application?"));
+        if (!ok) return;
+
+        window.location.assign(logoutUrl);
+    });
 });

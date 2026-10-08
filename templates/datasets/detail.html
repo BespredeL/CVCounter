@@ -1,0 +1,454 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ dataset.display_name }} — {{ trans('Datasets') }}{% endblock %}
+
+{% block header %}
+    {% with page_title=dataset.display_name or dataset.name, page_subtitle=dataset.name %}
+        {% include 'partials/page_header.html' %}
+    {% endwith %}
+{% endblock %}
+
+{% block breadcrumb %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">{{ trans('Home') }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('datasets.datasets_index') }}">{{ trans('Datasets') }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ dataset.name }}</li>
+        </ol>
+    </nav>
+{% endblock %}
+
+{% block content %}
+    {% include 'partials/inner_page_nav.html' %}
+
+    <div class="page-content dataset-detail"
+         id="dataset-detail"
+         data-name="{{ dataset.name }}"
+         data-task="{{ dataset.task }}"
+         data-classes='{{ dataset.classes|tojson }}'
+         data-inbox-path="{{ dataset.inbox_path }}">
+
+        <div class="dataset-detail__hero d-flex flex-wrap gap-3 justify-content-between align-items-center">
+            <div class="min-w-0">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <span class="badge rounded-pill text-bg-dark">{{ dataset.task }}</span>
+                    <span class="text-body-secondary small">
+                        {{ dataset.total }} {{ trans('images') }} ·
+                        {{ dataset.labeled }} {{ trans('labeled') }} ({{ dataset.labeled_pct }}%)
+                    </span>
+                </div>
+                <div class="progress dataset-detail__progress" role="progressbar"
+                     aria-valuenow="{{ dataset.labeled_pct }}" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-bar" style="width: {{ dataset.labeled_pct }}%"></div>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-primary" href="{{ url_for('datasets.dataset_annotate', name=dataset.name) }}">
+                    {{ trans('Annotate') }}
+                </a>
+                <button type="button" class="btn btn-outline-danger" id="btn-delete-dataset">{{ trans('Delete') }}</button>
+            </div>
+        </div>
+
+        <div class="row g-3 dataset-detail__stats">
+            <div class="col-6 col-md-3">
+                <div class="cv-card dataset-stat">
+                    <div class="dataset-stat__label">{{ trans('Train') }}</div>
+                    <div class="dataset-stat__value">{{ dataset.by_split.train or 0 }}</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="cv-card dataset-stat">
+                    <div class="dataset-stat__label">{{ trans('Val') }}</div>
+                    <div class="dataset-stat__value">{{ dataset.by_split.val or 0 }}</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="cv-card dataset-stat">
+                    <div class="dataset-stat__label">{{ trans('Inbox') }}</div>
+                    <div class="dataset-stat__value">{{ dataset.by_split.inbox or 0 }}</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="cv-card dataset-stat">
+                    <div class="dataset-stat__label">{{ trans('Classes') }}</div>
+                    <div class="dataset-stat__classes text-truncate" title="{{ dataset.classes|join(', ') }}">
+                        {{ dataset.classes|join(', ') or '—' }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <ul class="nav nav-pills dataset-detail__tabs" role="tablist">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-import" type="button">{{ trans('Import') }}</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-images" type="button">{{ trans('Images') }} <span class="badge text-bg-secondary">{{ dataset.total }}</span></button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-settings" type="button">{{ trans('Settings') }}</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-train" type="button" id="train-tab-btn">{{ trans('Train') }}</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-qa" type="button">{{ trans('QA') }}</button></li>
+        </ul>
+
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="tab-import">
+                <p class="dataset-tab-hint">{{ trans('Import frames into inbox, then split into train/val before training.') }}</p>
+                <div class="row g-3">
+                    <div class="col-lg-4">
+                        <div class="cv-card h-100">
+                            <div class="card-header">{{ trans('From cameras') }}</div>
+                            <div class="card-body d-flex flex-column">
+                                <p class="dataset-hint dataset-hint--tight">{{ trans('Copies saved frames from storage/saved_images. Pick one counter location or import all. Already imported files are skipped.') }}</p>
+                                <select class="form-select mb-3" id="import-location" aria-describedby="import-location-hint">
+                                    <option value="">{{ trans('All locations') }}</option>
+                                    {% for loc in saved_locations %}
+                                        <option value="{{ loc.location }}">{{ loc.location }} ({{ loc.count }})</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text mb-3" id="import-location-hint">{{ trans('Frames stay in inbox until you move or auto-split them.') }}</div>
+                                <button type="button" class="btn btn-primary w-100 mt-auto" id="btn-import-camera">{{ trans('Import') }}</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="cv-card h-100">
+                            <div class="card-header">{{ trans('Upload files / ZIP') }}</div>
+                            <div class="card-body d-flex flex-column">
+                                <p class="dataset-hint dataset-hint--tight">{{ trans('Upload JPG/PNG/WebP images or a ZIP archive. Files already in the dataset are skipped.') }}</p>
+                                <input type="file" class="form-control mb-3" id="import-files" multiple accept="image/*,.zip">
+                                <button type="button" class="btn btn-primary w-100 mt-auto" id="btn-import-upload">{{ trans('Upload') }}</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="cv-card h-100">
+                            <div class="card-header">{{ trans('From recordings') }}</div>
+                            <div class="card-body d-flex flex-column">
+                                <p class="dataset-hint dataset-hint--tight">{{ trans('Extract frames from videos in storage/saved_recordings.') }}</p>
+                                <select class="form-select mb-2" id="import-recording">
+                                    <option value="">{{ trans('Select recording') }}</option>
+                                    {% for rec in recordings %}
+                                        <option value="{{ rec.path }}">{{ rec.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="row g-2 mb-3">
+                                    <div class="col">
+                                        <label class="form-label small mb-1" for="rec-every-n">{{ trans('every N') }}</label>
+                                        <input type="number" class="form-control" id="rec-every-n" value="10" min="1"
+                                               title="{{ trans('Take every N-th frame from the video.') }}">
+                                        <div class="form-text">{{ trans('Take every N-th frame from the video.') }}</div>
+                                    </div>
+                                    <div class="col">
+                                        <label class="form-label small mb-1" for="rec-max">{{ trans('max') }}</label>
+                                        <input type="number" class="form-control" id="rec-max" value="200" min="1"
+                                               title="{{ trans('Stop after this many extracted frames.') }}">
+                                        <div class="form-text">{{ trans('Stop after this many extracted frames.') }}</div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-primary w-100 mt-auto" id="btn-import-recording">{{ trans('Extract frames') }}</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="cv-card mt-3">
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                            <button type="button" class="btn btn-outline-secondary" id="btn-auto-split"
+                                    data-bs-toggle="tooltip" data-bs-placement="top"
+                                    data-bs-title="{{ trans('Move inbox/train images into train and val by the ratio below.') }}">
+                                {{ trans('Auto train/val split') }}
+                            </button>
+                            <div class="input-group" style="width:auto;max-width:10rem">
+                                <span class="input-group-text">val</span>
+                                <input type="number" class="form-control" id="val-ratio" value="0.2" min="0.05" max="0.5" step="0.05"
+                                       title="{{ trans('Fraction of images moved to val (e.g. 0.2 = 20%).') }}"
+                                       aria-label="{{ trans('Val ratio') }}">
+                            </div>
+                        </div>
+                        <p class="dataset-hint dataset-hint--tight">{{ trans('Recommended before training: keep most images in train, a smaller share in val.') }}</p>
+                        <div class="dataset-inbox-path">
+                            <div class="small text-body-secondary mb-1">{{ trans('Inbox folder on disk') }}</div>
+                            <div class="input-group input-group-sm">
+                                <code class="form-control font-monospace" id="inbox-path-text">{{ dataset.inbox_path }}</code>
+                                <button type="button" class="btn btn-outline-secondary" id="btn-copy-inbox"
+                                        data-bs-toggle="tooltip" data-bs-placement="top"
+                                        data-bs-title="{{ trans('Copy path to clipboard') }}">{{ trans('Copy') }}</button>
+                            </div>
+                            <div class="form-text">{{ trans('You can also drop images into this folder manually, then refresh the page.') }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="tab-images">
+                <p class="dataset-tab-hint">{{ trans('Select images to move between splits, delete, or run Auto-label on unlabeled frames.') }}</p>
+                <div class="cv-card overflow-hidden">
+                    <div class="card-header dataset-images-toolbar d-flex flex-wrap gap-2 align-items-center">
+                        <select class="form-select form-select-sm" style="width:auto" id="filter-split" aria-label="{{ trans('Split') }}">
+                            <option value="">{{ trans('All splits') }}</option>
+                            <option value="inbox">inbox</option>
+                            <option value="train">train</option>
+                            <option value="val">val</option>
+                        </select>
+                        <select class="form-select form-select-sm" style="width:auto" id="filter-labeled" aria-label="{{ trans('Status') }}">
+                            <option value="">{{ trans('All') }}</option>
+                            <option value="0">{{ trans('Unlabeled') }}</option>
+                            <option value="1">{{ trans('Labeled') }}</option>
+                        </select>
+                        <div class="vr d-none d-md-block"></div>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="btn-move-train"
+                                data-bs-toggle="tooltip" data-bs-placement="top"
+                                data-bs-title="{{ trans('Move selected images to the train split.') }}">{{ trans('→ train') }}</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="btn-move-val"
+                                data-bs-toggle="tooltip" data-bs-placement="top"
+                                data-bs-title="{{ trans('Move selected images to the val split.') }}">{{ trans('→ val') }}</button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" id="btn-delete-images"
+                                data-bs-toggle="tooltip" data-bs-placement="top"
+                                data-bs-title="{{ trans('Permanently delete selected images and their annotations.') }}">{{ trans('Delete') }}</button>
+                        <button type="button" class="btn btn-sm btn-outline-success ms-md-auto" id="btn-autolabel"
+                                data-bs-toggle="tooltip" data-bs-placement="top"
+                                data-bs-title="{{ trans('Run the Auto-label model on up to 100 unlabeled images and write boxes.') }}">{{ trans('Auto-label') }}</button>
+                    </div>
+                    <div class="table-responsive dataset-images-table">
+                        <table class="table table-modern table-sm table-hover mb-0 align-middle">
+                            <thead>
+                            <tr>
+                                <th style="width:2.25rem"><input type="checkbox" id="check-all-images" class="form-check-input" aria-label="{{ trans('All') }}"></th>
+                                <th>{{ trans('Image') }}</th>
+                                <th style="width:5rem">{{ trans('Split') }}</th>
+                                <th style="width:7rem">{{ trans('Status') }}</th>
+                                <th style="width:4.5rem"></th>
+                            </tr>
+                            </thead>
+                            <tbody id="images-tbody">
+                            {% for img in images %}
+                                <tr data-name="{{ img.name }}" data-split="{{ img.split }}" data-labeled="{{ 1 if img.labeled else 0 }}">
+                                    <td><input type="checkbox" class="form-check-input img-check" value="{{ img.name }}"></td>
+                                    <td class="text-truncate dataset-images-name" title="{{ img.name }}">{{ img.name }}</td>
+                                    <td><span class="badge text-bg-dark">{{ img.split }}</span></td>
+                                    <td>
+                                        {% if img.labeled %}
+                                            <span class="badge text-bg-success">{{ trans('Labeled') }}</span>
+                                        {% else %}
+                                            <span class="badge text-bg-secondary">{{ trans('Unlabeled') }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a class="btn btn-sm btn-link px-0"
+                                           href="{{ url_for('datasets.dataset_annotate', name=dataset.name, image=img.name) }}">{{ trans('Edit') }}</a>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="5" class="empty-state">{{ trans('No images') }}</td></tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="tab-settings">
+                <p class="dataset-tab-hint">{{ trans('Dataset vocabulary, Auto-label model, and helpers for merging or renaming classes.') }}</p>
+                <div class="cv-card">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="meta-display-name">{{ trans('Display name') }}</label>
+                                <input class="form-control" id="meta-display-name" value="{{ dataset.display_name }}">
+                                <div class="form-text">{{ trans('Human-readable title shown in the UI. Folder id stays the same.') }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="meta-task">{{ trans('Task') }}</label>
+                                <select class="form-select" id="meta-task">
+                                    {% for t in ['detect', 'segment', 'classify', 'pose'] %}
+                                        <option value="{{ t }}" {% if dataset.task == t %}selected{% endif %}>{{ t }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">{{ trans('Changes annotation tools and format.') }}</div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="meta-classes">{{ trans('Classes') }}</label>
+                                <input class="form-control" id="meta-classes" value="{{ dataset.classes|join(', ') }}">
+                                <div class="form-text">{{ trans('Comma-separated. Selecting an Auto-label model fills this from the detector; save to keep.') }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="meta-autolabel-detector">{{ trans('Auto-label model') }}</label>
+                                <select class="form-select" id="meta-autolabel-detector">
+                                    <option value="">{{ trans('Default (first detector)') }}</option>
+                                    {% for m in detector_models %}
+                                        <option value="{{ m.location }}"
+                                                {% if dataset.autolabel_detector == m.location %}selected{% endif %}
+                                                {% if not m.exists %}disabled{% endif %}>
+                                            {{ m.label }}{% if not m.exists %} — {{ trans('missing') }}{% endif %}
+                                        </option>
+                                    {% else %}
+                                        <option value="" disabled>{{ trans('No detector models') }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">{{ trans('Counter detector used for Auto-label and Active learning ranking.') }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="meta-attributes">{{ trans('Attributes schema (JSON)') }}</label>
+                                <textarea class="form-control font-monospace" id="meta-attributes" rows="4"
+                                          placeholder='[{"name":"occluded","type":"bool"}]'>{{ dataset.attributes|tojson }}</textarea>
+                                <div class="form-text">{{ trans('Optional per-shape fields in the annotator (bool, text, enum…).') }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="meta-keypoints">{{ trans('Keypoints schema (JSON)') }}</label>
+                                <textarea class="form-control font-monospace" id="meta-keypoints" rows="4"
+                                          placeholder='["nose","left_eye"]'>{{ dataset.keypoints_schema|tojson }}</textarea>
+                                <div class="form-text">{{ trans('Used for pose task: ordered keypoint names.') }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="merge-source">{{ trans('Merge from dataset') }}</label>
+                                <div class="input-group">
+                                    <input class="form-control" id="merge-source" placeholder="{{ trans('other-dataset') }}">
+                                    <button type="button" class="btn btn-outline-secondary" id="btn-merge"
+                                            data-bs-toggle="tooltip" data-bs-placement="top"
+                                            data-bs-title="{{ trans('Copy images and annotations from another dataset into this one.') }}">{{ trans('Merge') }}</button>
+                                </div>
+                                <div class="form-text">{{ trans('Enter the other dataset folder name (id), not the display title.') }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">{{ trans('Reassign class') }}</label>
+                                <div class="input-group">
+                                    <input class="form-control" id="reassign-from" placeholder="{{ trans('from') }}">
+                                    <input class="form-control" id="reassign-to" placeholder="{{ trans('to') }}">
+                                    <button type="button" class="btn btn-outline-secondary" id="btn-reassign"
+                                            data-bs-toggle="tooltip" data-bs-placement="top"
+                                            data-bs-title="{{ trans('Rename a class on all shapes (and image labels).') }}">{{ trans('Reassign') }}</button>
+                                </div>
+                                <div class="form-text">{{ trans('Useful after fixing Auto-label class names.') }}</div>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <button type="button" class="btn btn-primary" id="btn-save-meta">{{ trans('Save') }}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="tab-train">
+                <p class="dataset-tab-hint">{{ trans('Train on labeled train/val images, then apply the resulting weights to a counter.') }}</p>
+                <div class="row g-3">
+                    <div class="col-lg-5">
+                        <div class="cv-card">
+                            <div class="card-header">{{ trans('Training') }}</div>
+                            <div class="card-body">
+                                <div class="alert alert-warning small py-2 mb-3" id="gpu-warning">
+                                    {{ trans('Training uses the GPU. Pause heavy counters on the same device if needed.') }}
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="train-base-model">{{ trans('Base model') }}</label>
+                                    <select class="form-select" id="train-base-model">
+                                        {% for m in base_models %}
+                                            <option value="{{ m }}" {% if m == default_base_model %}selected{% endif %}>{{ m }}</option>
+                                        {% else %}
+                                            <option value="{{ default_base_model }}">{{ default_base_model }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">{{ trans('Starting checkpoint (e.g. yolov8n). Fine-tuned on your dataset classes.') }}</div>
+                                </div>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-4">
+                                        <label class="form-label" for="train-epochs">{{ trans('Epochs') }}</label>
+                                        <input type="number" class="form-control" id="train-epochs" value="{{ default_epochs }}" min="1"
+                                               title="{{ trans('Full passes over the training set.') }}">
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label" for="train-imgsz">{{ trans('imgsz') }}</label>
+                                        <input type="number" class="form-control" id="train-imgsz" value="{{ default_imgsz }}"
+                                               title="{{ trans('Square input size in pixels (e.g. 640).') }}">
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label" for="train-batch">{{ trans('batch') }}</label>
+                                        <input type="number" class="form-control" id="train-batch" value="-1"
+                                               title="{{ trans('-1 = auto batch size for available VRAM.') }}">
+                                    </div>
+                                </div>
+                                <div class="row g-2 mb-1">
+                                    <div class="col">
+                                        <label class="form-label" for="train-device">{{ trans('device') }}</label>
+                                        <input class="form-control" id="train-device" value="auto"
+                                               title="{{ trans('auto, cpu, or GPU index like 0.') }}">
+                                    </div>
+                                    <div class="col">
+                                        <label class="form-label" for="train-export">{{ trans('Export') }}</label>
+                                        <select class="form-select" id="train-export"
+                                                title="{{ trans('Optional export after training (ONNX / TensorRT engine).') }}">
+                                            <option value="">{{ trans('None') }}</option>
+                                            <option value="onnx">onnx</option>
+                                            <option value="engine">engine</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <p class="form-text mb-3">{{ trans('batch -1 lets Ultralytics pick a safe size. Export is optional.') }}</p>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="train-dedupe">
+                                    <label class="form-check-label" for="train-dedupe">{{ trans('Dedupe val from train') }}</label>
+                                    <div class="form-text">{{ trans('Remove from train any images that also appear in val.') }}</div>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button type="button" class="btn btn-primary" id="btn-start-train">{{ trans('Start training') }}</button>
+                                    <button type="button" class="btn btn-outline-warning" id="btn-cancel-train">{{ trans('Cancel') }}</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="cv-card mt-3">
+                            <div class="card-header">{{ trans('Apply weights to counter') }}</div>
+                            <div class="card-body">
+                                <p class="dataset-hint dataset-hint--tight">{{ trans('Write trained weights into a counter detector config and sync class names.') }}</p>
+                                <label class="form-label" for="apply-location">{{ trans('Location') }}</label>
+                                <select class="form-select mb-2" id="apply-location">
+                                    {% for loc in counter_locations %}
+                                        <option value="{{ loc }}">{{ loc }}</option>
+                                    {% else %}
+                                        <option value="" disabled>{{ trans('No data') }}</option>
+                                    {% endfor %}
+                                </select>
+                                <label class="form-label" for="apply-weights">{{ trans('Weights') }}</label>
+                                <input class="form-control mb-3" id="apply-weights" placeholder="{{ trans('path to best.pt') }}">
+                                <div class="form-text mb-3">{{ trans('Relative path to best.pt from the training run (or absolute under the project).') }}</div>
+                                <button type="button" class="btn btn-outline-primary w-100" id="btn-apply-weights">{{ trans('Apply') }}</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-7">
+                        <div class="cv-card dataset-train-log-card h-100">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span>{{ trans('Training log') }}</span>
+                                <span class="badge text-bg-secondary" id="train-status-badge">{{ trans('idle') }}</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <pre class="training-log mb-0" id="training-log"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="tab-qa">
+                <p class="dataset-tab-hint">{{ trans('Check annotation quality, or rank unlabeled images the model is least sure about.') }}</p>
+                <div class="cv-card">
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <button type="button" class="btn btn-outline-primary" id="btn-run-qa"
+                                    data-bs-toggle="tooltip" data-bs-placement="top"
+                                    data-bs-title="{{ trans('Scan labels: unlabeled count, out-of-bounds boxes, class balance. Does not run the model.') }}">
+                                {{ trans('Run QA') }}
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="btn-active-learning"
+                                    data-bs-toggle="tooltip" data-bs-placement="top"
+                                    data-bs-title="{{ trans('Run the Auto-label model on unlabeled images and list the most uncertain ones first. Does not write annotations.') }}">
+                                {{ trans('Active learning rank') }}
+                            </button>
+                        </div>
+                        <p class="dataset-hint dataset-hint--tight">{{ trans('Results appear below as JSON. Use Active learning to decide which frames to annotate next.') }}</p>
+                        <pre class="qa-output mb-0" id="qa-output">{{ trans('No report yet') }}</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block footer_assets %}
+    <script src="{{ url_for('static', filename='assets/js/datasets.js') }}"></script>
+{% endblock %}

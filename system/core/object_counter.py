@@ -395,7 +395,12 @@ class ObjectCounter:
         return self.get_live_counts()
 
     def clear_pending_counts(self) -> None:
-        """Reset pending keyboard values to zero."""
+        """
+        Reset pending keyboard values to zero.
+        
+        Returns:
+            None
+        """
         self.pending_defect_count = 0
         self.pending_correct_count = 0
 

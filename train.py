@@ -3,17 +3,21 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 09.06.2026
+# Updated: 29.07.2026
 # Website: https://bespredel.name
 
 """
-Train and export Ultralytics YOLO models for CVCounter.
+Standalone CLI to train and export Ultralytics YOLO models.
+
+This script is intentionally independent from the web app.
+In-app training (Datasets → Train) uses system.training.yolo_trainer and does
+not call this file.
 
 Examples:
     python train.py list
     python train.py train --config yolov8_disk_in
-    python train.py train --config yolov8_disk_in --epochs 200 --export onnx
-    python train.py export --config yolov8_disk_in --export engine
+    python train.py train --config road-cam-test --epochs 200 --export onnx
+    python train.py export --config road-cam-test --export engine
 """
 
 from __future__ import annotations
@@ -28,13 +32,9 @@ import torch
 import yaml
 from ultralytics import YOLO
 
-from system.utils.paths import ensure_dir, set_project_root
-
 PROJECT_ROOT = Path(__file__).resolve().parent
 CONFIG_DIR = PROJECT_ROOT / 'config'
-CFG_DIR = CONFIG_DIR / 'cfg'
-MODELS_DIR = CONFIG_DIR / 'models'
-RUNS_DIR = CONFIG_DIR / 'runs'
+ULTRA_DIR = CONFIG_DIR / 'ultralytics'
 DATASETS_DIR = PROJECT_ROOT / 'storage' / 'datasets'
 
 DEFAULT_BASE_MODEL = 'yolo11n.pt'
@@ -44,10 +44,27 @@ DEFAULT_EPOCHS = 100
 IMAGE_EXTENSIONS = ('jpg', 'jpeg', 'png', 'bmp', 'webp')
 
 
+def _pick_dir(preferred: Path, legacy: Path) -> Path:
+    if preferred.is_dir() or not legacy.is_dir():
+        return preferred
+    return legacy
+
+
+def resolve_dirs() -> tuple[Path, Path, Path]:
+    cfg_dir = _pick_dir(ULTRA_DIR / 'cfg', CONFIG_DIR / 'cfg')
+    models_dir = _pick_dir(ULTRA_DIR / 'models', CONFIG_DIR / 'models')
+    runs_dir = _pick_dir(ULTRA_DIR / 'runs', CONFIG_DIR / 'runs')
+    return cfg_dir, models_dir, runs_dir
+
+
+CFG_DIR, MODELS_DIR, RUNS_DIR = resolve_dirs()
+
+
 def setup_directories() -> None:
-    set_project_root(str(PROJECT_ROOT))
+    global CFG_DIR, MODELS_DIR, RUNS_DIR
+    CFG_DIR, MODELS_DIR, RUNS_DIR = resolve_dirs()
     for path in (CFG_DIR, MODELS_DIR, RUNS_DIR, DATASETS_DIR):
-        ensure_dir(str(path))
+        path.mkdir(parents=True, exist_ok=True)
 
 
 def resolve_device(device: Optional[str]) -> str | int:
@@ -115,13 +132,12 @@ def _collect_files(directory: Path, extensions: Iterable[str]) -> list[Path]:
     files: list[Path] = []
     for extension in extensions:
         files.extend(Path(path) for path in glob.glob(str(directory / f'*.{extension}')))
+        files.extend(Path(path) for path in glob.glob(str(directory / f'*.{extension.upper()}')))
     return files
 
 
 def dedupe_val_from_train(dataset_root: Path) -> None:
-    """
-    Remove validation images/labels from train folders when they were duplicated.
-    """
+    """Remove validation images/labels from train folders when they were duplicated."""
     images_val = dataset_root / 'images' / 'val'
     labels_val = dataset_root / 'labels' / 'val'
     images_train = dataset_root / 'images' / 'train'
@@ -174,7 +190,9 @@ def train_model(
             raise FileNotFoundError(f'Dataset directory not found: {dataset_root}')
         dedupe_val_from_train(dataset_root)
 
-    base_model_path = MODELS_DIR / base_model
+    base_model_path = Path(base_model)
+    if not base_model_path.is_file():
+        base_model_path = MODELS_DIR / base_model
     model = load_model(base_model_path)
     run_name = config_name.removesuffix('.yaml')
 
@@ -218,14 +236,16 @@ def export_weights(weights_path: Path, export_format: str, device: str | int) ->
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description='Train and export YOLO models for CVCounter.',
+        description='Standalone YOLO train/export CLI (not used by the web UI).',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             'Project layout:\n'
-            '  config/cfg/<name>.yaml   dataset definition\n'
-            '  config/models/           base weights (.pt)\n'
-            '  config/runs/detect/      training output\n'
-            '  storage/datasets/        images and labels\n'
+            '  config/ultralytics/cfg/<name>.yaml   dataset definition (preferred)\n'
+            '  config/ultralytics/models/           base weights (.pt)\n'
+            '  config/ultralytics/runs/detect/      training output\n'
+            '  storage/datasets/                    images and labels\n'
+            '\n'
+            'Legacy fallback: config/cfg, config/models, config/runs\n'
         ),
     )
     subparsers = parser.add_subparsers(dest='command', required=True)
@@ -234,8 +254,8 @@ def build_parser() -> argparse.ArgumentParser:
     list_parser.set_defaults(func=lambda args: print_configs())
 
     train_parser = subparsers.add_parser('train', help='Train a model from a base checkpoint')
-    train_parser.add_argument('--config', '-c', required=True, help='YAML name in config/cfg (without .yaml)')
-    train_parser.add_argument('--base-model', '-m', default=DEFAULT_BASE_MODEL, help='Base weights in config/models/')
+    train_parser.add_argument('--config', '-c', required=True, help='YAML name in ultralytics/cfg (without .yaml)')
+    train_parser.add_argument('--base-model', '-m', default=DEFAULT_BASE_MODEL, help='Base weights in ultralytics/models/')
     train_parser.add_argument('--epochs', '-e', type=int, default=DEFAULT_EPOCHS)
     train_parser.add_argument('--imgsz', type=int, default=DEFAULT_IMG_SIZE)
     train_parser.add_argument('--batch', type=int, default=-1, help='Batch size (-1 = auto)')

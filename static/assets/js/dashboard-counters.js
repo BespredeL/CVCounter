@@ -483,13 +483,16 @@ const CounterDashboard = {
                 const card = stopBtn.closest(".counter-card");
                 const name = card?.querySelector(".counter-card__name")?.textContent.trim() || "";
 
-                if (!window.confirm(`${window.trans("Stop counter")} «${name}»?`)) {
-                    return;
-                }
-
-                if (card) {
-                    self.runAction(card, card.dataset.stopUrl, stopBtn);
-                }
+                window.appConfirm({
+                    title: window.trans("Stop counter"),
+                    message: `${window.trans("Stop counter")} «${name}»?`,
+                    confirmText: window.trans("Stop"),
+                    tone: "danger",
+                }).then((ok) => {
+                    if (ok && card) {
+                        self.runAction(card, card.dataset.stopUrl, stopBtn);
+                    }
+                });
                 return;
             }
 

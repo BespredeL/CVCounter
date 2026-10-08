@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ trans('Annotate') }} — {{ dataset.display_name }}{% endblock %}
+
+{% block body_class %}annotator-body{% endblock %}
+{% block shell_class %}annotator-shell{% endblock %}
+
+{% block header %}
+    {% with page_title=trans('Annotate'), page_subtitle=(dataset.display_name or dataset.name) %}
+        {% include 'partials/page_header.html' %}
+    {% endwith %}
+{% endblock %}
+
+{% block breadcrumb %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">{{ trans('Home') }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('datasets.datasets_index') }}">{{ trans('Datasets') }}</a>
+            </li>
+            <li class="breadcrumb-item"><a
+                    href="{{ url_for('datasets.dataset_detail', name=dataset.name) }}">{{ dataset.name }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ trans('Annotate') }}</li>
+        </ol>
+    </nav>
+{% endblock %}
+
+{% block content %}
+    <div class="annotator page-content"
+         id="dataset-annotator"
+         data-name="{{ dataset.name }}"
+         data-task="{{ dataset.task }}"
+         data-classes='{{ dataset.classes|tojson }}'
+         data-attributes='{{ dataset.attributes|tojson }}'
+         data-keypoints='{{ dataset.keypoints_schema|tojson }}'
+         data-current="{{ current_image or '' }}"
+         data-images='{{ images|map(attribute="name")|list|tojson }}'
+         data-class-id-map='{{ class_id_map|tojson }}'
+         data-detail-url="{{ url_for('datasets.dataset_detail', name=dataset.name) }}">
+
+        <div class="annotator__toolbar cv-card">
+            <div class="annotator__toolbar-row">
+                <div class="btn-group btn-group-sm" role="group" aria-label="{{ trans('frames') }}">
+                    <button type="button" class="btn btn-outline-secondary" id="ann-prev"
+                            title="A · {{ trans('Previous') }}">‹
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" id="ann-next"
+                            title="D · {{ trans('Next') }}">›
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" id="ann-skip"
+                            title="Space">{{ trans('Skip') }}</button>
+                </div>
+
+                <div class="btn-group btn-group-sm" role="group" aria-label="{{ trans('Select') }}">
+                    <button type="button" class="btn btn-outline-primary active" id="ann-mode-select"
+                            data-mode="select">{{ trans('Select') }}</button>
+                    <button type="button" class="btn btn-outline-primary" id="ann-mode-rect" data-mode="rect"
+                            title="W">{{ trans('Box') }}</button>
+                    {% if dataset.task in ['segment', 'detect'] %}
+                        <button type="button" class="btn btn-outline-primary" id="ann-mode-poly"
+                                data-mode="poly">{{ trans('Polygon') }}</button>
+                    {% endif %}
+                </div>
+
+                <select class="form-select form-select-sm annotator__class-select" id="ann-class"
+                        aria-label="{{ trans('Classes') }}"
+                        title="{{ trans('Active class for new shapes. Keys 1–9 switch class.') }}"></select>
+                <input type="number" class="form-control form-control-sm annotator__track-input" id="ann-track-id"
+                       placeholder="{{ trans('Track ID') }}"
+                       title="{{ trans('Same ID links one object across frames for interpolate.') }}"
+                       aria-label="{{ trans('Track ID') }}">
+
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-secondary" id="ann-copy-prev"
+                            title="{{ trans('Copy shapes from the previous image in the list.') }}">{{ trans('Copy prev') }}</button>
+                    <button type="button" class="btn btn-outline-secondary" id="ann-interpolate"
+                            title="{{ trans('Mark start frame, open end frame with the same Track ID, then interpolate boxes between them.') }}">{{ trans('Interpolate track') }}</button>
+                </div>
+
+                <div class="annotator__zoom btn-group btn-group-sm" role="group" aria-label="{{ trans('Zoom') }}">
+                    <button type="button" class="btn btn-outline-secondary" id="ann-zoom-out" title="−">−</button>
+                    <button type="button" class="btn btn-outline-secondary annotator__zoom-label" id="ann-zoom-label"
+                            title="{{ trans('Fit') }}">100%
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" id="ann-zoom-in" title="+">+</button>
+                    <button type="button" class="btn btn-outline-secondary" id="ann-zoom-fit"
+                            title="{{ trans('Fit') }}">{{ trans('Fit') }}</button>
+                </div>
+
+                <div class="annotator__toolbar-actions">
+                    <button type="button" class="btn btn-sm btn-outline-success" id="ann-autolabel"
+                            title="Ctrl+A · {{ trans('Run Auto-label on this image only (uses model from dataset settings).') }}">{{ trans('Auto-label') }}</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" id="ann-delete"
+                            title="Del · {{ trans('Delete the selected shape, not the image.') }}">{{ trans('Delete shape') }}</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" id="ann-delete-image"
+                            title="{{ trans('Permanently delete this image and its annotations.') }}">{{ trans('Delete image') }}</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="ann-save"
+                            title="Ctrl+S">{{ trans('Save') }}</button>
+                    <a class="btn btn-sm btn-outline-secondary"
+                       href="{{ url_for('datasets.dataset_detail', name=dataset.name) }}"
+                       title="{{ trans('Back to dataset page') }}">{{ trans('Open') }}</a>
+                </div>
+            </div>
+            <div class="annotator__status-bar">
+                <span class="annotator__index" id="ann-index">—</span>
+                <span class="annotator__filename text-truncate" id="ann-filename"></span>
+                <span class="badge rounded-pill text-bg-secondary" id="ann-status">{{ trans('Ready') }}</span>
+            </div>
+        </div>
+
+        <div class="annotator__workspace">
+            <aside class="annotator__sidebar annotator__sidebar--left">
+                <div class="cv-card annotator__queue-card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center gap-2">
+                        <span>{{ trans('Images') }}</span>
+                        <select class="form-select form-select-sm" style="width:auto;max-width:7.5rem" id="ann-filter"
+                                aria-label="{{ trans('Filter') }}"
+                                title="{{ trans('Filter the queue queue by annotation status.') }}">
+                            <option value="all">{{ trans('All') }}</option>
+                            <option value="unlabeled" selected>{{ trans('Unlabeled') }}</option>
+                            <option value="labeled">{{ trans('Labeled') }}</option>
+                        </select>
+                    </div>
+                    <div class="list-group list-group-flush annotator__queue" id="ann-queue" role="listbox"
+                         aria-label="{{ trans('Images') }}"></div>
+                </div>
+            </aside>
+
+            <div class="annotator__stage cv-card">
+                <div class="annotator__canvas-wrap" id="ann-canvas-wrap">
+                    <img id="ann-image" class="annotator__frame" alt="" draggable="false" hidden>
+                    <canvas id="ann-canvas" class="annotator__canvas"></canvas>
+                    <div class="annotator__loading" id="ann-loading">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <span class="ms-2">{{ trans('Loading…') }}</span>
+                    </div>
+                    <div class="annotator__empty d-none" id="ann-empty">{{ trans('No images') }}</div>
+                </div>
+            </div>
+
+            <aside class="annotator__sidebar annotator__sidebar--right">
+                <div class="cv-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>{{ trans('Shapes') }}</span>
+                        <span class="badge text-bg-dark" id="ann-shape-count">0</span>
+                    </div>
+                    <div class="list-group list-group-flush annotator__shapes" id="ann-shapes"></div>
+                </div>
+
+                <div class="cv-card">
+                    <div class="card-header">{{ trans('Attributes') }}</div>
+                    <div class="card-body" id="ann-attrs">
+                        <div class="small text-body-secondary">{{ trans('Select a shape') }}</div>
+                    </div>
+                </div>
+
+                <div class="cv-card {% if dataset.task != 'classify' %}d-none{% endif %}" id="ann-classify-panel">
+                    <div class="card-header">{{ trans('Image label') }}</div>
+                    <div class="card-body">
+                        <select class="form-select form-select-sm" id="ann-image-label"
+                                aria-label="{{ trans('Image label') }}"></select>
+                    </div>
+                </div>
+
+                <div class="annotator__hotkeys text-body-secondary mb-0">
+                    <div class="mb-3">
+                        <kbd>A</kbd> / <kbd>D</kbd> - {{ trans('frames') }}<br>
+                        <kbd>W</kbd> - {{ trans('Box') }}<br>
+                        <kbd>1</kbd> – <kbd>9</kbd> - {{ trans('class') }}<br>
+                    </div>
+
+                    <div class="mb-3">
+                        <kbd>Del</kbd> - {{ trans('Delete shape') }}<br>
+                        <kbd>Space</kbd> - {{ trans('Skip') }}<br>
+                        <kbd>Ctrl</kbd> + <kbd>A</kbd> - {{ trans('Auto-label') }}<br>
+                        <kbd>Ctrl</kbd> + <kbd>S</kbd> - {{ trans('Save') }}<br>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ trans('Wheel') }} - {{ trans('Zoom') }}<br>
+                        {{ trans('RMB pan') }}<br>
+                        {{ trans('Track ID + Interpolate for multi-frame boxes') }}
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+{% endblock %}
+
+{% block footer_assets %}
+    <script src="{{ url_for('static', filename='assets/js/dataset-annotator.js') }}"></script>
+{% endblock %}

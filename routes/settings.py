@@ -3,7 +3,7 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 03.12.2025
-# Updated: 28.07.2026
+# Updated: 29.07.2026
 # Website: https://bespredel.name
 
 from flask import Blueprint, Response, flash, redirect, render_template, request, url_for
@@ -99,7 +99,12 @@ def system_info() -> str:
 @settings_bp.route('/settings/telemetry/send', methods=['POST'])
 @login_required
 def telemetry_send():
-    """Queue a manual telemetry diagnostic send."""
+    """
+    Queue a manual telemetry diagnostic send.
+    
+    Returns:
+        Redirect to the system info page
+    """
     ok, message = get_telemetry().request_manual_send()
     if ok:
         flash(translate('Telemetry send queued'))
@@ -111,7 +116,12 @@ def telemetry_send():
 @settings_bp.route('/settings/telemetry/download')
 @login_required
 def telemetry_download():
-    """Download a local diagnostics JSON report."""
+    """
+    Download a local diagnostics JSON report.
+    
+    Returns:
+        Response: JSON payload
+    """
     payload = get_telemetry().export_json_bytes()
     return Response(
         payload,

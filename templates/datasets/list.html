@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ trans('Datasets') }}{% endblock %}
+
+{% block header %}
+    {% with page_title=trans('Datasets') %}
+        {% include 'partials/page_header.html' %}
+    {% endwith %}
+{% endblock %}
+
+{% block breadcrumb %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">{{ trans('Home') }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ trans('Datasets') }}</li>
+        </ol>
+    </nav>
+{% endblock %}
+
+{% block content %}
+    {% include 'partials/inner_page_nav.html' %}
+
+    <div class="page-content datasets-hub" id="datasets-page"
+         data-create-url="{{ url_for('datasets.api_create') }}">
+        <div class="datasets-hub__intro d-flex flex-wrap justify-content-between align-items-start gap-3">
+            <div class="min-w-0">
+                <p class="text-body-secondary mb-1">{{ trans('Create, import and annotate datasets for model training.') }}</p>
+                <p class="dataset-hint mb-0">{{ trans('Typical flow: create dataset → import frames → annotate → train → apply weights to a counter.') }}</p>
+            </div>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createDatasetModal">
+                {{ trans('New dataset') }}
+            </button>
+        </div>
+
+        <div class="row g-3" id="datasets-grid">
+            {% for ds in datasets %}
+                <div class="col-12 col-md-6 col-xl-4">
+                    <article class="cv-card dataset-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                <div class="min-w-0">
+                                    <a class="dataset-card__title text-decoration-none"
+                                       href="{{ url_for('datasets.dataset_detail', name=ds.name) }}">
+                                        {{ ds.display_name or ds.name }}
+                                    </a>
+                                    <div class="dataset-card__meta">
+                                        <span class="badge rounded-pill text-bg-dark">{{ ds.task }}</span>
+                                        <span class="text-body-secondary">{{ ds.name }}</span>
+                                    </div>
+                                </div>
+                                <span class="dataset-card__pct" title="{{ trans('Labeled') }}">{{ ds.labeled_pct }}%</span>
+                            </div>
+
+                            <div class="progress dataset-card__progress mb-3" role="progressbar"
+                                 aria-valuenow="{{ ds.labeled_pct }}" aria-valuemin="0" aria-valuemax="100">
+                                <div class="progress-bar" style="width: {{ ds.labeled_pct }}%"></div>
+                            </div>
+
+                            <div class="dataset-card__stats">
+                                <div><span class="dataset-card__stat-val">{{ ds.total }}</span><span class="dataset-card__stat-lbl">{{ trans('Images') }}</span></div>
+                                <div><span class="dataset-card__stat-val">{{ ds.labeled }}</span><span class="dataset-card__stat-lbl">{{ trans('Labeled') }}</span></div>
+                                <div><span class="dataset-card__stat-val">{{ ds.unlabeled }}</span><span class="dataset-card__stat-lbl">{{ trans('Unlabeled') }}</span></div>
+                            </div>
+
+                            <div class="dataset-card__classes text-truncate" title="{{ (ds.classes or [])|join(', ') }}">
+                                {{ trans('Classes') }}: {{ (ds.classes or [])|join(', ') or '—' }}
+                            </div>
+                        </div>
+                        <div class="card-footer dataset-card__footer">
+                            <a class="btn btn-sm btn-outline-primary"
+                               href="{{ url_for('datasets.dataset_detail', name=ds.name) }}">{{ trans('Open') }}</a>
+                            <a class="btn btn-sm btn-primary"
+                               href="{{ url_for('datasets.dataset_annotate', name=ds.name) }}">{{ trans('Annotate') }}</a>
+                        </div>
+                    </article>
+                </div>
+            {% else %}
+                <div class="col-12">
+                    <div class="cv-card datasets-empty">
+                        <div class="card-body text-center py-5">
+                            <p class="text-body-secondary mb-3">{{ trans('No datasets yet. Create one to get started.') }}</p>
+                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createDatasetModal">
+                                {{ trans('New dataset') }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="modal fade" id="createDatasetModal" tabindex="-1" aria-labelledby="createDatasetModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form class="modal-content" id="create-dataset-form">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createDatasetModalLabel">{{ trans('New dataset') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ trans('Cancel') }}"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label" for="ds-name">{{ trans('Name') }}</label>
+                        <input class="form-control" id="ds-name" name="name" required maxlength="64"
+                               autocomplete="off" placeholder="road-cam">
+                        <div class="form-text">{{ trans('Short folder id: letters, digits, dash. Used in paths and URLs.') }}</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="ds-classes">{{ trans('Classes') }}</label>
+                        <input class="form-control" id="ds-classes" name="classes" value="object"
+                               placeholder="car, truck, person">
+                        <div class="form-text">{{ trans('Comma-separated names. You can load them later from an Auto-label model.') }}</div>
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label" for="ds-task">{{ trans('Task') }}</label>
+                        <select class="form-select" id="ds-task" name="task">
+                            {% for t in tasks %}
+                                <option value="{{ t }}" {% if t == 'detect' %}selected{% endif %}>{{ t }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">{{ trans('detect = boxes, segment = polygons, classify = whole image, pose = keypoints.') }}</div>
+                    </div>
+                    <div class="text-danger small mt-2 d-none" id="create-dataset-error" role="alert"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ trans('Cancel') }}</button>
+                    <button type="submit" class="btn btn-primary" id="create-dataset-submit">{{ trans('Create') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block footer_assets %}
+    <script src="{{ url_for('static', filename='assets/js/datasets.js') }}"></script>
+{% endblock %}

@@ -590,6 +590,21 @@
                             <td class="align-middle">
                             <span class="btn toolbar-btn disabled">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                     class="bi bi-box-arrow-in-right"
+                                     viewBox="0 0 16 16" aria-hidden="true">
+                                    <path fill-rule="evenodd"
+                                          d="M6 3.5a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-2a.5.5 0 0 0-1 0v2A1.5 1.5 0 0 0 6.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-8A1.5 1.5 0 0 0 5 3.5v2a.5.5 0 0 0 1 0v-2a.5.5 0 0 1 .5-.5z"/>
+                                    <path fill-rule="evenodd"
+                                          d="M11.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5H1.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/>
+                                </svg>
+                            </span>
+                            </td>
+                            <td>{{ trans('Sign in with an account.') }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">
+                            <span class="btn toolbar-btn disabled">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                                      class="bi bi-arrows-angle-expand" viewBox="0 0 16 16">
                                     <path fill-rule="evenodd"
                                           d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707m4.344-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707"/></svg>
@@ -618,6 +633,94 @@
                             </span>
                             </td>
                             <td>{{ trans('Save capture to disk') }} ({{ trans('Video') }})</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="col-12 border-bottom mb-3 pb-3">
+                <h2 class="section-block__title">{{ trans('Datasets') }}</h2>
+                <p class="text-muted">{{ trans('Create, import and annotate datasets for model training.') }}</p>
+                <div class="table-responsive">
+                    <table class="table table-bordered mb-0">
+                        <thead class="table-dark">
+                        <tr>
+                            <th scope="col" class="w-50">{{ trans('Element') }}</th>
+                            <th scope="col" class="w-50">{{ trans('Description') }}</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            <td class="align-middle">
+                                <a href="{{ url_for('datasets.datasets_index') }}">/datasets</a>
+                            </td>
+                            <td>{{ trans('Help datasets index') }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">
+                                <div class="d-flex flex-wrap gap-1">
+                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('From cameras') }}</span>
+                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('Upload files / ZIP') }}</span>
+                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('From recordings') }}</span>
+                                </div>
+                            </td>
+                            <td>{{ trans('Help datasets import') }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">
+                                <div class="d-flex flex-wrap gap-1">
+                                    <span class="btn btn-outline-primary btn-sm">{{ trans('Box') }}</span>
+                                    <span class="btn btn-outline-primary btn-sm">{{ trans('Polygon') }}</span>
+                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('Track ID') }}</span>
+                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('Attributes') }}</span>
+                                </div>
+                            </td>
+                            <td>{{ trans('Help datasets annotate') }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">
+                                <div class="d-flex flex-wrap gap-1">
+                                    <span class="btn btn-primary btn-sm">{{ trans('Training') }}</span>
+                                    <span class="btn btn-outline-success btn-sm">{{ trans('Apply weights to counter') }}</span>
+                                </div>
+                            </td>
+                            <td>{{ trans('Help datasets train') }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">
+                                <code>dataset_create.path</code>
+                            </td>
+                            <td>{{ trans('Help datasets path') }}</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="col-12 border-bottom mb-3 pb-3">
+                <h2 class="section-block__title">{{ trans('Recording') }}</h2>
+                <p class="text-muted">{{ trans('Help recording intro') }}</p>
+                <div class="table-responsive">
+                    <table class="table table-bordered mb-0">
+                        <thead class="table-dark">
+                        <tr>
+                            <th scope="col" class="w-50">{{ trans('Element') }}</th>
+                            <th scope="col" class="w-50">{{ trans('Description') }}</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            <td class="align-middle"><code>recording.enable</code></td>
+                            <td>{{ trans('Help recording enable') }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle"><code>recording.idle_timeout</code></td>
+                            <td>{{ trans('Help recording idle') }}</td>
+                        </tr>
+                        <tr>
+                            <td class="align-middle">{{ trans('Saved media') }}</td>
+                            <td>{{ trans('Help saved media') }}</td>
                         </tr>
                         </tbody>
                     </table>
