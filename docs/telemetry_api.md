@@ -26,7 +26,7 @@ Automatic sending is **off** by default (`telemetry.enabled: false`). Manual sen
   "sent_at": "2026-07-26T06:00:00Z",
   "install_id": "uuid",
   "app_version": "5.7.0",
-  "mode": "auto|manual",
+  "mode": "auto|manual|replay",
   "system": {
     "python_version": "3.11.x",
     "platform": "...",
@@ -38,6 +38,9 @@ Automatic sending is **off** by default (`telemetry.enabled: false`). Manual sen
     "app_version": "5.7.0",
     "py_torch_version": "...",
     "py_torch_cuda_available": true,
+    "openvino_version": "...",
+    "ram_total_mb": 16384,
+    "ram_available_mb": 8192,
     "gpu_name": "...",
     "counters_count": 3,
     "counters_running": 1,
@@ -48,7 +51,7 @@ Automatic sending is **off** by default (`telemetry.enabled: false`). Manual sen
       "id": "uuid",
       "ts": "2026-07-26T06:00:00Z",
       "type": "usage|error",
-      "name": "app_started|counter_started|stream_lost|uncaught_exception|...",
+      "name": "app_started|counter_started|stream_lost|uncaught_exception|logged_error|...",
       "props": {},
       "error": {
         "type": "ValueError",
@@ -77,17 +80,18 @@ Automatic sending is **off** by default (`telemetry.enabled: false`). Manual sen
 | `report_created` | usage | Count/report saved |
 | `stream_lost` | usage | Camera frame/reconnect failure (rate-limited) |
 | `stream_reconnected` | usage | Camera restored (rate-limited) |
-| `uncaught_exception` | error | Logged exception / Flask 500 |
+| `uncaught_exception` | error | Logged exception / Flask 500 / sys.exc_info |
+| `logged_error` | error | Unhandled logger.error message |
 
 ## Expected responses
 
 | Status | Client behavior |
 |--------|-----------------|
-| `200`-`299` (prefer `{"ok": true}`) | Success; batch discarded |
+| `200`-`299` (prefer `{"ok": true}`) | Success; batch discarded; replayed from `queue.jsonl` if backlog exists |
 | `400` / `401` / `413` | Treat as failure; may spill to local `queue.jsonl` |
-| `429` / `5xx` / network error | Failure; short timeout; backoff via next flush interval; spill optional |
+| `429` / `5xx` / network error | Failure; short timeout; backoff via next flush interval; spill to `queue.jsonl` |
 
-Client timeout defaults to `telemetry.timeout_sec` (5 seconds). Failed auto batches may append to `storage/telemetry/queue.jsonl` (capped size). Telemetry never raises into the detection loop.
+Client timeout defaults to `telemetry.timeout_sec` (5 seconds). Failed auto batches append to `storage/telemetry/queue.jsonl` (capped size) and are automatically replayed when the connection is restored. Telemetry maintains an in-memory ring buffer of recent events for manual export even when auto-reporting is disabled. Telemetry never raises into the detection loop.
 
 ## Privacy (client guarantees)
 

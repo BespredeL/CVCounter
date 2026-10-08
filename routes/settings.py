@@ -87,12 +87,14 @@ def system_info() -> str:
 
     telemetry = get_telemetry()
     sys_info = get_system_info()
+    telemetry_status = telemetry.get_queue_status()
     return render_template(
         'system_info.html',
         sys_info=sys_info,
         app_version=APP_VERSION,
         telemetry_enabled=telemetry.enabled,
-        telemetry_last_send=telemetry.get_last_send_status(),
+        telemetry_last_send=telemetry_status.get('last_send'),
+        telemetry_status=telemetry_status,
     )
 
 

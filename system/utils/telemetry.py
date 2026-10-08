@@ -3,17 +3,19 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 26.07.2026
-# Updated: 26.07.2026
+# Updated: 08.10.2026
 # Website: https://bespredel.name
 
 from __future__ import annotations
 
+from collections import deque
 import hashlib
 import hmac
 import json
 import os
 import platform
 import queue
+import sys
 import threading
 import time
 import traceback
@@ -84,7 +86,7 @@ def _message_hash(message: str) -> str:
 
 class TelemetryManager:
     """
-    Singleton fire-and-forget telemetry manager.
+    Singleton fire-and-forget telemetry and diagnostics manager.
     """
 
     _instance: Optional['TelemetryManager'] = None
@@ -120,6 +122,7 @@ class TelemetryManager:
         self._dedup: dict[str, float] = {}
         self._dropped = 0
         self._pending: list[dict[str, Any]] = []
+        self._recent_events: deque[dict[str, Any]] = deque(maxlen=100)
         self._system_cache: Optional[dict[str, Any]] = None
         self._system_cache_at = 0.0
         self._runtime_context: Optional[dict[str, Any]] = None
@@ -165,8 +168,6 @@ class TelemetryManager:
 
         if self._enabled:
             self._ensure_worker()
-        elif self._worker is not None and self._worker.is_alive():
-            pass
 
     def set_runtime_context(self, runtime_context: Optional[dict[str, Any]]) -> None:
         """
@@ -204,7 +205,7 @@ class TelemetryManager:
 
     def track(self, event: str, props: Optional[dict[str, Any]] = None) -> None:
         """
-        Enqueue a usage event (no-op when disabled or send_usage=false).
+        Enqueue a usage event. Always keeps a copy in local diagnostic buffer.
         
         Args:
             event: The event name.
@@ -213,16 +214,25 @@ class TelemetryManager:
         Returns:
             None
         """
-        if not self._enabled or not self._send_usage:
-            return
         name = str(event or '').strip()
         if not name:
             return
-        location = None
-        if props and 'location' in props:
-            location = str(props.get('location'))
-        if not self._allow_dedup(f'usage:{name}:{location or ""}'):
+
+        location = str(props.get('location') or '') if props else ''
+        reason = str(props.get('reason') or '') if props else ''
+
+        # Rate-limiting: high-frequency stream reconnect/loss uses a short 10s window;
+        # other usage events use a 1s debounce to avoid rapid duplicate submissions.
+        if name in ('stream_lost', 'stream_reconnected'):
+            dedup_key = f'stream:{name}:{location}:{reason}'
+            dedup_window = 10.0
+        else:
+            dedup_key = f'usage:{name}:{location}'
+            dedup_window = 1.0
+
+        if not self._allow_dedup(dedup_key, window_sec=dedup_window):
             return
+
         item = {
             '_cmd': _CMD_EVENT,
             'id': str(uuid.uuid4()),
@@ -231,6 +241,15 @@ class TelemetryManager:
             'name': name,
             'props': dict(props) if props else {},
         }
+
+        # Keep recent event in memory for manual diagnostics even if auto is disabled
+        normalized = self._normalize_event(item)
+        with self._lock:
+            self._recent_events.append(normalized)
+
+        if not self._enabled or not self._send_usage:
+            return
+
         self._enqueue_command(item)
 
     def capture_exception(
@@ -240,41 +259,60 @@ class TelemetryManager:
             exc_info: Any = None,
     ) -> None:
         """
-        Enqueue an error event (no-op when disabled or send_errors=false).
+        Enqueue an error event. Always keeps a copy in local diagnostic buffer.
         
         Args:
-            exc: The exception.
-            tags: The tags.
-            exc_info: The exception info.
+            exc: The exception instance.
+            tags: Additional metadata tags.
+            exc_info: Exception tuple (type, val, tb) or True.
 
         Returns:
             None
         """
-        if not self._enabled or not self._send_errors:
-            return
         if self._logging_telemetry_error:
             return
 
         exc_type = ''
         message = ''
         stack = ''
-        if exc_info is not None:
+
+        resolved_exc_info = None
+        if exc_info is True or (exc_info is None and exc is None):
+            cur_sys = sys.exc_info()
+            if cur_sys[0] is not None:
+                resolved_exc_info = cur_sys
+        elif isinstance(exc_info, tuple) and len(exc_info) == 3 and exc_info[0] is not None:
+            resolved_exc_info = exc_info
+
+        if resolved_exc_info is not None:
+            cur_type, cur_val, cur_tb = resolved_exc_info
+            exc_type = getattr(cur_type, '__name__', str(cur_type))
+            message = str(cur_val) if cur_val is not None else ''
             try:
-                stack = ''.join(traceback.format_exception(*exc_info))
-                exc_type = getattr(exc_info[0], '__name__', str(exc_info[0]))
-                message = str(exc_info[1]) if exc_info[1] is not None else ''
+                stack = ''.join(traceback.format_exception(cur_type, cur_val, cur_tb))
             except Exception:
                 stack = traceback.format_exc()
         elif exc is not None:
             exc_type = type(exc).__name__
             message = str(exc)
-            stack = ''.join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+            try:
+                stack = ''.join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+            except Exception:
+                stack = traceback.format_exc()
         else:
             stack = traceback.format_exc()
+            if 'NoneType: None' in stack:
+                stack = ''
+            exc_type = 'Error'
             message = 'Exception occurred'
 
+        if not exc_type:
+            exc_type = 'Error'
+        if not message:
+            message = exc_type
+
         dedup_key = f'error:{exc_type}:{_message_hash(message)}'
-        if not self._allow_dedup(dedup_key):
+        if not self._allow_dedup(dedup_key, window_sec=float(self._error_dedup_sec)):
             return
 
         item = {
@@ -290,6 +328,62 @@ class TelemetryManager:
                 'stack': stack,
             },
         }
+
+        normalized = self._normalize_event(item)
+        with self._lock:
+            self._recent_events.append(normalized)
+
+        if not self._enabled or not self._send_errors:
+            return
+
+        self._enqueue_command(item)
+
+    def capture_error_message(
+            self,
+            message: str,
+            tags: Optional[dict[str, Any]] = None,
+    ) -> None:
+        """
+        Enqueue a non-exception error message (e.g. from logger.error).
+        
+        Args:
+            message: Error description.
+            tags: Optional metadata.
+            
+        Returns:
+            None
+        """
+        if self._logging_telemetry_error:
+            return
+        msg = str(message or '').strip()
+        if not msg:
+            return
+
+        dedup_key = f'error:logged_error:{_message_hash(msg)}'
+        if not self._allow_dedup(dedup_key, window_sec=float(self._error_dedup_sec)):
+            return
+
+        item = {
+            '_cmd': _CMD_EVENT,
+            'id': str(uuid.uuid4()),
+            'ts': _utc_now_iso(),
+            'type': 'error',
+            'name': 'logged_error',
+            'props': dict(tags) if tags else {},
+            'error': {
+                'type': 'LoggedError',
+                'message': msg,
+                'stack': '',
+            },
+        }
+
+        normalized = self._normalize_event(item)
+        with self._lock:
+            self._recent_events.append(normalized)
+
+        if not self._enabled or not self._send_errors:
+            return
+
         self._enqueue_command(item)
 
     def request_manual_send(self) -> tuple[bool, str]:
@@ -330,6 +424,7 @@ class TelemetryManager:
     def build_diagnostic_report(self, mode: str = 'manual') -> dict[str, Any]:
         """
         Build a diagnostic payload for download / manual send.
+        Prefers pending events if available, falls back to in-memory recent event buffer.
         
         Args:
             mode: The mode of the diagnostic report.
@@ -337,7 +432,11 @@ class TelemetryManager:
         Returns:
             dict[str, Any]: The diagnostic report.
         """
-        events = list(self._pending)
+        with self._lock:
+            if self._pending:
+                events = list(self._pending)
+            else:
+                events = list(self._recent_events)
         report = self._build_batch(events, mode=mode)
         return report
 
@@ -372,6 +471,38 @@ class TelemetryManager:
         except (OSError, ValueError, TypeError):
             return None
 
+    def get_queue_status(self) -> dict[str, Any]:
+        """
+        Return diagnostic status and queue statistics for UI.
+        
+        Returns:
+            dict[str, Any]: Metrics on in-memory and disk queues.
+        """
+        path = resolve_project_path(QUEUE_FILE) or QUEUE_FILE
+        disk_events_count = 0
+        disk_bytes = 0
+        try:
+            if os.path.isfile(path):
+                disk_bytes = os.path.getsize(path)
+                with open(path, 'r', encoding='utf-8') as handle:
+                    disk_events_count = sum(1 for line in handle if line.strip())
+        except OSError:
+            pass
+
+        with self._lock:
+            pending_count = len(self._pending)
+            recent_count = len(self._recent_events)
+
+        return {
+            'enabled': self._enabled,
+            'pending_count': pending_count,
+            'recent_count': recent_count,
+            'disk_events_count': disk_events_count,
+            'disk_bytes': disk_bytes,
+            'dropped_count': self._dropped,
+            'last_send': self.get_last_send_status(),
+        }
+
     @property
     def enabled(self) -> bool:
         """
@@ -402,25 +533,27 @@ class TelemetryManager:
     # Internals
     # ------------------------------------------------------------------
 
-    def _allow_dedup(self, key: str) -> bool:
+    def _allow_dedup(self, key: str, window_sec: Optional[float] = None) -> bool:
         """
-        Check if a deduplication key is allowed.
+        Check if a deduplication key is allowed within the given time window.
         
         Args:
             key: The deduplication key.
+            window_sec: Deduplication window in seconds. Defaults to _error_dedup_sec.
             
         Returns:
-            bool: True if the deduplication key is allowed, False otherwise.
+            bool: True if allowed, False if throttled.
         """
         now = time.monotonic()
+        effective_window = float(self._error_dedup_sec) if window_sec is None else float(window_sec)
         with self._lock:
             last = self._dedup.get(key)
-            if last is not None and (now - last) < self._error_dedup_sec:
+            if last is not None and (now - last) < effective_window:
                 return False
             self._dedup[key] = now
 
             if len(self._dedup) > 500:
-                cutoff = now - self._error_dedup_sec
+                cutoff = now - max(effective_window, float(self._error_dedup_sec))
                 self._dedup = {k: v for k, v in self._dedup.items() if v >= cutoff}
 
             return True
@@ -478,7 +611,7 @@ class TelemetryManager:
 
     def _run_manual_oneshot(self) -> None:
         """
-        Run a manual oneshot.
+        Run a manual oneshot send when worker is not running.
         
         Args:
             None
@@ -525,7 +658,9 @@ class TelemetryManager:
                     self._flush_pending(mode='auto')
                     last_flush = time.monotonic()
                 elif cmd == _CMD_EVENT:
-                    self._pending.append(self._normalize_event(item))
+                    normalized = self._normalize_event(item)
+                    with self._lock:
+                        self._pending.append(normalized)
                     if len(self._pending) >= self._max_batch_size:
                         self._flush_pending(mode='auto')
                         last_flush = time.monotonic()
@@ -535,7 +670,17 @@ class TelemetryManager:
                 last_flush = time.monotonic()
 
             if shutdown_requested:
-                self._flush_pending(mode='auto')
+                # Shorten timeout for final flush so shutdown does not block
+                old_timeout = self._timeout_sec
+                self._timeout_sec = min(2, self._timeout_sec)
+                try:
+                    self._flush_pending(mode='auto', max_batches=2)
+                finally:
+                    self._timeout_sec = old_timeout
+                with self._lock:
+                    if self._pending:
+                        self._spill_events(self._pending)
+                        self._pending.clear()
                 self._stop.set()
                 break
 
@@ -576,33 +721,100 @@ class TelemetryManager:
         Returns:
             None
         """
-        report = self._build_batch(list(self._pending), mode='manual')
-        self._pending.clear()
+        report = self.build_diagnostic_report(mode='manual')
+        with self._lock:
+            self._pending.clear()
         ok, message, status_code = self._post_batch(report)
         self._write_last_send(ok=ok, message=message, status_code=status_code, mode='manual')
 
-    def _flush_pending(self, mode: str = 'auto') -> None:
+    def _flush_pending(self, mode: str = 'auto', max_batches: int = 5) -> None:
         """
-        Flush pending events.
+        Flush pending events in batches.
         
         Args:
-            mode: The mode of the flush.
+            mode: The mode of the flush ('auto', 'manual').
+            max_batches: Maximum number of batches to send in one run.
             
         Returns:
             None
         """
-        if not self._pending:
+        with self._lock:
+            if not self._pending:
+                return
+            if mode == 'auto' and not self._enabled:
+                self._pending.clear()
+                return
+
+        batches_sent = 0
+        while batches_sent < max_batches:
+            with self._lock:
+                if not self._pending:
+                    break
+                batch_events = self._pending[: self._max_batch_size]
+                self._pending = self._pending[self._max_batch_size:]
+
+            report = self._build_batch(batch_events, mode=mode)
+            ok, message, status_code = self._post_batch(report)
+            self._write_last_send(ok=ok, message=message, status_code=status_code, mode=mode)
+            batches_sent += 1
+
+            if not ok:
+                self._spill_events(batch_events)
+                break
+            else:
+                # Connection is healthy, replay any previously spilled events
+                self._replay_spilled_events()
+
+    def _replay_spilled_events(self) -> None:
+        """
+        Replay events previously spilled to QUEUE_FILE when network was down.
+        """
+        path = resolve_project_path(QUEUE_FILE) or QUEUE_FILE
+        try:
+            if not os.path.isfile(path) or os.path.getsize(path) == 0:
+                return
+            with open(path, 'r', encoding='utf-8') as handle:
+                lines = handle.readlines()
+        except OSError:
             return
-        if mode == 'auto' and not self._enabled:
-            self._pending.clear()
+
+        if not lines:
             return
-        batch_events = self._pending[: self._max_batch_size]
-        self._pending = self._pending[self._max_batch_size:]
-        report = self._build_batch(batch_events, mode=mode)
+
+        replayed_events: list[dict[str, Any]] = []
+        remaining_lines: list[str] = []
+        for line in lines:
+            line_str = line.strip()
+            if not line_str:
+                continue
+            if len(replayed_events) < self._max_batch_size:
+                try:
+                    replayed_events.append(json.loads(line_str))
+                except Exception:
+                    continue
+            else:
+                remaining_lines.append(line)
+
+        if not replayed_events:
+            try:
+                with open(path, 'w', encoding='utf-8'):
+                    pass
+            except OSError:
+                pass
+            return
+
+        report = self._build_batch(replayed_events, mode='replay')
         ok, message, status_code = self._post_batch(report)
-        self._write_last_send(ok=ok, message=message, status_code=status_code, mode=mode)
-        if not ok:
-            self._spill_events(batch_events)
+        if ok:
+            try:
+                ensure_parent_dir(path)
+                tmp_path = f"{path}.tmp"
+                with open(tmp_path, 'w', encoding='utf-8') as handle:
+                    for rem in remaining_lines:
+                        handle.write(rem if rem.endswith('\n') else rem + '\n')
+                os.replace(tmp_path, path)
+            except OSError:
+                pass
 
     def _build_batch(self, events: list[dict[str, Any]], mode: str) -> dict[str, Any]:
         """
@@ -648,25 +860,28 @@ class TelemetryManager:
                 self._system_cache = dict(fingerprint)
                 self._system_cache_at = now
             context = self._runtime_context
+
         counters_count = 0
         counters_running = 0
         backends: list[str] = []
         if context:
             config = context.get('config')
-            detections = {}
             if config is not None:
                 try:
                     detections = config.get('detections', {}) or {}
+                    counters_count = len(detections)
                 except Exception:
-                    detections = {}
-            try:
-                counters_count = len(detections)
-            except Exception:
-                counters_count = 0
+                    counters_count = 0
             object_counters = context.get('object_counters') or {}
+            object_counters_lock = context.get('object_counters_lock')
             try:
-                counters_running = len(object_counters)
-                for counter in object_counters.values():
+                if object_counters_lock:
+                    with object_counters_lock:
+                        counters_list = list(object_counters.values())
+                else:
+                    counters_list = list(object_counters.values())
+                counters_running = len(counters_list)
+                for counter in counters_list:
                     model_type = getattr(counter, 'model_type', None)
                     if model_type and model_type not in backends:
                         backends.append(str(model_type))
@@ -697,6 +912,7 @@ class TelemetryManager:
             'cpu_count': os.cpu_count(),
             'app_version': APP_VERSION,
         }
+        # PyTorch / CUDA detection
         try:
             import torch
             info['py_torch_version'] = getattr(torch, '__version__', None)
@@ -711,6 +927,23 @@ class TelemetryManager:
         except Exception:
             info['py_torch_version'] = None
             info['py_torch_cuda_available'] = False
+
+        # OpenVINO detection
+        try:
+            import openvino
+            info['openvino_version'] = getattr(openvino, '__version__', None)
+        except Exception:
+            info['openvino_version'] = None
+
+        # System memory via psutil if available
+        try:
+            import psutil
+            mem = psutil.virtual_memory()
+            info['ram_total_mb'] = int(mem.total / (1024 * 1024))
+            info['ram_available_mb'] = int(mem.available / (1024 * 1024))
+        except Exception:
+            pass
+
         return info
 
     def _post_batch(self, report: dict[str, Any]) -> tuple[bool, str, Optional[int]]:
@@ -786,7 +1019,7 @@ class TelemetryManager:
             mode: str,
     ) -> None:
         """
-        Write the last send status.
+        Write the last send status atomically.
         
         Args:
             ok: Whether the last send was successful.
@@ -807,10 +1040,16 @@ class TelemetryManager:
         }
         try:
             ensure_parent_dir(path)
-            with open(path, 'w', encoding='utf-8') as handle:
+            tmp_path = f"{path}.tmp"
+            with open(tmp_path, 'w', encoding='utf-8') as handle:
                 json.dump(payload, handle, ensure_ascii=False, indent=2)
+            os.replace(tmp_path, path)
         except OSError:
-            pass
+            try:
+                with open(path, 'w', encoding='utf-8') as handle:
+                    json.dump(payload, handle, ensure_ascii=False, indent=2)
+            except OSError:
+                pass
 
     def _load_or_create_install_id(self) -> str:
         """

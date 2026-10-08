@@ -27,21 +27,44 @@
                 <p class="text-body-secondary small mb-2">
                     {{ trans('Telemetry privacy note') }}
                 </p>
-                <p class="small mb-3">
+                <p class="small mb-2">
                     <span class="text-body-secondary">{{ trans('App version') }}:</span>
-                    {{ app_version }}
+                    <strong>{{ app_version }}</strong>
                     &middot;
                     <span class="text-body-secondary">{{ trans('Automatic telemetry') }}:</span>
-                    {% if telemetry_enabled %}{{ trans('On') }}{% else %}{{ trans('Off') }}{% endif %}
+                    {% if telemetry_enabled %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle">{{ trans('On') }}</span>
+                    {% else %}
+                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">{{ trans('Off') }}</span>
+                    {% endif %}
+                    {% if telemetry_status %}
+                        &middot;
+                        <span class="text-body-secondary">{{ trans('Queue in memory') }}:</span>
+                        <span class="badge bg-body-tertiary text-body border">{{ telemetry_status.pending_count }}</span>
+                        {% if telemetry_status.disk_events_count > 0 %}
+                            &middot;
+                            <span class="text-body-secondary">{{ trans('Offline queue (disk)') }}:</span>
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">{{ telemetry_status.disk_events_count }}</span>
+                        {% endif %}
+                        {% if telemetry_status.dropped_count > 0 %}
+                            &middot;
+                            <span class="text-body-secondary">{{ trans('Dropped events') }}:</span>
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">{{ telemetry_status.dropped_count }}</span>
+                        {% endif %}
+                    {% endif %}
                 </p>
                 {% if telemetry_last_send %}
                     <p class="small mb-3">
                         <span class="text-body-secondary">{{ trans('Last telemetry send') }}:</span>
                         {{ telemetry_last_send.sent_at | default('—') }}
                         —
-                        {% if telemetry_last_send.ok %}{{ trans('Success') }}{% else %}{{ trans('Failed') }}{% endif %}
-                        {% if telemetry_last_send.message %}
-                            ({{ telemetry_last_send.message }})
+                        {% if telemetry_last_send.ok %}
+                            <span class="text-success fw-semibold">{{ trans('Success') }}</span>
+                        {% else %}
+                            <span class="text-danger fw-semibold">{{ trans('Failed') }}</span>
+                        {% endif %}
+                        {% if telemetry_last_send.message and telemetry_last_send.message != 'ok' %}
+                            <span class="text-body-secondary">({{ telemetry_last_send.message }})</span>
                         {% endif %}
                     </p>
                 {% endif %}

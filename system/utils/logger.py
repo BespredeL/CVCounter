@@ -9,6 +9,7 @@
 import logging
 from logging.handlers import RotatingFileHandler
 import os
+import sys
 import traceback
 from typing import Any, Optional
 
@@ -143,6 +144,14 @@ class Logger:
         """
         self._logger.error(msg)
         self._flush_handlers()
+        if isinstance(msg, Exception):
+            self._notify_telemetry(exc=msg)
+        else:
+            cur_exc = sys.exc_info()
+            if cur_exc[0] is not None:
+                self._notify_telemetry(exc_info=cur_exc)
+            else:
+                self._notify_telemetry_error(str(msg))
 
     def warning(self, msg: str) -> None:
         """
@@ -190,13 +199,14 @@ class Logger:
         Returns:
             None
         """
-        if exc_info is None:
-            exception_info = traceback.format_exc()
+        resolved_exc_info = exc_info if exc_info is not None else sys.exc_info()
+        if resolved_exc_info and resolved_exc_info[0] is not None:
+            exception_info = ''.join(traceback.format_exception(*resolved_exc_info))
         else:
-            exception_info = ''.join(traceback.format_exception(*exc_info))
+            exception_info = traceback.format_exc()
         self._logger.error("Exception occurred:\n%s", exception_info)
         self._flush_handlers()
-        self._notify_telemetry(exc_info=exc_info)
+        self._notify_telemetry(exc_info=resolved_exc_info)
 
     def exception(self, msg: str, exc_info=None) -> None:
         """
@@ -209,26 +219,44 @@ class Logger:
         Returns:
             None
         """
+        resolved_exc_info = exc_info if exc_info is not None else sys.exc_info()
         if exc_info is None:
             self._logger.error(msg, exc_info=True)
         else:
             self._logger.error(msg, exc_info=exc_info)
         self._flush_handlers()
-        self._notify_telemetry(exc_info=exc_info)
+        self._notify_telemetry(exc_info=resolved_exc_info)
 
-    def _notify_telemetry(self, exc_info=None) -> None:
+    def _notify_telemetry(self, exc: Optional[BaseException] = None, exc_info=None) -> None:
         """
         Notify telemetry of an exception.
         
         Args:
-            exc_info: Optional[Tuple[Type[BaseException], BaseException, TracebackType]] - The exception to log.
+            exc: Optional[BaseException] - The exception to log.
+            exc_info: Optional exception tuple from sys.exc_info().
         
         Returns:
             None
         """
         try:
             from system.utils.telemetry import get_telemetry
-            get_telemetry().capture_exception(exc_info=exc_info)
+            get_telemetry().capture_exception(exc=exc, exc_info=exc_info)
+        except Exception:
+            pass
+
+    def _notify_telemetry_error(self, message: str) -> None:
+        """
+        Notify telemetry of a logged error message.
+        
+        Args:
+            message: str - The error message to log.
+            
+        Returns:
+            None
+        """
+        try:
+            from system.utils.telemetry import get_telemetry
+            get_telemetry().capture_error_message(message=message)
         except Exception:
             pass
 
