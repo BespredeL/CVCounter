@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
 
-{% block title %}#{{ counter.id }} - {{ location|striptags|title }}{% endblock %}
+{% block title %}#{{ counter.id }} — {{ (location|striptags|title) }}{% endblock %}
 
 {% block header %}
-    {% with page_title='#' ~ counter.id ~ ' - ' ~ (location|striptags|title) %}
+    {% with page_title='#' ~ counter.id ~ ' — ' ~ (location|striptags|title), page_subtitle=trans('Detailed count session report and statistics.') %}
         {% include 'partials/page_header.html' %}
     {% endwith %}
 {% endblock %}
@@ -11,15 +11,9 @@
 {% block breadcrumb %}
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item">
-                <a href="{{ url_for('main.index') }}">{{ trans('Home') }}</a>
-            </li>
-            <li class="breadcrumb-item">
-                <a href="{{ url_for('reports.reports') }}">{{ trans('Reports') }}</a>
-            </li>
-            <li class="breadcrumb-item">
-                <a href="{{ url_for('reports.report_list', location=location) }}">{{ location|striptags|title }}</a>
-            </li>
+            <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">{{ trans('Home') }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('reports.reports') }}">{{ trans('Reports') }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('reports.report_list', location=location) }}">{{ location|striptags|title }}</a></li>
             <li class="breadcrumb-item active" aria-current="page">#{{ counter.id }}</li>
         </ol>
     </nav>
@@ -28,111 +22,331 @@
 {% block content %}
     {% include 'partials/inner_page_nav.html' %}
 
-    <div class="page-content">
-        <div class="cv-card p-3 p-md-4 mb-4">
-            <h2 class="section-block__title">{{ trans('Primary information') }}</h2>
-            <div class="detail-list">
-                <div class="detail-list__row">
-                    <div class="detail-list__label">{{ trans('Location') }}</div>
-                    <div class="detail-list__value">{{ counter.location|striptags|title }}</div>
+    <div class="page-content reports-detail-page">
+        <!-- Top Action & Navigation Bar -->
+        <div class="cv-card p-3 mb-4 shadow-sm">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <!-- Left: Back & Context Badges -->
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <a href="{{ url_for('reports.report_list', location=location) }}"
+                       class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
+                       title="{{ trans('Back to reports') }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-arrow-left" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+                        </svg>
+                        <span>{{ trans('Back to list') }}</span>
+                    </a>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace fs-6">
+                        #{{ counter.id }}
+                    </span>
+                    <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace">
+                        {{ location }}
+                    </span>
+                    {% if counter.active %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle d-inline-flex align-items-center gap-1">
+                            <span class="reports-status-dot bg-success"></span>
+                            <span>{{ trans('Running') }}</span>
+                        </span>
+                    {% else %}
+                        <span class="badge bg-secondary-subtle text-body-secondary border border-secondary-subtle d-inline-flex align-items-center gap-1">
+                            <span class="reports-status-dot bg-secondary"></span>
+                            <span>{{ trans('Completed') }}</span>
+                        </span>
+                    {% endif %}
                 </div>
-                <div class="detail-list__row">
-                    <div class="detail-list__label">{{ trans('Source') }}</div>
-                    <div class="detail-list__value">{{ counter.source_count }}</div>
-                </div>
-                <div class="detail-list__row">
-                    <div class="detail-list__label">{{ trans('Defect') }}</div>
-                    <div class="detail-list__value">{{ counter.defects_count }}</div>
-                </div>
-                <div class="detail-list__row">
-                    <div class="detail-list__label">{{ trans('Correct') }}</div>
-                    <div class="detail-list__value">{{ counter.correct_count }}</div>
-                </div>
-                <div class="detail-list__row">
-                    <div class="detail-list__label">{{ trans('Total') }}</div>
-                    <div class="detail-list__value fw-semibold fs-5">{{ counter.total_count }}</div>
-                </div>
-                <div class="detail-list__row">
-                    <div class="detail-list__label">{{ trans('Created') }}</div>
-                    <div class="detail-list__value">{{ counter.created_at.strftime('%d.%m.%Y %H:%M:%S') }}</div>
-                </div>
-                <div class="detail-list__row">
-                    <div class="detail-list__label">{{ trans('Updated') }}</div>
-                    <div class="detail-list__value">{{ counter.updated_at.strftime('%d.%m.%Y %H:%M:%S') }}</div>
+
+                <!-- Right: Adjacent Reports Navigation & Actions -->
+                <div class="d-flex align-items-center gap-2 ms-auto">
+                    <div class="btn-group btn-group-sm" role="group">
+                        {% if prev_report_id %}
+                            <a href="{{ url_for('reports.report_show', location=location, report_id=prev_report_id) }}"
+                               class="btn btn-outline-secondary d-inline-flex align-items-center gap-1"
+                               title="{{ trans('Previous report') }} (#{{ prev_report_id }})">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-chevron-left" viewBox="0 0 16 16">
+                                    <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
+                                </svg>
+                                <span class="d-none d-sm-inline">#{{ prev_report_id }}</span>
+                            </a>
+                        {% endif %}
+                        {% if next_report_id %}
+                            <a href="{{ url_for('reports.report_show', location=location, report_id=next_report_id) }}"
+                               class="btn btn-outline-secondary d-inline-flex align-items-center gap-1"
+                               title="{{ trans('Next report') }} (#{{ next_report_id }})">
+                                <span class="d-none d-sm-inline">#{{ next_report_id }}</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-chevron-right" viewBox="0 0 16 16">
+                                    <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
+                                </svg>
+                            </a>
+                        {% endif %}
+                    </div>
+
+                    <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" onclick="window.print()" title="{{ trans('Print report') }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-printer" viewBox="0 0 16 16">
+                            <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
+                            <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/>
+                        </svg>
+                        <span class="d-none d-md-inline">{{ trans('Print report') }}</span>
+                    </button>
                 </div>
             </div>
         </div>
 
-        {% set class_counts = json.loads(counter.class_counts) if counter.class_counts else [] %}
-        {% if class_counts %}
-            <div class="cv-card p-3 p-md-4 mb-4">
-                <h2 class="section-block__title">{{ trans('By class') }}</h2>
-                <div class="detail-list">
-                    {% for item in class_counts %}
-                        <div class="detail-list__row">
-                            <div class="detail-list__label">{{ item.name|striptags }}</div>
-                            <div class="detail-list__value">
-                                {% if item.current is defined %}
-                                    {{ item.current }} / {{ item.total }}
-                                {% else %}
-                                    {{ item.total if item.total is defined else item.count }}
+        <!-- 4 Key Metric KPI Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3">
+                <div class="cv-card p-3 h-100 reports-kpi-card shadow-sm border-start border-primary border-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="reports-kpi-icon bg-primary-subtle text-primary border border-primary-subtle">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-bullseye" viewBox="0 0 16 16">
+                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                <path d="M8 13A5 5 0 1 1 8 3a5 5 0 0 1 0 10zm0 1A6 6 0 1 0 8 2a6 6 0 0 0 0 12z"/>
+                                <path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/>
+                                <path d="M9.5 8a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="text-body-secondary small text-uppercase tracking-wider fw-semibold">{{ trans('Total') }}</div>
+                            <div class="fs-3 fw-bold font-monospace text-primary">{{ counter.total_count }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="cv-card p-3 h-100 reports-kpi-card shadow-sm border-start border-success border-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="reports-kpi-icon bg-success-subtle text-success border border-success-subtle">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-check2-circle" viewBox="0 0 16 16">
+                                <path d="M2.5 8a5.5 5.5 0 0 1 8.25-4.764.5.5 0 0 0 .5-.866A6.5 6.5 0 1 0 14.5 8a.5.5 0 0 0-1 0 5.5 5.5 0 1 1-11 0z"/>
+                                <path d="M15.354 3.354a.5.5 0 0 0-.708-.708L8 9.293 5.354 6.646a.5.5 0 1 0-.708.708l3 3a.5.5 0 0 0 .708 0l7-7z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="text-body-secondary small text-uppercase tracking-wider fw-semibold">{{ trans('Correct') }}</div>
+                            <div class="fs-3 fw-bold font-monospace text-success">{{ counter.correct_count }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="cv-card p-3 h-100 reports-kpi-card shadow-sm border-start border-danger border-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="reports-kpi-icon bg-danger-subtle text-danger border border-danger-subtle">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-exclamation-triangle" viewBox="0 0 16 16">
+                                <path d="M7.938 2.016A.13.13 0 0 1 8.002 2a.13.13 0 0 1 .063.016.15.15 0 0 1 .054.057l6.857 11.667c.036.06.035.124.002.183a.2.2 0 0 1-.054.06.1.1 0 0 1-.066.017H1.146a.1.1 0 0 1-.066-.017.2.2 0 0 1-.054-.06.18.18 0 0 1 .002-.183L7.884 2.073a.15.15 0 0 1 .054-.057m1.044-.45a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767z"/>
+                                <path d="M7.002 12a1 1 0 1 1 2 0 1 1 0 0 1-2 0M7.1 5.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="text-body-secondary small text-uppercase tracking-wider fw-semibold">{{ trans('Defect') }}</div>
+                            <div class="d-flex align-items-baseline gap-2">
+                                <span class="fs-3 fw-bold font-monospace text-danger">{{ counter.defects_count }}</span>
+                                {% if counter.total_count > 0 %}
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 0.72rem;">
+                                        {{ ((counter.defects_count / counter.total_count) * 100)|round(1) }}%
+                                    </span>
                                 {% endif %}
                             </div>
                         </div>
-                    {% endfor %}
+                    </div>
                 </div>
             </div>
-        {% endif %}
 
-        {% if counter.custom_fields %}
-            <div class="cv-card p-3 p-md-4 mb-4">
-                <h2 class="section-block__title">{{ trans('Secondary information') }}</h2>
-                <div class="detail-list">
-                    {% set custom_fields = json.loads(counter.custom_fields) %}
-                    {% for field in config.get('form.custom_fields', []).values() %}
-                        <div class="detail-list__row">
-                            <div class="detail-list__label">{{ trans(field.label) }}</div>
-                            <div class="detail-list__value">{{ custom_fields[field.name] | striptags }}</div>
+            <div class="col-6 col-lg-3">
+                <div class="cv-card p-3 h-100 reports-kpi-card shadow-sm border-start border-info border-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="reports-kpi-icon bg-info-subtle text-info border border-info-subtle">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-box-arrow-in-down" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M3.5 6a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5v-8a.5.5 0 0 0-.5-.5h-2a.5.5 0 0 1 0-1h2A1.5 1.5 0 0 1 14 6.5v8a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 14.5v-8A1.5 1.5 0 0 1 3.5 5h2a.5.5 0 0 1 0 1z"/>
+                                <path fill-rule="evenodd" d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/>
+                            </svg>
                         </div>
-                    {% endfor %}
+                        <div>
+                            <div class="text-body-secondary small text-uppercase tracking-wider fw-semibold">{{ trans('Source') }}</div>
+                            <div class="fs-3 fw-bold font-monospace text-info">{{ counter.source_count }}</div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        {% endif %}
+        </div>
 
-        {% if counter.parts %}
-            <div class="cv-card p-3 p-md-4 mb-4">
-                <h2 class="section-block__title">{{ trans('Parts information') }}</h2>
-                {% set parts = json.loads(counter.parts) %}
-                {% for part in parts %}
-                    <div class="report-parts-block">
-                        <div class="detail-list__label mb-2">{{ trans('Part {index}', index=loop.index) }}</div>
-                        <ul class="list-unstyled mb-0 ps-0">
-                            {% for field, value in part.items() if field != 'by_class' %}
-                                <li class="mb-1">
-                                    <span class="text-body-secondary">{{ trans(field) }}:</span> {{ value | striptags }}
-                                </li>
-                            {% endfor %}
-                            {% if part.get('by_class') %}
-                                <li class="mb-1 mt-2">
-                                    <span class="text-body-secondary">{{ trans('By class') }}:</span>
-                                    <ul class="list-unstyled ms-3 mb-0 mt-1">
-                                        {% for item in part.by_class %}
-                                            <li class="mb-1">
-                                                {{ item.name|striptags }} —
+        <div class="row g-4">
+            <!-- Left Column: Class Distribution & Timeline -->
+            <div class="col-12 col-lg-7">
+                <!-- Class Distribution Card -->
+                {% set class_counts = json.loads(counter.class_counts) if counter.class_counts else [] %}
+                {% if class_counts %}
+                    <div class="cv-card p-3 p-md-4 mb-4 shadow-sm">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h5 class="fw-semibold mb-0 d-flex align-items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-pie-chart text-primary" viewBox="0 0 16 16">
+                                    <path d="M7.5 1.018a7 7 0 0 0-4.79 11.566L7.5 7.793zm1 0V7.5h6.482A7.001 7.001 0 0 0 8.5 1.018M14.982 8.5H8.207l-4.79 4.79A7 7 0 0 0 14.982 8.5M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8"/>
+                                </svg>
+                                <span>{{ trans('Distribution by class') }}</span>
+                            </h5>
+                            <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ class_counts|length }} {{ trans('Classes').lower() if trans('Classes') != 'Classes' else 'классов' }}</span>
+                        </div>
+
+                        <div class="d-flex flex-column gap-3">
+                            {% for item in class_counts %}
+                                {% set cnt = item.total if item.total is defined else (item.count if item.count is defined else 0) %}
+                                {% set pct = ((cnt / counter.total_count) * 100)|round(1) if counter.total_count > 0 else 0 %}
+                                <div class="reports-class-row p-2 rounded-2 bg-body-tertiary border">
+                                    <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+                                        <span class="fw-medium text-truncate">{{ item.name|striptags }}</span>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace">
                                                 {% if item.current is defined %}
                                                     {{ item.current }} / {{ item.total }}
                                                 {% else %}
-                                                    {{ item.total if item.total is defined else item.count }}
+                                                    {{ cnt }}
                                                 {% endif %}
-                                            </li>
-                                        {% endfor %}
-                                    </ul>
-                                </li>
-                            {% endif %}
-                        </ul>
+                                            </span>
+                                            <span class="small text-body-secondary font-monospace" style="min-width: 3rem; text-align: right;">{{ pct }}%</span>
+                                        </div>
+                                    </div>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ pct }}%;" aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
                     </div>
-                {% endfor %}
+                {% endif %}
+
+                <!-- Parts Information Card -->
+                {% if counter.parts %}
+                    <div class="cv-card p-3 p-md-4 mb-4 shadow-sm">
+                        <h5 class="fw-semibold mb-3 d-flex align-items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-stack text-warning" viewBox="0 0 16 16">
+                                <path d="m14.12 10.163 1.715.858c.22.11.22.424 0 .534L8.267 15.34a.6.6 0 0 1-.534 0L.165 11.555a.299.299 0 0 1 0-.534l1.716-.858 5.317 2.659c.505.252 1.1.252 1.604 0l5.317-2.66zM7.733.063a.6.6 0 0 1 .534 0l7.568 3.784a.3.3 0 0 1 0 .535L8.267 8.165a.6.6 0 0 1-.534 0L.165 4.382a.299.299 0 0 1 0-.535z"/>
+                                <path d="m14.12 6.163 1.715.858c.22.11.22.424 0 .534L8.267 11.34a.6.6 0 0 1-.534 0L.165 7.555a.299.299 0 0 1 0-.534l1.716-.858 5.317 2.659c.505.252 1.1.252 1.604 0l5.317-2.66z"/>
+                            </svg>
+                            <span>{{ trans('Parts information') }}</span>
+                        </h5>
+                        {% set parts = json.loads(counter.parts) %}
+                        <div class="d-flex flex-column gap-3">
+                            {% for part in parts %}
+                                <div class="p-3 rounded-2 bg-body-tertiary border">
+                                    <div class="fw-semibold small text-uppercase tracking-wider text-primary mb-2">
+                                        {{ trans('Part {index}', index=loop.index) }}
+                                    </div>
+                                    <div class="row g-2 small">
+                                        {% for field, value in part.items() if field != 'by_class' %}
+                                            <div class="col-6 col-sm-4">
+                                                <div class="text-body-secondary" style="font-size: 0.75rem;">{{ trans(field) }}</div>
+                                                <div class="fw-medium text-truncate">{{ value | striptags }}</div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% if part.get('by_class') %}
+                                        <div class="border-top pt-2 mt-2">
+                                            <div class="small text-body-secondary mb-1">{{ trans('By class') }}:</div>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                {% for item in part.by_class %}
+                                                    <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace">
+                                                        {{ item.name|striptags }}:
+                                                        {% if item.current is defined %}
+                                                            {{ item.current }}/{{ item.total }}
+                                                        {% else %}
+                                                            {{ item.total if item.total is defined else item.count }}
+                                                        {% endif %}
+                                                    </span>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
             </div>
-        {% endif %}
+
+            <!-- Right Column: Timeline & Custom Secondary Fields -->
+            <div class="col-12 col-lg-5">
+                <!-- Timeline & Session Details Card -->
+                <div class="cv-card p-3 p-md-4 mb-4 shadow-sm">
+                    <h5 class="fw-semibold mb-3 d-flex align-items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-calendar-event text-info" viewBox="0 0 16 16">
+                            <path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5z"/>
+                            <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z"/>
+                        </svg>
+                        <span>{{ trans('Session timeline') }}</span>
+                    </h5>
+
+                    <div class="detail-list">
+                        <div class="detail-list__row">
+                            <div class="detail-list__label">{{ trans('Location') }}</div>
+                            <div class="detail-list__value fw-medium">{{ counter.location|striptags|title }}</div>
+                        </div>
+                        <div class="detail-list__row">
+                            <div class="detail-list__label">{{ trans('Status') }}</div>
+                            <div class="detail-list__value">
+                                {% if counter.active %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle">{{ trans('Running') }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary-subtle text-body-secondary border border-secondary-subtle">{{ trans('Completed') }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="detail-list__row">
+                            <div class="detail-list__label">{{ trans('Created') }}</div>
+                            <div class="detail-list__value font-monospace">{{ counter.created_at.strftime('%d.%m.%Y %H:%M:%S') }}</div>
+                        </div>
+                        <div class="detail-list__row">
+                            <div class="detail-list__label">{{ trans('Updated') }}</div>
+                            <div class="detail-list__value font-monospace">{{ counter.updated_at.strftime('%d.%m.%Y %H:%M:%S') }}</div>
+                        </div>
+                        {% if counter.created_at and counter.updated_at %}
+                            {% set duration_secs = (counter.updated_at - counter.created_at).total_seconds()|round|int %}
+                            {% if duration_secs > 0 %}
+                                <div class="detail-list__row">
+                                    <div class="detail-list__label">{{ trans('Duration') }}</div>
+                                    <div class="detail-list__value font-monospace">
+                                        {% set mins = (duration_secs // 60) %}
+                                        {% set secs = (duration_secs % 60) %}
+                                        {% if mins > 60 %}
+                                            {{ (mins // 60) }}h {{ (mins % 60) }}m {{ secs }}s
+                                        {% elif mins > 0 %}
+                                            {{ mins }}m {{ secs }}s
+                                        {% else %}
+                                            {{ secs }}s
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Secondary Information (Custom Fields) Card -->
+                {% if counter.custom_fields %}
+                    {% set custom_fields = json.loads(counter.custom_fields) %}
+                    {% if custom_fields %}
+                        <div class="cv-card p-3 p-md-4 mb-4 shadow-sm">
+                            <h5 class="fw-semibold mb-3 d-flex align-items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-card-text text-secondary" viewBox="0 0 16 16">
+                                    <path d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2z"/>
+                                    <path d="M3 5.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5M3 8a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 8m0 2.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5"/>
+                                </svg>
+                                <span>{{ trans('Secondary information') }}</span>
+                            </h5>
+                            <div class="detail-list">
+                                {% for field in config.get('form.custom_fields', {}).values() %}
+                                    {% if custom_fields.get(field.name) is not none %}
+                                        <div class="detail-list__row">
+                                            <div class="detail-list__label">{{ trans(field.label) }}</div>
+                                            <div class="detail-list__value">{{ custom_fields[field.name] | striptags }}</div>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
     </div>
 {% endblock %}

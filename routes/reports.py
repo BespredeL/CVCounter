@@ -74,17 +74,47 @@ def _start_media_warm(location: str, config) -> None:
 @reports_bp.route('/reports')
 def reports() -> str:
     """
-    Display the main reports page.
+    Display the main reports page with locations overview and metrics.
 
     Returns:
         str: Rendered HTML template with reports overview
     """
     context = get_app_context()
     locations_dict = context['locations_dict']
+    db_manager = context['db_manager']
+    config = context['config']
+    active_counters = context.get('object_counters', {})
+
+    locations_stats = {}
+    total_all_sessions = 0
+    total_all_images = 0
+    total_all_videos = 0
+
+    for loc_key, loc_title in locations_dict.items():
+        paginated = db_manager.get_paginated(loc_key, page=1, per_page=1)
+        loc_reports = paginated['total'] if paginated else 0
+        loc_images = count_saved_images(loc_key, config=config)
+        loc_videos = count_saved_recordings(loc_key, config=config)
+        is_active = loc_key in active_counters
+
+        locations_stats[loc_key] = {
+            'title': loc_title,
+            'reports_count': loc_reports,
+            'images_count': loc_images,
+            'videos_count': loc_videos,
+            'is_active': is_active,
+        }
+        total_all_sessions += loc_reports
+        total_all_images += loc_images
+        total_all_videos += loc_videos
 
     return render_template(
         'reports/index.html',
-        object_counters=locations_dict
+        object_counters=locations_dict,
+        locations_stats=locations_stats,
+        total_all_sessions=total_all_sessions,
+        total_all_images=total_all_images,
+        total_all_videos=total_all_videos,
     )
 
 
@@ -103,6 +133,7 @@ def report_list(location: str = None) -> str:
     locations_dict = context['locations_dict']
     db_manager = context['db_manager']
     config = context['config']
+    active_counters = context.get('object_counters', {})
 
     try:
         location = _valid_location(location)
@@ -156,6 +187,13 @@ def report_list(location: str = None) -> str:
         if total_videos:
             _start_media_warm(location, config)
 
+        # Page-level stats summary
+        page_total_count = sum(item.total_count or 0 for item in items)
+        page_defects_count = sum(item.defects_count or 0 for item in items)
+        page_correct_count = sum(item.correct_count or 0 for item in items)
+        page_source_count = sum(item.source_count or 0 for item in items)
+        is_counter_active = location in active_counters
+
         return render_template(
             'reports/list.html',
             object_counters=locations_dict,
@@ -172,6 +210,11 @@ def report_list(location: str = None) -> str:
             videos_current_page=videos_page,
             videos_total_pages=videos_total_pages,
             media_tab=media_tab,
+            page_total_count=page_total_count,
+            page_defects_count=page_defects_count,
+            page_correct_count=page_correct_count,
+            page_source_count=page_source_count,
+            is_counter_active=is_counter_active,
             json=json
         )
     except ValidationError as e:
@@ -289,9 +332,37 @@ def report_show(location: str, report_id: int) -> str:
     if counter.location != location:
         abort(404, translate('Page not found'))
 
+    prev_report_id = None
+    next_report_id = None
+    session = db_manager.create_session()
+    try:
+        from system.db.models.cvcounter import CVCounter
+        prev_row = session.query(CVCounter.id).filter(
+            CVCounter.location == location,
+            CVCounter.id < report_id
+        ).order_by(CVCounter.id.desc()).first()
+        if prev_row:
+            prev_report_id = prev_row[0]
+
+        next_row = session.query(CVCounter.id).filter(
+            CVCounter.location == location,
+            CVCounter.id > report_id
+        ).order_by(CVCounter.id.asc()).first()
+        if next_row:
+            next_report_id = next_row[0]
+    except Exception:
+        pass
+    finally:
+        session.close()
+
+    is_counter_active = location in context.get('object_counters', {})
+
     return render_template(
         'reports/show.html',
         location=location,
         counter=counter,
+        prev_report_id=prev_report_id,
+        next_report_id=next_report_id,
+        is_counter_active=is_counter_active,
         json=json
     )

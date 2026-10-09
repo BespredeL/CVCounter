@@ -1847,6 +1847,100 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
     justify-content: space-between;
 }
 
+/* Reports Modernization */
+.reports-kpi-card {
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.reports-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.reports-kpi-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+
+.reports-status-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.reports-status-dot.bg-success {
+    box-shadow: 0 0 6px #198754;
+    animation: reportsPulseDot 2s infinite ease-in-out;
+}
+
+@keyframes reportsPulseDot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.45; transform: scale(0.85); }
+}
+
+.reports-loc-card {
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.reports-loc-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(var(--cv-accent-rgb), 0.4);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.reports-media__nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 50%;
+    background: rgba(15, 20, 26, 0.7);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(6px);
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.reports-media__nav-btn:hover:not(:disabled) {
+    background: var(--cv-accent);
+    color: #fff;
+    transform: translateY(-50%) scale(1.08);
+}
+
+.reports-media__nav-btn--prev {
+    left: 0.75rem;
+}
+
+.reports-media__nav-btn--next {
+    right: 0.75rem;
+}
+
+.reports-media-speed-btn.active {
+    background: var(--cv-accent);
+    color: #fff;
+    border-color: var(--cv-accent);
+}
+
+.reports-class-row {
+    transition: background 0.15s ease;
+}
+
+.reports-class-row:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+}
+
 /* Settings layout */
 .settings-layout__nav {
     background: var(--cv-surface-elevated);
