@@ -564,7 +564,7 @@ class CountingAreaEditor {
 
             // Right: Actions (Visibility, Duplicate, Delete)
             const actions = document.createElement("div");
-            actions.className = "btn-group btn-group-sm flex-shrink-0";
+            actions.className = "d-flex align-items-center gap-2 flex-shrink-0";
 
             // Visibility button
             const visBtn = document.createElement("button");

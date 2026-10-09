@@ -6,46 +6,210 @@
         prefix: The prefix of the field
         depth: The depth of the field
 #}
+
+{% macro get_field_hint(key) %}
+    {%- if key == 'debug' -%}{{ trans('Enable Flask debug mode with detailed exception reporting') }}
+    {%- elif key == 'system_check' -%}{{ trans('Check GPU availability and core libraries on system startup') }}
+    {%- elif key == 'log_path' -%}{{ trans('Path to application log file') }}
+    {%- elif key == 'log_level' -%}{{ trans('Minimum log message severity level to record') }}
+    {%- elif key == 'log_console' -%}{{ trans('Output log messages directly to the terminal stdout') }}
+    {%- elif key == 'default_language' -%}{{ trans('Default system interface language') }}
+    {%- elif key == 'allow_unsafe_werkzeug' -%}{{ trans('Allow running the Werkzeug development server in production') }}
+    {%- elif key == 'button_change_theme' -%}{{ trans('Display dark/light theme switch button in the interface') }}
+    {%- elif key == 'button_fullscreen' -%}{{ trans('Display fullscreen mode button') }}
+    {%- elif key == 'button_backward' -%}{{ trans('Display back navigation button in header bars') }}
+    {%- elif key == 'button_save_capture' -%}{{ trans('Display instant frame snapshot button on video streams') }}
+    {%- elif key == 'collapsed_keyboard' -%}{{ trans('Keep the on-screen numeric keypad collapsed by default') }}
+    {%- elif key == 'host' -%}{{ trans('Network address to listen on (0.0.0.0 for all)') }}
+    {%- elif key == 'port' -%}{{ trans('TCP port for the web application server') }}
+    {%- elif key == 'use_reloader' -%}{{ trans('Automatically reload server process when source code is modified') }}
+    {%- elif key == 'log_output' -%}{{ trans('Print incoming HTTP access requests in the server console') }}
+    {%- elif key == 'secret_key' -%}{{ trans('Cryptographic key used to sign session cookies and tokens') }}
+    {%- elif key == 'allowed_origins' -%}{{ trans('Allowed Cross-Origin Resource Sharing (CORS) domains (* for all)') }}
+    {%- elif key == 'socketio_async_mode' -%}{{ trans('Asynchronous worker engine for real-time WebSocket communication') }}
+    {%- elif key == 'socketio_transports' -%}{{ trans('Supported Socket.IO communication protocols') }}
+    {%- elif key == 'socketio_upgrade' -%}{{ trans('Allow connection upgrade from HTTP polling to WebSockets') }}
+    {%- elif key == 'allow_web_control' -%}{{ trans('Enable process management and server restarts via the web interface') }}
+    {%- elif key == 'max_upload_mb' -%}{{ trans('Maximum allowed file size for dataset uploads (in MB)') }}
+    {%- elif key == 'prefix' -%}{{ trans('Optional table name prefix for database tables') }}
+    {%- elif key == 'uri' -%}{{ trans('SQLAlchemy connection string') }}
+    {%- elif key == 'enabled' -%}{{ trans('Send anonymous diagnostic data and error telemetry') }}
+    {%- elif key == 'endpoint' -%}{{ trans('Remote API endpoint for telemetry ingest') }}
+    {%- elif key == 'send_errors' -%}{{ trans('Automatically send anonymized crash reports and traceback logs') }}
+    {%- elif key == 'send_usage' -%}{{ trans('Send anonymous feature usage and performance metrics') }}
+    {%- elif key == 'flush_interval_sec' -%}{{ trans('Time between automatic telemetry queue flushes in seconds') }}
+    {%- elif key == 'max_batch_size' -%}{{ trans('Maximum telemetry events per single HTTP request') }}
+    {%- elif key == 'max_queue_size' -%}{{ trans('Maximum telemetry queue size in memory') }}
+    {%- elif key == 'max_stack_chars' -%}{{ trans('Maximum error traceback characters to retain in reports') }}
+    {%- elif key == 'error_dedup_sec' -%}{{ trans('Window in seconds to deduplicate identical error reports') }}
+    {%- elif key == 'timeout_sec' -%}{{ trans('Network timeout in seconds for telemetry requests') }}
+    {%- elif key == 'hmac_secret' -%}{{ trans('Secret key used to calculate HMAC signature for telemetry requests') }}
+    {%- elif key == 'defect_show' -%}{{ trans('Show defect count input field in the counting session form') }}
+    {%- elif key == 'correct_show' -%}{{ trans('Show manual correction field in the counting session form') }}
+    {%- elif key == 'label' -%}{{ trans('Display name of this detection camera stream') }}
+    {%- elif key == 'start_total_count' -%}{{ trans('Initial counter offset number for this camera') }}
+    {%- elif key == 'video_path' -%}{{ trans('RTSP video stream URL or local video file path') }}
+    {%- elif key == 'video_show_scale' -%}{{ trans('Video stream resolution scaling for web preview') }}
+    {%- elif key == 'video_show_quality' -%}{{ trans('JPEG compression quality percentage for web broadcast') }}
+    {%- elif key == 'video_fps' -%}{{ trans('Target stream FPS limit (0 for native camera frame rate)') }}
+    {%- elif key == 'video_reconnect_attempts' -%}{{ trans('Number of reconnect retries if video feed disconnects') }}
+    {%- elif key == 'model_type' -%}{{ trans('Neural network architecture used for object detection') }}
+    {%- elif key == 'weights_path' -%}{{ trans('Path to trained model weights (.pt, .engine, .onnx)') }}
+    {%- elif key == 'confidence' -%}{{ trans('Minimum confidence score threshold (0.01 - 1.00) for detections') }}
+    {%- elif key == 'iou' -%}{{ trans('Intersection-Over-Union threshold for Non-Maximum Suppression (NMS)') }}
+    {%- elif key == 'device' -%}{{ trans('Inference compute device: 0 for first GPU, or "cpu" for processor') }}
+    {%- elif key == 'vid_stride' -%}{{ trans('Frame skip interval: 1 processes every frame, 2 processes every second frame') }}
+    {%- elif key == 'indicator_size' -%}{{ trans('Size in pixels of bounding boxes and tracking dots on frames') }}
+    {%- elif key == 'classes' -%}{{ trans('Dictionary of class IDs and object label names') }}
+    {%- elif key == 'enable' -%}{{ trans('Enable this module') }}
+    {%- elif key == 'probability' -%}{{ trans('Fraction of detected frames to save to training dataset (e.g. 0.1 = 10%)') }}
+    {%- elif key == 'path' -%}{{ trans('Storage directory path on server') }}
+    {%- elif key == 'scale' -%}{{ trans('Saved video resolution scale percentage') }}
+    {%- elif key == 'quality' -%}{{ trans('Saved video compression quality percentage') }}
+    {%- elif key == 'idle_timeout' -%}{{ trans('Seconds of inactivity without detections before stopping video recording') }}
+    {%- endif -%}
+{% endmacro %}
+
 {% macro generate_form_fields(key, value, prefix='', depth=0) %}
 <!-- START: Generate form fields -->
     {% set field_id = prefix ~ key %}
     {% if value is mapping %}
-        <section class="cv-form-section{% if depth > 0 %} cv-form-section--nested{% endif %}">
-            <h3 class="cv-form-section__title">{{ trans(key.replace('_', ' ')|title) }}</h3>
-            <div class="cv-form-section__body">
-                {% for sub_key, sub_value in value.items() %}
-                    {{ generate_form_fields(sub_key, sub_value, field_id ~ '-', depth + 1) }}
-                {% endfor %}
+        {% if prefix == 'detections-' and depth == 0 %}
+            <!-- Collapsible Camera Module -->
+            <div class="cv-camera-card card border mb-3 shadow-sm" data-camera-id="{{ key }}">
+                <div class="card-header cv-camera-card__header d-flex align-items-center justify-content-between p-3"
+                     data-bs-toggle="collapse" data-bs-target="#collapse-{{ field_id }}"
+                     role="button" aria-expanded="true" aria-controls="collapse-{{ field_id }}">
+                    <div class="d-flex align-items-center gap-3 min-w-0">
+                        <div class="cv-camera-card__icon bg-primary-subtle text-primary border border-primary-subtle rounded-3 d-flex align-items-center justify-content-center flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-camera-video" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2V5z"/>
+                            </svg>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="fw-bold text-body fs-6">{{ value.get('label', key) }}</span>
+                                <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace" style="font-size: 0.72rem;">#{{ key }}</span>
+                                {% if value.get('model_type') %}
+                                    <span class="badge bg-info-subtle text-info-emphasis font-monospace" style="font-size: 0.7rem;">{{ value.get('model_type') }}</span>
+                                {% endif %}
+                            </div>
+                            <span class="text-body-secondary small text-truncate d-block font-monospace mt-0.5" style="font-size: 0.75rem; max-width: 32rem;">{{ value.get('video_path', '') }}</span>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                        <a class="btn btn-outline-primary btn-sm d-none d-sm-inline-flex align-items-center gap-1 shadow-xs"
+                           href="{{ url_for('counters.counting_area_edit', location=key) }}"
+                           target="_blank" rel="noopener" onclick="event.stopPropagation();" title="{{ trans('Configure counting polygon') }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-bounding-box-circles" viewBox="0 0 16 16">
+                                <path d="M2 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2M0 2a2 2 0 0 1 3.937-.5h8.126A2 2 0 1 1 14.5 3.937v8.126a2 2 0 1 1-2.437 2.437H3.937A2 2 0 1 1 1.5 12.063V3.937A2 2 0 0 1 0 2m2.5 1.937v8.126c.703.18 1.256.734 1.437 1.437h8.126a2 2 0 0 1 1.437-1.437V3.937A2 2 0 0 1 12.063 2.5H3.937A2 2 0 0 1 2.5 3.937"/>
+                            </svg>
+                            <span>{{ trans('Counting zone') }}</span>
+                        </a>
+                        <span class="cv-camera-card__chevron text-body-secondary p-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/>
+                            </svg>
+                        </span>
+                    </div>
+                </div>
+                <div id="collapse-{{ field_id }}" class="collapse show cv-camera-card__collapse">
+                    <div class="card-body p-3 cv-camera-card__body">
+                        <div class="cv-form-section__body">
+                            {% for sub_key, sub_value in value.items() %}
+                                {{ generate_form_fields(sub_key, sub_value, field_id ~ '-', depth + 1) }}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
             </div>
-        </section>
+        {% else %}
+            <section class="cv-form-section{% if depth > 0 %} cv-form-section--nested{% endif %}">
+                <h3 class="cv-form-section__title">{{ trans(key.replace('_', ' ')|title) }}</h3>
+                <div class="cv-form-section__body">
+                    {% for sub_key, sub_value in value.items() %}
+                        {{ generate_form_fields(sub_key, sub_value, field_id ~ '-', depth + 1) }}
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
     {% else %}
         {% if key in ('counting_area_color', 'counting_areas') and prefix.startswith('detections-') %}
         {# Zones are saved only via the visual zone editor #}
         {% elif key == 'counting_area' and prefix.startswith('detections-') %}
             {% set detection_location = prefix.replace('detections-', '').rstrip('-') %}
-            <div class="cv-form-field">
+            <div class="cv-form-field cv-form-field--zone">
                 <span class="cv-form-label">{{ trans('Counting zone') }}</span>
                 <p class="cv-form-hint mb-2">{{ trans('Configure the polygon on a live video frame') }}</p>
-                <a class="btn btn-outline-primary btn-sm"
+                <a class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2"
                    href="{{ url_for('counters.counting_area_edit', location=detection_location) }}"
                    target="_blank" rel="noopener">
-                    {{ trans('Open zone editor') }}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-bounding-box-circles" viewBox="0 0 16 16">
+                        <path d="M2 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2M0 2a2 2 0 0 1 3.937-.5h8.126A2 2 0 1 1 14.5 3.937v8.126a2 2 0 1 1-2.437 2.437H3.937A2 2 0 1 1 1.5 12.063V3.937A2 2 0 0 1 0 2m2.5 1.937v8.126c.703.18 1.256.734 1.437 1.437h8.126a2 2 0 0 1 1.437-1.437V3.937A2 2 0 0 1 12.063 2.5H3.937A2 2 0 0 1 2.5 3.937"/>
+                    </svg>
+                    <span>{{ trans('Open zone editor') }}</span>
                 </a>
             </div>
         {% else %}
-        <div class="cv-form-field">
-            <label for="{{ field_id }}" class="cv-form-label">{{ trans(key.replace('_', ' ')|title) }}</label>
-            {% if value is string %}
-                {% if key == 'password' or 'password' in key or 'secret' in key %}
+        <div class="cv-form-field" data-field-key="{{ key }}">
+            {% if prefix.endswith('classes-') or (key is string and key.isdigit()) %}
+                <label for="{{ field_id }}" class="cv-form-label d-flex align-items-center gap-2">
+                    <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace px-1.5 py-0.5" style="font-size: 0.72rem;">ID {{ key }}</span>
+                    <span>{{ trans('Class name') }}</span>
+                </label>
+            {% else %}
+                <label for="{{ field_id }}" class="cv-form-label">{{ trans(key.replace('_', ' ')|title) }}</label>
+            {% endif %}
+
+            {# Semantic Field Controls #}
+            {% if key == 'default_language' %}
+                <select id="{{ field_id }}" name="{{ field_id }}" class="form-select cv-form-control cv-form-select">
+                    <option value="ru" {% if value == 'ru' %}selected{% endif %}>{{ trans('Russian') }} (ru)</option>
+                    <option value="en" {% if value == 'en' %}selected{% endif %}>{{ trans('English') }} (en)</option>
+                </select>
+            {% elif key == 'log_level' %}
+                <select id="{{ field_id }}" name="{{ field_id }}" class="form-select cv-form-control cv-form-select font-monospace">
+                    {% for lvl in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'] %}
+                        <option value="{{ lvl }}" {% if value == lvl %}selected{% endif %}>{{ lvl }}</option>
+                    {% endfor %}
+                </select>
+            {% elif key == 'model_type' %}
+                {% set model_types = ['auto', 'yolo', 'ultralytics', 'onnx', 'onnxruntime', 'opencv', 'openvino'] %}
+                <select id="{{ field_id }}" name="{{ field_id }}" class="form-select cv-form-control cv-form-select">
+                    {% for mt in model_types %}
+                        <option value="{{ mt }}" {% if value == mt %}selected{% endif %}>
+                            {% if mt == 'auto' %}{{ trans('Auto-detect') }} (auto)
+                            {% elif mt == 'yolo' %}YOLO (Engine / Weights)
+                            {% elif mt == 'ultralytics' %}Ultralytics PyTorch (.pt)
+                            {% elif mt == 'onnx' %}ONNX
+                            {% elif mt == 'onnxruntime' %}ONNX Runtime
+                            {% elif mt == 'opencv' %}OpenCV DNN
+                            {% elif mt == 'openvino' %}Intel OpenVINO
+                            {% else %}{{ mt }}{% endif %}
+                        </option>
+                    {% endfor %}
+                    {% if value not in model_types %}
+                        <option value="{{ value }}" selected>{{ value }} ({{ trans('Custom') }})</option>
+                    {% endif %}
+                </select>
+            {% elif key == 'socketio_async_mode' %}
+                <select id="{{ field_id }}" name="{{ field_id }}" class="form-select cv-form-control cv-form-select font-monospace">
+                    {% for mode in ['threading', 'eventlet', 'gevent'] %}
+                        <option value="{{ mode }}" {% if value == mode %}selected{% endif %}>{{ mode }}</option>
+                    {% endfor %}
+                </select>
+            {% elif key == 'password' or 'password' in key or 'secret' in key %}
+                <div class="input-group cv-input-group">
                     <input type="password" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
-                           class="form-control cv-form-control" autocomplete="new-password">
-                {% elif value|length > 80 or '\n' in value %}
-                    <textarea id="{{ field_id }}" name="{{ field_id }}" rows="3"
-                              class="form-control cv-form-control cv-form-control--textarea">{{ value }}</textarea>
-                {% else %}
-                    <input type="text" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
-                           class="form-control cv-form-control">
-                {% endif %}
+                           class="form-control cv-form-control cv-password-input font-monospace" autocomplete="new-password">
+                    <button class="btn btn-outline-secondary cv-password-toggle px-3" type="button"
+                            aria-label="{{ trans('Toggle visibility') }}" title="{{ trans('Toggle visibility') }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" class="bi bi-eye" viewBox="0 0 16 16">
+                            <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-8.3 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z"/>
+                            <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0"/>
+                        </svg>
+                    </button>
+                </div>
             {% elif value is boolean %}
                 <div class="cv-form-toggle" role="group" aria-label="{{ trans(key.replace('_', ' ')|title) }}">
                     <input type="radio" class="cv-form-toggle__input" value="on" name="{{ field_id }}" id="{{ field_id }}_yes"
@@ -63,19 +227,71 @@
                     </label>
                 </div>
             {% elif value is number %}
-                <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
-                       class="form-control cv-form-control" step="any">
+                {% if key in ('confidence', 'iou', 'probability') %}
+                    <div class="input-group cv-input-group">
+                        <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                               class="form-control cv-form-control cv-rate-input font-monospace" min="0" max="1" step="0.01">
+                        <span class="input-group-text cv-input-addon text-body-secondary font-monospace cv-rate-badge">
+                            {{ (value * 100)|round|int }}%
+                        </span>
+                    </div>
+                {% elif key in ('video_show_scale', 'video_show_quality', 'scale', 'quality') %}
+                    <div class="input-group cv-input-group">
+                        <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                               class="form-control cv-form-control font-monospace" min="5" max="100" step="5">
+                        <span class="input-group-text cv-input-addon font-monospace">%</span>
+                    </div>
+                {% elif key in ('idle_timeout', 'flush_interval_sec', 'timeout_sec', 'error_dedup_sec') %}
+                    <div class="input-group cv-input-group">
+                        <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                               class="form-control cv-form-control font-monospace" min="0" step="1">
+                        <span class="input-group-text cv-input-addon font-monospace">{{ trans('sec') }}</span>
+                    </div>
+                {% elif key == 'max_upload_mb' %}
+                    <div class="input-group cv-input-group">
+                        <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                               class="form-control cv-form-control font-monospace" min="1" step="1">
+                        <span class="input-group-text cv-input-addon font-monospace">{{ trans('MB') }}</span>
+                    </div>
+                {% elif key == 'indicator_size' %}
+                    <div class="input-group cv-input-group">
+                        <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                               class="form-control cv-form-control font-monospace" min="1" step="1">
+                        <span class="input-group-text cv-input-addon font-monospace">px</span>
+                    </div>
+                {% elif key == 'video_fps' %}
+                    <div class="input-group cv-input-group">
+                        <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                               class="form-control cv-form-control font-monospace" min="0" step="1">
+                        <span class="input-group-text cv-input-addon font-monospace">FPS</span>
+                    </div>
+                {% elif key == 'port' %}
+                    <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                           class="form-control cv-form-control font-monospace" min="1" max="65535" step="1">
+                {% else %}
+                    <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                           class="form-control cv-form-control font-monospace" step="any">
+                {% endif %}
             {% elif value is iterable and value is not string %}
-                <textarea id="{{ field_id }}" name="{{ field_id }}" rows="4"
+                <textarea id="{{ field_id }}" name="{{ field_id }}" rows="3"
                           class="form-control cv-form-control cv-form-control--mono">{{ value }}</textarea>
+            {% elif value is string and (value|length > 80 or '\n' in value) %}
+                <textarea id="{{ field_id }}" name="{{ field_id }}" rows="3"
+                          class="form-control cv-form-control cv-form-control--textarea">{{ value }}</textarea>
             {% else %}
                 <input type="text" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
                        class="form-control cv-form-control">
             {% endif %}
+
+            {# Localized field description hint #}
+            {% set hint_text = get_field_hint(key)|trim %}
+            {% if hint_text %}
+                <span class="cv-form-hint">{{ hint_text }}</span>
+            {% endif %}
         </div>
         {% endif %}
     {% endif %}
-    <!-- END: Generate form fields -->
+<!-- END: Generate form fields -->
 {% endmacro %}
 
 
@@ -92,8 +308,22 @@
         {% if label or name %}
             <label for="{{ name }}" class="cv-form-label">{{ label or name }}</label>
         {% endif %}
-        <input type="{{ type }}" class="form-control cv-form-control" id="{{ name }}" name="{{ name }}"
-               value="{{ value|e }}" {% if type == 'password' %}autocomplete="new-password"{% endif %}>
+        {% if type == 'password' %}
+            <div class="input-group cv-input-group">
+                <input type="password" class="form-control cv-form-control cv-password-input font-monospace"
+                       id="{{ name }}" name="{{ name }}" value="{{ value|e }}" autocomplete="new-password">
+                <button class="btn btn-outline-secondary cv-password-toggle px-3" type="button"
+                        aria-label="{{ trans('Toggle visibility') }}" title="{{ trans('Toggle visibility') }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" class="bi bi-eye" viewBox="0 0 16 16">
+                        <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-8.3 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z"/>
+                        <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0"/>
+                    </svg>
+                </button>
+            </div>
+        {% else %}
+            <input type="{{ type }}" class="form-control cv-form-control" id="{{ name }}" name="{{ name }}"
+                   value="{{ value|e }}">
+        {% endif %}
     </div>
 {%- endmacro %}
 

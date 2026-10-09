@@ -2418,6 +2418,111 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
     }
 }
 
+/* --- Form controls: Select, Input groups, Password toggle & Camera cards --- */
+.cv-form-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23868e96' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+    background-position: right 0.75rem center;
+    background-size: 14px 10px;
+    padding-right: 2.25rem;
+}
+
+.cv-input-group {
+    border-radius: 10px;
+}
+
+.cv-input-group .cv-form-control {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.cv-input-group .cv-input-addon {
+    border-color: var(--cv-border-strong);
+    background-color: var(--cv-surface);
+    color: var(--bs-secondary-color);
+    font-size: 0.8125rem;
+    padding: 0.45rem 0.75rem;
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+    border-left: none;
+}
+
+.cv-password-toggle {
+    border-color: var(--cv-border-strong);
+    background-color: var(--cv-surface);
+    color: var(--bs-secondary-color);
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+    border-left: none;
+    transition: all 0.15s ease;
+}
+
+.cv-password-toggle:hover {
+    background-color: var(--cv-accent-muted);
+    color: var(--cv-accent);
+    border-color: var(--cv-border-strong);
+}
+
+.cv-form-field--zone {
+    padding: 0.85rem;
+    border: 1px dashed var(--cv-border-strong);
+    border-radius: 10px;
+    background: rgba(var(--cv-accent-rgb), 0.03);
+}
+
+/* --- Camera Card Component in Settings --- */
+.cv-camera-card {
+    border-color: var(--cv-border) !important;
+    border-radius: var(--cv-radius);
+    background: var(--cv-surface);
+    overflow: hidden;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.cv-camera-card:hover {
+    border-color: var(--cv-border-strong) !important;
+}
+
+.cv-camera-card__header {
+    background: var(--cv-surface-elevated);
+    border-bottom: 1px solid var(--cv-border);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s ease;
+}
+
+.cv-camera-card__header:hover {
+    background: var(--cv-surface);
+}
+
+.cv-camera-card__icon {
+    width: 2.25rem;
+    height: 2.25rem;
+}
+
+.cv-camera-card__chevron {
+    transition: transform 0.2s ease;
+}
+
+.cv-camera-card__header[aria-expanded="false"] .cv-camera-card__chevron {
+    transform: rotate(-90deg);
+}
+
+.cv-camera-card__body {
+    background: var(--cv-surface);
+}
+
+.is-search-match {
+    outline: 2px solid rgba(var(--cv-accent-rgb), 0.65);
+    outline-offset: 2px;
+    border-radius: var(--cv-radius);
+    transition: outline 0.15s ease;
+}
+
+.is-search-dimmed {
+    opacity: 0.35;
+    transition: opacity 0.15s ease;
+}
+
 /* --- Reports: detail list --- */
 .detail-list {
     display: flex;

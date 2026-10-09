@@ -27,14 +27,16 @@
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
                 <div class="d-flex align-items-center gap-3 min-w-0">
                     <div class="datasets-toolbar__icon bg-primary-subtle text-primary border border-primary-subtle rounded-3 d-none d-sm-flex align-items-center justify-content-center flex-shrink-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-collection" viewBox="0 0 16 16" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                             class="bi bi-collection" viewBox="0 0 16 16" aria-hidden="true">
                             <path d="M2.5 3.5a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1zm2-2a.5.5 0 0 1 0-1h7a.5.5 0 0 1 0 1zM0 13a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 16 13V6a1.5 1.5 0 0 0-1.5-1.5h-13A1.5 1.5 0 0 0 0 6zm1.5.5A.5.5 0 0 1 1 13V6a.5.5 0 0 1 .5-.5h13a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5z"/>
                         </svg>
                     </div>
                     <div class="min-w-0">
                         <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
                             <span class="fw-semibold text-body fs-6">{{ trans('Datasets') }}</span>
-                            <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace" id="datasets-count-badge" title="{{ trans('Datasets') }}">
+                            <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace"
+                                  id="datasets-count-badge" title="{{ trans('Datasets') }}">
                                 {{ datasets|length }}
                             </span>
                         </div>
@@ -47,17 +49,21 @@
                 <div class="d-flex align-items-center gap-2 flex-wrap ms-auto">
                     <div class="input-group input-group-sm" style="min-width: 14rem; max-width: 18rem;">
                         <span class="input-group-text bg-body-tertiary border-end-0">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-search text-body-secondary" viewBox="0 0 16 16" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                                 class="bi bi-search text-body-secondary" viewBox="0 0 16 16" aria-hidden="true">
                                 <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
                             </svg>
                         </span>
-                        <input type="search" class="form-control form-control-sm border-start-0" id="dataset-search-input"
+                        <input type="search" class="form-control form-control-sm border-start-0"
+                               id="dataset-search-input"
                                placeholder="{{ trans('Search') }}…" aria-label="{{ trans('Search') }}">
                     </div>
                     <button type="button" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1"
                             data-bs-toggle="modal" data-bs-target="#createDatasetModal">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16" aria-hidden="true">
-                            <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                             class="bi bi-plus-lg" viewBox="0 0 16 16" aria-hidden="true">
+                            <path fill-rule="evenodd"
+                                  d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/>
                         </svg>
                         <span>{{ trans('New dataset') }}</span>
                     </button>
@@ -67,26 +73,32 @@
 
         <div class="row g-3" id="datasets-grid">
             {% for ds in datasets %}
-                <div class="col-12 col-md-6 col-xl-4 dataset-item-col" data-search="{{ (ds.display_name or ds.name)|lower }} {{ ds.name|lower }} {{ (ds.classes or [])|join(' ')|lower }}">
+                <div class="col-12 col-md-6 col-xl-4 dataset-item-col"
+                     data-search="{{ (ds.display_name or ds.name)|lower }} {{ ds.name|lower }} {{ (ds.classes or [])|join(' ')|lower }}">
                     <article class="cv-card dataset-card h-100 shadow-sm transition-card">
                         <div class="card-body d-flex flex-column">
                             <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
                                 <div class="min-w-0">
                                     <a class="dataset-card__title text-decoration-none fw-semibold fs-5 text-truncate d-block"
-                                       href="{{ url_for('datasets.dataset_detail', name=ds.name) }}" title="{{ ds.display_name or ds.name }}">
+                                       href="{{ url_for('datasets.dataset_detail', name=ds.name) }}"
+                                       title="{{ ds.display_name or ds.name }}">
                                         {{ ds.display_name or ds.name }}
                                     </a>
                                     <div class="dataset-card__meta mt-1 d-flex align-items-center gap-2">
                                         {% if ds.task == 'segment' %}
                                             <span class="badge text-bg-primary d-inline-flex align-items-center">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-bounding-box-circles me-1" viewBox="0 0 16 16" aria-hidden="true">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                                                     fill="currentColor" class="bi bi-bounding-box-circles me-1"
+                                                     viewBox="0 0 16 16" aria-hidden="true">
                                                     <path d="M2 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2M0 2a2 2 0 0 1 3.937-.5h8.126A2 2 0 1 1 14.5 3.937v8.126a2 2 0 1 1-2.437 2.437H3.937A2 2 0 1 1 1.5 12.063V3.937A2 2 0 0 1 0 2m2.5 1.937v8.126c.703.18 1.257.734 1.437 1.437h8.126a2 2 0 0 1 1.437-1.437V3.937A2 2 0 0 1 12.063 2.5H3.937A2 2 0 0 1 2.5 3.937M14 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2M2 13a1 1 0 1 0 0 2 1 1 0 0 0 0-2m12 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2"/>
                                                 </svg>
                                                 segment
                                             </span>
                                         {% elif ds.task == 'classify' %}
                                             <span class="badge text-bg-success d-inline-flex align-items-center">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-tags me-1" viewBox="0 0 16 16" aria-hidden="true">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                                                     fill="currentColor" class="bi bi-tags me-1" viewBox="0 0 16 16"
+                                                     aria-hidden="true">
                                                     <path d="M3 2v4.586l7 7L14.586 9l-7-7zM2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"/>
                                                     <path d="M1.293 7.707A1 1 0 0 1 1 7.086V2h5.086a1 1 0 0 1 .707.293l.353.354-.707.707-.354-.354H2v4.086l.354.353-.707.708z"/>
                                                 </svg>
@@ -94,7 +106,9 @@
                                             </span>
                                         {% elif ds.task == 'pose' %}
                                             <span class="badge text-bg-warning d-inline-flex align-items-center">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-person-standing me-1" viewBox="0 0 16 16" aria-hidden="true">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                                                     fill="currentColor" class="bi bi-person-standing me-1"
+                                                     viewBox="0 0 16 16" aria-hidden="true">
                                                     <path d="M8 3a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M6 6.75v8.5a.75.75 0 0 0 1.5 0V10.5a.5.5 0 0 1 1 0v4.75a.75.75 0 0 0 1.5 0v-8.5a.25.25 0 0 0-.25-.25h-3.5a.25.25 0 0 0-.25.25"/>
                                                     <path d="M5.5 4A1.5 1.5 0 0 0 4 5.5v2a.75.75 0 0 0 1.5 0V5.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v2a.75.75 0 0 0 1.5 0v-2A1.5 1.5 0 0 0 10.5 4z"/>
                                                 </svg>
@@ -102,7 +116,9 @@
                                             </span>
                                         {% else %}
                                             <span class="badge text-bg-info d-inline-flex align-items-center">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-bounding-box me-1" viewBox="0 0 16 16" aria-hidden="true">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                                                     fill="currentColor" class="bi bi-bounding-box me-1"
+                                                     viewBox="0 0 16 16" aria-hidden="true">
                                                     <path d="M5 2V0H0v5h2v6H0v5h5v-2h6v2h5v-5h-2V5h2V0h-5v2zm6 1v2h2v6h-2v2H5v-2H3V5h2V3zm1-2h3v3h-3zm3 11v3h-3v-3zM4 15H1v-3h3zM1 4V1h3v3z"/>
                                                 </svg>
                                                 detect
@@ -117,13 +133,18 @@
 
                             <div class="progress dataset-card__progress mb-3" style="height: 6px;" role="progressbar"
                                  aria-valuenow="{{ ds.labeled_pct }}" aria-valuemin="0" aria-valuemax="100">
-                                <div class="progress-bar {% if ds.labeled_pct >= 80 %}bg-success{% endif %}" style="width: {{ ds.labeled_pct }}%"></div>
+                                <div class="progress-bar {% if ds.labeled_pct >= 80 %}bg-success{% endif %}"
+                                     style="width: {{ ds.labeled_pct }}%"></div>
                             </div>
 
                             <div class="dataset-card__stats mb-3">
-                                <div><span class="dataset-card__stat-val">{{ ds.total }}</span><span class="dataset-card__stat-lbl">{{ trans('Images') }}</span></div>
-                                <div><span class="dataset-card__stat-val text-success">{{ ds.labeled }}</span><span class="dataset-card__stat-lbl">{{ trans('Labeled') }}</span></div>
-                                <div><span class="dataset-card__stat-val text-body-secondary">{{ ds.unlabeled }}</span><span class="dataset-card__stat-lbl">{{ trans('Unlabeled') }}</span></div>
+                                <div><span class="dataset-card__stat-val">{{ ds.total }}</span><span
+                                        class="dataset-card__stat-lbl">{{ trans('Images') }}</span></div>
+                                <div><span class="dataset-card__stat-val text-success">{{ ds.labeled }}</span><span
+                                        class="dataset-card__stat-lbl">{{ trans('Labeled') }}</span></div>
+                                <div><span
+                                        class="dataset-card__stat-val text-body-secondary">{{ ds.unlabeled }}</span><span
+                                        class="dataset-card__stat-lbl">{{ trans('Unlabeled') }}</span></div>
                             </div>
 
                             <div class="mt-auto pt-2 border-top">
@@ -132,10 +153,12 @@
                                 </div>
                                 <div class="d-flex flex-wrap gap-1" style="max-height: 2.2rem; overflow: hidden;">
                                     {% for c in ds.classes[:4] %}
-                                        <span class="badge bg-body-tertiary text-body border" style="font-size: 0.72rem;">{{ c }}</span>
+                                        <span class="badge bg-body-tertiary text-body border"
+                                              style="font-size: 0.72rem;">{{ c }}</span>
                                     {% endfor %}
                                     {% if (ds.classes or [])|length > 4 %}
-                                        <span class="badge bg-body-secondary text-body-secondary" style="font-size: 0.72rem;">+{{ (ds.classes|length) - 4 }}</span>
+                                        <span class="badge bg-body-secondary text-body-secondary"
+                                              style="font-size: 0.72rem;">+{{ (ds.classes|length) - 4 }}</span>
                                     {% endif %}
                                     {% if not ds.classes %}
                                         <span class="text-body-secondary small">—</span>
@@ -148,8 +171,10 @@
                                 <a class="btn btn-outline-secondary"
                                    href="{{ url_for('datasets.dataset_detail', name=ds.name) }}">{{ trans('Open') }}</a>
                                 <a class="btn btn-outline-secondary"
-                                   href="{{ url_for('datasets.api_export_zip', name=ds.name) }}" title="{{ trans('Export ZIP') }}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-file-earmark-zip" viewBox="0 0 16 16" aria-hidden="true">
+                                   href="{{ url_for('datasets.api_export_zip', name=ds.name) }}"
+                                   title="{{ trans('Export ZIP') }}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                                         class="bi bi-file-earmark-zip" viewBox="0 0 16 16" aria-hidden="true">
                                         <path d="M5 10.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5m0-2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5m.5-2.5A.5.5 0 0 0 5 6.5v.01a.5.5 0 0 0 .5.49h2a.5.5 0 0 0 0-1zm0-2a.5.5 0 0 0-.5.5v.01a.5.5 0 0 0 .5.49h2a.5.5 0 0 0 0-1z"/>
                                         <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5z"/>
                                     </svg>
@@ -157,9 +182,11 @@
                             </div>
                             <a class="btn btn-sm btn-primary d-flex align-items-center gap-1"
                                href="{{ url_for('datasets.dataset_annotate', name=ds.name) }}">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16" aria-hidden="true">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                                     class="bi bi-pencil-square" viewBox="0 0 16 16" aria-hidden="true">
                                     <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.8-6.8z"/>
-                                    <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
+                                    <path fill-rule="evenodd"
+                                          d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
                                 </svg>
                                 <span>{{ trans('Annotate') }}</span>
                             </a>
@@ -170,14 +197,18 @@
                 <div class="col-12">
                     <div class="cv-card datasets-empty">
                         <div class="card-body text-center py-5">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-collection text-body-tertiary mb-3" viewBox="0 0 16 16" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor"
+                                 class="bi bi-collection text-body-tertiary mb-3" viewBox="0 0 16 16">
                                 <path d="M2.5 3.5a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1zm2-2a.5.5 0 0 1 0-1h7a.5.5 0 0 1 0 1zM0 13a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 16 13V6a1.5 1.5 0 0 0-1.5-1.5h-13A1.5 1.5 0 0 0 0 6zm1.5.5A.5.5 0 0 1 1 13V6a.5.5 0 0 1 .5-.5h13a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5z"/>
                             </svg>
                             <h3 class="h5">{{ trans('No datasets yet. Create one to get started.') }}</h3>
                             <p class="text-body-secondary mb-3 small">{{ trans('Typical flow: create dataset → import frames → annotate → train → apply weights to a counter.') }}</p>
-                            <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createDatasetModal">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16" aria-hidden="true">
-                                    <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/>
+                            <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2"
+                                    data-bs-toggle="modal" data-bs-target="#createDatasetModal">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                     class="bi bi-plus-lg" viewBox="0 0 16 16" aria-hidden="true">
+                                    <path fill-rule="evenodd"
+                                          d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/>
                                 </svg>
                                 <span>{{ trans('New dataset') }}</span>
                             </button>
@@ -187,19 +218,22 @@
             {% endfor %}
         </div>
         <div id="no-search-results" class="d-none text-center py-5 text-body-secondary">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-search mb-2 opacity-50" viewBox="0 0 16 16" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor"
+                 class="bi bi-search mb-2 opacity-50" viewBox="0 0 16 16" aria-hidden="true">
                 <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
             </svg>
             <div>{{ trans('No data') }}</div>
         </div>
     </div>
 
-    <div class="modal fade" id="createDatasetModal" tabindex="-1" aria-labelledby="createDatasetModalLabel" aria-hidden="true">
+    <div class="modal fade" id="createDatasetModal" tabindex="-1" aria-labelledby="createDatasetModalLabel"
+         aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <form class="modal-content" id="create-dataset-form">
                 <div class="modal-header">
                     <h5 class="modal-title" id="createDatasetModalLabel">{{ trans('New dataset') }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ trans('Cancel') }}"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                            aria-label="{{ trans('Cancel') }}"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
@@ -226,8 +260,10 @@
                     <div class="text-danger small mt-2 d-none" id="create-dataset-error" role="alert"></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ trans('Cancel') }}</button>
-                    <button type="submit" class="btn btn-primary" id="create-dataset-submit">{{ trans('Create') }}</button>
+                    <button type="button" class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">{{ trans('Cancel') }}</button>
+                    <button type="submit" class="btn btn-primary"
+                            id="create-dataset-submit">{{ trans('Create') }}</button>
                 </div>
             </form>
         </div>

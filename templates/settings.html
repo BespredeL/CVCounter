@@ -21,25 +21,60 @@
 
 {% macro section_icon(key) %}
     {% if key == 'general' %}
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-sliders flex-shrink-0" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M11.5 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M9.05 3a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0V3zM4.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M2.05 8a2.5 2.5 0 0 1 4.9 0H16v1H6.95a2.5 2.5 0 0 1-4.9 0H0V8zm9.45 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m-2.45 1a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0v-1z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+             class="bi bi-sliders flex-shrink-0" viewBox="0 0 16 16">
+            <path fill-rule="evenodd"
+                  d="M11.5 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M9.05 3a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0V3zM4.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M2.05 8a2.5 2.5 0 0 1 4.9 0H16v1H6.95a2.5 2.5 0 0 1-4.9 0H0V8zm9.45 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m-2.45 1a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0v-1z"/>
+        </svg>
     {% elif key == 'server' %}
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-hdd-network flex-shrink-0" viewBox="0 0 16 16"><path d="M4.5 5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1M3 4.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0m2 7a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0"/><path d="M2 2a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h5.5v3A1.5 1.5 0 0 0 6 11.5H5a.5.5 0 0 0 0 1h1a1.5 1.5 0 0 0 1.5 1.5h1A1.5 1.5 0 0 0 10 12.5h1a.5.5 0 0 0 0-1H10A1.5 1.5 0 0 0 8.5 10V7H14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM1 4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm6.5 7.5A.5.5 0 0 1 8 11h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5H8a.5.5 0 0 1-.5-.5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+             class="bi bi-hdd-network flex-shrink-0" viewBox="0 0 16 16">
+            <path d="M4.5 5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1M3 4.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0"/>
+            <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2H8.5v3a1.5 1.5 0 0 1 1.5 1.5h5.5a.5.5 0 0 1 0 1H10A1.5 1.5 0 0 1 8.5 14h-1A1.5 1.5 0 0 1 6 12.5H.5a.5.5 0 0 1 0-1H6A1.5 1.5 0 0 1 7.5 10V7H2a2 2 0 0 1-2-2zm1 0v1a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1m6 7.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5"/>
+        </svg>
     {% elif key == 'datasets' %}
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-collection flex-shrink-0" viewBox="0 0 16 16"><path d="M2.5 3.5a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1zm2-2a.5.5 0 0 1 0-1h7a.5.5 0 0 1 0 1zM0 13a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 16 13V6a1.5 1.5 0 0 0-1.5-1.5h-13A1.5 1.5 0 0 0 0 6zm1.5.5A.5.5 0 0 1 1 13V6a.5.5 0 0 1 .5-.5h13a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+             class="bi bi-collection flex-shrink-0" viewBox="0 0 16 16">
+            <path d="M2.5 3.5a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1zm2-2a.5.5 0 0 1 0-1h7a.5.5 0 0 1 0 1zM0 13a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 16 13V6a1.5 1.5 0 0 0-1.5-1.5h-13A1.5 1.5 0 0 0 0 6zm1.5.5A.5.5 0 0 1 1 13V6a.5.5 0 0 1 .5-.5h13a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5z"/>
+        </svg>
     {% elif key == 'users' %}
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-people flex-shrink-0" viewBox="0 0 16 16"><path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1zm-7.978-1L7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72zm-5.94-1q.003-.145.054-.315C1.88 11.094 2.971 10 5 10c1.69 0 2.734.8 3.272 1.455a4.2 4.2 0 0 0-.555.838l-.508.85H1.348zM5.5 5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5M11 6a2 2 0 1 0 0-4 2 2 0 0 0 0 4"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+             class="bi bi-people flex-shrink-0" viewBox="0 0 16 16">
+            <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1zm-7.978-1L7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002-.014.002zM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4m3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0M6.936 9.28a6 6 0 0 0-1.23-.247A7 7 0 0 0 5 9c-4 0-5 3-5 4q0 1 1 1h4.216A2.24 2.24 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816M4.92 10A5.5 5.5 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275ZM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0m3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4"/>
+        </svg>
     {% elif key == 'db' %}
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-database flex-shrink-0" viewBox="0 0 16 16"><path d="M4.318 2.687C5.234 2.271 6.536 2 8 2s2.766.27 3.682.687C12.644 3.125 13 3.627 13 4c0 .374-.356.875-1.318 1.313C10.766 5.729 9.464 6 8 6s-2.766-.27-3.682-.687C3.356 4.875 3 4.373 3 4c0-.374.356-.875 1.318-1.313ZM13 5.698V7c0 .374-.356.875-1.318 1.313C10.766 8.729 9.464 9 8 9s-2.766-.27-3.682-.687C3.356 7.875 3 7.374 3 7V5.698c.271.202.58.378.904.525C4.978 6.711 6.427 7 8 7s3.022-.289 4.096-.777A5 5 0 0 0 13 5.698M14 4c0-1.007-.875-1.755-1.904-2.223C11.022 1.289 9.573 1 8 1s-3.022.289-4.096.777C2.875 2.245 2 2.993 2 4v9c0 1.007.875 1.755 1.904 2.223C4.978 15.71 6.427 16 8 16s3.022-.289 4.096-.777C13.125 14.755 14 14.007 14 13zm-1 4.698V10c0 .374-.356.875-1.318 1.313C10.766 11.729 9.464 12 8 12s-2.766-.27-3.682-.687C3.356 10.875 3 10.374 3 10V8.698c.271.202.58.378.904.525C4.978 9.71 6.427 10 8 10s3.022-.289 4.096-.777A5 5 0 0 0 13 8.698M14 13c0 .374-.356.875-1.318 1.313C11.766 14.729 10.464 15 8 15s-2.766-.27-3.682-.687C3.356 13.875 3 13.374 3 13v-1.302c.271.202.58.378.904.525C4.978 12.71 6.427 13 8 13s3.022-.289 4.096-.777c.324-.147.633-.323.904-.525z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+             class="bi bi-database flex-shrink-0" viewBox="0 0 16 16">
+            <path d="M4.318 2.687C5.234 2.271 6.536 2 8 2s2.766.27 3.682.687C12.644 3.125 13 3.627 13 4c0 .374-.356.875-1.318 1.313C10.766 5.729 9.464 6 8 6s-2.766-.27-3.682-.687C3.356 4.875 3 4.373 3 4c0-.374.356-.875 1.318-1.313M13 5.698V7c0 .374-.356.875-1.318 1.313C10.766 8.729 9.464 9 8 9s-2.766-.27-3.682-.687C3.356 7.875 3 7.373 3 7V5.698c.271.202.58.378.904.525C4.978 6.711 6.427 7 8 7s3.022-.289 4.096-.777A5 5 0 0 0 13 5.698M14 4c0-1.007-.875-1.755-1.904-2.223C11.022 1.289 9.573 1 8 1s-3.022.289-4.096.777C2.875 2.245 2 2.993 2 4v9c0 1.007.875 1.755 1.904 2.223C4.978 15.71 6.427 16 8 16s3.022-.289 4.096-.777C13.125 14.755 14 14.007 14 13zm-1 4.698V10c0 .374-.356.875-1.318 1.313C10.766 11.729 9.464 12 8 12s-2.766-.27-3.682-.687C3.356 10.875 3 10.373 3 10V8.698c.271.202.58.378.904.525C4.978 9.71 6.427 10 8 10s3.022-.289 4.096-.777A5 5 0 0 0 13 8.698m0 3V13c0 .374-.356.875-1.318 1.313C10.766 14.729 9.464 15 8 15s-2.766-.27-3.682-.687C3.356 13.875 3 13.373 3 13v-1.302c.271.202.58.378.904.525C4.978 12.71 6.427 13 8 13s3.022-.289 4.096-.777c.324-.147.633-.323.904-.525"/>
+        </svg>
     {% elif key == 'telemetry' %}
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-activity flex-shrink-0" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M6 2a.5.5 0 0 1 .47.33L10 12.036l1.53-4.208A.5.5 0 0 1 12 7.5h3.5a.5.5 0 0 1 0 1h-3.15l-1.88 5.17a.5.5 0 0 1-.94 0L6 3.964 4.47 8.171A.5.5 0 0 1 4 8.5H.5a.5.5 0 0 1 0-1h3.15l1.88-5.17A.5.5 0 0 1 6 2"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+             class="bi bi-activity flex-shrink-0" viewBox="0 0 16 16">
+            <path fill-rule="evenodd"
+                  d="M6 2a.5.5 0 0 1 .47.33L10 12.036l1.53-4.208A.5.5 0 0 1 12 7.5h3.5a.5.5 0 0 1 0 1h-3.15l-1.88 5.17a.5.5 0 0 1-.94 0L6 3.964 4.47 8.171A.5.5 0 0 1 4 8.5H.5a.5.5 0 0 1 0-1h3.15l1.88-5.17A.5.5 0 0 1 6 2"/>
+        </svg>
     {% elif key == 'form' %}
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-ui-checks flex-shrink-0" viewBox="0 0 16 16"><path d="M7 2.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5zM2 1a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm0 8a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2zm.854-3.646a.5.5 0 0 1-.708 0l-1-1a.5.5 0 1 1 .708-.708l.646.647 1.646-1.647a.5.5 0 1 1 .708.708zM7 10.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+             class="bi bi-ui-checks flex-shrink-0" viewBox="0 0 16 16">
+            <path d="M7 2.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5zM2 1a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm0 8a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2zm.854-3.646a.5.5 0 0 1-.708 0l-1-1a.5.5 0 1 1 .708-.708l.646.647 1.646-1.647a.5.5 0 1 1 .708.708zM7 10.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5z"/>
+        </svg>
     {% elif key == 'detection_default' %}
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-crosshair flex-shrink-0" viewBox="0 0 16 16"><path d="M8.5.5a.5.5 0 0 0-1 0v.518A7 7 0 0 0 1.018 7.5H.5a.5.5 0 0 0 0 1h.518A7 7 0 0 0 7.5 14.982v.518a.5.5 0 0 0 1 0v-.518A7 7 0 0 0 14.982 8.5h.518a.5.5 0 0 0 0-1h-.518A7 7 0 0 0 8.5 1.018zm-5.94 7A6 6 0 0 1 7.5 2.06v1.44a.5.5 0 0 0 1 0V2.06A6 6 0 0 1 13.44 7.5h-1.44a.5.5 0 0 0 0 1h1.44A6 6 0 0 1 8.5 13.94v-1.44a.5.5 0 0 0-1 0v1.44A6 6 0 0 1 2.56 8.5h1.44a.5.5 0 0 0 0-1zm4.94 0A.5.5 0 0 0 8 7a.5.5 0 0 0-.5.5v.005L7.5 8a.5.5 0 0 0 .5.5h.005l.005-.005A.5.5 0 0 0 8.5 8V7.5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+             class="bi bi-crosshair flex-shrink-0" viewBox="0 0 16 16">
+            <path d="M8.5.5a.5.5 0 0 0-1 0v.518A7 7 0 0 0 1.018 7.5H.5a.5.5 0 0 0 0 1h.518A7 7 0 0 0 7.5 14.982v.518a.5.5 0 0 0 1 0v-.518A7 7 0 0 0 14.982 8.5h.518a.5.5 0 0 0 0-1h-.518A7 7 0 0 0 8.5 1.018zm-6.48 7A6 6 0 0 1 7.5 2.02v.48a.5.5 0 0 0 1 0v-.48a6 6 0 0 1 5.48 5.48h-.48a.5.5 0 0 0 0 1h.48a6 6 0 0 1-5.48 5.48v-.48a.5.5 0 0 0-1 0v.48A6 6 0 0 1 2.02 8.5h.48a.5.5 0 0 0 0-1zM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4"/>
+        </svg>
     {% elif key == 'detections' %}
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-camera-video flex-shrink-0" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2V5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+             class="bi bi-camera-video flex-shrink-0" viewBox="0 0 16 16">
+            <path fill-rule="evenodd"
+                  d="M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2zm11.5 5.175 3.5 1.556V4.269l-3.5 1.556zM2 4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h7.5a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z"/>
+        </svg>
     {% else %}
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-gear flex-shrink-0" viewBox="0 0 16 16"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+             class="bi bi-gear flex-shrink-0" viewBox="0 0 16 16">
+            <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0"/>
+            <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z"/>
+        </svg>
     {% endif %}
 {% endmacro %}
 
@@ -76,14 +111,17 @@
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
                 <div class="d-flex align-items-center gap-3 min-w-0">
                     <div class="settings-intro__icon bg-primary-subtle text-primary border border-primary-subtle rounded-3 d-none d-sm-flex align-items-center justify-content-center flex-shrink-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-sliders" viewBox="0 0 16 16">
-                            <path fill-rule="evenodd" d="M11.5 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M9.05 3a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0V3zM4.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M2.05 8a2.5 2.5 0 0 1 4.9 0H16v1H6.95a2.5 2.5 0 0 1-4.9 0H0V8zm9.45 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m-2.45 1a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0v-1z"/>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                             class="bi bi-sliders" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd"
+                                  d="M11.5 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M9.05 3a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0V3zM4.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M2.05 8a2.5 2.5 0 0 1 4.9 0H16v1H6.95a2.5 2.5 0 0 1-4.9 0H0V8zm9.45 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m-2.45 1a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0v-1z"/>
                         </svg>
                     </div>
                     <div class="min-w-0">
                         <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
                             <span class="fw-semibold text-body fs-6">{{ trans('Configuration') }}</span>
-                            <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace" title="{{ trans('Configuration sections') }}">
+                            <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace"
+                                  title="{{ trans('Configuration sections') }}">
                                 {{ _config|length }} {{ trans('sections') }}
                             </span>
                         </div>
@@ -96,15 +134,19 @@
                 <div class="d-flex align-items-center gap-2 flex-wrap ms-auto">
                     <div class="input-group input-group-sm" style="min-width: 14rem; max-width: 18rem;">
                         <span class="input-group-text bg-body-tertiary border-end-0">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-search text-body-secondary" viewBox="0 0 16 16">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                                 class="bi bi-search text-body-secondary" viewBox="0 0 16 16">
                                 <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
                             </svg>
                         </span>
-                        <input type="search" class="form-control form-control-sm border-start-0" id="settings-search-input"
+                        <input type="search" class="form-control form-control-sm border-start-0"
+                               id="settings-search-input"
                                placeholder="{{ trans('Search setting...') }}" aria-label="{{ trans('Search') }}">
                     </div>
-                    <button type="submit" form="settings-form" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1 shadow-sm px-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-check2" viewBox="0 0 16 16">
+                    <button type="submit" form="settings-form"
+                            class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1 shadow-sm px-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                             class="bi bi-check2" viewBox="0 0 16 16">
                             <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
                         </svg>
                         <span>{{ trans('Save') }}</span>
@@ -118,12 +160,15 @@
             <div class="col-md-4 col-lg-3">
                 <div class="list-group settings-layout__nav" id="pills-tab" role="tablist">
                     <div class="d-flex align-items-center justify-content-between px-2 pb-2 mb-2 border-bottom">
-                        <span class="small text-uppercase fw-bold text-body-secondary" style="font-size: 0.7rem; letter-spacing: 0.05em;">{{ trans('Sections') }}</span>
-                        <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill" style="font-size: 0.7rem;">{{ _config|length }}</span>
+                        <span class="small text-uppercase fw-bold text-body-secondary"
+                              style="font-size: 0.7rem; letter-spacing: 0.05em;">{{ trans('Sections') }}</span>
+                        <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill"
+                              style="font-size: 0.7rem;">{{ _config|length }}</span>
                     </div>
                     {% for key, value in _config.items() %}
                         <button class="list-group-item list-group-item-action border-0 d-flex align-items-center justify-content-between gap-2 py-2 px-3 {% if loop.first %}active{% endif %}"
-                                id="pills-{{ key }}-tab" data-bs-toggle="pill" data-bs-target="#pills-{{ key }}" role="tab"
+                                id="pills-{{ key }}-tab" data-bs-toggle="pill" data-bs-target="#pills-{{ key }}"
+                                role="tab"
                                 data-section-key="{{ key }}"
                                 aria-controls="pills-{{ key }}" aria-selected="{{ 'true' if loop.first else 'false' }}">
                             <div class="d-flex align-items-center gap-2 min-w-0">
@@ -131,7 +176,8 @@
                                 <span class="text-truncate fw-medium">{{ trans(key.replace('_', ' ')|title) }}</span>
                             </div>
                             {% if value is mapping %}
-                                <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill px-2 py-1 font-monospace" style="font-size: 0.68rem;">{{ value|length }}</span>
+                                <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill px-2 py-1 font-monospace"
+                                      style="font-size: 0.68rem;">{{ value|length }}</span>
                             {% endif %}
                         </button>
                     {% endfor %}
@@ -145,15 +191,19 @@
                     <div class="settings-layout__form">
                         <div class="settings-layout__toolbar d-flex flex-wrap justify-content-between align-items-center gap-2 sticky-top">
                             <div class="d-flex align-items-center gap-2 min-w-0">
-                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-inline-flex align-items-center gap-1 px-2.5 py-1.5" id="settings-toolbar-section-badge">
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-inline-flex align-items-center gap-1 px-2.5 py-1.5"
+                                      id="settings-toolbar-section-badge">
                                     <span id="settings-toolbar-section-icon">{{ section_icon('general') }}</span>
-                                    <span id="settings-toolbar-section-title" class="fw-semibold">{{ trans('General') }}</span>
+                                    <span id="settings-toolbar-section-title"
+                                          class="fw-semibold">{{ trans('General') }}</span>
                                 </span>
                                 <span class="text-body-secondary small d-none d-lg-inline">{{ trans('Edit configuration sections on the left') }}</span>
                             </div>
                             <div class="d-flex align-items-center gap-2 ms-auto">
-                                <button type="submit" class="btn btn-primary btn-sm px-3 d-inline-flex align-items-center gap-1 shadow-sm">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-check2" viewBox="0 0 16 16">
+                                <button type="submit"
+                                        class="btn btn-primary btn-sm px-3 d-inline-flex align-items-center gap-1 shadow-sm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                                         class="bi bi-check2" viewBox="0 0 16 16">
                                         <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
                                     </svg>
                                     <span>{{ trans('Save') }}</span>
@@ -163,10 +213,11 @@
 
                         <div class="tab-content" id="pills-tabContent">
                             {% for key, value in _config.items() %}
-                                <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="pills-{{ key }}" role="tabpanel"
+                                <div class="tab-pane fade {% if loop.first %}show active{% endif %}"
+                                     id="pills-{{ key }}" role="tabpanel"
                                      aria-labelledby="pills-{{ key }}-tab" tabindex="0" data-section-key="{{ key }}">
                                     <!-- Section Header inside Tab -->
-                                    <div class="settings-pane-header d-flex align-items-center justify-content-between pb-2 mb-3">
+                                    <div class="settings-pane-header d-flex flex-wrap align-items-center justify-content-between gap-2 pb-2 mb-3">
                                         <div class="d-flex align-items-center gap-2 min-w-0">
                                             <span class="fs-5 text-primary">{{ section_icon(key) }}</span>
                                             <div class="min-w-0">
@@ -174,6 +225,34 @@
                                                 <span class="text-body-secondary small">{{ section_description(key) }}</span>
                                             </div>
                                         </div>
+                                        {% if key == 'detections' %}
+                                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 py-1 px-2.5 shadow-xs"
+                                                        id="btn-collapse-all-cameras"
+                                                        title="{{ trans('Collapse all cameras') }}">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                                                         fill="currentColor" class="bi bi-arrows-collapse"
+                                                         viewBox="0 0 16 16">
+                                                        <path fill-rule="evenodd"
+                                                              d="M1 8a.5.5 0 0 1 .5-.5h13a.5.5 0 0 1 0 1h-13A.5.5 0 0 1 1 8m7-8a.5.5 0 0 1 .5.5v3.793l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 1 1 .708-.708L7.5 4.293V.5A.5.5 0 0 1 8 0m0 16a.5.5 0 0 1-.5-.5v-3.793l-1.146 1.147a.5.5 0 0 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 11.707V15.5a.5.5 0 0 1-.5.5"/>
+                                                    </svg>
+                                                    <span>{{ trans('Collapse all') }}</span>
+                                                </button>
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 py-1 px-2.5 shadow-xs"
+                                                        id="btn-expand-all-cameras"
+                                                        title="{{ trans('Expand all cameras') }}">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                                                         fill="currentColor" class="bi bi-arrows-expand"
+                                                         viewBox="0 0 16 16">
+                                                        <path fill-rule="evenodd"
+                                                              d="M1 8a.5.5 0 0 1 .5-.5h13a.5.5 0 0 1 0 1h-13A.5.5 0 0 1 1 8M7.646.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 1.707V5.5a.5.5 0 0 1-1 0V1.707L6.354 2.854a.5.5 0 1 1-.708-.708zM8 10a.5.5 0 0 1 .5.5v3.793l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 0 1 .708-.708L7.5 14.293V10.5A.5.5 0 0 1 8 10"/>
+                                                    </svg>
+                                                    <span>{{ trans('Expand all') }}</span>
+                                                </button>
+                                            </div>
+                                        {% endif %}
                                     </div>
 
                                     {% if key != 'users' %}
@@ -190,12 +269,16 @@
                                                     <div class="cv-form-section cv-form-section--nested">
                                                         <div class="cv-form-section__subtitle d-flex align-items-center justify-content-between">
                                                             <div class="d-flex align-items-center gap-2">
-                                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-person text-secondary" viewBox="0 0 16 16">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="14"
+                                                                     height="14" fill="currentColor"
+                                                                     class="bi bi-person text-secondary"
+                                                                     viewBox="0 0 16 16">
                                                                     <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6m2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0m4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4m-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10s-3.516.68-4.168 1.332c-.678.678-.83 1.418-.832 1.664z"/>
                                                                 </svg>
                                                                 <span>{{ trans(username.replace('_', ' ')|title) }}</span>
                                                             </div>
-                                                            <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace" style="font-size: 0.65rem;">@{{ username }}</span>
+                                                            <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace"
+                                                                  style="font-size: 0.65rem;">@{{ username }}</span>
                                                         </div>
                                                         <div class="cv-form-section__body">
                                                             {{ forms.input('users-' + username, '', trans('New password'), type='password') }}
@@ -218,7 +301,7 @@
 
 {% block footer_assets %}
     <script>
-        (function() {
+        (function () {
             var tabButtons = document.querySelectorAll('#pills-tab button[data-bs-toggle="pill"]');
             var activeTabInput = document.getElementById('settings-active-tab');
             var toolbarTitle = document.getElementById('settings-toolbar-section-title');
@@ -241,15 +324,16 @@
                 }
             }
 
-            tabButtons.forEach(function(btn) {
-                btn.addEventListener('shown.bs.tab', function(e) {
+            tabButtons.forEach(function (btn) {
+                btn.addEventListener('shown.bs.tab', function (e) {
                     var target = e.target;
                     var key = target.dataset.sectionKey;
                     syncActiveTabUI(target);
                     if (key) {
                         try {
                             history.replaceState(null, '', '#pills-' + key);
-                        } catch(err) {}
+                        } catch (err) {
+                        }
                     }
                 });
             });
@@ -259,7 +343,7 @@
             if (hash) {
                 var cleanHash = hash.replace(/^#/, '');
                 var matchBtn = document.getElementById(cleanHash + '-tab') ||
-                               document.querySelector('#pills-tab button[data-section-key="' + cleanHash.replace(/^pills-/, '') + '"]');
+                    document.querySelector('#pills-tab button[data-section-key="' + cleanHash.replace(/^pills-/, '') + '"]');
                 if (matchBtn) {
                     var tabInst = bootstrap.Tab.getOrCreateInstance(matchBtn);
                     tabInst.show();
@@ -270,22 +354,72 @@
                 if (firstActive) syncActiveTabUI(firstActive);
             }
 
+            // Password visibility toggle handler
+            document.addEventListener('click', function (e) {
+                var toggleBtn = e.target.closest('.cv-password-toggle');
+                if (!toggleBtn) return;
+                e.preventDefault();
+                var group = toggleBtn.closest('.input-group');
+                if (!group) return;
+                var input = group.querySelector('.cv-password-input') || group.querySelector('input');
+                if (!input) return;
+                var isPass = input.type === 'password';
+                input.type = isPass ? 'text' : 'password';
+                toggleBtn.setAttribute('title', isPass ? "{{ trans('Hide password') }}" : "{{ trans('Show password') }}");
+                toggleBtn.innerHTML = isPass ?
+                    '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" class="bi bi-eye-slash" viewBox="0 0 16 16"><path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7 7 0 0 0-2.79.588l.77.771A6 6 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755q-.247.248-.506.476z"/><path d="M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829"/><path d="M3.35 5.47q-.27.24-.518.487A13 13 0 0 0 1.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7 7 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.71.708zm10.296 8.884-12-12 .708-.708 12 12z"/></svg>' :
+                    '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" class="bi bi-eye" viewBox="0 0 16 16"><path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-8.3 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z"/><path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0"/></svg>';
+            });
+
+            // Live rate percentage badges
+            document.addEventListener('input', function (e) {
+                if (e.target.classList.contains('cv-rate-input')) {
+                    var group = e.target.closest('.cv-input-group');
+                    if (!group) return;
+                    var badge = group.querySelector('.cv-rate-badge');
+                    if (badge) {
+                        var val = parseFloat(e.target.value);
+                        if (!isNaN(val)) {
+                            badge.textContent = Math.round(val * 100) + '%';
+                        }
+                    }
+                }
+            });
+
+            // Camera collapse & expand all
+            var btnCollapseAll = document.getElementById('btn-collapse-all-cameras');
+            var btnExpandAll = document.getElementById('btn-expand-all-cameras');
+            if (btnCollapseAll) {
+                btnCollapseAll.addEventListener('click', function () {
+                    document.querySelectorAll('#pills-detections .cv-camera-card__collapse').forEach(function (el) {
+                        bootstrap.Collapse.getOrCreateInstance(el, {toggle: false}).hide();
+                    });
+                });
+            }
+            if (btnExpandAll) {
+                btnExpandAll.addEventListener('click', function () {
+                    document.querySelectorAll('#pills-detections .cv-camera-card__collapse').forEach(function (el) {
+                        bootstrap.Collapse.getOrCreateInstance(el, {toggle: false}).show();
+                    });
+                });
+            }
+
             // Quick live search across form fields
             if (searchInput) {
-                searchInput.addEventListener('input', function(e) {
+                searchInput.addEventListener('input', function (e) {
                     var q = (e.target.value || '').trim().toLowerCase();
-                    var allFields = document.querySelectorAll('.tab-pane .cv-form-field, .tab-pane .cv-form-section');
+                    var allFields = document.querySelectorAll('.tab-pane .cv-form-field, .tab-pane .cv-form-section, .tab-pane .cv-camera-card');
                     var tabsWithMatches = new Set();
 
                     if (!q) {
-                        allFields.forEach(function(el) {
+                        allFields.forEach(function (el) {
                             el.classList.remove('is-search-match', 'is-search-dimmed');
                             el.style.display = '';
                         });
                         return;
                     }
 
-                    allFields.forEach(function(el) {
+                    allFields.forEach(function (el) {
                         var text = (el.textContent || '').toLowerCase();
                         var isMatch = text.indexOf(q) !== -1;
                         el.classList.toggle('is-search-match', isMatch);
@@ -294,6 +428,14 @@
                             var pane = el.closest('.tab-pane');
                             if (pane && pane.dataset.sectionKey) {
                                 tabsWithMatches.add(pane.dataset.sectionKey);
+                            }
+                            // Auto expand camera card if matched inside
+                            var parentCameraCard = el.closest('.cv-camera-card');
+                            if (parentCameraCard) {
+                                var collapseEl = parentCameraCard.querySelector('.cv-camera-card__collapse');
+                                if (collapseEl) {
+                                    bootstrap.Collapse.getOrCreateInstance(collapseEl, {toggle: false}).show();
+                                }
                             }
                         }
                     });
