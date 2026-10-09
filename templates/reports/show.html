@@ -2,6 +2,10 @@
 
 {% block title %}#{{ counter.id }} — {{ (location|striptags|title) }}{% endblock %}
 
+{% block head_assets %}
+    <link href="{{ url_for('static', filename='assets/css/print-report.css') }}" rel="stylesheet">
+{% endblock %}
+
 {% block header %}
     {% with page_title='#' ~ counter.id ~ ' — ' ~ (location|striptags|title), page_subtitle=trans('Detailed count session report and statistics.') %}
         {% include 'partials/page_header.html' %}
@@ -20,14 +24,76 @@
 {% endblock %}
 
 {% block content %}
-    {% include 'partials/inner_page_nav.html' %}
+    <div class="d-print-none">
+        {% include 'partials/inner_page_nav.html' %}
+    </div>
 
     <div class="page-content reports-detail-page">
+        <!-- Print-only Report Header -->
+        <div class="print-report-header">
+            <div class="print-report-header__top">
+                <div class="print-report-header__brand">
+                    <div class="print-report-header__logo">CVCounter</div>
+                    <div class="print-report-header__subtitle">{{ trans('Computer Vision Counting System') }}</div>
+                </div>
+                <div class="print-report-header__title-block">
+                    <h1 class="print-report-header__title">{{ trans('Count Session Report') }} #{{ counter.id }}</h1>
+                    <div class="print-report-header__meta">
+                        <span>{{ trans('Printed at') }}: <strong class="print-current-date"></strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="print-report-header__summary-grid">
+                <div class="print-summary-item">
+                    <span class="print-summary-item__label">{{ trans('Location') }}</span>
+                    <strong class="print-summary-item__value">{{ location|striptags|title }}</strong>
+                </div>
+                <div class="print-summary-item">
+                    <span class="print-summary-item__label">{{ trans('Status') }}</span>
+                    <strong class="print-summary-item__value">
+                        {% if counter.active %}{{ trans('Running') }}{% else %}{{ trans('Completed') }}{% endif %}
+                    </strong>
+                </div>
+                <div class="print-summary-item">
+                    <span class="print-summary-item__label">{{ trans('Created') }}</span>
+                    <strong class="print-summary-item__value font-monospace">{{ counter.created_at.strftime('%d.%m.%Y %H:%M:%S') }}</strong>
+                </div>
+                <div class="print-summary-item">
+                    <span class="print-summary-item__label">{{ trans('Updated') }}</span>
+                    <strong class="print-summary-item__value font-monospace">{{ counter.updated_at.strftime('%d.%m.%Y %H:%M:%S') }}</strong>
+                </div>
+                <div class="print-summary-item">
+                    <span class="print-summary-item__label">{{ trans('Duration') }}</span>
+                    <strong class="print-summary-item__value font-monospace">
+                        {% if counter.created_at and counter.updated_at %}
+                            {% set duration_secs = (counter.updated_at - counter.created_at).total_seconds()|round|int %}
+                            {% if duration_secs > 0 %}
+                                {% set mins = (duration_secs // 60) %}
+                                {% set secs = (duration_secs % 60) %}
+                                {% if mins > 60 %}
+                                    {{ (mins // 60) }}h {{ (mins % 60) }}m {{ secs }}s
+                                {% elif mins > 0 %}
+                                    {{ mins }}m {{ secs }}s
+                                {% else %}
+                                    {{ secs }}s
+                                {% endif %}
+                            {% else %}
+                                —
+                            {% endif %}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </strong>
+                </div>
+            </div>
+        </div>
+
         <!-- Top Action & Navigation Bar -->
-        <div class="cv-card p-3 mb-4 shadow-sm">
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="cv-card p-2 p-sm-3 mb-3 mb-sm-4 shadow-sm reports-action-bar d-print-none">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                 <!-- Left: Back & Context Badges -->
-                <div class="d-flex flex-wrap align-items-center gap-2">
+                <div class="d-flex flex-wrap align-items-center gap-1 gap-sm-2">
                     <a href="{{ url_for('reports.report_list', location=location) }}"
                        class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
                        title="{{ trans('Back to reports') }}">
@@ -92,10 +158,10 @@
         </div>
 
         <!-- 4 Key Metric KPI Cards -->
-        <div class="row g-3 mb-4">
+        <div class="row g-2 g-sm-3 mb-3 mb-sm-4">
             <div class="col-6 col-lg-3">
-                <div class="cv-card p-3 h-100 reports-kpi-card shadow-sm border-start border-primary border-3">
-                    <div class="d-flex align-items-center gap-3">
+                <div class="cv-card p-2 p-sm-3 h-100 reports-kpi-card shadow-sm border-start border-primary border-3">
+                    <div class="d-flex align-items-center gap-2 gap-sm-3">
                         <div class="reports-kpi-icon bg-primary-subtle text-primary border border-primary-subtle">
                             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-bullseye" viewBox="0 0 16 16">
                                 <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
@@ -104,46 +170,46 @@
                                 <path d="M9.5 8a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
                             </svg>
                         </div>
-                        <div>
-                            <div class="text-body-secondary small text-uppercase tracking-wider fw-semibold">{{ trans('Total') }}</div>
-                            <div class="fs-3 fw-bold font-monospace text-primary">{{ counter.total_count }}</div>
+                        <div class="min-w-0 flex-grow-1">
+                            <span class="reports-kpi-label" title="{{ trans('Total') }}">{{ trans('Total') }}</span>
+                            <div class="reports-kpi-value text-primary">{{ counter.total_count }}</div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="col-6 col-lg-3">
-                <div class="cv-card p-3 h-100 reports-kpi-card shadow-sm border-start border-success border-3">
-                    <div class="d-flex align-items-center gap-3">
+                <div class="cv-card p-2 p-sm-3 h-100 reports-kpi-card shadow-sm border-start border-success border-3">
+                    <div class="d-flex align-items-center gap-2 gap-sm-3">
                         <div class="reports-kpi-icon bg-success-subtle text-success border border-success-subtle">
                             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-check2-circle" viewBox="0 0 16 16">
                                 <path d="M2.5 8a5.5 5.5 0 0 1 8.25-4.764.5.5 0 0 0 .5-.866A6.5 6.5 0 1 0 14.5 8a.5.5 0 0 0-1 0 5.5 5.5 0 1 1-11 0z"/>
                                 <path d="M15.354 3.354a.5.5 0 0 0-.708-.708L8 9.293 5.354 6.646a.5.5 0 1 0-.708.708l3 3a.5.5 0 0 0 .708 0l7-7z"/>
                             </svg>
                         </div>
-                        <div>
-                            <div class="text-body-secondary small text-uppercase tracking-wider fw-semibold">{{ trans('Correct') }}</div>
-                            <div class="fs-3 fw-bold font-monospace text-success">{{ counter.correct_count }}</div>
+                        <div class="min-w-0 flex-grow-1">
+                            <span class="reports-kpi-label" title="{{ trans('Correct') }}">{{ trans('Correct') }}</span>
+                            <div class="reports-kpi-value text-success">{{ counter.correct_count }}</div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="col-6 col-lg-3">
-                <div class="cv-card p-3 h-100 reports-kpi-card shadow-sm border-start border-danger border-3">
-                    <div class="d-flex align-items-center gap-3">
+                <div class="cv-card p-2 p-sm-3 h-100 reports-kpi-card shadow-sm border-start border-danger border-3">
+                    <div class="d-flex align-items-center gap-2 gap-sm-3">
                         <div class="reports-kpi-icon bg-danger-subtle text-danger border border-danger-subtle">
                             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-exclamation-triangle" viewBox="0 0 16 16">
                                 <path d="M7.938 2.016A.13.13 0 0 1 8.002 2a.13.13 0 0 1 .063.016.15.15 0 0 1 .054.057l6.857 11.667c.036.06.035.124.002.183a.2.2 0 0 1-.054.06.1.1 0 0 1-.066.017H1.146a.1.1 0 0 1-.066-.017.2.2 0 0 1-.054-.06.18.18 0 0 1 .002-.183L7.884 2.073a.15.15 0 0 1 .054-.057m1.044-.45a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767z"/>
                                 <path d="M7.002 12a1 1 0 1 1 2 0 1 1 0 0 1-2 0M7.1 5.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0z"/>
                             </svg>
                         </div>
-                        <div>
-                            <div class="text-body-secondary small text-uppercase tracking-wider fw-semibold">{{ trans('Defect') }}</div>
-                            <div class="d-flex align-items-baseline gap-2">
-                                <span class="fs-3 fw-bold font-monospace text-danger">{{ counter.defects_count }}</span>
+                        <div class="min-w-0 flex-grow-1">
+                            <span class="reports-kpi-label" title="{{ trans('Defect') }}">{{ trans('Defect') }}</span>
+                            <div class="d-flex align-items-baseline gap-1 gap-sm-2 flex-wrap">
+                                <span class="reports-kpi-value text-danger">{{ counter.defects_count }}</span>
                                 {% if counter.total_count > 0 %}
-                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 0.72rem;">
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle reports-kpi-badge">
                                         {{ ((counter.defects_count / counter.total_count) * 100)|round(1) }}%
                                     </span>
                                 {% endif %}
@@ -154,17 +220,17 @@
             </div>
 
             <div class="col-6 col-lg-3">
-                <div class="cv-card p-3 h-100 reports-kpi-card shadow-sm border-start border-info border-3">
-                    <div class="d-flex align-items-center gap-3">
+                <div class="cv-card p-2 p-sm-3 h-100 reports-kpi-card shadow-sm border-start border-info border-3">
+                    <div class="d-flex align-items-center gap-2 gap-sm-3">
                         <div class="reports-kpi-icon bg-info-subtle text-info border border-info-subtle">
                             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-box-arrow-in-down" viewBox="0 0 16 16">
                                 <path fill-rule="evenodd" d="M3.5 6a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5v-8a.5.5 0 0 0-.5-.5h-2a.5.5 0 0 1 0-1h2A1.5 1.5 0 0 1 14 6.5v8a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 14.5v-8A1.5 1.5 0 0 1 3.5 5h2a.5.5 0 0 1 0 1z"/>
                                 <path fill-rule="evenodd" d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/>
                             </svg>
                         </div>
-                        <div>
-                            <div class="text-body-secondary small text-uppercase tracking-wider fw-semibold">{{ trans('Source') }}</div>
-                            <div class="fs-3 fw-bold font-monospace text-info">{{ counter.source_count }}</div>
+                        <div class="min-w-0 flex-grow-1">
+                            <span class="reports-kpi-label" title="{{ trans('Source') }}">{{ trans('Source') }}</span>
+                            <div class="reports-kpi-value text-info">{{ counter.source_count }}</div>
                         </div>
                     </div>
                 </div>
@@ -185,7 +251,7 @@
                                 </svg>
                                 <span>{{ trans('Distribution by class') }}</span>
                             </h5>
-                            <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ class_counts|length }} {{ trans('Classes').lower() if trans('Classes') != 'Classes' else 'классов' }}</span>
+                            <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ class_counts|length }} {{ trans('classes_count_label') }}</span>
                         </div>
 
                         <div class="d-flex flex-column gap-3">
@@ -348,5 +414,59 @@
                 {% endif %}
             </div>
         </div>
+
+        <!-- Print-only Report Footer with Signatures -->
+        <div class="print-report-footer">
+            <div class="print-signatures-grid">
+                <div class="print-signature-col">
+                    <div class="print-signature-label">{{ trans('Operator') }}:</div>
+                    <div class="print-signature-line">
+                        <span class="print-signature-sub">({{ trans('Signature') }} / {{ trans('Full name') }})</span>
+                    </div>
+                </div>
+                <div class="print-signature-col">
+                    <div class="print-signature-label">{{ trans('Quality Inspector / Approved by') }}:</div>
+                    <div class="print-signature-line">
+                        <span class="print-signature-sub">({{ trans('Signature') }} / {{ trans('Full name') }})</span>
+                    </div>
+                </div>
+                <div class="print-signature-col">
+                    <div class="print-signature-label">{{ trans('Date') }}:</div>
+                    <div class="print-signature-line">
+                        <span class="print-signature-sub">«____» ________________ 20___ г.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="print-report-bottom-note">
+                <span>{{ trans('Automated report generated by CVCounter') }}</span>
+                <span>ID: #{{ counter.id }} &bull; {{ location }}</span>
+            </div>
+        </div>
     </div>
+{% endblock %}
+
+{% block footer_assets %}
+    <script>
+        (function() {
+            function updatePrintDate() {
+                var now = new Date();
+                var d = String(now.getDate()).padStart(2, '0');
+                var m = String(now.getMonth() + 1).padStart(2, '0');
+                var y = now.getFullYear();
+                var hh = String(now.getHours()).padStart(2, '0');
+                var mm = String(now.getMinutes()).padStart(2, '0');
+                var str = d + '.' + m + '.' + y + ' ' + hh + ':' + mm;
+                document.querySelectorAll('.print-current-date').forEach(function(el) {
+                    el.textContent = str;
+                });
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', updatePrintDate);
+            } else {
+                updatePrintDate();
+            }
+            window.addEventListener('beforeprint', updatePrintDate);
+        })();
+    </script>
 {% endblock %}

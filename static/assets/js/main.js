@@ -92,6 +92,23 @@ const ThemeManager = {
     initialize() {
         this.set(CookieUtil.get("theme") || "dark");
         document.getElementById("theme-switch")?.addEventListener("click", () => this.toggle());
+
+        let printOriginalTheme = null;
+        window.addEventListener("beforeprint", () => {
+            printOriginalTheme = document.documentElement.getAttribute("data-bs-theme") || "dark";
+            document.documentElement.setAttribute("data-bs-theme", "light");
+            document.documentElement.style.setProperty("color-scheme", "light");
+            document.documentElement.style.setProperty("background-color", "#ffffff", "important");
+            document.body.style.setProperty("background-color", "#ffffff", "important");
+        });
+        window.addEventListener("afterprint", () => {
+            if (printOriginalTheme) {
+                document.documentElement.setAttribute("data-bs-theme", printOriginalTheme);
+            }
+            document.documentElement.style.removeProperty("color-scheme");
+            document.documentElement.style.removeProperty("background-color");
+            document.body.style.removeProperty("background-color");
+        });
     },
 };
 

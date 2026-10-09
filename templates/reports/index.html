@@ -22,69 +22,69 @@
 
     <div class="page-content reports-index-page">
         <!-- Top Summary KPI Metric Cards -->
-        <div class="row g-3 mb-4">
+        <div class="row g-2 g-sm-3 mb-4">
             <div class="col-6 col-lg-3">
-                <div class="cv-card p-3 h-100 reports-kpi-card shadow-sm">
-                    <div class="d-flex align-items-center gap-3">
+                <div class="cv-card p-2 p-sm-3 h-100 reports-kpi-card shadow-sm">
+                    <div class="d-flex align-items-center gap-2 gap-sm-3">
                         <div class="reports-kpi-icon bg-primary-subtle text-primary border border-primary-subtle">
                             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-camera-video" viewBox="0 0 16 16">
                                 <path fill-rule="evenodd" d="M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2V5z"/>
                             </svg>
                         </div>
-                        <div class="min-w-0">
-                            <div class="text-body-secondary small text-uppercase tracking-wider fw-semibold">{{ trans('Locations') }}</div>
-                            <div class="fs-4 fw-bold font-monospace">{{ object_counters|length }}</div>
+                        <div class="min-w-0 flex-grow-1">
+                            <span class="reports-kpi-label" title="{{ trans('Locations') }}">{{ trans('Locations') }}</span>
+                            <div class="reports-kpi-value">{{ object_counters|length }}</div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="col-6 col-lg-3">
-                <div class="cv-card p-3 h-100 reports-kpi-card shadow-sm">
-                    <div class="d-flex align-items-center gap-3">
+                <div class="cv-card p-2 p-sm-3 h-100 reports-kpi-card shadow-sm">
+                    <div class="d-flex align-items-center gap-2 gap-sm-3">
                         <div class="reports-kpi-icon bg-success-subtle text-success border border-success-subtle">
                             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-file-earmark-bar-graph" viewBox="0 0 16 16">
                                 <path d="M10 13.5a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-6a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v6zm-2.5.5a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-1zm-3 0a.5.5 0 0 1-.5-.5v-2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-1z"/>
                                 <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
                             </svg>
                         </div>
-                        <div class="min-w-0">
-                            <div class="text-body-secondary small text-uppercase tracking-wider fw-semibold">{{ trans('Total sessions') }}</div>
-                            <div class="fs-4 fw-bold font-monospace">{{ total_all_sessions }}</div>
+                        <div class="min-w-0 flex-grow-1">
+                            <span class="reports-kpi-label" title="{{ trans('Total sessions') }}">{{ trans('Total sessions') }}</span>
+                            <div class="reports-kpi-value text-success">{{ total_all_sessions }}</div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="col-6 col-lg-3">
-                <div class="cv-card p-3 h-100 reports-kpi-card shadow-sm">
-                    <div class="d-flex align-items-center gap-3">
+                <div class="cv-card p-2 p-sm-3 h-100 reports-kpi-card shadow-sm">
+                    <div class="d-flex align-items-center gap-2 gap-sm-3">
                         <div class="reports-kpi-icon bg-info-subtle text-info border border-info-subtle">
                             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-images" viewBox="0 0 16 16">
                                 <path d="M4.502 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
                                 <path d="M14.002 13a2 2 0 0 1-2 2h-10a2 2 0 0 1-2-2V5A2 2 0 0 1 2 3a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-1.998 2zM14 2H4a1 1 0 0 0-1 1h9.002a2 2 0 0 1 2 2v7A1 1 0 0 0 15 11V3a1 1 0 0 0-1-1zM2.002 4a1 1 0 0 0-1 1v8l2.646-2.354a.5.5 0 0 1 .63-.062l2.66 1.773 3.71-3.71a.5.5 0 0 1 .577-.094l1.777 1.947V5a1 1 0 0 0-1-1h-10z"/>
                             </svg>
                         </div>
-                        <div class="min-w-0">
-                            <div class="text-body-secondary small text-uppercase tracking-wider fw-semibold">{{ trans('Total saved images') }}</div>
-                            <div class="fs-4 fw-bold font-monospace">{{ total_all_images }}</div>
+                        <div class="min-w-0 flex-grow-1">
+                            <span class="reports-kpi-label" title="{{ trans('Total saved images') }}">{{ trans('Total saved images') }}</span>
+                            <div class="reports-kpi-value text-info">{{ total_all_images }}</div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="col-6 col-lg-3">
-                <div class="cv-card p-3 h-100 reports-kpi-card shadow-sm">
-                    <div class="d-flex align-items-center gap-3">
+                <div class="cv-card p-2 p-sm-3 h-100 reports-kpi-card shadow-sm">
+                    <div class="d-flex align-items-center gap-2 gap-sm-3">
                         <div class="reports-kpi-icon bg-danger-subtle text-danger border border-danger-subtle">
                             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-play-circle" viewBox="0 0 16 16">
                                 <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
                                 <path d="M6.271 5.055a.5.5 0 0 1 .52.038l3.5 2.5a.5.5 0 0 1 0 .814l-3.5 2.5A.5.5 0 0 1 6 10.5v-5a.5.5 0 0 1 .271-.445z"/>
                             </svg>
                         </div>
-                        <div class="min-w-0">
-                            <div class="text-body-secondary small text-uppercase tracking-wider fw-semibold">{{ trans('Total saved videos') }}</div>
-                            <div class="fs-4 fw-bold font-monospace">{{ total_all_videos }}</div>
+                        <div class="min-w-0 flex-grow-1">
+                            <span class="reports-kpi-label" title="{{ trans('Total saved videos') }}">{{ trans('Total saved videos') }}</span>
+                            <div class="reports-kpi-value text-danger">{{ total_all_videos }}</div>
                         </div>
                     </div>
                 </div>

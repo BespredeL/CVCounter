@@ -77,10 +77,14 @@
 
         const searchInput = document.getElementById('dataset-search-input');
         const emptyResults = document.getElementById('no-search-results');
+        const countBadge = document.getElementById('datasets-count-badge');
+        const allCols = document.querySelectorAll('.dataset-item-col');
+        const totalDatasets = allCols.length;
+
         searchInput?.addEventListener('input', (e) => {
             const query = (e.target.value || '').trim().toLowerCase();
             let visibleCount = 0;
-            document.querySelectorAll('.dataset-item-col').forEach((col) => {
+            allCols.forEach((col) => {
                 const searchData = col.dataset.search || '';
                 const match = !query || searchData.includes(query);
                 col.style.display = match ? '' : 'none';
@@ -88,6 +92,9 @@
             });
             if (emptyResults) {
                 emptyResults.classList.toggle('d-none', visibleCount > 0);
+            }
+            if (countBadge) {
+                countBadge.textContent = query ? `${visibleCount} / ${totalDatasets}` : `${totalDatasets}`;
             }
         });
     }

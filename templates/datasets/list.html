@@ -3,7 +3,7 @@
 {% block title %}{{ trans('Datasets') }}{% endblock %}
 
 {% block header %}
-    {% with page_title=trans('Datasets') %}
+    {% with page_title=trans('Datasets'), page_subtitle=trans('Create, import and annotate datasets for model training.') %}
         {% include 'partials/page_header.html' %}
     {% endwith %}
 {% endblock %}
@@ -22,26 +22,46 @@
 
     <div class="page-content datasets-hub" id="datasets-page"
          data-create-url="{{ url_for('datasets.api_create') }}">
-        <div class="datasets-hub__intro d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-            <div class="min-w-0">
-                <p class="text-body-secondary mb-1">{{ trans('Create, import and annotate datasets for model training.') }}</p>
-                <p class="dataset-hint mb-0">{{ trans('Typical flow: create dataset → import frames → annotate → train → apply weights to a counter.') }}</p>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <div class="input-group input-group-sm" style="max-width: 14rem;">
-                    <span class="input-group-text">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16" aria-hidden="true">
-                            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+        <!-- Top Toolbar & Filter Card -->
+        <div class="cv-card p-3 mb-4 shadow-sm datasets-hub__intro">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-3 min-w-0">
+                    <div class="datasets-toolbar__icon bg-primary-subtle text-primary border border-primary-subtle rounded-3 d-none d-sm-flex align-items-center justify-content-center flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-collection" viewBox="0 0 16 16" aria-hidden="true">
+                            <path d="M2.5 3.5a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1zm2-2a.5.5 0 0 1 0-1h7a.5.5 0 0 1 0 1zM0 13a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 16 13V6a1.5 1.5 0 0 0-1.5-1.5h-13A1.5 1.5 0 0 0 0 6zm1.5.5A.5.5 0 0 1 1 13V6a.5.5 0 0 1 .5-.5h13a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5z"/>
                         </svg>
-                    </span>
-                    <input type="text" class="form-control" id="dataset-search-input" placeholder="{{ trans('Search') }}…" aria-label="{{ trans('Search') }}">
+                    </div>
+                    <div class="min-w-0">
+                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                            <span class="fw-semibold text-body fs-6">{{ trans('Datasets') }}</span>
+                            <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace" id="datasets-count-badge" title="{{ trans('Datasets') }}">
+                                {{ datasets|length }}
+                            </span>
+                        </div>
+                        <p class="dataset-hint text-body-secondary small mb-0">
+                            {{ trans('Typical flow: create dataset → import frames → annotate → train → apply weights to a counter.') }}
+                        </p>
+                    </div>
                 </div>
-                <button type="button" class="btn btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createDatasetModal">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16" aria-hidden="true">
-                        <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/>
-                    </svg>
-                    <span>{{ trans('New dataset') }}</span>
-                </button>
+
+                <div class="d-flex align-items-center gap-2 flex-wrap ms-auto">
+                    <div class="input-group input-group-sm" style="min-width: 14rem; max-width: 18rem;">
+                        <span class="input-group-text bg-body-tertiary border-end-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-search text-body-secondary" viewBox="0 0 16 16" aria-hidden="true">
+                                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+                            </svg>
+                        </span>
+                        <input type="search" class="form-control form-control-sm border-start-0" id="dataset-search-input"
+                               placeholder="{{ trans('Search') }}…" aria-label="{{ trans('Search') }}">
+                    </div>
+                    <button type="button" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1"
+                            data-bs-toggle="modal" data-bs-target="#createDatasetModal">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/>
+                        </svg>
+                        <span>{{ trans('New dataset') }}</span>
+                    </button>
+                </div>
             </div>
         </div>
 

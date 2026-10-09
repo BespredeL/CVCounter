@@ -19,735 +19,1591 @@
 
 {% block content %}
     {% include 'partials/inner_page_nav.html' %}
+
     <div class="page-content doc-page pb-5">
-        <p class="text-muted mb-4">{{ trans('Help intro') }}</p>
+        <!-- Hero section with live search and category chips -->
+        <div class="help-hero">
+            <div class="help-hero__badge">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-book-half" viewBox="0 0 16 16">
+                    <path d="M8.5 2.687c.654-.689 1.782-.886 3.112-.752 1.234.124 2.503.523 3.388.893v9.923c-.918-.35-2.107-.692-3.287-.81-1.094-.111-2.278-.039-3.213.492zM8 1.783C7.015.936 5.587.81 4.287.94c-1.514.153-3.042.672-3.994 1.105A.5.5 0 0 0 0 2.5v11a.5.5 0 0 0 .707.455c.882-.4 2.303-.881 3.68-1.02 1.409-.142 2.59.087 3.223.877a.5.5 0 0 0 .78 0c.633-.79 1.814-1.019 3.222-.877 1.378.139 2.8.62 3.681 1.02A.5.5 0 0 0 16 13.5v-11a.5.5 0 0 0-.293-.455c-.952-.433-2.48-.952-3.994-1.105C10.413.809 8.985.936 8 1.783"/>
+                </svg>
+                <span>{{ trans('Help') }} &amp; {{ trans('Instructions') }}</span>
+            </div>
+            <h1 class="help-hero__title">{{ trans('Help') }} CVCounter</h1>
+            <p class="help-hero__desc">{{ trans('Help intro') }}</p>
 
-        <div class="row g-0">
-            <div class="col-12 border-bottom mb-3 pb-3">
-                <h2 class="section-block__title">{{ trans('Counters') }}</h2>
-                <p class="text-muted">{{ trans('Dashboard counters hint') }}</p>
+            <!-- Search field -->
+            <div class="help-search-container">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" fill="currentColor" class="bi bi-search help-search-icon" viewBox="0 0 16 16">
+                    <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+                </svg>
+                <input type="search" id="help-search" class="help-search-input"
+                       placeholder="{{ trans('Search help...') }}"
+                       aria-label="{{ trans('Search help...') }}" autocomplete="off">
+                <button type="button" id="help-search-clear" class="help-search-clear" title="{{ trans('Clear') }}" aria-label="{{ trans('Clear') }}">&times;</button>
+                <span class="help-search-kbd">Ctrl+K</span>
+            </div>
 
-                <div class="table-responsive">
-                    <table class="table table-bordered mb-0">
-                        <thead class="table-dark">
-                        <tr>
-                            <th scope="col" class="w-50">{{ trans('Element') }}</th>
-                            <th scope="col" class="w-50">{{ trans('Description') }}</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr>
-                            <td class="align-middle">
-                                <input type="search" class="form-control form-control-sm" style="max-width: 220px"
-                                       placeholder="{{ trans('Search counters') }}" disabled>
-                            </td>
-                            <td>{{ trans('Help search counters') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">
-                                <div class="counter-filter-pills btn-group btn-group-sm" role="group">
-                                    <span class="btn btn-secondary">{{ trans('All') }}</span>
-                                    <span class="btn btn-outline-secondary">{{ trans('Running') }}</span>
-                                    <span class="btn btn-outline-secondary">{{ trans('Paused') }}</span>
-                                    <span class="btn btn-outline-secondary">{{ trans('Stopped') }}</span>
+            <!-- Filter chips -->
+            <div class="help-filter-chips" role="tablist">
+                <button type="button" class="help-chip active" data-filter="all">
+                    <span>{{ trans('All') }}</span>
+                </button>
+                <button type="button" class="help-chip" data-filter="sec-counters">
+                    <span>{{ trans('Counters') }}</span>
+                </button>
+                <button type="button" class="help-chip" data-filter="sec-video">
+                    <span>{{ trans('Video') }} / {{ trans('Text') }}</span>
+                </button>
+                <button type="button" class="help-chip" data-filter="sec-zones">
+                    <span>{{ trans('Counting zone editor') }}</span>
+                </button>
+                <button type="button" class="help-chip" data-filter="sec-multi">
+                    <span>{{ trans('Multi counter view') }}</span>
+                </button>
+                <button type="button" class="help-chip" data-filter="sec-toolbar">
+                    <span>{{ trans('Help toolbar') }}</span>
+                </button>
+                <button type="button" class="help-chip" data-filter="sec-datasets">
+                    <span>{{ trans('Datasets') }}</span>
+                </button>
+                <button type="button" class="help-chip" data-filter="sec-recording">
+                    <span>{{ trans('Recording') }}</span>
+                </button>
+                <button type="button" class="help-chip" data-filter="sec-shortcuts">
+                    <span>{{ trans('Keyboard shortcuts') }}</span>
+                </button>
+                <button type="button" class="help-chip" data-filter="sec-about">
+                    <span>{{ trans('Developer') }}</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Layout with Sticky Navigation -->
+        <div class="row g-4">
+            <!-- Sidebar Table of Contents -->
+            <aside class="col-12 col-lg-3 d-none d-lg-block">
+                <div class="help-sidebar">
+                    <nav class="help-toc-card">
+                        <div class="help-toc-title">
+                            <span>{{ trans('Table of contents') }}</span>
+                            <span class="badge text-bg-secondary rounded-pill" id="help-total-items-badge">26</span>
+                        </div>
+                        <div class="help-toc-nav" id="help-toc">
+                            <a href="#sec-workflow" class="help-toc-link">
+                                <span><span class="help-toc-link__icon bi bi-diagram-3"></span>{{ trans('Workflow overview') }}</span>
+                            </a>
+                            <a href="#sec-counters" class="help-toc-link">
+                                <span><span class="help-toc-link__icon bi bi-grid"></span>{{ trans('Counters') }}</span>
+                                <span class="help-toc-link__badge">5</span>
+                            </a>
+                            <a href="#sec-video" class="help-toc-link">
+                                <span><span class="help-toc-link__icon bi bi-camera-video"></span>{{ trans('Video') }} / {{ trans('Text') }}</span>
+                                <span class="help-toc-link__badge">5</span>
+                            </a>
+                            <a href="#sec-zones" class="help-toc-link">
+                                <span><span class="help-toc-link__icon bi bi-bounding-box-circles"></span>{{ trans('Counting zone editor') }}</span>
+                                <span class="help-toc-link__badge">2</span>
+                            </a>
+                            <a href="#sec-multi" class="help-toc-link">
+                                <span><span class="help-toc-link__icon bi bi-columns-gap"></span>{{ trans('Multi counter view') }}</span>
+                                <span class="help-toc-link__badge">1</span>
+                            </a>
+                            <a href="#sec-toolbar" class="help-toc-link">
+                                <span><span class="help-toc-link__icon bi bi-sliders"></span>{{ trans('Help toolbar') }}</span>
+                                <span class="help-toc-link__badge">5</span>
+                            </a>
+                            <a href="#sec-datasets" class="help-toc-link">
+                                <span><span class="help-toc-link__icon bi bi-collection"></span>{{ trans('Datasets') }}</span>
+                                <span class="help-toc-link__badge">5</span>
+                            </a>
+                            <a href="#sec-recording" class="help-toc-link">
+                                <span><span class="help-toc-link__icon bi bi-record-circle"></span>{{ trans('Recording') }}</span>
+                                <span class="help-toc-link__badge">3</span>
+                            </a>
+                            <a href="#sec-shortcuts" class="help-toc-link">
+                                <span><span class="help-toc-link__icon bi bi-keyboard"></span>{{ trans('Keyboard shortcuts') }}</span>
+                                <span class="help-toc-link__badge">8</span>
+                            </a>
+                            <a href="#sec-about" class="help-toc-link">
+                                <span><span class="help-toc-link__icon bi bi-info-circle"></span>{{ trans('Developer') }}</span>
+                            </a>
+                        </div>
+                    </nav>
+                </div>
+            </aside>
+
+            <!-- Main Documentation Content -->
+            <main class="col-12 col-lg-9">
+                <!-- Search empty state placeholder -->
+                <div id="help-empty-state" class="help-empty-search">
+                    <div class="help-empty-search__icon">🔍</div>
+                    <h3 class="h5 mb-2">{{ trans('Nothing found') }}</h3>
+                    <p class="text-secondary small mb-3">{{ trans('Try changing your search query') }}</p>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="help-reset-search-btn">
+                        {{ trans('All sections') }}
+                    </button>
+                </div>
+
+                <!-- Section: Workflow overview -->
+                <section id="sec-workflow" class="help-section help-topic-group">
+                    <div class="help-section__header">
+                        <h2 class="help-section__title">
+                            <span class="bi bi-diagram-3 text-primary"></span>
+                            {{ trans('Workflow overview') }}
+                        </h2>
+                    </div>
+                    <div class="help-workflow-card">
+                        <div class="row g-3">
+                            <div class="col-12 col-sm-6 col-xl-3">
+                                <div class="help-workflow-step">
+                                    <span class="help-workflow-step__num">1</span>
+                                    <div class="help-workflow-step__title">{{ trans('Counters') }}</div>
+                                    <p class="help-workflow-step__text">{{ trans('Dashboard counters hint') }}</p>
                                 </div>
-                            </td>
-                            <td>{{ trans('Help filter counters') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">
-                                <article class="counter-card counter-card--stopped help-card-mock"
-                                         style="max-width: 280px">
-                                    <div class="counter-card__preview">
+                            </div>
+                            <div class="col-12 col-sm-6 col-xl-3">
+                                <div class="help-workflow-step">
+                                    <span class="help-workflow-step__num">2</span>
+                                    <div class="help-workflow-step__title">{{ trans('Counting zone') }}</div>
+                                    <p class="help-workflow-step__text">{{ trans('Configure the polygon on a live video frame') }}</p>
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6 col-xl-3">
+                                <div class="help-workflow-step">
+                                    <span class="help-workflow-step__num">3</span>
+                                    <div class="help-workflow-step__title">{{ trans('Video') }} / {{ trans('Text') }}</div>
+                                    <p class="help-workflow-step__text">{{ trans('Help counter totals') }}</p>
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6 col-xl-3">
+                                <div class="help-workflow-step">
+                                    <span class="help-workflow-step__num">4</span>
+                                    <div class="help-workflow-step__title">{{ trans('Datasets') }}</div>
+                                    <p class="help-workflow-step__text">{{ trans('Create, import and annotate datasets for model training.') }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 1: Counters -->
+                <section id="sec-counters" class="help-section help-topic-group">
+                    <div class="help-section__header">
+                        <div>
+                            <h2 class="help-section__title">
+                                <span class="bi bi-grid text-primary"></span>
+                                {{ trans('Counters') }}
+                            </h2>
+                            <p class="help-section__desc">{{ trans('Dashboard counters hint') }}</p>
+                        </div>
+                        <span class="help-section__badge">5 {{ trans('Quick actions') }}</span>
+                    </div>
+
+                    <!-- Item 1.1: Search & Filter -->
+                    <div class="help-card help-searchable-item" data-keywords="search filter поиск фильтр счетчиков counters all running paused stopped">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Element') }}</span>
+                                <div class="d-flex flex-column gap-2 w-100 align-items-center">
+                                    <input type="search" class="form-control form-control-sm text-center" style="max-width: 240px"
+                                           placeholder="{{ trans('Search counters') }}" readonly>
+                                    <div class="counter-filter-pills btn-group btn-group-sm" role="group">
+                                        <span class="btn btn-secondary">{{ trans('All') }}</span>
+                                        <span class="btn btn-outline-secondary">{{ trans('Running') }}</span>
+                                        <span class="btn btn-outline-secondary">{{ trans('Paused') }}</span>
+                                        <span class="btn btn-outline-secondary">{{ trans('Stopped') }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">{{ trans('Search counters') }} &amp; {{ trans('Help filter counters') }}</h3>
+                                    <span class="help-card__badge">{{ trans('Counters') }}</span>
+                                </div>
+                                <p class="help-card__desc">{{ trans('Help search counters') }}</p>
+                                <p class="help-card__desc">{{ trans('Help filter counters') }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Item 1.2: Card Status (Interactive Preview!) -->
+                    <div class="help-card help-searchable-item" data-keywords="status card running paused stopped статус карточка работает пауза остановлен">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Interactive demo') }}</span>
+                                <!-- Interactive Status Mock -->
+                                <article class="counter-card counter-card--running w-100" id="help-status-mock" style="max-width: 270px">
+                                    <div class="counter-card__preview" style="min-height:90px">
+                                        <label class="counter-card__select" title="{{ trans('Select for multi view') }}">
+                                            <input type="checkbox" class="form-check-input" checked disabled aria-label="{{ trans('Select for multi view') }}">
+                                        </label>
                                         <div class="counter-card__preview-placeholder" aria-hidden="true">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"
-                                                 fill="currentColor"
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="currentColor"
                                                  class="bi bi-camera-video opacity-50" viewBox="0 0 16 16">
-                                                <path fill-rule="evenodd"
-                                                      d="M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2zm11.5 5.175 3.5 1.556V4.269l-3.5 1.556zM2 4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h7.5a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z"/>
+                                                <path fill-rule="evenodd" d="M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2zm11.5 5.175 3.5 1.556V4.269l-3.5 1.556zM2 4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h7.5a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z"/>
                                             </svg>
                                         </div>
                                         <span class="counter-card__status-dot" aria-hidden="true"></span>
                                     </div>
                                     <div class="counter-card__body">
                                         <div class="counter-card__head">
-                                            <h3 class="counter-card__name h6 mb-0">{{ trans('Counter name') }}</h3>
-                                            <span class="counter-card__badge">{{ trans('Counter stopped') }}</span>
+                                            <h4 class="counter-card__name h6 mb-0">{{ trans('Counter name') }}</h4>
+                                            <span class="counter-card__badge" id="help-status-badge">{{ trans('Counter running') }}</span>
                                         </div>
-                                        <p class="counter-card__location text-muted small mb-2">location_id</p>
+                                        <p class="counter-card__location text-muted small mb-0">camera_01</p>
+                                        <div class="counter-card__actions">
+                                            <div class="btn-group counter-card__transport" role="group" aria-label="{{ trans('Counter control') }}">
+                                                <button type="button" class="btn counter-card__btn counter-card__toggle" id="help-mock-toggle" title="{{ trans('Pause') }}">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" fill="currentColor" class="icon-play bi bi-play-fill d-none" viewBox="0 0 16 16">
+                                                        <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/>
+                                                    </svg>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" fill="currentColor" class="icon-pause bi bi-pause-fill" viewBox="0 0 16 16">
+                                                        <path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"/>
+                                                    </svg>
+                                                </button>
+                                                <button type="button" class="btn counter-card__btn counter-card__stop" id="help-mock-stop" title="{{ trans('Stop') }}">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" fill="currentColor" class="bi bi-stop-fill" viewBox="0 0 16 16">
+                                                        <path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                            <div class="btn-group counter-card__open" role="group" aria-label="{{ trans('Open as') }}">
+                                                <button type="button" class="btn btn-primary counter-card__btn counter-card__launch">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" fill="currentColor" class="bi bi-box-arrow-up-right" viewBox="0 0 16 16">
+                                                        <path fill-rule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5"/>
+                                                        <path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0z"/>
+                                                    </svg>
+                                                    <span class="counter-card__launch-label">{{ trans('Open') }}</span>
+                                                </button>
+                                                <button type="button" class="btn btn-primary counter-card__btn dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <span class="visually-hidden">{{ trans('Open as') }}</span>
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </article>
-                            </td>
-                            <td>{{ trans('Counter not running') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">
-                                <article class="counter-card counter-card--running help-card-mock"
-                                         style="max-width: 280px">
-                                    <div class="counter-card__preview">
-                                        <div class="counter-card__preview-placeholder" aria-hidden="true"></div>
-                                        <span class="counter-card__status-dot" aria-hidden="true"></span>
-                                    </div>
-                                    <div class="counter-card__body">
-                                        <div class="counter-card__head">
-                                            <h3 class="counter-card__name h6 mb-0">{{ trans('Counter name') }}</h3>
-                                            <span class="counter-card__badge">{{ trans('Counter running') }}</span>
-                                        </div>
-                                        <p class="counter-card__location text-muted small mb-2">location_id</p>
-                                    </div>
-                                </article>
-                            </td>
-                            <td>{{ trans('Counter running') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">
-                                <article class="counter-card counter-card--paused help-card-mock"
-                                         style="max-width: 280px">
-                                    <div class="counter-card__preview">
-                                        <div class="counter-card__preview-placeholder" aria-hidden="true"></div>
-                                        <span class="counter-card__status-dot" aria-hidden="true"></span>
-                                    </div>
-                                    <div class="counter-card__body">
-                                        <div class="counter-card__head">
-                                            <h3 class="counter-card__name h6 mb-0">{{ trans('Counter name') }}</h3>
-                                            <span class="counter-card__badge">{{ trans('Counter paused') }}</span>
-                                        </div>
-                                        <p class="counter-card__location text-muted small mb-2">location_id</p>
-                                    </div>
-                                </article>
-                            </td>
-                            <td>{{ trans('Counter paused') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">
-                                <div class="btn-group counter-card__transport my-2" role="group">
-                                    <button type="button" class="btn counter-card__btn counter-card__toggle">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17"
-                                             fill="currentColor"
-                                             class="bi bi-play-fill" viewBox="0 0 16 16">
+                                <!-- Interactive state label -->
+                                <div class="btn-group btn-group-sm mt-2" role="group" style="max-width:270px;width:100%">
+                                    <button type="button" class="btn btn-outline-success active" id="btn-mock-running">{{ trans('Running') }}</button>
+                                    <button type="button" class="btn btn-outline-warning" id="btn-mock-paused">{{ trans('Paused') }}</button>
+                                    <button type="button" class="btn btn-outline-secondary" id="btn-mock-stopped">{{ trans('Stopped') }}</button>
+                                </div>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">{{ trans('Counter running') }} / {{ trans('Counter paused') }} / {{ trans('Counter not running') }}</h3>
+                                    <span class="help-card__badge">{{ trans('Status') }}</span>
+                                </div>
+                                <ul class="help-card__desc mb-0 ps-3">
+                                    <li><strong>{{ trans('Counter running') }}:</strong> {{ trans('Active video stream processing, object counting, and database logging.') }}</li>
+                                    <li><strong>{{ trans('Counter paused') }}:</strong> {{ trans('Video stream is active, but counting is temporarily paused by operator.') }}</li>
+                                    <li><strong>{{ trans('Counter not running') }}:</strong> {{ trans('Detection process is stopped, resources released.') }}</li>
+                                </ul>
+                                <div class="help-card__tip">
+                                    💡 <strong>{{ trans('Click buttons to test interaction') }}:</strong> {{ trans('Toggle the buttons in the demo on the left to preview status appearances.') }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Item 1.3: Transport buttons -->
+                    <div class="help-card help-searchable-item" data-keywords="transport play stop toggle кнопки старт стоп">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Element') }}</span>
+                                <div class="btn-group counter-card__transport my-2" role="group" aria-label="{{ trans('Counter control') }}">
+                                    <button type="button" class="btn counter-card__btn counter-card__toggle" title="{{ trans('Start counter') }}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-play-fill" viewBox="0 0 16 16">
                                             <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/>
                                         </svg>
                                     </button>
-                                    <button type="button" class="btn counter-card__btn counter-card__stop">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17"
-                                             fill="currentColor"
-                                             class="bi bi-stop-fill" viewBox="0 0 16 16">
+                                    <button type="button" class="btn counter-card__btn counter-card__stop" title="{{ trans('Stop') }}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-stop-fill" viewBox="0 0 16 16">
                                             <path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5"/>
                                         </svg>
                                     </button>
                                 </div>
-                            </td>
-                            <td>
-                                <ul class="mb-0">
-                                    <li>{{ trans('Help card toggle') }}</li>
-                                    <li>{{ trans('Help card stop') }}</li>
-                                </ul>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">
-                                <div class="btn-group">
-                                    <button type="button"
-                                            class="btn btn-primary counter-card__btn counter-card__launch">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17"
-                                             fill="currentColor"
-                                             class="bi bi-box-arrow-up-right" viewBox="0 0 16 16">
-                                            <path fill-rule="evenodd"
-                                                  d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5"/>
-                                            <path fill-rule="evenodd"
-                                                  d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0z"/>
-                                        </svg>
-                                        {{ trans('Open') }}
-                                    </button>
-                                    <button type="button"
-                                            class="btn btn-primary btn-sm dropdown-toggle dropdown-toggle-split"></button>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">{{ trans('Help card toggle') }} &amp; {{ trans('Help card stop') }}</h3>
+                                    <span class="help-card__badge">{{ trans('Transport') }}</span>
                                 </div>
-                                <ul class="dropdown-menu d-block position-relative mt-1" style="max-width: 180px">
-                                    <li><span class="dropdown-item-text">{{ trans('Video') }}</span></li>
-                                    <li><span class="dropdown-item-text">{{ trans('Text') }}</span></li>
-                                    <li>
-                                        <hr class="dropdown-divider">
-                                    </li>
-                                    <li><span class="dropdown-item-text">{{ trans('Settings') }}</span></li>
-                                </ul>
-                            </td>
-                            <td>{{ trans('Help card open menu') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">
-                                <label class="d-inline-flex align-items-center gap-2">
-                                    <input type="checkbox" class="form-check-input" readonly checked>
-                                    <span class="small text-muted">{{ trans('Select for multi view') }}</span>
-                                </label>
-                            </td>
-                            <td>{{ trans('Multi counter hint') }}</td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="col-12 border-bottom mb-3 pb-3">
-                <h2 class="section-block__title">{{ trans('Video') }} / {{ trans('Text') }}</h2>
-
-                <div class="table-responsive">
-                    <table class="table table-bordered mb-0">
-                        <thead class="table-dark">
-                        <tr>
-                            <th scope="col" class="w-50">{{ trans('Element') }}</th>
-                            <th scope="col" class="w-50">{{ trans('Description') }}</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr>
-                            <td class="align-middle">
-                            <span class="btn btn-sm btn-dark disabled">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                     class="bi bi-intersect me-1" viewBox="0 0 16 16">
-                                    <path d="M0 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2H2a2 2 0 0 1-2-2zm5 10v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2v5a2 2 0 0 1-2 2zm6-8V2a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2V6a2 2 0 0 1 2-2z"/>
-                                </svg>
-                                {{ trans('Counting zone') }}
-                            </span>
-                            </td>
-                            <td>{{ trans('Help counting zone link') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">
-                                <div class="sidebar-counter-tile text-dark position-relative my-2 px-3 py-2"
-                                     style="width: 100%; max-width: 250px">
-                                    <div class="h4 mb-0">{{ trans('Quantity:') }} <span>300</span></div>
-                                    <div class="display-1 lh-1">50</div>
-                                    <div class="h5 d-flex flex-wrap justify-content-between w-100 mt-2 pb-1 border-top border-dark">
-                                        <div>{{ trans('Defective products') }}: <span>0</span></div>
-                                        <div>{{ trans('Corr.') }}: <span>0</span></div>
-                                    </div>
+                                <p class="help-card__desc">{{ trans('Help card toggle') }}</p>
+                                <p class="help-card__desc">{{ trans('Help card stop') }}</p>
+                                <div class="help-card__tip">
+                                    ⌨️ {{ trans('Space key on counter page toggles Start / Pause.') }}
                                 </div>
-                                <div class="cv-panel class-count-panel my-2" style="max-width: 250px">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="h5 mb-0">{{ trans('By class') }}</span>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
-                                             fill="currentColor"
-                                             class="bi bi-chevron-down" viewBox="0 0 16 16" aria-hidden="true">
-                                            <path fill-rule="evenodd"
-                                                  d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/>
-                                        </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Item 1.4: Launch menu -->
+                    <div class="help-card help-searchable-item" data-keywords="launch open menu video text settings меню открыть видео текст настройки">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Element') }}</span>
+                                <div class="d-flex flex-column align-items-center">
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-primary counter-card__btn counter-card__launch">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-up-right me-1" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5"/>
+                                                <path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0z"/>
+                                            </svg>
+                                            {{ trans('Open') }}
+                                        </button>
+                                        <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split"></button>
                                     </div>
-                                    <ul class="class-count-list list-unstyled mb-0 mt-2 small">
-                                        <li class="d-flex justify-content-between gap-2">
-                                            <span>{{ trans('Help class example 1') }}</span>
-                                            <span class="text-nowrap"><span>30</span><span
-                                                    class="opacity-75"> / 200</span></span>
-                                        </li>
-                                        <li class="d-flex justify-content-between gap-2">
-                                            <span>{{ trans('Help class example 2') }}</span>
-                                            <span class="text-nowrap"><span>20</span><span
-                                                    class="opacity-75"> / 100</span></span>
-                                        </li>
+                                    <ul class="dropdown-menu d-block position-relative mt-2 shadow-sm" style="min-width: 160px; z-index: 1;">
+                                        <li><span class="dropdown-item-text"><span class="bi bi-camera-video me-2"></span>{{ trans('Video') }}</span></li>
+                                        <li><span class="dropdown-item-text"><span class="bi bi-file-text me-2"></span>{{ trans('Text') }}</span></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><span class="dropdown-item-text"><span class="bi bi-gear me-2"></span>{{ trans('Settings') }}</span></li>
                                     </ul>
                                 </div>
-                            </td>
-                            <td>{{ trans('Help counter totals') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">
-                                <div class="cv-panel cv-panel--danger my-2" style="max-width: 400px">
-                                    <div class="col-12 mb-3">
-                                        <label for="help_defect_keyboard"
-                                               class="form-label h4 user-select-none">{{ trans('Defective products') }}</label>
-                                        <button class="btn btn-outline-info float-end"
-                                                style="--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem;">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
-                                                 fill="currentColor"
-                                                 class="bi bi-keyboard align-middle" viewBox="0 0 16 16">
-                                                <path d="M14 5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM2 4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
-                                                <path d="M13 10.25a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm0-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5 0A.25.25 0 0 1 8.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 8 8.75zm2 0a.25.25 0 0 1 .25-.25h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5a.25.25 0 0 1-.25-.25zm1 2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5-2A.25.25 0 0 1 6.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 6 8.75zm-2 0A.25.25 0 0 1 4.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 4 8.75zm-2 0A.25.25 0 0 1 2.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 2 8.75zm11-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0A.25.25 0 0 1 9.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 9 6.75zm-2 0A.25.25 0 0 1 7.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 7 6.75zm-2 0A.25.25 0 0 1 5.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 5 6.75zm-3 0A.25.25 0 0 1 2.25 6h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5A.25.25 0 0 1 2 6.75zm0 4a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm2 0a.25.25 0 0 1 .25-.25h5.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-5.5a.25.25 0 0 1-.25-.25z"></path>
-                                            </svg>
-                                        </button>
-                                        <button class="btn btn-outline-danger float-end me-2"
-                                                style="--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem;">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
-                                                 fill="currentColor"
-                                                 class="bi bi-trash" viewBox="0 0 16 16">
-                                                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"></path>
-                                                <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"></path>
-                                            </svg>
-                                        </button>
-
-                                        <div class="input-group" id="help_defect_keyboard">
-                                            <button class="btn btn-sm btn-secondary input-plus">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
-                                                     fill="currentColor"
-                                                     class="bi bi-plus-lg" viewBox="0 0 16 16">
-                                                    <path fill-rule="evenodd"
-                                                          d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"></path>
-                                                </svg>
-                                            </button>
-                                            <input type="number" class="form-control form-control-lg valid_min_max"
-                                                   aria-label=""
-                                                   name="defect_count" value="0" min="0" max="9999999" readonly>
-                                            <button class="btn btn-sm btn-secondary input-minus">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
-                                                     fill="currentColor"
-                                                     class="bi bi-dash-lg" viewBox="0 0 16 16">
-                                                    <path fill-rule="evenodd"
-                                                          d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8"></path>
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-12 keyboard keyboard-defect px-2 collapse show">
-                                        <div class="row">
-                                            <button class="btn btn-secondary col m-1 fs-5">1</button>
-                                            <button class="btn btn-secondary col m-1 fs-5">2</button>
-                                            <button class="btn btn-secondary col m-1 fs-5">3</button>
-                                        </div>
-                                        <div class="row">
-                                            <button class="btn btn-secondary col m-1 fs-5">4</button>
-                                            <button class="btn btn-secondary col m-1 fs-5">5</button>
-                                            <button class="btn btn-secondary col m-1 fs-5">6</button>
-                                        </div>
-                                        <div class="row">
-                                            <button class="btn btn-secondary col m-1 fs-5">7</button>
-                                            <button class="btn btn-secondary col m-1 fs-5">8</button>
-                                            <button class="btn btn-secondary col m-1 fs-5">9</button>
-                                        </div>
-                                        <div class="row">
-                                            <button class="btn btn-secondary col m-1 fs-5">0</button>
-                                            <button class="btn btn-danger col-4 m-1 reset text-truncate">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
-                                                     fill="currentColor"
-                                                     class="bi bi-trash" viewBox="0 0 16 16">
-                                                    <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"></path>
-                                                    <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"></path>
-                                                </svg>
-                                                {{ trans('Reset') }}
-                                            </button>
-                                        </div>
-                                    </div>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">{{ trans('Open') }} ({{ trans('Video') }} / {{ trans('Text') }} / {{ trans('Settings') }})</h3>
+                                    <span class="help-card__badge">{{ trans('Navigation') }}</span>
                                 </div>
-                            </td>
-                            <td>{{ trans('Entering the number of defective products') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">
-                                <div class="cv-panel cv-panel--warning my-2" style="max-width: 400px">
-                                    <div class="col-12 mb-3">
-                                        <label for="help_correct_keyboard"
-                                               class="form-label h4 user-select-none">{{ trans('Correct count') }}</label>
-                                        <button class="btn btn-outline-info float-end"
-                                                style="--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem;">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
-                                                 fill="currentColor"
-                                                 class="bi bi-keyboard align-middle"
-                                                 viewBox="0 0 16 16">
-                                                <path d="M14 5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM2 4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
-                                                <path d="M13 10.25a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm0-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5 0A.25.25 0 0 1 8.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 8 8.75zm2 0a.25.25 0 0 1 .25-.25h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5a.25.25 0 0 1-.25-.25zm1 2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5-2A.25.25 0 0 1 6.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 6 8.75zm-2 0A.25.25 0 0 1 4.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 4 8.75zm-2 0A.25.25 0 0 1 2.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 2 8.75zm11-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0A.25.25 0 0 1 9.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 9 6.75zm-2 0A.25.25 0 0 1 7.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 7 6.75zm-2 0A.25.25 0 0 1 5.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 5 6.75zm-3 0A.25.25 0 0 1 2.25 6h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5A.25.25 0 0 1 2 6.75zm0 4a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm2 0a.25.25 0 0 1 .25-.25h5.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-5.5a.25.25 0 0 1-.25-.25z"></path>
-                                            </svg>
-                                        </button>
-                                        <button class="btn btn-outline-danger float-end me-2"
-                                                style="--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem;">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
-                                                 fill="currentColor"
-                                                 class="bi bi-trash"
-                                                 viewBox="0 0 16 16">
-                                                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"></path>
-                                                <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"></path>
-                                            </svg>
-                                        </button>
-                                        <div class="input-group" id="help_correct_keyboard">
-                                            <button class="btn btn-sm btn-secondary input-plus">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
-                                                     fill="currentColor"
-                                                     class="bi bi-plus-lg"
-                                                     viewBox="0 0 16 16">
-                                                    <path fill-rule="evenodd"
-                                                          d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"></path>
-                                                </svg>
-                                            </button>
-                                            <input type="number" class="form-control form-control-lg valid_min_max"
-                                                   aria-label=""
-                                                   name="correct_count" value="0"
-                                                   min="-9999999" max="9999999" readonly>
-                                            <button class="btn btn-sm btn-secondary input-minus">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
-                                                     fill="currentColor"
-                                                     class="bi bi-dash-lg"
-                                                     viewBox="0 0 16 16">
-                                                    <path fill-rule="evenodd"
-                                                          d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8"></path>
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </div>
+                                <p class="help-card__desc">{{ trans('Help card open menu') }}</p>
+                                <ul class="small text-secondary mb-0 ps-3">
+                                    <li><strong>{{ trans('Video') }}:</strong> {{ trans('Fullscreen video stream preview with detection polygons.') }}</li>
+                                    <li><strong>{{ trans('Text') }}:</strong> {{ trans('Lightweight numeric mode for operator displays (minimal network load).') }}</li>
+                                    <li><strong>{{ trans('Settings') }}:</strong> {{ trans('Modal window with parameters for this counter (RTSP, model, sensitivity).') }}</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
 
-                                    <div class="col-12 keyboard keyboard-correct px-2 collapse show">
-                                        <div class="row">
-                                            <button class="btn btn-secondary col m-1 fs-5">1</button>
-                                            <button class="btn btn-secondary col m-1 fs-5">2</button>
-                                            <button class="btn btn-secondary col m-1 fs-5">3</button>
-                                        </div>
-                                        <div class="row">
-                                            <button class="btn btn-secondary col m-1 fs-5">4</button>
-                                            <button class="btn btn-secondary col m-1 fs-5">5</button>
-                                            <button class="btn btn-secondary col m-1 fs-5">6</button>
-                                        </div>
-                                        <div class="row">
-                                            <button class="btn btn-secondary col m-1 fs-5">7</button>
-                                            <button class="btn btn-secondary col m-1 fs-5">8</button>
-                                            <button class="btn btn-secondary col m-1 fs-5">9</button>
-                                        </div>
-                                        <div class="row">
-                                            <button class="btn btn-secondary col m-1 fs-5">+/-</button>
-                                            <button class="btn btn-secondary col m-1 fs-5">0</button>
-                                            <button class="btn btn-danger col m-1 reset text-truncate">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
-                                                     fill="currentColor"
-                                                     class="bi bi-trash"
-                                                     viewBox="0 0 16 16">
-                                                    <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"></path>
-                                                    <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"></path>
-                                                </svg>
-                                                {{ trans('Reset') }}
-                                            </button>
-                                        </div>
-                                    </div>
+                    <!-- Item 1.5: Multi View Checkbox -->
+                    <div class="help-card help-searchable-item" data-keywords="multi view checkbox мульти просмотр выбор">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Element') }}</span>
+                                <label class="d-inline-flex align-items-center gap-2 p-2 border rounded bg-body">
+                                    <input type="checkbox" class="form-check-input mt-0" checked readonly>
+                                    <span class="small font-monospace">{{ trans('Select for multi view') }}</span>
+                                </label>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">{{ trans('Select for multi view') }}</h3>
+                                    <span class="help-card__badge">{{ trans('Multi counter view') }}</span>
                                 </div>
-                            </td>
-                            <td>
-                                {{ trans('Entering quantities to adjust product counts') }}
-                                <p class="small text-muted mb-0 mt-2">{{ trans('Help numpad description') }}</p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">
-                                <button class="btn btn-outline-secondary btn-sm me-3">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor"
-                                         class="bi bi-pause-fill"
-                                         viewBox="0 0 16 16">
-                                        <path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"/>
+                                <p class="help-card__desc">{{ trans('Multi counter hint') }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 2: Video / Text page -->
+                <section id="sec-video" class="help-section help-topic-group">
+                    <div class="help-section__header">
+                        <div>
+                            <h2 class="help-section__title">
+                                <span class="bi bi-camera-video text-primary"></span>
+                                {{ trans('Video') }} / {{ trans('Text') }}
+                            </h2>
+                            <p class="help-section__desc">{{ trans('Help counter totals') }}</p>
+                        </div>
+                        <span class="help-section__badge">5 {{ trans('Element') }}</span>
+                    </div>
+
+                    <!-- Item 2.1: Counting zone link -->
+                    <div class="help-card help-searchable-item" data-keywords="counting zone link зона подсчета полигон">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Element') }}</span>
+                                <span class="btn btn-sm btn-dark">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-intersect me-1 text-primary" viewBox="0 0 16 16">
+                                        <path d="M0 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2H2a2 2 0 0 1-2-2zm5 10v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2v5a2 2 0 0 1-2 2zm6-8V2a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2V6a2 2 0 0 1 2-2z"/>
                                     </svg>
-                                    <span>{{ trans('Pause') }}</span>
-                                </button>
-                            </td>
-                            <td>{{ trans('Pause counting') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">
-                                <button class="btn btn-outline-secondary btn-sm me-3">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor"
-                                         class="bi bi-play-fill"
-                                         viewBox="0 0 16 16">
-                                        <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/>
-                                    </svg>
-                                    <span>{{ trans('Start') }}</span>
-                                </button>
-                            </td>
-                            <td>{{ trans('Continue counting') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle"><span class="btn btn-primary me-3">{{ trans('New batch') }}</span>
-                            </td>
-                            <td>{{ trans('Reset the current count (without total)') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle"><span class="btn btn-success me-3">{{ trans('Save') }}</span></td>
-                            <td>{{ trans('Save the count') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle"><span class="btn btn-danger me-3">{{ trans('Reset') }}</span></td>
-                            <td>{{ trans('Reset the count (with total)') }}</td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="col-12 border-bottom mb-3 pb-3">
-                <h2 class="section-block__title">{{ trans('Counting zone editor') }}</h2>
-                <p class="text-muted">{{ trans('Configure the polygon on a live video frame') }}</p>
-                <div class="table-responsive">
-                    <table class="table table-bordered mb-0">
-                        <thead class="table-dark">
-                        <tr>
-                            <th scope="col" class="w-50">{{ trans('Element') }}</th>
-                            <th scope="col" class="w-50">{{ trans('Description') }}</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr>
-                            <td class="align-middle">
-                                <div class="d-flex flex-wrap gap-1 mb-2">
-                                    <span class="btn btn-outline-primary btn-sm">{{ trans('Add zone') }}</span>
-                                    <span class="btn btn-outline-danger btn-sm">{{ trans('Delete zone') }}</span>
-                                    <span class="btn btn-primary btn-sm">{{ trans('Zone {index}', index=1) }}</span>
-                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('Zone {index}', index=2) }}</span>
+                                    {{ trans('Counting zone') }}
+                                </span>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">{{ trans('Counting zone') }}</h3>
+                                    <span class="help-card__badge">{{ trans('Navigation') }}</span>
                                 </div>
-                                <div class="d-flex flex-wrap gap-1">
-                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('Undo') }}</span>
-                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('Clear') }}</span>
-                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('Full frame') }}</span>
-                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('Rectangle') }}</span>
-                                    <span class="btn btn-primary btn-sm">{{ trans('Save zone') }}</span>
-                                </div>
-                            </td>
-                            <td>{{ trans('Help counting zone editor') }}</td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                                <p class="help-card__desc">{{ trans('Help counting zone link') }}</p>
+                            </div>
+                        </div>
+                    </div>
 
-            <div class="col-12 border-bottom mb-3 pb-3">
-                <h2 class="section-block__title">{{ trans('Multi counter view') }}</h2>
-                <p class="text-muted">{{ trans('Multi counter hint short') }}</p>
-                <div class="table-responsive">
-                    <table class="table table-bordered mb-0">
-                        <thead class="table-dark">
-                        <tr>
-                            <th scope="col" class="w-50">{{ trans('Element') }}</th>
-                            <th scope="col" class="w-50">{{ trans('Description') }}</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr>
-                            <td class="align-middle">
-                                <article class="multi-counter-card" style="max-width: 260px">
-                                    <header class="multi-counter-card__header">
-                                        <h2 class="multi-counter-card__title h5">{{ trans('Counter name') }}</h2>
-                                        <p class="multi-counter-card__id text-muted small">location_id</p>
-                                    </header>
-                                    <div class="multi-counter-card__metric multi-counter-card__metric--current">
-                                        <span class="multi-counter-card__metric-label">{{ trans('Current batch') }}</span>
-                                        <div class="multi-counter-card__value">42</div>
-                                    </div>
-                                    <div class="multi-counter-card__metric multi-counter-card__metric--total">
-                                        <span class="multi-counter-card__metric-label">{{ trans('Total') }}</span>
-                                        <div class="multi-counter-card__value multi-counter-card__value--total">1000
+                    <!-- Item 2.2: Counter Totals & By Class Tile -->
+                    <div class="help-card help-searchable-item" data-keywords="totals quantity batch defective classes итоги количество брак партии классы">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Element') }}</span>
+                                <div class="w-100" style="max-width: 250px">
+                                    <div class="sidebar-counter-tile text-dark position-relative my-2 px-3 py-2 rounded">
+                                        <div class="h5 mb-0">{{ trans('Quantity:') }} <span class="badge bg-dark text-white">300</span></div>
+                                        <div class="display-3 fw-bold lh-1 my-1">50</div>
+                                        <div class="small d-flex flex-wrap justify-content-between w-100 pt-1 border-top border-dark opacity-75">
+                                            <div>{{ trans('Defective products') }}: <strong>0</strong></div>
+                                            <div>{{ trans('Corr.') }}: <strong>0</strong></div>
                                         </div>
                                     </div>
-                                    <div class="multi-counter-card__classes">
-                                        <div class="multi-counter-card__classes-toggle small">
-                                            <span>{{ trans('By class') }}</span>
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
-                                                 fill="currentColor"
-                                                 class="bi bi-chevron-down" viewBox="0 0 16 16" aria-hidden="true">
-                                                <path fill-rule="evenodd"
-                                                      d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/>
+                                    <div class="cv-panel class-count-panel p-2 rounded border" style="background: var(--cv-surface-elevated)">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="fw-semibold small">{{ trans('By class') }}</span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/>
                                             </svg>
                                         </div>
-                                        <ul class="multi-counter-card__class-list list-unstyled mb-0">
-                                            <li class="multi-counter-card__class-item d-flex justify-content-between gap-2">
+                                        <ul class="class-count-list list-unstyled mb-0 mt-2 small">
+                                            <li class="d-flex justify-content-between gap-2 border-bottom pb-1">
                                                 <span>{{ trans('Help class example 1') }}</span>
-                                                <span class="multi-counter-card__class-values">20 / 600</span>
+                                                <span class="font-monospace"><strong>30</strong> <span class="opacity-50">/ 200</span></span>
                                             </li>
-                                            <li class="multi-counter-card__class-item d-flex justify-content-between gap-2">
+                                            <li class="d-flex justify-content-between gap-2 pt-1">
                                                 <span>{{ trans('Help class example 2') }}</span>
-                                                <span class="multi-counter-card__class-values">22 / 400</span>
+                                                <span class="font-monospace"><strong>20</strong> <span class="opacity-50">/ 100</span></span>
                                             </li>
                                         </ul>
                                     </div>
+                                </div>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">{{ trans('Quantity:') }} &amp; {{ trans('By class') }}</h3>
+                                    <span class="help-card__badge">{{ trans('Metrics') }}</span>
+                                </div>
+                                <p class="help-card__desc">{{ trans('Help counter totals') }}</p>
+                                <ul class="small text-secondary mb-0 ps-3">
+                                    <li><strong>{{ trans('Current batch') }} (50):</strong> {{ trans('Current count of the active batch.') }}</li>
+                                    <li><strong>{{ trans('Total') }} (300):</strong> {{ trans('Cumulative total count since reset.') }}</li>
+                                    <li><strong>{{ trans('By class') }}:</strong> {{ trans('Detailed breakdown by detected neural network classes.') }}</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Item 2.3: Defective Products Panel (Interactive Keypad!) -->
+                    <div class="help-card help-searchable-item" data-keywords="defective defect keyboard numpad брак клавиатура бракованная продукция">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Interactive demo') }}</span>
+                                <div class="cv-panel cv-panel--danger my-2 w-100" style="max-width: 280px">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label h5 user-select-none mb-0">{{ trans('Defective products') }}</label>
+                                        <div class="d-flex gap-1">
+                                            <button type="button" class="btn btn-outline-danger btn-sm help-demo-defect-reset" title="{{ trans('Reset') }}">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                                                    <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+                                                    <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+                                                </svg>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-info btn-sm help-demo-defect-toggle-kb" id="help-demo-defect-kb-toggle" title="{{ trans('Keyboard') }}">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-keyboard align-middle" viewBox="0 0 16 16">
+                                                    <path d="M14 5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM2 4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/>
+                                                    <path d="M13 10.25a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm0-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5 0A.25.25 0 0 1 8.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 8 8.75zm2 0a.25.25 0 0 1 .25-.25h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5a.25.25 0 0 1-.25-.25zm1 2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5-2A.25.25 0 0 1 6.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 6 8.75zm-2 0A.25.25 0 0 1 4.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 4 8.75zm-2 0A.25.25 0 0 1 2.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 2 8.75zm11-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0A.25.25 0 0 1 9.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 9 6.75zm-2 0A.25.25 0 0 1 7.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 7 6.75zm-2 0A.25.25 0 0 1 5.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 5 6.75zm-3 0A.25.25 0 0 1 2.25 6h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5A.25.25 0 0 1 2 6.75zm0 4a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm2 0a.25.25 0 0 1 .25-.25h5.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-5.5a.25.25 0 0 1-.25-.25z"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="input-group mb-2">
+                                        <button type="button" class="btn btn-sm btn-secondary input-plus help-demo-defect-plus" title="+1">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/>
+                                            </svg>
+                                        </button>
+                                        <input type="number" class="form-control form-control-lg text-center fw-bold font-monospace" id="help-demo-defect-val" value="0" readonly>
+                                        <button type="button" class="btn btn-sm btn-secondary input-minus help-demo-defect-minus" title="-1">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-dash-lg" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd" d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div class="keyboard keyboard-defect px-1" id="help-demo-defect-collapse">
+                                        <div class="row g-1 mb-1">
+                                            <div class="col"><button type="button" class="btn btn-secondary w-100 fs-5 help-demo-defect-key" data-value="1">1</button></div>
+                                            <div class="col"><button type="button" class="btn btn-secondary w-100 fs-5 help-demo-defect-key" data-value="2">2</button></div>
+                                            <div class="col"><button type="button" class="btn btn-secondary w-100 fs-5 help-demo-defect-key" data-value="3">3</button></div>
+                                        </div>
+                                        <div class="row g-1 mb-1">
+                                            <div class="col"><button type="button" class="btn btn-secondary w-100 fs-5 help-demo-defect-key" data-value="4">4</button></div>
+                                            <div class="col"><button type="button" class="btn btn-secondary w-100 fs-5 help-demo-defect-key" data-value="5">5</button></div>
+                                            <div class="col"><button type="button" class="btn btn-secondary w-100 fs-5 help-demo-defect-key" data-value="6">6</button></div>
+                                        </div>
+                                        <div class="row g-1 mb-1">
+                                            <div class="col"><button type="button" class="btn btn-secondary w-100 fs-5 help-demo-defect-key" data-value="7">7</button></div>
+                                            <div class="col"><button type="button" class="btn btn-secondary w-100 fs-5 help-demo-defect-key" data-value="8">8</button></div>
+                                            <div class="col"><button type="button" class="btn btn-secondary w-100 fs-5 help-demo-defect-key" data-value="9">9</button></div>
+                                        </div>
+                                        <div class="row g-1">
+                                            <div class="col-8"><button type="button" class="btn btn-secondary w-100 fs-5 help-demo-defect-key" data-value="0">0</button></div>
+                                            <div class="col-4">
+                                                <button type="button" class="btn btn-danger w-100 fs-6 reset text-truncate d-flex align-items-center justify-content-center gap-1 h-100 help-demo-defect-reset" title="{{ trans('Reset') }}">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                                                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+                                                        <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+                                                    </svg>
+                                                    <span>{{ trans('Reset') }}</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">{{ trans('Defective products') }}</h3>
+                                    <span class="help-card__badge text-bg-danger">{{ trans('Quality') }}</span>
+                                </div>
+                                <p class="help-card__desc">{{ trans('Entering the number of defective products') }}</p>
+                                <p class="help-card__desc">{{ trans('Help numpad description') }}</p>
+                                <div class="help-card__tip">
+                                    💡 <strong>{{ trans('Click buttons to test interaction') }}:</strong> {{ trans('Press numbers on the demo keypad to try input.') }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Item 2.4: Correct Count Panel -->
+                    <div class="help-card help-searchable-item" data-keywords="correct correction adjustment ручная коррекция правка">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Interactive demo') }}</span>
+                                <div class="cv-panel cv-panel--warning my-2 w-100" style="max-width: 280px">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label h5 user-select-none mb-0">{{ trans('Correct count') }}</label>
+                                        <div class="d-flex gap-1">
+                                            <button type="button" class="btn btn-outline-danger btn-sm help-demo-correct-reset" title="{{ trans('Reset') }}">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                                                    <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+                                                    <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+                                                </svg>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-info btn-sm help-demo-correct-toggle-kb" id="help-demo-correct-kb-toggle" title="{{ trans('Keyboard') }}">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-keyboard align-middle" viewBox="0 0 16 16">
+                                                    <path d="M14 5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM2 4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/>
+                                                    <path d="M13 10.25a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm0-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5 0A.25.25 0 0 1 8.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 8 8.75zm2 0a.25.25 0 0 1 .25-.25h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5a.25.25 0 0 1-.25-.25zm1 2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5-2A.25.25 0 0 1 6.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 6 8.75zm-2 0A.25.25 0 0 1 4.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 4 8.75zm-2 0A.25.25 0 0 1 2.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 2 8.75zm11-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0A.25.25 0 0 1 9.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 9 6.75zm-2 0A.25.25 0 0 1 7.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 7 6.75zm-2 0A.25.25 0 0 1 5.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 5 6.75zm-3 0A.25.25 0 0 1 2.25 6h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5A.25.25 0 0 1 2 6.75zm0 4a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm2 0a.25.25 0 0 1 .25-.25h5.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-5.5a.25.25 0 0 1-.25-.25z"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="input-group mb-2">
+                                        <button type="button" class="btn btn-sm btn-secondary input-plus help-demo-correct-plus" title="+1">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/>
+                                            </svg>
+                                        </button>
+                                        <input type="number" class="form-control form-control-lg text-center fw-bold font-monospace" id="help-demo-correct-val" value="0" readonly>
+                                        <button type="button" class="btn btn-sm btn-secondary input-minus help-demo-correct-minus" title="-1">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-dash-lg" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd" d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div class="keyboard keyboard-correct px-1" id="help-demo-correct-collapse">
+                                        <div class="row g-1 mb-1">
+                                            <div class="col"><button type="button" class="btn btn-secondary w-100 fs-5 help-demo-correct-key" data-value="1">1</button></div>
+                                            <div class="col"><button type="button" class="btn btn-secondary w-100 fs-5 help-demo-correct-key" data-value="2">2</button></div>
+                                            <div class="col"><button type="button" class="btn btn-secondary w-100 fs-5 help-demo-correct-key" data-value="3">3</button></div>
+                                        </div>
+                                        <div class="row g-1 mb-1">
+                                            <div class="col"><button type="button" class="btn btn-secondary w-100 fs-5 help-demo-correct-key" data-value="4">4</button></div>
+                                            <div class="col"><button type="button" class="btn btn-secondary w-100 fs-5 help-demo-correct-key" data-value="5">5</button></div>
+                                            <div class="col"><button type="button" class="btn btn-secondary w-100 fs-5 help-demo-correct-key" data-value="6">6</button></div>
+                                        </div>
+                                        <div class="row g-1 mb-1">
+                                            <div class="col"><button type="button" class="btn btn-secondary w-100 fs-5 help-demo-correct-key" data-value="7">7</button></div>
+                                            <div class="col"><button type="button" class="btn btn-secondary w-100 fs-5 help-demo-correct-key" data-value="8">8</button></div>
+                                            <div class="col"><button type="button" class="btn btn-secondary w-100 fs-5 help-demo-correct-key" data-value="9">9</button></div>
+                                        </div>
+                                        <div class="row g-1">
+                                            <div class="col-4"><button type="button" class="btn btn-secondary w-100 fs-5 help-demo-correct-sign" title="+/-">+/-</button></div>
+                                            <div class="col-4"><button type="button" class="btn btn-secondary w-100 fs-5 help-demo-correct-key" data-value="0">0</button></div>
+                                            <div class="col-4">
+                                                <button type="button" class="btn btn-danger w-100 fs-6 reset text-truncate d-flex align-items-center justify-content-center gap-1 h-100 help-demo-correct-reset" title="{{ trans('Reset') }}">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                                                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+                                                        <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+                                                    </svg>
+                                                    <span>{{ trans('Reset') }}</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">{{ trans('Correct count') }}</h3>
+                                    <span class="help-card__badge text-bg-warning">{{ trans('Adjustment') }}</span>
+                                </div>
+                                <p class="help-card__desc">{{ trans('Entering quantities to adjust product counts') }}</p>
+                                <p class="help-card__desc small text-secondary mb-0">
+                                    {{ trans('Allows compensating recognition errors or missed products both up and down (+/-).') }}
+                                </p>
+                                <div class="help-card__tip">
+                                    💡 <strong>{{ trans('Click buttons to test interaction') }}:</strong> {{ trans('Allows entering both positive and negative values (+/-).') }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Item 2.5: Action Buttons (Pause, Start, New Batch, Save, Reset) -->
+                    <div class="help-card help-searchable-item" data-keywords="pause start new batch save reset пауза старт новая партия сохранить сброс">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Element') }}</span>
+                                <div class="d-flex flex-wrap gap-2 justify-content-center">
+                                    <button class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+                                        <span class="bi bi-pause-fill"></span> {{ trans('Pause') }}
+                                    </button>
+                                    <button class="btn btn-outline-success btn-sm d-flex align-items-center gap-1">
+                                        <span class="bi bi-play-fill"></span> {{ trans('Start') }}
+                                    </button>
+                                    <button class="btn btn-primary btn-sm">{{ trans('New batch') }}</button>
+                                    <button class="btn btn-success btn-sm">{{ trans('Save') }}</button>
+                                    <button class="btn btn-danger btn-sm">{{ trans('Reset') }}</button>
+                                </div>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">{{ trans('Button actions') }}</h3>
+                                    <span class="help-card__badge">{{ trans('Actions') }}</span>
+                                </div>
+                                <ul class="help-card__desc mb-0 ps-3">
+                                    <li><strong>{{ trans('Pause') }}:</strong> {{ trans('Pause counting') }}.</li>
+                                    <li><strong>{{ trans('Start') }}:</strong> {{ trans('Continue counting') }}.</li>
+                                    <li><strong>{{ trans('New batch') }}:</strong> {{ trans('Reset the current count (without total)') }}.</li>
+                                    <li><strong>{{ trans('Save') }}:</strong> {{ trans('Save the count into storage and reports.') }}</li>
+                                    <li><strong>{{ trans('Reset') }}:</strong> {{ trans('Reset the count (with total)') }}.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 3: Counting zone editor -->
+                <section id="sec-zones" class="help-section help-topic-group">
+                    <div class="help-section__header">
+                        <div>
+                            <h2 class="help-section__title">
+                                <span class="bi bi-bounding-box-circles text-primary"></span>
+                                {{ trans('Counting zone editor') }}
+                            </h2>
+                            <p class="help-section__desc">{{ trans('Configure the polygon on a live video frame') }}</p>
+                        </div>
+                        <span class="help-section__badge">2 {{ trans('Elements') }}</span>
+                    </div>
+
+                    <!-- Item 3.1: Toolbar & polygon operations -->
+                    <div class="help-card help-searchable-item" data-keywords="zone polygon editor add delete undo clear full frame rectangle save зона полигон редактор добавить удалить отмена">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Element') }}</span>
+                                <div class="d-flex flex-column gap-2 align-items-center w-100">
+                                    <div class="d-flex flex-wrap gap-1 justify-content-center">
+                                        <span class="btn btn-outline-primary btn-sm">{{ trans('Add zone') }}</span>
+                                        <span class="btn btn-outline-danger btn-sm">{{ trans('Delete zone') }}</span>
+                                        <span class="btn btn-primary btn-sm">{{ trans('Zone {index}', index=1) }}</span>
+                                        <span class="btn btn-outline-secondary btn-sm">{{ trans('Zone {index}', index=2) }}</span>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-1 justify-content-center">
+                                        <span class="btn btn-outline-secondary btn-sm">{{ trans('Undo') }}</span>
+                                        <span class="btn btn-outline-secondary btn-sm">{{ trans('Clear') }}</span>
+                                        <span class="btn btn-outline-secondary btn-sm">{{ trans('Full frame') }}</span>
+                                        <span class="btn btn-outline-secondary btn-sm">{{ trans('Rectangle') }}</span>
+                                        <span class="btn btn-success btn-sm">{{ trans('Save zone') }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">{{ trans('Counting zone editor') }}</h3>
+                                    <span class="help-card__badge">{{ trans('Geometry') }}</span>
+                                </div>
+                                <p class="help-card__desc">{{ trans('Help counting zone editor') }}</p>
+                                <div class="help-card__tip">
+                                    📐 <strong>{{ trans('At least 3 points required') }}:</strong> {{ trans('Click on video frame to place polygon vertices. Double-click or click first point to close shape.') }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 4: Multi counter view -->
+                <section id="sec-multi" class="help-section help-topic-group">
+                    <div class="help-section__header">
+                        <div>
+                            <h2 class="help-section__title">
+                                <span class="bi bi-columns-gap text-primary"></span>
+                                {{ trans('Multi counter view') }}
+                            </h2>
+                            <p class="help-section__desc">{{ trans('Multi counter hint short') }}</p>
+                        </div>
+                        <span class="help-section__badge">1 {{ trans('Element') }}</span>
+                    </div>
+
+                    <!-- Item 4.1: Multi counter card -->
+                    <div class="help-card help-searchable-item" data-keywords="multi counter card batch total мульти счетчик сводная карточка">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Element') }}</span>
+                                <article class="multi-counter-card border rounded overflow-hidden shadow-sm" style="max-width:270px;width:100%;min-width:0;flex:none;display:flex;flex-direction:column">
+                                    <header class="multi-counter-card__header">
+                                        <h3 class="multi-counter-card__title h6 mb-0">{{ trans('Counter name') }}</h3>
+                                        <p class="multi-counter-card__id text-muted mb-0">line_conveyor_01</p>
+                                    </header>
+                                    <div class="multi-counter-card__metric multi-counter-card__metric--current" style="min-height:5rem">
+                                        <span class="multi-counter-card__metric-label">{{ trans('Current batch') }}</span>
+                                        <div class="multi-counter-card__value" style="font-size:2.5rem">42</div>
+                                    </div>
+                                    <div class="multi-counter-card__metric multi-counter-card__metric--total" style="min-height:3.5rem">
+                                        <span class="multi-counter-card__metric-label">{{ trans('Total') }}</span>
+                                        <div class="multi-counter-card__value multi-counter-card__value--total" style="font-size:1.5rem">1 000</div>
+                                    </div>
                                     <footer class="multi-counter-card__actions">
                                         <div class="multi-counter-card__action-group">
-                                            <span class="btn btn-primary btn-sm disabled">{{ trans('New batch') }}</span>
-                                            <span class="btn btn-danger btn-sm disabled">{{ trans('Reset') }}</span>
+                                            <span class="btn btn-primary btn-lg">{{ trans('New batch') }}</span>
+                                            <span class="btn btn-danger btn-lg">{{ trans('Reset') }}</span>
                                         </div>
                                     </footer>
                                 </article>
-                            </td>
-                            <td>{{ trans('Help multi counter card') }}</td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">{{ trans('Multi counter view') }}</h3>
+                                    <span class="help-card__badge">{{ trans('Dashboard') }}</span>
+                                </div>
+                                <p class="help-card__desc">{{ trans('Help multi counter card') }}</p>
+                                <p class="help-card__desc small text-secondary mb-0">
+                                    {{ trans('Ideal for dispatcher and operator displays: combines multiple conveyor lines into one control panel.') }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
-            <div class="col-12 border-bottom mb-3 pb-3">
-                <h2 class="section-block__title">{{ trans('Help toolbar') }}</h2>
-                <div class="table-responsive">
-                    <table class="table table-bordered mb-0">
-                        <thead class="table-dark">
-                        <tr>
-                            <th scope="col" class="w-50">{{ trans('Element') }}</th>
-                            <th scope="col" class="w-50">{{ trans('Description') }}</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr>
-                            <td class="align-middle">
-                            <span class="btn toolbar-btn disabled">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                     class="bi bi-moon-stars"
-                                     viewBox="0 0 16 16">
-                                    <path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278M4.858 1.311A7.269 7.269 0 0 0 1.025 7.71c0 4.02 3.279 7.276 7.319 7.276a7.316 7.316 0 0 0 5.205-2.162c-.337.042-.68.063-1.029.063-4.61 0-8.343-3.714-8.343-8.29 0-1.167.242-2.278.681-3.286z"></path>
-                                    <path d="M10.794 3.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387a1.734 1.734 0 0 0-1.097 1.097l-.387 1.162a.217.217 0 0 1-.412 0l-.387-1.162A1.734 1.734 0 0 0 9.31 6.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387a1.734 1.734 0 0 0 1.097-1.097l.387-1.162zM13.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.156 1.156 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.156 1.156 0 0 0-.732-.732l-.774-.258a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732L13.863.1z"></path>
-                                </svg>
-                            </span>
-                            </td>
-                            <td>{{ trans('Switch theme color') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">
-                            <span class="btn toolbar-btn disabled">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                     class="bi bi-box-arrow-in-right"
-                                     viewBox="0 0 16 16" aria-hidden="true">
-                                    <path fill-rule="evenodd"
-                                          d="M6 3.5a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-2a.5.5 0 0 0-1 0v2A1.5 1.5 0 0 0 6.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-8A1.5 1.5 0 0 0 5 3.5v2a.5.5 0 0 0 1 0v-2a.5.5 0 0 1 .5-.5z"/>
-                                    <path fill-rule="evenodd"
-                                          d="M11.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5H1.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/>
-                                </svg>
-                            </span>
-                            </td>
-                            <td>{{ trans('Sign in with an account.') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">
-                            <span class="btn toolbar-btn disabled">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                     class="bi bi-arrows-angle-expand" viewBox="0 0 16 16">
-                                    <path fill-rule="evenodd"
-                                          d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707m4.344-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707"/></svg>
-                            </span>
-                            </td>
-                            <td>{{ trans('Switch fullscreen mode') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">
-                            <span class="btn toolbar-btn disabled">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                     class="bi bi-arrow-return-left" viewBox="0 0 16 16">
-                                    <path fill-rule="evenodd"
-                                          d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"></path></svg>
-                            </span>
-                            </td>
-                            <td>{{ trans('Back to homepage') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">
-                            <span class="btn toolbar-btn disabled">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                     class="bi bi-floppy"
-                                     viewBox="0 0 16 16"><path d="M11 2H9v3h2z"/><path
-                                        d="M1.5 0h11.586a1.5 1.5 0 0 1 1.06.44l1.415 1.414A1.5 1.5 0 0 1 16 2.914V14.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 14.5v-13A1.5 1.5 0 0 1 1.5 0M1 1.5v13a.5.5 0 0 0 .5.5H2v-4.5A1.5 1.5 0 0 1 3.5 9h9a1.5 1.5 0 0 1 1.5 1.5V15h.5a.5.5 0 0 0 .5-.5V2.914a.5.5 0 0 0-.146-.353l-1.415-1.415A.5.5 0 0 0 13.086 1H13v4.5A1.5 1.5 0 0 1 11.5 7h-7A1.5 1.5 0 0 1 3 5.5V1H1.5a.5.5 0 0 0-.5.5m3 4a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V1H4zM3 15h10v-4.5a.5.5 0 0 0-.5-.5h-9a.5.5 0 0 0-.5.5z"/></svg>
-                            </span>
-                            </td>
-                            <td>{{ trans('Save capture to disk') }} ({{ trans('Video') }})</td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                <!-- Section 5: Toolbar -->
+                <section id="sec-toolbar" class="help-section help-topic-group">
+                    <div class="help-section__header">
+                        <div>
+                            <h2 class="help-section__title">
+                                <span class="bi bi-sliders text-primary"></span>
+                                {{ trans('Help toolbar') }}
+                            </h2>
+                            <p class="help-section__desc">{{ trans('Quick actions on the bottom app bar') }}</p>
+                        </div>
+                        <span class="help-section__badge">5 {{ trans('Elements') }}</span>
+                    </div>
 
-            <div class="col-12 border-bottom mb-3 pb-3">
-                <h2 class="section-block__title">{{ trans('Datasets') }}</h2>
-                <p class="text-muted">{{ trans('Create, import and annotate datasets for model training.') }}</p>
-                <div class="table-responsive">
-                    <table class="table table-bordered mb-0">
-                        <thead class="table-dark">
-                        <tr>
-                            <th scope="col" class="w-50">{{ trans('Element') }}</th>
-                            <th scope="col" class="w-50">{{ trans('Description') }}</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr>
-                            <td class="align-middle">
-                                <a href="{{ url_for('datasets.datasets_index') }}">/datasets</a>
-                            </td>
-                            <td>{{ trans('Help datasets index') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">
-                                <div class="d-flex flex-wrap gap-1">
+                    <!-- Live toolbar preview -->
+                    <div class="help-toolbar-preview d-flex align-items-center gap-1 p-2 mb-3 rounded border" style="background:var(--cv-surface-elevated)">
+                        <button type="button" class="btn toolbar-btn d-flex align-items-center justify-content-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-brightness-high" viewBox="0 0 16 16">
+                                <path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6m0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z"/>
+                            </svg>
+                        </button>
+                        <button type="button" class="btn toolbar-btn d-flex align-items-center justify-content-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrows-angle-expand" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707m4.344-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707"/>
+                            </svg>
+                        </button>
+                        <button type="button" class="btn toolbar-btn d-flex align-items-center justify-content-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-return-left" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/>
+                            </svg>
+                        </button>
+                        <button type="button" class="btn toolbar-btn d-flex align-items-center justify-content-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-floppy" viewBox="0 0 16 16">
+                                <path d="M11 2H9v3h2z"/>
+                                <path d="M1.5 0h11.586a1.5 1.5 0 0 1 1.06.44l1.415 1.414A1.5 1.5 0 0 1 16 2.914V14.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 14.5v-13A1.5 1.5 0 0 1 1.5 0M1 1.5v13a.5.5 0 0 0 .5.5H2v-4.5A1.5 1.5 0 0 1 3.5 9h9a1.5 1.5 0 0 1 1.5 1.5V15h.5a.5.5 0 0 0 .5-.5V2.914a.5.5 0 0 0-.146-.353l-1.415-1.415A.5.5 0 0 0 13.086 1H13v4.5A1.5 1.5 0 0 1 11.5 7h-7A1.5 1.5 0 0 1 3 5.5V1H1.5a.5.5 0 0 0-.5.5m3 4a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V1H4zM3 15h10v-4.5a.5.5 0 0 0-.5-.5h-9a.5.5 0 0 0-.5.5z"/>
+                            </svg>
+                        </button>
+                        <button type="button" class="btn toolbar-btn d-flex align-items-center justify-content-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0z"/>
+                                <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/>
+                            </svg>
+                        </button>
+                        <span class="ms-2 small text-secondary fst-italic">{{ trans('Help toolbar') }}</span>
+                    </div>
+
+                    <div class="row g-3">
+                        <!-- Toolbar 1: Theme -->
+                        <div class="col-12 col-md-6">
+                            <div class="help-card help-searchable-item h-100" data-keywords="theme light dark тема темная светлая">
+                                <div class="help-card__inner" style="grid-template-columns:auto 1fr">
+                                    <div class="help-card__preview" style="min-height:0;padding:0.75rem">
+                                        <button type="button" class="btn toolbar-btn d-flex align-items-center justify-content-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-brightness-high" viewBox="0 0 16 16">
+                                                <path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6m0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div class="help-card__body">
+                                        <div class="help-card__header">
+                                            <h3 class="help-card__title">{{ trans('Switch theme color') }}</h3>
+                                            <span class="help-card__badge">{{ trans('Toolbar') }}</span>
+                                        </div>
+                                        <p class="help-card__desc small mb-0">{{ trans('Switches between Dark and Light interface theme.') }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Toolbar 2: Fullscreen -->
+                        <div class="col-12 col-md-6">
+                            <div class="help-card help-searchable-item h-100" data-keywords="fullscreen full screen полноэкранный режим f11">
+                                <div class="help-card__inner" style="grid-template-columns:auto 1fr">
+                                    <div class="help-card__preview" style="min-height:0;padding:0.75rem">
+                                        <button type="button" class="btn toolbar-btn d-flex align-items-center justify-content-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrows-angle-expand" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707m4.344-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div class="help-card__body">
+                                        <div class="help-card__header">
+                                            <h3 class="help-card__title">{{ trans('Switch fullscreen mode') }}</h3>
+                                            <span class="help-card__badge">{{ trans('Toolbar') }}</span>
+                                        </div>
+                                        <p class="help-card__desc small mb-0">{{ trans('Button Fullscreen') }} &mdash; <span class="help-kbd">F</span> / <span class="help-kbd">F11</span>.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Toolbar 3: Home -->
+                        <div class="col-12 col-md-6">
+                            <div class="help-card help-searchable-item h-100" data-keywords="home back назад главная">
+                                <div class="help-card__inner" style="grid-template-columns:auto 1fr">
+                                    <div class="help-card__preview" style="min-height:0;padding:0.75rem">
+                                        <button type="button" class="btn toolbar-btn d-flex align-items-center justify-content-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-return-left" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div class="help-card__body">
+                                        <div class="help-card__header">
+                                            <h3 class="help-card__title">{{ trans('Back to homepage') }}</h3>
+                                            <span class="help-card__badge">{{ trans('Toolbar') }}</span>
+                                        </div>
+                                        <p class="help-card__desc small mb-0">{{ trans('Button Backward') }}.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Toolbar 4: Save Capture -->
+                        <div class="col-12 col-md-6">
+                            <div class="help-card help-searchable-item h-100" data-keywords="save capture disk кадр снимок скриншот">
+                                <div class="help-card__inner" style="grid-template-columns:auto 1fr">
+                                    <div class="help-card__preview" style="min-height:0;padding:0.75rem">
+                                        <button type="button" class="btn toolbar-btn d-flex align-items-center justify-content-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-floppy" viewBox="0 0 16 16">
+                                                <path d="M11 2H9v3h2z"/>
+                                                <path d="M1.5 0h11.586a1.5 1.5 0 0 1 1.06.44l1.415 1.414A1.5 1.5 0 0 1 16 2.914V14.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 14.5v-13A1.5 1.5 0 0 1 1.5 0M1 1.5v13a.5.5 0 0 0 .5.5H2v-4.5A1.5 1.5 0 0 1 3.5 9h9a1.5 1.5 0 0 1 1.5 1.5V15h.5a.5.5 0 0 0 .5-.5V2.914a.5.5 0 0 0-.146-.353l-1.415-1.415A.5.5 0 0 0 13.086 1H13v4.5A1.5 1.5 0 0 1 11.5 7h-7A1.5 1.5 0 0 1 3 5.5V1H1.5a.5.5 0 0 0-.5.5m3 4a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V1H4zM3 15h10v-4.5a.5.5 0 0 0-.5-.5h-9a.5.5 0 0 0-.5.5z"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div class="help-card__body">
+                                        <div class="help-card__header">
+                                            <h3 class="help-card__title">{{ trans('Save capture to disk') }}</h3>
+                                            <span class="help-card__badge">{{ trans('Toolbar') }}</span>
+                                        </div>
+                                        <p class="help-card__desc small mb-0">{{ trans('Button Save Capture') }} ({{ trans('Video') }}).</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Toolbar 5: Auth -->
+                        <div class="col-12">
+                            <div class="help-card help-searchable-item" data-keywords="auth login logout signin вход выход авторизация">
+                                <div class="help-card__inner" style="grid-template-columns:auto 1fr">
+                                    <div class="help-card__preview" style="min-height:0;padding:0.75rem">
+                                        <button type="button" class="btn toolbar-btn d-flex align-items-center justify-content-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-in-right" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd" d="M6 3.5a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-2a.5.5 0 0 0-1 0v2A1.5 1.5 0 0 0 6.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-8A1.5 1.5 0 0 0 5 3.5v2a.5.5 0 0 0 1 0z"/>
+                                                <path fill-rule="evenodd" d="M11.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5H1.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div class="help-card__body">
+                                        <div class="help-card__header">
+                                            <h3 class="help-card__title">{{ trans('Log in') }} / {{ trans('Log out') }}</h3>
+                                            <span class="help-card__badge">{{ trans('Toolbar') }}</span>
+                                        </div>
+                                        <p class="help-card__desc small mb-0">{{ trans('Authentication required to access this resource.') }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 6: Datasets & Training -->
+                <section id="sec-datasets" class="help-section help-topic-group">
+                    <div class="help-section__header">
+                        <div>
+                            <h2 class="help-section__title">
+                                <span class="bi bi-collection text-primary"></span>
+                                {{ trans('Datasets') }} &amp; {{ trans('Training') }}
+                            </h2>
+                            <p class="help-section__desc">{{ trans('Create, import and annotate datasets for model training.') }}</p>
+                        </div>
+                        <span class="help-section__badge">5 {{ trans('Element') }}</span>
+                    </div>
+
+                    <!-- Item 6.1: Datasets index -->
+                    <div class="help-card help-searchable-item" data-keywords="datasets index датасеты список">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Element') }}</span>
+                                <a href="{{ url_for('datasets.datasets_index') }}" class="btn btn-outline-primary btn-sm font-monospace">
+                                    <span class="bi bi-folder2-open me-1"></span> /datasets
+                                </a>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">{{ trans('Datasets') }}</h3>
+                                    <span class="help-card__badge">{{ trans('Navigation') }}</span>
+                                </div>
+                                <p class="help-card__desc">{{ trans('Help datasets index') }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Item 6.2: Import data -->
+                    <div class="help-card help-searchable-item" data-keywords="import camera zip recording импорт камеры архив">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Element') }}</span>
+                                <div class="d-flex flex-wrap gap-1 justify-content-center">
                                     <span class="btn btn-outline-secondary btn-sm">{{ trans('From cameras') }}</span>
                                     <span class="btn btn-outline-secondary btn-sm">{{ trans('Upload files / ZIP') }}</span>
                                     <span class="btn btn-outline-secondary btn-sm">{{ trans('From recordings') }}</span>
                                 </div>
-                            </td>
-                            <td>{{ trans('Help datasets import') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">
-                                <div class="d-flex flex-wrap gap-1">
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">{{ trans('Help datasets import') }}</h3>
+                                    <span class="help-card__badge">{{ trans('Import') }}</span>
+                                </div>
+                                <p class="help-card__desc">{{ trans('Help datasets import') }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Item 6.3: Annotate tools -->
+                    <div class="help-card help-searchable-item" data-keywords="annotate box polygon trackid attributes разметка рамка полигон">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Element') }}</span>
+                                <div class="d-flex flex-wrap gap-1 justify-content-center">
                                     <span class="btn btn-outline-primary btn-sm">{{ trans('Box') }}</span>
                                     <span class="btn btn-outline-primary btn-sm">{{ trans('Polygon') }}</span>
                                     <span class="btn btn-outline-secondary btn-sm">{{ trans('Track ID') }}</span>
                                     <span class="btn btn-outline-secondary btn-sm">{{ trans('Attributes') }}</span>
                                 </div>
-                            </td>
-                            <td>{{ trans('Help datasets annotate') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">
-                                <div class="d-flex flex-wrap gap-1">
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">{{ trans('Annotate') }}</h3>
+                                    <span class="help-card__badge">{{ trans('Tools') }}</span>
+                                </div>
+                                <p class="help-card__desc">{{ trans('Help datasets annotate') }}</p>
+                                <div class="help-card__tip">
+                                    🎯 {{ trans('Keys 1–9 quickly switch the active annotation class.') }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Item 6.4: Training & weights -->
+                    <div class="help-card help-searchable-item" data-keywords="training weights best.pt обучение веса модель">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Element') }}</span>
+                                <div class="d-flex flex-wrap gap-1 justify-content-center">
                                     <span class="btn btn-primary btn-sm">{{ trans('Training') }}</span>
                                     <span class="btn btn-outline-success btn-sm">{{ trans('Apply weights to counter') }}</span>
                                 </div>
-                            </td>
-                            <td>{{ trans('Help datasets train') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">
-                                <code>dataset_create.path</code>
-                            </td>
-                            <td>{{ trans('Help datasets path') }}</td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">{{ trans('Training') }} &amp; {{ trans('Apply weights to counter') }}</h3>
+                                    <span class="help-card__badge">{{ trans('AI Training') }}</span>
+                                </div>
+                                <p class="help-card__desc">{{ trans('Help datasets train') }}</p>
+                            </div>
+                        </div>
+                    </div>
 
-            <div class="col-12 border-bottom mb-3 pb-3">
-                <h2 class="section-block__title">{{ trans('Recording') }}</h2>
-                <p class="text-muted">{{ trans('Help recording intro') }}</p>
-                <div class="table-responsive">
-                    <table class="table table-bordered mb-0">
-                        <thead class="table-dark">
-                        <tr>
-                            <th scope="col" class="w-50">{{ trans('Element') }}</th>
-                            <th scope="col" class="w-50">{{ trans('Description') }}</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr>
-                            <td class="align-middle"><code>recording.enable</code></td>
-                            <td>{{ trans('Help recording enable') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle"><code>recording.idle_timeout</code></td>
-                            <td>{{ trans('Help recording idle') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="align-middle">{{ trans('Saved media') }}</td>
-                            <td>{{ trans('Help saved media') }}</td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                    <!-- Item 6.5: Inbox storage path with copy button -->
+                    <div class="help-card help-searchable-item" data-keywords="path inbox storage storage/datasets путь папка">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Element') }}</span>
+                                <button type="button" class="help-code-copy" data-copy="storage/datasets/<name>/images/inbox" title="{{ trans('Copy') }}">
+                                    <span>storage/.../inbox</span>
+                                    <span class="bi bi-copy"></span>
+                                </button>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">dataset_create.path</h3>
+                                    <span class="help-card__badge">{{ trans('Storage') }}</span>
+                                </div>
+                                <p class="help-card__desc">{{ trans('Help datasets path') }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
-            <div class="col-12 border-bottom mb-3 pb-3">
-                <h2 class="section-block__title">{{ trans('Developer') }}</h2>
-                <div>Александр Киреев (Aleksandr Kireev)</div>
-                <div>{{ trans('Website') }}: <a href="https://bespredel.name">https://bespredel.name</a></div>
-                <div>{{ trans('E-mail') }}: <a href="mailto:hello@bespredel.name">hello@bespredel.name</a></div>
-                <div>{{ trans('GitHub') }}: <a href="https://github.com/BespredeL">https://github.com/BespredeL</a>
-                </div>
-            </div>
+                <!-- Section 7: Recording & Archives -->
+                <section id="sec-recording" class="help-section help-topic-group">
+                    <div class="help-section__header">
+                        <div>
+                            <h2 class="help-section__title">
+                                <span class="bi bi-record-circle text-primary"></span>
+                                {{ trans('Recording') }}
+                            </h2>
+                            <p class="help-section__desc">{{ trans('Help recording intro') }}</p>
+                        </div>
+                        <span class="help-section__badge">3 {{ trans('Element') }}</span>
+                    </div>
 
-            <div class="col-12 border-bottom mb-3 pb-3">
-                <h2 class="section-block__title">{{ trans('References') }}</h2>
-                <div>Ultralytics: <a href="https://github.com/ultralytics" target="_blank" rel="noopener">https://github.com/ultralytics</a>
-                </div>
-            </div>
+                    <!-- Item 7.1: recording.enable -->
+                    <div class="help-card help-searchable-item" data-keywords="recording enable запись запись видео">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Parameter') }}</span>
+                                <button type="button" class="help-code-copy" data-copy="recording.enable" title="{{ trans('Copy') }}">
+                                    <span>recording.enable</span>
+                                    <span class="bi bi-copy"></span>
+                                </button>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">recording.enable</h3>
+                                    <span class="help-card__badge">{{ trans('Config') }}</span>
+                                </div>
+                                <p class="help-card__desc">{{ trans('Help recording enable') }}</p>
+                            </div>
+                        </div>
+                    </div>
 
-            <div class="col-12 border-bottom mb-3 pb-3">
-                <h2 class="section-block__title">{{ trans('License') }}</h2>
-                <div>
-                    <a href="https://www.gnu.org/licenses/agpl-3.0.en.html">AGPL-3.0 License</a>
-                </div>
-            </div>
+                    <!-- Item 7.2: recording.idle_timeout -->
+                    <div class="help-card help-searchable-item" data-keywords="recording idle timeout тайм-аут простой">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Parameter') }}</span>
+                                <button type="button" class="help-code-copy" data-copy="recording.idle_timeout" title="{{ trans('Copy') }}">
+                                    <span>recording.idle_timeout</span>
+                                    <span class="bi bi-copy"></span>
+                                </button>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">recording.idle_timeout</h3>
+                                    <span class="help-card__badge">{{ trans('Config') }}</span>
+                                </div>
+                                <p class="help-card__desc">{{ trans('Help recording idle') }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Item 7.3: Saved media -->
+                    <div class="help-card help-searchable-item" data-keywords="saved media archive сохраненные файлы архив">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Element') }}</span>
+                                <span class="btn btn-outline-info btn-sm">
+                                    <span class="bi bi-images me-1"></span> {{ trans('Saved media') }}
+                                </span>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">{{ trans('Saved media') }}</h3>
+                                    <span class="help-card__badge">{{ trans('Archive') }}</span>
+                                </div>
+                                <p class="help-card__desc">{{ trans('Help saved media') }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 8: Keyboard Shortcuts Cheat Sheet -->
+                <section id="sec-shortcuts" class="help-section help-topic-group">
+                    <div class="help-section__header">
+                        <div>
+                            <h2 class="help-section__title">
+                                <span class="bi bi-keyboard text-primary"></span>
+                                {{ trans('Keyboard shortcuts') }}
+                            </h2>
+                            <p class="help-section__desc">{{ trans('Fast navigation and operation via keyboard') }}</p>
+                        </div>
+                        <span class="help-section__badge">8 {{ trans('Shortcuts') }}</span>
+                    </div>
+
+                    <div class="help-shortcuts-grid">
+                        <div class="help-shortcut-card help-searchable-item" data-keywords="space пробел пауза старт">
+                            <span class="help-shortcut-card__label">{{ trans('Pause') }} / {{ trans('Start') }}</span>
+                            <span class="help-kbd">Space</span>
+                        </div>
+                        <div class="help-shortcut-card help-searchable-item" data-keywords="1-9 цифры класс ввод">
+                            <span class="help-shortcut-card__label">{{ trans('Class / quick input') }}</span>
+                            <span class="help-kbd">1 – 9</span>
+                        </div>
+                        <div class="help-shortcut-card help-searchable-item" data-keywords="ctrl k поиск find search">
+                            <span class="help-shortcut-card__label">{{ trans('Search help...') }}</span>
+                            <span class="help-kbd">Ctrl + K</span>
+                        </div>
+                        <div class="help-shortcut-card help-searchable-item" data-keywords="f f11 fullscreen полноэкранный">
+                            <span class="help-shortcut-card__label">{{ trans('Switch fullscreen mode') }}</span>
+                            <span class="help-kbd">F / F11</span>
+                        </div>
+                        <div class="help-shortcut-card help-searchable-item" data-keywords="esc escape закрыть отмена">
+                            <span class="help-shortcut-card__label">{{ trans('Cancel') }} / {{ trans('Close') }}</span>
+                            <span class="help-kbd">Esc</span>
+                        </div>
+                        <div class="help-shortcut-card help-searchable-item" data-keywords="enter сохранить применить">
+                            <span class="help-shortcut-card__label">{{ trans('Save') }} / {{ trans('Apply') }}</span>
+                            <span class="help-kbd">Enter</span>
+                        </div>
+                        <div class="help-shortcut-card help-searchable-item" data-keywords="+ - плюс минус количество">
+                            <span class="help-shortcut-card__label">{{ trans('Step ± 1 (Defect / Correction)') }}</span>
+                            <span class="help-kbd">+ / -</span>
+                        </div>
+                        <div class="help-shortcut-card help-searchable-item" data-keywords="slash слэш поиск">
+                            <span class="help-shortcut-card__label">{{ trans('Focus search') }}</span>
+                            <span class="help-kbd">/</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 9: About, Developer & License -->
+                <section id="sec-about" class="help-section help-topic-group">
+                    <div class="help-section__header">
+                        <div>
+                            <h2 class="help-section__title">
+                                <span class="bi bi-info-circle text-primary"></span>
+                                {{ trans('Developer') }} &amp; {{ trans('License') }}
+                            </h2>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <!-- Developer Card -->
+                        <div class="col-12 col-md-6">
+                            <div class="help-about-card">
+                                <div class="help-about-card__avatar">AK</div>
+                                <h3 class="h6 fw-bold mb-1">Александр Киреев (Aleksandr Kireev)</h3>
+                                <p class="text-secondary small mb-3">{{ trans('Author and lead developer of CVCounter') }}</p>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a href="https://bespredel.name" target="_blank" rel="noopener" class="help-about-link">
+                                        <span class="bi bi-globe"></span> bespredel.name
+                                    </a>
+                                    <a href="https://github.com/BespredeL" target="_blank" rel="noopener" class="help-about-link">
+                                        <span class="bi bi-github"></span> GitHub
+                                    </a>
+                                    <a href="mailto:hello@bespredel.name" class="help-about-link">
+                                        <span class="bi bi-envelope"></span> Email
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stack & License Card -->
+                        <div class="col-12 col-md-6">
+                            <div class="help-about-card">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <span class="badge text-bg-primary">Open Source</span>
+                                    <span class="badge text-bg-secondary">AGPL-3.0</span>
+                                </div>
+                                <h3 class="h6 fw-bold mb-1">{{ trans('References') }} &amp; {{ trans('License') }}</h3>
+                                <p class="text-secondary small mb-2">
+                                    {{ trans('Based on open-source computer vision and object detection algorithms.') }}
+                                </p>
+                                <div class="mb-3">
+                                    <a href="https://github.com/ultralytics" target="_blank" rel="noopener" class="help-about-link mb-2">
+                                        <span class="bi bi-cpu"></span> Ultralytics YOLO Engine
+                                    </a>
+                                </div>
+                                <a href="https://www.gnu.org/licenses/agpl-3.0.en.html" target="_blank" rel="noopener" class="text-decoration-none small text-muted">
+                                    📄 GNU Affero General Public License v3.0
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
         </div>
+
+        <!-- Floating Back To Top button -->
+        <button type="button" id="help-back-to-top" class="help-back-to-top" title="{{ trans('Back to top') }}" aria-label="{{ trans('Back to top') }}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-arrow-up" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5"/>
+            </svg>
+        </button>
     </div>
+
+    <!-- Client-side Interactive Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // 1. Live Search & Category Filtering
+            const searchInput = document.getElementById('help-search');
+            const searchClear = document.getElementById('help-search-clear');
+            const filterChips = document.querySelectorAll('.help-chip');
+            const searchableItems = document.querySelectorAll('.help-searchable-item');
+            const topicGroups = document.querySelectorAll('.help-topic-group');
+            const emptyState = document.getElementById('help-empty-state');
+            const resetSearchBtn = document.getElementById('help-reset-search-btn');
+            const totalBadge = document.getElementById('help-total-items-badge');
+
+            if (totalBadge) {
+                totalBadge.textContent = searchableItems.length;
+            }
+
+            function filterDocumentation() {
+                const query = (searchInput.value || '').trim().toLowerCase();
+                const activeChip = document.querySelector('.help-chip.active');
+                const activeCategory = activeChip ? activeChip.getAttribute('data-filter') : 'all';
+
+                if (searchClear) {
+                    searchClear.style.display = query.length > 0 ? 'block' : 'none';
+                }
+
+                let visibleCount = 0;
+
+                searchableItems.forEach(function (item) {
+                    const text = (item.innerText || '').toLowerCase();
+                    const keywords = (item.getAttribute('data-keywords') || '').toLowerCase();
+                    const matchesQuery = !query || text.includes(query) || keywords.includes(query);
+
+                    let matchesCategory = true;
+                    if (activeCategory && activeCategory !== 'all') {
+                        const parentGroup = item.closest('.help-topic-group');
+                        matchesCategory = parentGroup && parentGroup.id === activeCategory;
+                    }
+
+                    if (matchesQuery && matchesCategory) {
+                        item.style.display = '';
+                        visibleCount++;
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+
+                // Show/hide section containers based on whether they have visible children
+                topicGroups.forEach(function (group) {
+                    if (activeCategory !== 'all' && group.id !== activeCategory && !query) {
+                        group.style.display = 'none';
+                        return;
+                    }
+
+                    const visibleChildren = group.querySelectorAll('.help-searchable-item:not([style*="display: none"])');
+                    const isWorkflow = group.id === 'sec-workflow';
+                    if (visibleChildren.length > 0 || (isWorkflow && (!query || 'workflow общая схема'.includes(query)))) {
+                        group.style.display = '';
+                    } else {
+                        group.style.display = 'none';
+                    }
+                });
+
+                if (emptyState) {
+                    emptyState.style.display = visibleCount === 0 ? 'block' : 'none';
+                }
+            }
+
+            if (searchInput) {
+                searchInput.addEventListener('input', filterDocumentation);
+            }
+
+            if (searchClear) {
+                searchClear.addEventListener('click', function () {
+                    searchInput.value = '';
+                    filterDocumentation();
+                    searchInput.focus();
+                });
+            }
+
+            if (resetSearchBtn) {
+                resetSearchBtn.addEventListener('click', function () {
+                    searchInput.value = '';
+                    filterChips.forEach(c => c.classList.remove('active'));
+                    const allChip = document.querySelector('.help-chip[data-filter="all"]');
+                    if (allChip) allChip.classList.add('active');
+                    filterDocumentation();
+                });
+            }
+
+            filterChips.forEach(function (chip) {
+                chip.addEventListener('click', function () {
+                    filterChips.forEach(c => c.classList.remove('active'));
+                    this.classList.add('active');
+                    filterDocumentation();
+
+                    const filterTarget = this.getAttribute('data-filter');
+                    if (filterTarget && filterTarget !== 'all') {
+                        const targetEl = document.getElementById(filterTarget);
+                        if (targetEl) {
+                            targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    }
+                });
+            });
+
+            // Global Keyboard Shortcut: Ctrl+K or / to focus search
+            document.addEventListener('keydown', function (e) {
+                if ((e.ctrlKey && e.key.toLowerCase() === 'k') || (e.key === '/' && document.activeElement !== searchInput && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName))) {
+                    e.preventDefault();
+                    if (searchInput) {
+                        searchInput.focus();
+                        searchInput.select();
+                    }
+                } else if (e.key === 'Escape' && document.activeElement === searchInput) {
+                    searchInput.value = '';
+                    filterDocumentation();
+                    searchInput.blur();
+                }
+            });
+
+            // 2. Interactive Status Mock Switcher
+            const mockCard = document.getElementById('help-status-mock');
+            const mockBadge = document.getElementById('help-status-badge');
+            const btnRunning = document.getElementById('btn-mock-running');
+            const btnPaused = document.getElementById('btn-mock-paused');
+            const btnStopped = document.getElementById('btn-mock-stopped');
+
+            if (mockCard && mockBadge && btnRunning && btnPaused && btnStopped) {
+                const mockToggle = document.getElementById('help-mock-toggle');
+                const mockStop  = document.getElementById('help-mock-stop');
+
+                function setMockStatus(statusClass, badgeText, activeBtn) {
+                    mockCard.classList.remove('counter-card--running', 'counter-card--paused', 'counter-card--stopped');
+                    mockCard.classList.add(statusClass);
+                    mockBadge.textContent = badgeText;
+
+                    [btnRunning, btnPaused, btnStopped].forEach(b => b.classList.remove('active'));
+                    activeBtn.classList.add('active');
+
+                    // Update toggle icon: running → show pause, else → show play
+                    if (mockToggle) {
+                        const iconPlay  = mockToggle.querySelector('.icon-play');
+                        const iconPause = mockToggle.querySelector('.icon-pause');
+                        if (statusClass === 'counter-card--running') {
+                            iconPlay  && iconPlay.classList.add('d-none');
+                            iconPause && iconPause.classList.remove('d-none');
+                        } else {
+                            iconPlay  && iconPlay.classList.remove('d-none');
+                            iconPause && iconPause.classList.add('d-none');
+                        }
+                    }
+
+                    // Stop button is disabled when already stopped
+                    if (mockStop) {
+                        mockStop.disabled = (statusClass === 'counter-card--stopped');
+                    }
+                }
+
+                // Allow clicking the transport buttons directly on the card
+                if (mockToggle) {
+                    mockToggle.addEventListener('click', function () {
+                        if (mockCard.classList.contains('counter-card--running')) {
+                            setMockStatus('counter-card--paused', '{{ trans("Counter paused") }}', btnPaused);
+                        } else {
+                            setMockStatus('counter-card--running', '{{ trans("Counter running") }}', btnRunning);
+                        }
+                    });
+                }
+                if (mockStop) {
+                    mockStop.addEventListener('click', function () {
+                        setMockStatus('counter-card--stopped', '{{ trans("Counter stopped") }}', btnStopped);
+                    });
+                }
+
+                // Init: running state
+                setMockStatus('counter-card--running', '{{ trans("Counter running") }}', btnRunning);
+
+                btnRunning.addEventListener('click', () => setMockStatus('counter-card--running', '{{ trans("Counter running") }}',  btnRunning));
+                btnPaused .addEventListener('click', () => setMockStatus('counter-card--paused',  '{{ trans("Counter paused") }}',   btnPaused));
+                btnStopped.addEventListener('click', () => setMockStatus('counter-card--stopped', '{{ trans("Counter stopped") }}',  btnStopped));
+            }
+
+            // 3. Interactive Defective Keyboard Mock
+            const defectInput = document.getElementById('help-demo-defect-val');
+            const defectKeys = document.querySelectorAll('.help-demo-defect-key');
+            const defectPlus = document.querySelector('.help-demo-defect-plus');
+            const defectMinus = document.querySelector('.help-demo-defect-minus');
+            const defectResets = document.querySelectorAll('.help-demo-defect-reset');
+            const defectKbToggle = document.getElementById('help-demo-defect-kb-toggle');
+            const defectCollapse = document.getElementById('help-demo-defect-collapse');
+
+            if (defectKbToggle && defectCollapse) {
+                defectKbToggle.addEventListener('click', function () {
+                    defectCollapse.classList.toggle('d-none');
+                });
+            }
+
+            if (defectInput) {
+                defectKeys.forEach(function (keyBtn) {
+                    keyBtn.addEventListener('click', function () {
+                        const digit = (this.getAttribute('data-value') || this.textContent).trim();
+                        let cur = defectInput.value.toString();
+                        if (cur === '0') cur = '';
+                        defectInput.value = (cur + digit).slice(0, 6) || '0';
+                    });
+                });
+
+                if (defectPlus) {
+                    defectPlus.addEventListener('click', function () {
+                        defectInput.value = Math.max(0, parseInt(defectInput.value || 0, 10) + 1);
+                    });
+                }
+
+                if (defectMinus) {
+                    defectMinus.addEventListener('click', function () {
+                        defectInput.value = Math.max(0, parseInt(defectInput.value || 0, 10) - 1);
+                    });
+                }
+
+                defectResets.forEach(function (rBtn) {
+                    rBtn.addEventListener('click', function () {
+                        defectInput.value = '0';
+                    });
+                });
+            }
+
+            // 3b. Interactive Correction Keyboard Mock
+            const correctInput = document.getElementById('help-demo-correct-val');
+            const correctKeys = document.querySelectorAll('.help-demo-correct-key');
+            const correctPlus = document.querySelector('.help-demo-correct-plus');
+            const correctMinus = document.querySelector('.help-demo-correct-minus');
+            const correctSign = document.querySelector('.help-demo-correct-sign');
+            const correctResets = document.querySelectorAll('.help-demo-correct-reset');
+            const correctKbToggle = document.getElementById('help-demo-correct-kb-toggle');
+            const correctCollapse = document.getElementById('help-demo-correct-collapse');
+
+            if (correctKbToggle && correctCollapse) {
+                correctKbToggle.addEventListener('click', function () {
+                    correctCollapse.classList.toggle('d-none');
+                });
+            }
+
+            if (correctInput) {
+                correctKeys.forEach(function (keyBtn) {
+                    keyBtn.addEventListener('click', function () {
+                        const digit = (this.getAttribute('data-value') || this.textContent).trim();
+                        let cur = correctInput.value.toString();
+                        const isNeg = cur.startsWith('-');
+                        let raw = isNeg ? cur.slice(1) : cur;
+                        if (raw === '0') raw = '';
+                        raw = (raw + digit).slice(0, 6) || '0';
+                        correctInput.value = (isNeg && raw !== '0' ? '-' : '') + raw;
+                    });
+                });
+
+                if (correctSign) {
+                    correctSign.addEventListener('click', function () {
+                        let val = parseInt(correctInput.value || 0, 10);
+                        if (val !== 0) {
+                            correctInput.value = (-val).toString();
+                        } else if (correctInput.value === '0') {
+                            correctInput.value = '-0';
+                        } else if (correctInput.value === '-0') {
+                            correctInput.value = '0';
+                        }
+                    });
+                }
+
+                if (correctPlus) {
+                    correctPlus.addEventListener('click', function () {
+                        let val = parseInt(correctInput.value || 0, 10);
+                        correctInput.value = (val + 1).toString();
+                    });
+                }
+
+                if (correctMinus) {
+                    correctMinus.addEventListener('click', function () {
+                        let val = parseInt(correctInput.value || 0, 10);
+                        correctInput.value = (val - 1).toString();
+                    });
+                }
+
+                correctResets.forEach(function (rBtn) {
+                    rBtn.addEventListener('click', function () {
+                        correctInput.value = '0';
+                    });
+                });
+            }
+
+            // 4. Copy-to-clipboard buttons
+            const copyButtons = document.querySelectorAll('.help-code-copy');
+            copyButtons.forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    const textToCopy = this.getAttribute('data-copy');
+                    if (!textToCopy) return;
+
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        const originalHTML = this.innerHTML;
+                        this.classList.add('copied');
+                        this.innerHTML = `<span>${textToCopy}</span> <span class="bi bi-check-lg text-success"></span>`;
+                        setTimeout(() => {
+                            this.classList.remove('copied');
+                            this.innerHTML = originalHTML;
+                        }, 2000);
+                    }).catch(() => {});
+                });
+            });
+
+            // 5. ScrollSpy & Back to Top
+            const backToTopBtn = document.getElementById('help-back-to-top');
+            const tocLinks = document.querySelectorAll('.help-toc-link');
+
+            function handleScroll() {
+                const scrollY = window.scrollY;
+
+                // Back to top visibility
+                if (backToTopBtn) {
+                    if (scrollY > 300) {
+                        backToTopBtn.classList.add('visible');
+                    } else {
+                        backToTopBtn.classList.remove('visible');
+                    }
+                }
+
+                // TOC Active tracking
+                const sections = document.querySelectorAll('.help-section');
+                let currentSectionId = '';
+
+                sections.forEach(function (section) {
+                    const rect = section.getBoundingClientRect();
+                    if (rect.top <= 120 && rect.bottom >= 120) {
+                        currentSectionId = section.id;
+                    }
+                });
+
+                if (currentSectionId) {
+                    tocLinks.forEach(function (link) {
+                        if (link.getAttribute('href') === '#' + currentSectionId) {
+                            link.classList.add('active');
+                        } else {
+                            link.classList.remove('active');
+                        }
+                    });
+                }
+            }
+
+            window.addEventListener('scroll', handleScroll, { passive: true });
+
+            if (backToTopBtn) {
+                backToTopBtn.addEventListener('click', function () {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            }
+        });
+    </script>
 {% endblock %}
