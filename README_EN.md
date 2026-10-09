@@ -61,7 +61,24 @@ It is perfectly suited for **counting products, people, vehicle tracking, retail
 
 ## 📦 Installation
 
-### Method 1: Manual Installation
+### Method 1: Automatic 1-Click Installation (Recommended)
+
+The installer script automatically detects your GPU hardware (NVIDIA GeForce/RTX with CUDA, AMD Radeon with DirectML, Intel Arc/CPU with OpenVINO), creates the virtual environment, installs the required packages, and prepares the configuration:
+
+- **On Windows:**  
+  Double-click **`install.bat`** (or run `install.bat` in CMD/PowerShell).  
+  To launch the application, double-click **`start.bat`**.
+
+- **On Linux / macOS:**  
+  ```bash
+  chmod +x install.sh start.sh
+  ./install.sh
+  ./start.sh
+  ```
+
+---
+
+### Method 2: Manual Installation
 
 1. **Clone the repository:**
    ```bash

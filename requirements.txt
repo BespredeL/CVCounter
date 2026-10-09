@@ -24,7 +24,7 @@
 # Core Web & App -----------------------------
 filterpy==1.4.5
 Flask-SocketIO==5.6.*
-simple-websocket>=1.1.*
+simple-websocket>=1.1.0
 Flask==3.1.*
 imutils==0.5.4
 MarkupSafe==2.1.5
@@ -50,8 +50,8 @@ onnxruntime>=1.17.0
 onnx==1.17  # ONNX export
 onnxsim==0.4.36  # ONNX simplifier
 onnxslim==0.1.57  # ONNX simplifier
-tensorrt==8.6.1 # TensorRT export
-nvidia-pyindex  # TensorRT export
+# tensorrt==8.6.1 # TensorRT export (requires TensorRT SDK / wheels)
+# nvidia-pyindex  # TensorRT export
 # nvidia-tensorrt  # TensorRT export
 # scikit-learn==0.19.2  # CoreML quantization
 # tensorflow>=2.4.1  # TF exports (-cpu, -aarch64, -macos)
