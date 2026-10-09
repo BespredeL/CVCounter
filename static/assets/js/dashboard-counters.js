@@ -619,6 +619,42 @@ const CounterDashboard = {
     },
 
     /**
+     * Bind global keyboard shortcuts on the dashboard.
+     *
+     * @returns {void}
+     */
+    bindKeyboardShortcuts() {
+        document.addEventListener("keydown", (e) => {
+            const target = e.target;
+            const tag = target?.tagName?.toLowerCase();
+            const isEditing = tag === "input" || tag === "textarea" || tag === "select" || target?.isContentEditable;
+            if (isEditing || document.querySelector(".modal.show")) {
+                return;
+            }
+
+            // Space: Toggle Pause / Start on hovered, running, or first visible counter
+            if (e.code === "Space" || e.key === " " || e.key === "Spacebar") {
+                const visibleCards = Array.from(document.querySelectorAll(".counter-card:not(.counter-card--hidden)"));
+                if (!visibleCards.length) return;
+
+                const hoveredCard = visibleCards.find(c => c.matches(":hover") || c.contains(document.activeElement));
+                const runningCard = visibleCards.find(c => c.dataset.status === "running");
+                const pausedCard = visibleCards.find(c => c.dataset.status === "paused");
+                const card = hoveredCard || runningCard || pausedCard || visibleCards[0];
+
+                if (card) {
+                    const toggleBtn = card.querySelector("[data-role=toggle]");
+                    if (toggleBtn && !toggleBtn.disabled && !toggleBtn.classList.contains("is-loading")) {
+                        e.preventDefault();
+                        document.activeElement?.blur();
+                        toggleBtn.click();
+                    }
+                }
+            }
+        });
+    },
+
+    /**
      * Initialize the counter dashboard
      *
      * @returns {void}
@@ -632,6 +668,7 @@ const CounterDashboard = {
         this.bindCards();
         this.bindFilters();
         this.bindMultiCounter();
+        this.bindKeyboardShortcuts();
         this.updateStats();
 
         if (typeof CounterSettingsModal !== "undefined") {

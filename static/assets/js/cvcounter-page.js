@@ -497,6 +497,69 @@ const CounterPage = {
     },
 
     /**
+     * Bind global keyboard shortcuts on the counter page.
+     *
+     * @param {object} urls - Endpoint URLs
+     * @returns {void}
+     */
+    bindKeyboardShortcuts(urls) {
+        document.addEventListener("keydown", (e) => {
+            const target = e.target;
+            const tag = target?.tagName?.toLowerCase();
+            const isEditing = tag === "input" || tag === "textarea" || tag === "select" || target?.isContentEditable;
+
+            // Do not capture if typing in form fields or modal is open
+            if (isEditing || document.querySelector(".modal.show")) {
+                return;
+            }
+
+            // Space: Toggle Pause / Start
+            if (e.code === "Space" || e.key === " " || e.key === "Spacebar") {
+                e.preventDefault();
+                e.stopPropagation();
+                document.activeElement?.blur();
+
+                const btnPause = document.getElementById("btn_pause");
+                const pauseDisplay = document.getElementById("pause_display");
+                const isPaused = (btnPause && btnPause.classList.contains("btn-warning")) ||
+                                 (pauseDisplay && !pauseDisplay.classList.contains("d-none"));
+
+                if (isPaused) {
+                    this.startCount(urls.start);
+                } else {
+                    this.pauseCount(urls.pause);
+                }
+                return;
+            }
+
+            // Enter: Save count session
+            if (e.code === "Enter" || e.key === "Enter") {
+                e.preventDefault();
+                document.getElementById("btn_save")?.click();
+                return;
+            }
+
+            // + / = : Increment defect count
+            if (e.key === "+" || e.key === "=") {
+                e.preventDefault();
+                const defectPlus = document.querySelector("#defect_keyboard .input-plus") ||
+                                   document.querySelector("#correct_keyboard .input-plus");
+                defectPlus?.click();
+                return;
+            }
+
+            // - : Decrement defect count
+            if (e.key === "-" || e.key === "_") {
+                e.preventDefault();
+                const defectMinus = document.querySelector("#defect_keyboard .input-minus") ||
+                                    document.querySelector("#correct_keyboard .input-minus");
+                defectMinus?.click();
+                return;
+            }
+        });
+    },
+
+    /**
      * Initialize the single counter page.
      *
      * @returns {void}
@@ -510,6 +573,7 @@ const CounterPage = {
         document.addEventListener("contextmenu", (e) => e.preventDefault());
 
         this.bindSidebarButtons(options.urls);
+        this.bindKeyboardShortcuts(options.urls);
         this.applyCounts(options.counts);
         this.bindInputListeners();
         this.bindSocket(options.location);

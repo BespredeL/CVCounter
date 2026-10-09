@@ -332,23 +332,28 @@
                                         <li class="page-item page-item__previous">
                                             <a class="page-link"
                                                href="{{ url_for('reports.report_list', location=location, page=current_page, media_tab='images', images_page=images_current_page - 1) }}"
-                                               aria-label="Previous">
-                                                <span aria-hidden="true">&laquo;</span>
+                                               aria-label="{{ trans('Previous') }}" title="{{ trans('Previous') }}">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-chevron-left" viewBox="0 0 16 16">
+                                                    <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
+                                                </svg>
                                             </a>
                                         </li>
                                     {% endif %}
                                     {% for p in range(img_start, img_end + 1) %}
                                         <li class="page-item{% if p == images_current_page %} active{% endif %}">
                                             <a class="page-link"
-                                               href="{{ url_for('reports.report_list', location=location, page=current_page, media_tab='images', images_page=p) }}">{{ p }}</a>
+                                               href="{{ url_for('reports.report_list', location=location, page=current_page, media_tab='images', images_page=p) }}"
+                                               {% if p == images_current_page %}aria-current="page"{% endif %}>{{ p }}</a>
                                         </li>
                                     {% endfor %}
                                     {% if images_current_page < images_total_pages %}
                                         <li class="page-item page-item__next">
                                             <a class="page-link"
                                                href="{{ url_for('reports.report_list', location=location, page=current_page, media_tab='images', images_page=images_current_page + 1) }}"
-                                               aria-label="Next">
-                                                <span aria-hidden="true">&raquo;</span>
+                                               aria-label="{{ trans('Next') }}" title="{{ trans('Next') }}">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-chevron-right" viewBox="0 0 16 16">
+                                                    <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
+                                                </svg>
                                             </a>
                                         </li>
                                     {% endif %}
@@ -411,23 +416,28 @@
                                         <li class="page-item page-item__previous">
                                             <a class="page-link"
                                                href="{{ url_for('reports.report_list', location=location, page=current_page, media_tab='videos', videos_page=videos_current_page - 1) }}"
-                                               aria-label="Previous">
-                                                <span aria-hidden="true">&laquo;</span>
+                                               aria-label="{{ trans('Previous') }}" title="{{ trans('Previous') }}">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-chevron-left" viewBox="0 0 16 16">
+                                                    <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
+                                                </svg>
                                             </a>
                                         </li>
                                     {% endif %}
                                     {% for p in range(vid_start, vid_end + 1) %}
                                         <li class="page-item{% if p == videos_current_page %} active{% endif %}">
                                             <a class="page-link"
-                                               href="{{ url_for('reports.report_list', location=location, page=current_page, media_tab='videos', videos_page=p) }}">{{ p }}</a>
+                                               href="{{ url_for('reports.report_list', location=location, page=current_page, media_tab='videos', videos_page=p) }}"
+                                               {% if p == videos_current_page %}aria-current="page"{% endif %}>{{ p }}</a>
                                         </li>
                                     {% endfor %}
                                     {% if videos_current_page < videos_total_pages %}
                                         <li class="page-item page-item__next">
                                             <a class="page-link"
                                                href="{{ url_for('reports.report_list', location=location, page=current_page, media_tab='videos', videos_page=videos_current_page + 1) }}"
-                                               aria-label="Next">
-                                                <span aria-hidden="true">&raquo;</span>
+                                               aria-label="{{ trans('Next') }}" title="{{ trans('Next') }}">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-chevron-right" viewBox="0 0 16 16">
+                                                    <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
+                                                </svg>
                                             </a>
                                         </li>
                                     {% endif %}
