@@ -1,4 +1,7 @@
 /**
+ * Computer Vision Counter (CVCounter)
+ * Main application client script (theme, fullscreen, toasts, dialogs).
+ *
  * Developed by: Aleksandr Kireev
  * Created: 01.11.2023
  * Updated: 08.06.2026

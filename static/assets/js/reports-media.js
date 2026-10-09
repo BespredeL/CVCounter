@@ -1,6 +1,10 @@
 /**
- * Reports saved media viewer (images + recordings) with lightbox navigation.
- * Developed by: Aleksandr Kireev — https://bespredel.name
+ * Computer Vision Counter (CVCounter)
+ * Reports saved media viewer (images and recordings) with lightbox navigation.
+ *
+ * Developed by: Aleksandr Kireev
+ * Created: 09.10.2026
+ * Website: https://bespredel.name
  */
 
 (function () {
@@ -35,7 +39,7 @@
     let currentIndex = -1;
 
     function getMediaItems() {
-        // Collect visible tab's items first, or all items
+        /* Collect visible tab's items first, or all items */
         const activePane = root.querySelector(".tab-pane.active");
         if (activePane) {
             const tabItems = Array.from(activePane.querySelectorAll("[data-media-url]"));
@@ -172,7 +176,7 @@
         }
     }
 
-    // Attach click to thumbnails
+    /* --- Thumbnail click handler --- */
     root.addEventListener("click", (e) => {
         const btn = e.target.closest("[data-media-url]");
         if (!btn) return;
@@ -183,7 +187,7 @@
         }
     });
 
-    // Navigation button clicks
+    /* --- Lightbox navigation buttons --- */
     btnPrev?.addEventListener("click", () => {
         if (currentIndex > 0) {
             openMediaByIndex(currentIndex - 1);
@@ -196,7 +200,7 @@
         }
     });
 
-    // Keyboard navigation (ArrowLeft / ArrowRight)
+    /* --- Keyboard navigation (ArrowLeft / ArrowRight) --- */
     window.addEventListener("keydown", (e) => {
         if (!modalEl.classList.contains("show")) return;
         if (e.target.matches("input, textarea, select")) return;
@@ -214,7 +218,7 @@
         }
     });
 
-    // Video playback speed buttons
+    /* --- Video playback speed controls --- */
     document.querySelectorAll(".reports-media-speed-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
             const speed = parseFloat(btn.dataset.speed) || 1.0;
@@ -227,7 +231,7 @@
         });
     });
 
-    // Modal lifecycle
+    /* --- Modal lifecycle events --- */
     modalEl.addEventListener("shown.bs.modal", () => {
         if (!pendingVideoUrl || !videoEl) return;
         const url = pendingVideoUrl;

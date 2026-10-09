@@ -1,12 +1,11 @@
 /**
+ * Computer Vision Counter (CVCounter)
+ * Dashboard - counter cards, filters, and transport controls.
+ *
  * Developed by: Aleksandr Kireev
  * Created: 04.06.2026
  * Updated: 16.06.2026
  * Website: https://bespredel.name
- */
-
-/**
- * Dashboard - counter cards, filters, transport controls
  */
 const CounterDashboard = {
     /**

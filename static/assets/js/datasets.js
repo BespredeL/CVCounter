@@ -1,6 +1,10 @@
 /**
- * Dataset hub UI (list + detail + training).
- * Developed by: Aleksandr Kireev — https://bespredel.name
+ * Computer Vision Counter (CVCounter)
+ * Dataset hub UI (list, detail, training, and log viewer).
+ *
+ * Developed by: Aleksandr Kireev
+ * Created: 09.10.2026
+ * Website: https://bespredel.name
  */
 
 (function () {
@@ -41,7 +45,7 @@
         return data;
     }
 
-    // ---- list page ----
+    /* --- List page --- */
     const listPage = document.getElementById('datasets-page');
     if (listPage) {
         const form = document.getElementById('create-dataset-form');
@@ -99,7 +103,7 @@
         });
     }
 
-    // ---- detail page ----
+    /* --- Detail page --- */
     const detail = document.getElementById('dataset-detail');
     if (!detail) return;
 
@@ -139,7 +143,7 @@
         }
     }
 
-    // Sync checkboxes across table and grid view
+    /* Sync checkboxes across table and grid view */
     document.addEventListener('change', (e) => {
         if (e.target && e.target.classList.contains('img-check')) {
             const val = e.target.value;
@@ -480,7 +484,7 @@
         if (fillBestWeightsBtn) fillBestWeightsBtn.classList.remove('d-none');
     }
 
-    // ---- training ----
+    /* --- Training & log streaming --- */
     const logEl = document.getElementById('training-log');
     const statusBadge = document.getElementById('train-status-badge');
     const progressBar = document.getElementById('train-progress-bar');
@@ -648,7 +652,7 @@
         document.getElementById('train-tab-btn')?.click();
     }
 
-    // ---- view mode (table vs grid) ----
+    /* --- View mode (table vs grid) --- */
     const btnViewTable = document.getElementById('btn-view-table');
     const btnViewGrid = document.getElementById('btn-view-grid');
     const tableView = document.getElementById('images-table-view');
@@ -675,7 +679,7 @@
         setViewMode('grid');
     }
 
-    // ---- filters & pagination ----
+    /* --- Filters & pagination --- */
     let currentPage = 1;
     const pageSize = 48;
 

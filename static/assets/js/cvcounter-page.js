@@ -1,12 +1,11 @@
 /**
+ * Computer Vision Counter (CVCounter)
+ * Single counter page UI (video / text views).
+ *
  * Developed by: Aleksandr Kireev
  * Created: 04.09.2024
  * Updated: 09.07.2026
  * Website: https://bespredel.name
- */
-
-/**
- * Single counter page UI (video / text views)
  */
 const CounterPage = {
     /**
@@ -524,7 +523,6 @@ const CounterPage = {
         }
     },
 };
-
 
 document.addEventListener("DOMContentLoaded", () => {
     CounterPage.initialize();

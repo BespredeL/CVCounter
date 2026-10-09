@@ -1,12 +1,11 @@
 /**
+ * Computer Vision Counter (CVCounter)
+ * Dashboard modal - per-counter detection settings.
+ *
  * Developed by: Aleksandr Kireev
  * Created: 04.06.2026
  * Updated: 08.06.2026
  * Website: https://bespredel.name
- */
-
-/**
- * Dashboard modal - per-counter detection settings
  */
 const CounterSettingsModal = {
     /**

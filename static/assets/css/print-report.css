@@ -1,7 +1,13 @@
-/* ==========================================================================
-   REPORT PRINT STYLESHEET
-   Dedicated stylesheet for printing report documents (A4 portrait)
-   ========================================================================== */
+/**
+ * Computer Vision Counter (CVCounter)
+ * 
+ * Dedicated stylesheet for printing report documents (A4 portrait)
+ * 
+ * Developed by: Aleksandr Kireev
+ * Created: 09.10.2026
+ * Updated: 09.10.2026
+ * Website: https://bespredel.name
+ */
 
 .print-report-header,
 .print-report-footer {
@@ -9,14 +15,15 @@
 }
 
 @media print {
-    /* 1. Page Configuration */
+
+    /* --- 1. Page configuration --- */
     @page {
         size: A4 portrait;
         margin: 10mm 12mm 12mm 12mm;
         background: #ffffff !important;
     }
 
-    /* 2. Global Document Reset */
+    /* --- 2. Global document reset --- */
     *,
     *::before,
     *::after {
@@ -83,7 +90,7 @@
         width: 100% !important;
     }
 
-    /* 3. Hide Unwanted Web UI Elements */
+    /* --- 3. Hide unwanted web UI elements --- */
     .d-print-none,
     .nav-card,
     [class*="nav-card"],
@@ -111,7 +118,7 @@
         margin-right: 0 !important;
     }
 
-    /* 4. Display Print-Only Header & Footer */
+    /* --- 4. Print header & footer display --- */
     .print-report-header {
         display: block !important;
         width: 100% !important;
@@ -134,7 +141,7 @@
         break-inside: avoid !important;
     }
 
-    /* 5. Print Header Structure */
+    /* --- 5. Print header structure --- */
     .print-report-header__top {
         display: flex !important;
         align-items: flex-start !important;
@@ -223,7 +230,7 @@
         font-weight: 600 !important;
     }
 
-    /* 6. KPI Cards in Print */
+    /* --- 6. KPI cards --- */
     .reports-detail-page .row.g-2,
     .reports-detail-page .row.g-3 {
         display: flex !important;
@@ -233,8 +240,8 @@
         width: 100% !important;
     }
 
-    .reports-detail-page .row.g-2 > [class*="col-"],
-    .reports-detail-page .row.g-3 > [class*="col-"] {
+    .reports-detail-page .row.g-2>[class*="col-"],
+    .reports-detail-page .row.g-3>[class*="col-"] {
         flex: 1 1 0 !important;
         max-width: 25% !important;
         width: 25% !important;
@@ -310,7 +317,7 @@
         border: 1px solid #fca5a5 !important;
     }
 
-    /* 7. Two-column Grid in Print */
+    /* --- 7. Two-column grid layout --- */
     .reports-detail-page .row.g-4 {
         display: flex !important;
         flex-direction: row !important;
@@ -319,21 +326,21 @@
         width: 100% !important;
     }
 
-    .reports-detail-page .row.g-4 > .col-lg-7 {
+    .reports-detail-page .row.g-4>.col-lg-7 {
         flex: 0 0 calc(58% - 6px) !important;
         max-width: calc(58% - 6px) !important;
         width: calc(58% - 6px) !important;
         padding: 0 !important;
     }
 
-    .reports-detail-page .row.g-4 > .col-lg-5 {
+    .reports-detail-page .row.g-4>.col-lg-5 {
         flex: 0 0 calc(42% - 6px) !important;
         max-width: calc(42% - 6px) !important;
         width: calc(42% - 6px) !important;
         padding: 0 !important;
     }
 
-    /* 8. Cards and Sections */
+    /* --- 8. Cards and sections --- */
     .cv-card {
         background: #ffffff !important;
         border: 1px solid #e2e8f0 !important;
@@ -367,7 +374,7 @@
         padding: 1px 6px !important;
     }
 
-    /* 9. Class Distribution Rows */
+    /* --- 9. Class distribution rows --- */
     .reports-class-row {
         background: #f8fafc !important;
         border: 1px solid #e2e8f0 !important;
@@ -413,7 +420,7 @@
         background-color: #2563eb !important;
     }
 
-    /* 10. Detail Lists */
+    /* --- 10. Detail lists --- */
     .detail-list__row {
         display: flex !important;
         justify-content: space-between !important;
@@ -462,7 +469,7 @@
         font-weight: 600 !important;
     }
 
-    /* 11. Parts rows */
+    /* --- 11. Parts rows --- */
     .reports-detail-page .p-3.rounded-2.bg-body-tertiary {
         background: #f8fafc !important;
         border: 1px solid #e2e8f0 !important;
@@ -471,7 +478,7 @@
         break-inside: avoid !important;
     }
 
-    /* 12. Signatures & Footer */
+    /* --- 12. Signatures & footer --- */
     .print-signatures-grid {
         display: grid !important;
         grid-template-columns: repeat(3, 1fr) !important;
