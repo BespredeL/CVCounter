@@ -3,7 +3,7 @@
 {% block title %}{{ trans('Settings') }}{% endblock %}
 
 {% block header %}
-    {% with page_title=trans('Settings') %}
+    {% with page_title=trans('Settings'), page_subtitle=trans('Configure application parameters, hardware, detection modules, and security.') %}
         {% include 'partials/page_header.html' %}
     {% endwith %}
 {% endblock %}
@@ -19,35 +19,163 @@
 
 {% import 'partials/forms.html' as forms %}
 
+{% macro section_icon(key) %}
+    {% if key == 'general' %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-sliders flex-shrink-0" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M11.5 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M9.05 3a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0V3zM4.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M2.05 8a2.5 2.5 0 0 1 4.9 0H16v1H6.95a2.5 2.5 0 0 1-4.9 0H0V8zm9.45 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m-2.45 1a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0v-1z"/></svg>
+    {% elif key == 'server' %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-hdd-network flex-shrink-0" viewBox="0 0 16 16"><path d="M4.5 5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1M3 4.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0m2 7a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0"/><path d="M2 2a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h5.5v3A1.5 1.5 0 0 0 6 11.5H5a.5.5 0 0 0 0 1h1a1.5 1.5 0 0 0 1.5 1.5h1A1.5 1.5 0 0 0 10 12.5h1a.5.5 0 0 0 0-1H10A1.5 1.5 0 0 0 8.5 10V7H14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM1 4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm6.5 7.5A.5.5 0 0 1 8 11h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5H8a.5.5 0 0 1-.5-.5z"/></svg>
+    {% elif key == 'datasets' %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-collection flex-shrink-0" viewBox="0 0 16 16"><path d="M2.5 3.5a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1zm2-2a.5.5 0 0 1 0-1h7a.5.5 0 0 1 0 1zM0 13a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 16 13V6a1.5 1.5 0 0 0-1.5-1.5h-13A1.5 1.5 0 0 0 0 6zm1.5.5A.5.5 0 0 1 1 13V6a.5.5 0 0 1 .5-.5h13a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5z"/></svg>
+    {% elif key == 'users' %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-people flex-shrink-0" viewBox="0 0 16 16"><path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1zm-7.978-1L7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72zm-5.94-1q.003-.145.054-.315C1.88 11.094 2.971 10 5 10c1.69 0 2.734.8 3.272 1.455a4.2 4.2 0 0 0-.555.838l-.508.85H1.348zM5.5 5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5M11 6a2 2 0 1 0 0-4 2 2 0 0 0 0 4"/></svg>
+    {% elif key == 'db' %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-database flex-shrink-0" viewBox="0 0 16 16"><path d="M4.318 2.687C5.234 2.271 6.536 2 8 2s2.766.27 3.682.687C12.644 3.125 13 3.627 13 4c0 .374-.356.875-1.318 1.313C10.766 5.729 9.464 6 8 6s-2.766-.27-3.682-.687C3.356 4.875 3 4.373 3 4c0-.374.356-.875 1.318-1.313ZM13 5.698V7c0 .374-.356.875-1.318 1.313C10.766 8.729 9.464 9 8 9s-2.766-.27-3.682-.687C3.356 7.875 3 7.374 3 7V5.698c.271.202.58.378.904.525C4.978 6.711 6.427 7 8 7s3.022-.289 4.096-.777A5 5 0 0 0 13 5.698M14 4c0-1.007-.875-1.755-1.904-2.223C11.022 1.289 9.573 1 8 1s-3.022.289-4.096.777C2.875 2.245 2 2.993 2 4v9c0 1.007.875 1.755 1.904 2.223C4.978 15.71 6.427 16 8 16s3.022-.289 4.096-.777C13.125 14.755 14 14.007 14 13zm-1 4.698V10c0 .374-.356.875-1.318 1.313C10.766 11.729 9.464 12 8 12s-2.766-.27-3.682-.687C3.356 10.875 3 10.374 3 10V8.698c.271.202.58.378.904.525C4.978 9.71 6.427 10 8 10s3.022-.289 4.096-.777A5 5 0 0 0 13 8.698M14 13c0 .374-.356.875-1.318 1.313C11.766 14.729 10.464 15 8 15s-2.766-.27-3.682-.687C3.356 13.875 3 13.374 3 13v-1.302c.271.202.58.378.904.525C4.978 12.71 6.427 13 8 13s3.022-.289 4.096-.777c.324-.147.633-.323.904-.525z"/></svg>
+    {% elif key == 'telemetry' %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-activity flex-shrink-0" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M6 2a.5.5 0 0 1 .47.33L10 12.036l1.53-4.208A.5.5 0 0 1 12 7.5h3.5a.5.5 0 0 1 0 1h-3.15l-1.88 5.17a.5.5 0 0 1-.94 0L6 3.964 4.47 8.171A.5.5 0 0 1 4 8.5H.5a.5.5 0 0 1 0-1h3.15l1.88-5.17A.5.5 0 0 1 6 2"/></svg>
+    {% elif key == 'form' %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-ui-checks flex-shrink-0" viewBox="0 0 16 16"><path d="M7 2.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5zM2 1a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm0 8a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2zm.854-3.646a.5.5 0 0 1-.708 0l-1-1a.5.5 0 1 1 .708-.708l.646.647 1.646-1.647a.5.5 0 1 1 .708.708zM7 10.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5z"/></svg>
+    {% elif key == 'detection_default' %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-crosshair flex-shrink-0" viewBox="0 0 16 16"><path d="M8.5.5a.5.5 0 0 0-1 0v.518A7 7 0 0 0 1.018 7.5H.5a.5.5 0 0 0 0 1h.518A7 7 0 0 0 7.5 14.982v.518a.5.5 0 0 0 1 0v-.518A7 7 0 0 0 14.982 8.5h.518a.5.5 0 0 0 0-1h-.518A7 7 0 0 0 8.5 1.018zm-5.94 7A6 6 0 0 1 7.5 2.06v1.44a.5.5 0 0 0 1 0V2.06A6 6 0 0 1 13.44 7.5h-1.44a.5.5 0 0 0 0 1h1.44A6 6 0 0 1 8.5 13.94v-1.44a.5.5 0 0 0-1 0v1.44A6 6 0 0 1 2.56 8.5h1.44a.5.5 0 0 0 0-1zm4.94 0A.5.5 0 0 0 8 7a.5.5 0 0 0-.5.5v.005L7.5 8a.5.5 0 0 0 .5.5h.005l.005-.005A.5.5 0 0 0 8.5 8V7.5z"/></svg>
+    {% elif key == 'detections' %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-camera-video flex-shrink-0" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2V5z"/></svg>
+    {% else %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-gear flex-shrink-0" viewBox="0 0 16 16"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z"/></svg>
+    {% endif %}
+{% endmacro %}
+
+{% macro section_description(key) %}
+    {% if key == 'general' %}
+        {{ trans('Main system preferences, language, UI and logging settings.') }}
+    {% elif key == 'server' %}
+        {{ trans('Host, network ports, CORS and web server options.') }}
+    {% elif key == 'datasets' %}
+        {{ trans('Dataset storage path, annotation options and model export directories.') }}
+    {% elif key == 'users' %}
+        {{ trans('User accounts and authentication credentials.') }}
+    {% elif key == 'db' %}
+        {{ trans('Database connection parameters and storage path.') }}
+    {% elif key == 'telemetry' %}
+        {{ trans('Anonymous diagnostics, crash reporting and health telemetry.') }}
+    {% elif key == 'form' %}
+        {{ trans('Custom secondary fields for count sessions and reports.') }}
+    {% elif key == 'detection_default' %}
+        {{ trans('Default parameters for YOLO detectors, tracking and thresholds.') }}
+    {% elif key == 'detections' %}
+        {{ trans('Configured camera locations, video sources and counting rules.') }}
+    {% else %}
+        {{ trans('Configure application parameters, hardware, detection modules, and security.') }}
+    {% endif %}
+{% endmacro %}
+
 {% block content %}
     {% include 'partials/inner_page_nav.html' %}
 
     <div class="page-content settings-layout">
+        <!-- Top Toolbar & Filter Card in unified design -->
+        <div class="cv-card p-3 mb-4 shadow-sm settings-intro-card">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-3 min-w-0">
+                    <div class="settings-intro__icon bg-primary-subtle text-primary border border-primary-subtle rounded-3 d-none d-sm-flex align-items-center justify-content-center flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-sliders" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M11.5 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M9.05 3a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0V3zM4.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M2.05 8a2.5 2.5 0 0 1 4.9 0H16v1H6.95a2.5 2.5 0 0 1-4.9 0H0V8zm9.45 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m-2.45 1a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0v-1z"/>
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                            <span class="fw-semibold text-body fs-6">{{ trans('Configuration') }}</span>
+                            <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace" title="{{ trans('Configuration sections') }}">
+                                {{ _config|length }} {{ trans('sections') }}
+                            </span>
+                        </div>
+                        <p class="text-body-secondary small mb-0">
+                            {{ trans('Changes take effect immediately or after restarting counter processes.') }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center gap-2 flex-wrap ms-auto">
+                    <div class="input-group input-group-sm" style="min-width: 14rem; max-width: 18rem;">
+                        <span class="input-group-text bg-body-tertiary border-end-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-search text-body-secondary" viewBox="0 0 16 16">
+                                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+                            </svg>
+                        </span>
+                        <input type="search" class="form-control form-control-sm border-start-0" id="settings-search-input"
+                               placeholder="{{ trans('Search setting...') }}" aria-label="{{ trans('Search') }}">
+                    </div>
+                    <button type="submit" form="settings-form" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1 shadow-sm px-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-check2" viewBox="0 0 16 16">
+                            <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                        </svg>
+                        <span>{{ trans('Save') }}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div class="row g-3">
+            <!-- Left Navigation Sidebar -->
             <div class="col-md-4 col-lg-3">
                 <div class="list-group settings-layout__nav" id="pills-tab" role="tablist">
+                    <div class="d-flex align-items-center justify-content-between px-2 pb-2 mb-2 border-bottom">
+                        <span class="small text-uppercase fw-bold text-body-secondary" style="font-size: 0.7rem; letter-spacing: 0.05em;">{{ trans('Sections') }}</span>
+                        <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill" style="font-size: 0.7rem;">{{ _config|length }}</span>
+                    </div>
                     {% for key, value in _config.items() %}
-                        <button class="list-group-item list-group-item-action border-0 {% if loop.first %}active{% endif %}"
+                        <button class="list-group-item list-group-item-action border-0 d-flex align-items-center justify-content-between gap-2 py-2 px-3 {% if loop.first %}active{% endif %}"
                                 id="pills-{{ key }}-tab" data-bs-toggle="pill" data-bs-target="#pills-{{ key }}" role="tab"
+                                data-section-key="{{ key }}"
                                 aria-controls="pills-{{ key }}" aria-selected="{{ 'true' if loop.first else 'false' }}">
-                            {{ trans(key.replace('_', ' ')|title) }}
+                            <div class="d-flex align-items-center gap-2 min-w-0">
+                                <span class="settings-nav-icon">{{ section_icon(key) }}</span>
+                                <span class="text-truncate fw-medium">{{ trans(key.replace('_', ' ')|title) }}</span>
+                            </div>
+                            {% if value is mapping %}
+                                <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill px-2 py-1 font-monospace" style="font-size: 0.68rem;">{{ value|length }}</span>
+                            {% endif %}
                         </button>
                     {% endfor %}
                 </div>
             </div>
 
+            <!-- Right Content Panels -->
             <div class="col-md-8 col-lg-9 setting-content">
-                <form method="POST" action="{{ url_for('settings.settings_save') }}">
+                <form method="POST" action="{{ url_for('settings.settings_save') }}" id="settings-form">
+                    <input type="hidden" name="_active_tab" id="settings-active-tab" value="general">
                     <div class="settings-layout__form">
-                        <div class="settings-layout__toolbar d-flex justify-content-between align-items-center sticky-top">
-                            <span class="text-body-secondary small">{{ trans('Edit configuration sections on the left') }}</span>
-                            {{ forms.button(trans('Save')) }}
+                        <div class="settings-layout__toolbar d-flex flex-wrap justify-content-between align-items-center gap-2 sticky-top">
+                            <div class="d-flex align-items-center gap-2 min-w-0">
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-inline-flex align-items-center gap-1 px-2.5 py-1.5" id="settings-toolbar-section-badge">
+                                    <span id="settings-toolbar-section-icon">{{ section_icon('general') }}</span>
+                                    <span id="settings-toolbar-section-title" class="fw-semibold">{{ trans('General') }}</span>
+                                </span>
+                                <span class="text-body-secondary small d-none d-lg-inline">{{ trans('Edit configuration sections on the left') }}</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 ms-auto">
+                                <button type="submit" class="btn btn-primary btn-sm px-3 d-inline-flex align-items-center gap-1 shadow-sm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-check2" viewBox="0 0 16 16">
+                                        <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                                    </svg>
+                                    <span>{{ trans('Save') }}</span>
+                                </button>
+                            </div>
                         </div>
+
                         <div class="tab-content" id="pills-tabContent">
                             {% for key, value in _config.items() %}
                                 <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="pills-{{ key }}" role="tabpanel"
-                                     aria-labelledby="pills-{{ key }}-tab" tabindex="0">
-                                    <h2 class="page-section-title d-md-none">{{ trans(key.replace('_', ' ')|title) }}</h2>
+                                     aria-labelledby="pills-{{ key }}-tab" tabindex="0" data-section-key="{{ key }}">
+                                    <!-- Section Header inside Tab -->
+                                    <div class="settings-pane-header d-flex align-items-center justify-content-between pb-2 mb-3">
+                                        <div class="d-flex align-items-center gap-2 min-w-0">
+                                            <span class="fs-5 text-primary">{{ section_icon(key) }}</span>
+                                            <div class="min-w-0">
+                                                <h4 class="fw-bold mb-0 fs-6">{{ trans(key.replace('_', ' ')|title) }}</h4>
+                                                <span class="text-body-secondary small">{{ section_description(key) }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     {% if key != 'users' %}
                                         <div class="cv-form-panel">
                                             {% for sub_key, sub_value in value.items() %}
@@ -60,9 +188,18 @@
                                             <div class="cv-form-section__body cv-form-grid cv-form-grid--users">
                                                 {% for username, password in value.items() %}
                                                     <div class="cv-form-section cv-form-section--nested">
-                                                        <h4 class="cv-form-section__subtitle">{{ trans(username.replace('_', ' ')|title) }}</h4>
+                                                        <div class="cv-form-section__subtitle d-flex align-items-center justify-content-between">
+                                                            <div class="d-flex align-items-center gap-2">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-person text-secondary" viewBox="0 0 16 16">
+                                                                    <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6m2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0m4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4m-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10s-3.516.68-4.168 1.332c-.678.678-.83 1.418-.832 1.664z"/>
+                                                                </svg>
+                                                                <span>{{ trans(username.replace('_', ' ')|title) }}</span>
+                                                            </div>
+                                                            <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace" style="font-size: 0.65rem;">@{{ username }}</span>
+                                                        </div>
                                                         <div class="cv-form-section__body">
                                                             {{ forms.input('users-' + username, '', trans('New password'), type='password') }}
+                                                            <span class="cv-form-hint">{{ trans('Leave blank to keep current password') }}</span>
                                                         </div>
                                                     </div>
                                                 {% endfor %}
@@ -77,4 +214,104 @@
             </div>
         </div>
     </div>
+{% endblock %}
+
+{% block footer_assets %}
+    <script>
+        (function() {
+            var tabButtons = document.querySelectorAll('#pills-tab button[data-bs-toggle="pill"]');
+            var activeTabInput = document.getElementById('settings-active-tab');
+            var toolbarTitle = document.getElementById('settings-toolbar-section-title');
+            var toolbarIcon = document.getElementById('settings-toolbar-section-icon');
+            var searchInput = document.getElementById('settings-search-input');
+
+            function syncActiveTabUI(btn) {
+                if (!btn) return;
+                var key = btn.dataset.sectionKey;
+                if (activeTabInput && key) {
+                    activeTabInput.value = key;
+                }
+                var textSpan = btn.querySelector('.text-truncate');
+                var iconSpan = btn.querySelector('.settings-nav-icon');
+                if (toolbarTitle && textSpan) {
+                    toolbarTitle.textContent = textSpan.textContent.trim();
+                }
+                if (toolbarIcon && iconSpan) {
+                    toolbarIcon.innerHTML = iconSpan.innerHTML;
+                }
+            }
+
+            tabButtons.forEach(function(btn) {
+                btn.addEventListener('shown.bs.tab', function(e) {
+                    var target = e.target;
+                    var key = target.dataset.sectionKey;
+                    syncActiveTabUI(target);
+                    if (key) {
+                        try {
+                            history.replaceState(null, '', '#pills-' + key);
+                        } catch(err) {}
+                    }
+                });
+            });
+
+            // Restore active tab from hash
+            var hash = window.location.hash;
+            if (hash) {
+                var cleanHash = hash.replace(/^#/, '');
+                var matchBtn = document.getElementById(cleanHash + '-tab') ||
+                               document.querySelector('#pills-tab button[data-section-key="' + cleanHash.replace(/^pills-/, '') + '"]');
+                if (matchBtn) {
+                    var tabInst = bootstrap.Tab.getOrCreateInstance(matchBtn);
+                    tabInst.show();
+                    syncActiveTabUI(matchBtn);
+                }
+            } else {
+                var firstActive = document.querySelector('#pills-tab button.active');
+                if (firstActive) syncActiveTabUI(firstActive);
+            }
+
+            // Quick live search across form fields
+            if (searchInput) {
+                searchInput.addEventListener('input', function(e) {
+                    var q = (e.target.value || '').trim().toLowerCase();
+                    var allFields = document.querySelectorAll('.tab-pane .cv-form-field, .tab-pane .cv-form-section');
+                    var tabsWithMatches = new Set();
+
+                    if (!q) {
+                        allFields.forEach(function(el) {
+                            el.classList.remove('is-search-match', 'is-search-dimmed');
+                            el.style.display = '';
+                        });
+                        return;
+                    }
+
+                    allFields.forEach(function(el) {
+                        var text = (el.textContent || '').toLowerCase();
+                        var isMatch = text.indexOf(q) !== -1;
+                        el.classList.toggle('is-search-match', isMatch);
+                        el.classList.toggle('is-search-dimmed', !isMatch);
+                        if (isMatch) {
+                            var pane = el.closest('.tab-pane');
+                            if (pane && pane.dataset.sectionKey) {
+                                tabsWithMatches.add(pane.dataset.sectionKey);
+                            }
+                        }
+                    });
+
+                    // If matches exist outside current tab, auto-switch to first matching tab
+                    if (tabsWithMatches.size > 0) {
+                        var activePane = document.querySelector('.tab-pane.active');
+                        var activeKey = activePane ? activePane.dataset.sectionKey : null;
+                        if (!tabsWithMatches.has(activeKey)) {
+                            var firstMatchKey = Array.from(tabsWithMatches)[0];
+                            var targetBtn = document.querySelector('#pills-tab button[data-section-key="' + firstMatchKey + '"]');
+                            if (targetBtn) {
+                                bootstrap.Tab.getOrCreateInstance(targetBtn).show();
+                            }
+                        }
+                    }
+                });
+            }
+        })();
+    </script>
 {% endblock %}

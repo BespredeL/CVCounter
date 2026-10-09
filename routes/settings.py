@@ -50,6 +50,7 @@ def settings_save():
     config = context['config']
 
     form_data = request.form.to_dict()
+    active_tab = form_data.pop('_active_tab', None)
 
     # Retrieving users from a form and encrypting passwords
     for key, value in form_data.items():
@@ -68,6 +69,8 @@ def settings_save():
     get_telemetry().track('settings_saved')
 
     flash(translate('Settings saved'))
+    if active_tab:
+        return redirect(url_for('settings.settings', _anchor=f'pills-{active_tab}'))
     return redirect(url_for('settings.settings'))
 
 
