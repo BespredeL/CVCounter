@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ dataset.display_name }} — {{ trans('Datasets') }}{% endblock %}
+{% block title %}{{ dataset.display_name }} - {{ trans('Datasets') }}{% endblock %}
 
 {% block header %}
     {% with page_title=dataset.display_name or dataset.name, page_subtitle=dataset.name %}
@@ -160,7 +160,7 @@
                         </svg>
                     </div>
                     <div class="dataset-stat__classes text-truncate" title="{{ dataset.classes|join(', ') }}">
-                        {{ dataset.classes|join(', ') or '—' }}
+                        {{ dataset.classes|join(', ') or '-' }}
                     </div>
                 </div>
             </div>
@@ -468,7 +468,7 @@
                                         {% endif %}
                                     </td>
                                     <td class="text-truncate small text-body-secondary" style="max-width: 12rem;">
-                                        {{ (img.labels or [])|join(', ') or '—' }}
+                                        {{ (img.labels or [])|join(', ') or '-' }}
                                     </td>
                                     <td>
                                         <a class="btn btn-sm btn-link px-0"
@@ -572,7 +572,7 @@
                                         <option value="{{ m.location }}"
                                                 {% if dataset.autolabel_detector == m.location %}selected{% endif %}
                                                 {% if not m.exists %}disabled{% endif %}>
-                                            {{ m.label }}{% if not m.exists %} — {{ trans('missing') }}{% endif %}
+                                            {{ m.label }}{% if not m.exists %} - {{ trans('missing') }}{% endif %}
                                         </option>
                                     {% else %}
                                         <option value="" disabled>{{ trans('No detector models') }}</option>
@@ -783,19 +783,19 @@
                             <div class="col-sm-4">
                                 <div class="p-2 border rounded bg-body-tertiary text-center">
                                     <div class="small text-body-secondary">{{ trans('Images') }}</div>
-                                    <div class="fs-5 fw-bold" id="qa-stat-images">—</div>
+                                    <div class="fs-5 fw-bold" id="qa-stat-images">-</div>
                                 </div>
                             </div>
                             <div class="col-sm-4">
                                 <div class="p-2 border rounded bg-body-tertiary text-center">
                                     <div class="small text-body-secondary">{{ trans('Labels') }}</div>
-                                    <div class="fs-5 fw-bold" id="qa-stat-labels">—</div>
+                                    <div class="fs-5 fw-bold" id="qa-stat-labels">-</div>
                                 </div>
                             </div>
                             <div class="col-sm-4">
                                 <div class="p-2 border rounded bg-body-tertiary text-center">
                                     <div class="small text-body-secondary">{{ trans('Unlabeled') }}</div>
-                                    <div class="fs-5 fw-bold" id="qa-stat-unlabeled">—</div>
+                                    <div class="fs-5 fw-bold" id="qa-stat-unlabeled">-</div>
                                 </div>
                             </div>
                         </div>

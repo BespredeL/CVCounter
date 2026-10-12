@@ -3,7 +3,7 @@
 {% block title %}{{ trans('System info') }}{% endblock %}
 
 {% block header %}
-    {% with page_title=trans('System info') %}
+    {% with page_title=trans('System info'), page_subtitle=trans('Hardware status, runtime environment, diagnostics, and telemetry.') %}
         {% include 'partials/page_header.html' %}
     {% endwith %}
 {% endblock %}
@@ -56,8 +56,8 @@
                 {% if telemetry_last_send %}
                     <p class="small mb-3">
                         <span class="text-body-secondary">{{ trans('Last telemetry send') }}:</span>
-                        {{ telemetry_last_send.sent_at | default('—') }}
-                        —
+                        {{ telemetry_last_send.sent_at | default('-') }}
+                        -
                         {% if telemetry_last_send.ok %}
                             <span class="text-success fw-semibold">{{ trans('Success') }}</span>
                         {% else %}
@@ -69,18 +69,26 @@
                     </p>
                 {% endif %}
                 <div class="d-flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-outline-success btn-sm" id="btn-run-doctor">
+                        <i class="bi bi-heart-pulse me-1"></i>{{ trans('Run system doctor') }}
+                    </button>
+                    <button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#feedbackModal">
+                        <i class="bi bi-chat-left-dots me-1"></i>{{ trans('Report a problem') }}
+                    </button>
                     <form method="POST" action="{{ url_for('settings.telemetry_send') }}">
                         <button type="submit" class="btn btn-outline-warning btn-sm">
-                            {{ trans('Send diagnostics now') }}
+                            <i class="bi bi-cloud-arrow-up me-1"></i>{{ trans('Send diagnostics now') }}
                         </button>
                     </form>
                     <a class="btn btn-outline-primary btn-sm"
                        href="{{ url_for('settings.telemetry_download') }}">
-                        {{ trans('Download diagnostics JSON') }}
+                        <i class="bi bi-download me-1"></i>{{ trans('Download diagnostics JSON') }}
                     </a>
                 </div>
             </div>
         </div>
+
+        <div id="system-doctor-results" class="d-none cv-card p-3 mb-3"></div>
 
         <div class="cv-card overflow-hidden">
             <div class="table-responsive">
@@ -116,4 +124,49 @@
             </div>
         </div>
     </div>
+
+    <!-- START: Feedback Modal -->
+    <div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form method="POST" action="{{ url_for('settings.feedback_send') }}">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="feedbackModalLabel">
+                            <i class="bi bi-chat-left-dots me-2 text-info"></i>{{ trans('Report a problem / Send feedback') }}
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="feedbackComment" class="form-label fw-semibold">
+                                {{ trans('Description of the problem') }} <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control" id="feedbackComment" name="comment" rows="4"
+                                      placeholder="{{ trans('Describe what happened, what camera or detector model was used...') }}" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="feedbackEmail" class="form-label">
+                                {{ trans('Contact email (optional, for reply)') }}
+                            </label>
+                            <input type="email" class="form-control" id="feedbackEmail" name="email"
+                                   placeholder="name@example.com">
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="includeLogsCheck" name="include_logs" value="1" checked>
+                            <label class="form-check-label text-body-secondary small" for="includeLogsCheck">
+                                {{ trans('Include anonymized diagnostics and recent logs') }}
+                            </label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">{{ trans('Cancel') }}</button>
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-send me-1"></i>{{ trans('Send report') }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- END: Feedback Modal -->
 {% endblock %}

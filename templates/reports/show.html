@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 
-{% block title %}#{{ counter.id }} — {{ (location|striptags|title) }}{% endblock %}
+{% block title %}#{{ counter.id }} - {{ (location|striptags|title) }}{% endblock %}
 
 {% block head_assets %}
     <link href="{{ url_for('static', filename='assets/css/print-report.css') }}" rel="stylesheet">
 {% endblock %}
 
 {% block header %}
-    {% with page_title='#' ~ counter.id ~ ' — ' ~ (location|striptags|title), page_subtitle=trans('Detailed count session report and statistics.') %}
+    {% with page_title='#' ~ counter.id ~ ' - ' ~ (location|striptags|title), page_subtitle=trans('Detailed count session report and statistics.') %}
         {% include 'partials/page_header.html' %}
     {% endwith %}
 {% endblock %}
@@ -79,10 +79,10 @@
                                     {{ secs }}s
                                 {% endif %}
                             {% else %}
-                                —
+                                -
                             {% endif %}
                         {% else %}
-                            —
+                            -
                         {% endif %}
                     </strong>
                 </div>

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-CVCounterWEB — Универсальный автоматический установщик системы.
+CVCounterWEB - Универсальный автоматический установщик системы.
 Автоматически определяет доступное оборудование (NVIDIA GPU, AMD GPU, Intel GPU/CPU)
 и устанавливает все необходимые зависимости для максимального аппаратного ускорения.
 """
@@ -311,7 +311,7 @@ def check_python_compatibility():
     if (major, minor) < (3, 10):
         pr_warn(f"Python {major}.{minor} может быть устаревшим. Рекомендуется Python 3.11 для работы с нейросетями.")
     elif (major, minor) > (3, 12):
-        pr_warn(f"Python {major}.{minor} — новейшая версия. Для некоторых библиотек (ONNX Runtime / PyTorch) могут отсутствовать скомпилированные сборки.")
+        pr_warn(f"Python {major}.{minor} - новейшая версия. Для некоторых библиотек (ONNX Runtime / PyTorch) могут отсутствовать скомпилированные сборки.")
         pr_warn("Если возникнут ошибки, рекомендуется использовать Python 3.11.")
     else:
         pr_ok(f"Версия Python {major}.{minor} отлично подходит для нейросетей!")
@@ -407,7 +407,7 @@ def install_core_dependencies(hw: dict) -> bool:
             stripped = line.strip()
             if not stripped or stripped.startswith("#"):
                 continue
-            # Если это onnxruntime, но мы на GPU профиле — пропускаем, чтобы не перетереть onnxruntime-gpu
+            # Если это onnxruntime, но мы на GPU профиле - пропускаем, чтобы не перетереть onnxruntime-gpu
             if hw["profile"] in ["nvidia_cuda", "amd_directml"] and stripped.startswith("onnxruntime"):
                 continue
             # Пропускаем возможные legacy пакеты TensorRT
@@ -601,7 +601,7 @@ def main():
 
     print()
     pr("==================================================================", Colors.CYAN, bold=True)
-    pr("                CVCounterWEB — АВТОМАТИЧЕСКИЙ УСТАНОВЩИК          ", Colors.CYAN, bold=True)
+    pr("                CVCounterWEB - АВТОМАТИЧЕСКИЙ УСТАНОВЩИК          ", Colors.CYAN, bold=True)
     pr("     Интеллектуальная настройка окружения и видеокарты (GPU)      ", Colors.CYAN)
     pr("==================================================================", Colors.CYAN, bold=True)
 

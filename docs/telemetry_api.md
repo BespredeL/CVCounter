@@ -16,7 +16,7 @@ Automatic sending is **off** by default (`telemetry.enabled: false`). Manual sen
   - `User-Agent: CVCounter/{app_version}`
   - `X-CVCounter-App-Version: {app_version}`
   - `X-CVCounter-Install-Id: {install_id}`
-  - `X-CVCounter-Signature: sha256={hex}` — only when `telemetry.hmac_secret` is non-empty (HMAC-SHA256 of the raw body)
+  - `X-CVCounter-Signature: sha256={hex}` - only when `telemetry.hmac_secret` is non-empty (HMAC-SHA256 of the raw body)
 
 ## Batch payload schema
 
@@ -25,7 +25,7 @@ Automatic sending is **off** by default (`telemetry.enabled: false`). Manual sen
   "schema_version": 1,
   "sent_at": "2026-07-26T06:00:00Z",
   "install_id": "uuid",
-  "app_version": "5.7.0",
+  "app_version": "5.8.0",
   "mode": "auto|manual|replay",
   "system": {
     "python_version": "3.11.x",
@@ -35,7 +35,7 @@ Automatic sending is **off** by default (`telemetry.enabled: false`). Manual sen
     "machine": "AMD64",
     "processor": "...",
     "cpu_count": 8,
-    "app_version": "5.7.0",
+    "app_version": "5.8.0",
     "py_torch_version": "...",
     "py_torch_cuda_available": true,
     "openvino_version": "...",

@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ trans('Reports') }} — {{ (object_counters[location]|striptags|title if location in object_counters else location|striptags|title) }}{% endblock %}
+{% block title %}{{ trans('Reports') }} - {{ (object_counters[location]|striptags|title if location in object_counters else location|striptags|title) }}{% endblock %}
 
 {% block header %}
     {% with page_title=(object_counters[location]|striptags|title if location in object_counters else location|striptags|title), page_subtitle=trans('Captured frames and recordings for this counter location.') %}
@@ -78,7 +78,7 @@
                         </div>
                         <div class="min-w-0 flex-grow-1">
                             <span class="reports-kpi-label" title="{{ trans('Total sessions') }}">{{ trans('Total sessions') }}</span>
-                            <div class="reports-kpi-value">{{ total_pages * 10 if total_pages > 1 else items|length }}</div>
+                            <div class="reports-kpi-value">{{ summary.total_sessions if summary is defined else total_items }}</div>
                         </div>
                     </div>
                 </div>
@@ -94,8 +94,8 @@
                             </svg>
                         </div>
                         <div class="min-w-0 flex-grow-1">
-                            <span class="reports-kpi-label" title="{{ trans('Objects on page') }}">{{ trans('Objects on page') }}</span>
-                            <div class="reports-kpi-value text-success">{{ page_total_count }}</div>
+                            <span class="reports-kpi-label" title="{{ trans('Total objects') }}">{{ trans('Total objects') }}</span>
+                            <div class="reports-kpi-value text-success">{{ summary.total_objects if summary is defined else page_total_count }}</div>
                         </div>
                     </div>
                 </div>
@@ -113,10 +113,12 @@
                         <div class="min-w-0 flex-grow-1">
                             <span class="reports-kpi-label" title="{{ trans('Defect') }}">{{ trans('Defect') }}</span>
                             <div class="d-flex align-items-baseline gap-1 gap-sm-2 flex-wrap">
-                                <span class="reports-kpi-value text-danger">{{ page_defects_count }}</span>
-                                {% if page_total_count > 0 %}
+                                <span class="reports-kpi-value text-danger">{{ summary.total_defects if summary is defined else page_defects_count }}</span>
+                                {% set objects_cnt = summary.total_objects if summary is defined else page_total_count %}
+                                {% set defects_cnt = summary.total_defects if summary is defined else page_defects_count %}
+                                {% if objects_cnt > 0 %}
                                     <span class="badge bg-danger-subtle text-danger border border-danger-subtle reports-kpi-badge">
-                                        {{ ((page_defects_count / page_total_count) * 100)|round(1) }}%
+                                        {{ ((defects_cnt / objects_cnt) * 100)|round(1) }}%
                                     </span>
                                 {% endif %}
                             </div>

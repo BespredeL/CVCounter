@@ -6,7 +6,7 @@
         "log_level": "INFO",
         "log_console": false,
         "default_language": "ru",
-        "allow_unsafe_werkzeug": false,
+        "allow_unsafe_werkzeug": true,
         "button_change_theme": true,
         "button_fullscreen": true,
         "button_backward": false,

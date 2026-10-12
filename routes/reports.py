@@ -90,6 +90,9 @@ def reports() -> str:
     total_all_images = 0
     total_all_videos = 0
 
+    from system.utils.telemetry import get_telemetry
+    get_telemetry().track('reports_view')
+
     for loc_key, loc_title in locations_dict.items():
         paginated = db_manager.get_paginated(loc_key, page=1, per_page=1)
         loc_reports = paginated['total'] if paginated else 0
@@ -187,7 +190,8 @@ def report_list(location: str = None) -> str:
         if total_videos:
             _start_media_warm(location, config)
 
-        # Page-level stats summary
+        # All-time location metrics and page-level fallback
+        loc_summary = db_manager.get_location_summary(location)
         page_total_count = sum(item.total_count or 0 for item in items)
         page_defects_count = sum(item.defects_count or 0 for item in items)
         page_correct_count = sum(item.correct_count or 0 for item in items)
@@ -201,6 +205,8 @@ def report_list(location: str = None) -> str:
             location=location,
             current_page=current_page,
             total_pages=total_pages,
+            total_items=total_items,
+            summary=loc_summary,
             saved_images=saved_images,
             saved_recordings=saved_recordings,
             images_total_items=total_images,

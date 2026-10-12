@@ -372,6 +372,8 @@ def datasets_index():
     """
     svc = _service()
     datasets = svc.list_datasets()
+    from system.utils.telemetry import get_telemetry
+    get_telemetry().track('datasets_view')
     return render_template(
         'datasets/list.html',
         datasets=datasets,
@@ -1042,6 +1044,8 @@ def api_train(name: str):
         return _json_error(str(exc))
 
     try:
+        from system.utils.telemetry import get_telemetry
+        get_telemetry().track('training_started', {'dataset': name})
         job = training_job_manager.start(
             config_name=name,
             base_model=data.get('base_model') or DEFAULT_BASE_MODEL,

@@ -10,7 +10,7 @@ import json
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import create_engine, inspect as sa_inspect, text
+from sqlalchemy import create_engine, func, inspect as sa_inspect, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 
@@ -299,6 +299,54 @@ class DatabaseManager:
         except SQLAlchemyError as error:
             self.__logger.error(f"Error retrieving counters for key '{key}': {str(error)}")
             return None  # Return None on error
+        finally:
+            session.close()
+
+    def get_location_summary(self, key: str = '') -> dict:
+        """
+        Calculates aggregated all-time metrics for a given location.
+
+        Args:
+            key (str, optional): The location key. Defaults to ''.
+
+        Returns:
+            dict: Aggregated metrics (total_sessions, total_objects, total_defects, total_correct, total_source, defect_rate).
+        """
+        session = self.create_session()
+        try:
+            row = session.query(
+                func.count(CVCounter.id),
+                func.coalesce(func.sum(CVCounter.total_count), 0),
+                func.coalesce(func.sum(CVCounter.defects_count), 0),
+                func.coalesce(func.sum(CVCounter.correct_count), 0),
+                func.coalesce(func.sum(CVCounter.source_count), 0),
+            ).filter_by(location=key).one()
+
+            total_sessions = int(row[0] or 0)
+            total_objects = int(row[1] or 0)
+            total_defects = int(row[2] or 0)
+            total_correct = int(row[3] or 0)
+            total_source = int(row[4] or 0)
+            defect_rate = round((total_defects / total_objects * 100), 1) if total_objects > 0 else 0.0
+
+            return {
+                'total_sessions': total_sessions,
+                'total_objects': total_objects,
+                'total_defects': total_defects,
+                'total_correct': total_correct,
+                'total_source': total_source,
+                'defect_rate': defect_rate,
+            }
+        except SQLAlchemyError as error:
+            self.__logger.error(f"Error retrieving summary for key '{key}': {str(error)}")
+            return {
+                'total_sessions': 0,
+                'total_objects': 0,
+                'total_defects': 0,
+                'total_correct': 0,
+                'total_source': 0,
+                'defect_rate': 0.0,
+            }
         finally:
             session.close()
 

@@ -127,6 +127,13 @@ class ObjectCounter:
         # Mask for fast point-in-polygon check (generated on first frame)
         self._counting_mask: Optional[np.ndarray] = None
 
+        # Stream performance diagnostics
+        self._perf_frame_count: int = 0
+        self._perf_total_frame_time: float = 0.0
+        self._perf_total_inference_time: float = 0.0
+        self._perf_last_report_time: float = time.monotonic()
+        self._perf_report_interval: float = 300.0
+
         # Load and initialize config
         self.__initialize_config(location, config_manager, kwargs)
 
@@ -585,6 +592,7 @@ class ObjectCounter:
             None
         """
         if self.running:
+            self._maybe_report_performance(force=True)
             self.notif_manager.notify(trans('Counting has stopped!'), 'primary')
             self.notif_manager.event('counter_status', {'status': 'stopped', 'location': self.location})
         self.running = False
@@ -1172,7 +1180,9 @@ class ObjectCounter:
             last_total_count = self.total_count
 
             work_frame = self._work_frame(frame)
+            inf_start = time.monotonic()
             boxes = self._detect(work_frame)
+            inf_duration = time.monotonic() - inf_start
 
             if boxes is not None and len(boxes) > 0:
                 self._on_detection_activity()
@@ -1201,10 +1211,46 @@ class ObjectCounter:
 
             self._stop_recording_if_idle()
 
+            # Record performance metrics
+            self._perf_frame_count += 1
+            self._perf_total_inference_time += inf_duration
+            self._perf_total_frame_time += timer.elapsed
+            self._maybe_report_performance()
+
             if self.get_frames_running:
                 self._maybe_encode_mjpeg(display_frame)
 
             return display_frame
+
+    def _maybe_report_performance(self, force: bool = False) -> None:
+        """
+        Record and report aggregate FPS and inference performance metrics.
+        
+        Args:
+            force: Force metric dispatch regardless of interval window.
+            
+        Returns:
+            None
+        """
+        now = time.monotonic()
+        elapsed = now - self._perf_last_report_time
+        if (elapsed >= self._perf_report_interval and self._perf_frame_count >= 20) or (force and self._perf_frame_count >= 5):
+            avg_fps = self._perf_frame_count / max(0.001, elapsed)
+            avg_inf_ms = (self._perf_total_inference_time / max(1, self._perf_frame_count)) * 1000.0
+            avg_frame_ms = (self._perf_total_frame_time / max(1, self._perf_frame_count)) * 1000.0
+            get_telemetry().track('stream_performance', {
+                'location': self.location,
+                'model_type': str(getattr(self, 'model_type', 'unknown')),
+                'backend': str(getattr(self, 'backend', 'unknown')),
+                'fps': round(avg_fps, 1),
+                'inference_ms': round(avg_inf_ms, 1),
+                'frame_ms': round(avg_frame_ms, 1),
+                'frames_count': self._perf_frame_count,
+            })
+            self._perf_frame_count = 0
+            self._perf_total_frame_time = 0.0
+            self._perf_total_inference_time = 0.0
+            self._perf_last_report_time = now
 
     def _encode_mjpeg_chunk(self, frame: np.ndarray) -> bytes | None:
         """

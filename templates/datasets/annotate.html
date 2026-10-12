@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ trans('Annotate') }} — {{ dataset.display_name }}{% endblock %}
+{% block title %}{{ trans('Annotate') }} - {{ dataset.display_name }}{% endblock %}
 
 {% block body_class %}annotator-body{% endblock %}
 {% block shell_class %}annotator-shell{% endblock %}
@@ -121,7 +121,7 @@
                 </div>
             </div>
             <div class="annotator__status-bar">
-                <span class="annotator__index" id="ann-index">—</span>
+                <span class="annotator__index" id="ann-index">-</span>
                 <span class="annotator__filename text-truncate" id="ann-filename"></span>
                 <span class="badge rounded-pill text-bg-secondary" id="ann-status">{{ trans('Ready') }}</span>
             </div>

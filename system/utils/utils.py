@@ -18,6 +18,13 @@ from flask import request
 
 from system.utils.paths import get_project_root
 
+try:
+    import colorama
+    colorama.init()
+except Exception:
+    if os.name == 'nt':
+        os.system('')
+
 
 def is_ajax() -> bool:
     """

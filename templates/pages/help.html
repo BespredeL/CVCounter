@@ -3,7 +3,7 @@
 {% block title %}{{ trans('Help') }}{% endblock %}
 
 {% block header %}
-    {% with page_title=trans('Help') %}
+    {% with page_title=trans('Help'), page_subtitle=trans('Documentation, user guides, API reference, and keyboard shortcuts.') %}
         {% include 'partials/page_header.html' %}
     {% endwith %}
 {% endblock %}

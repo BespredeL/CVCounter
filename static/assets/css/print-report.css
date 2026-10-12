@@ -52,8 +52,36 @@
         --bs-body-bg-rgb: 255, 255, 255 !important;
         --bs-body-color: #0f172a !important;
         --bs-body-color-rgb: 15, 23, 42 !important;
+        --bs-emphasis-color: #0f172a !important;
+        --bs-emphasis-color-rgb: 15, 23, 42 !important;
+        --bs-secondary-color: #475569 !important;
+        --bs-secondary-color-rgb: 71, 85, 105 !important;
+        --bs-secondary-bg: #f1f5f9 !important;
+        --bs-secondary-bg-rgb: 241, 245, 249 !important;
+        --bs-tertiary-color: #64748b !important;
+        --bs-tertiary-color-rgb: 100, 116, 139 !important;
         --bs-tertiary-bg: #f8fafc !important;
         --bs-tertiary-bg-rgb: 248, 250, 252 !important;
+        --bs-border-color: #e2e8f0 !important;
+        --bs-border-color-translucent: rgba(0, 0, 0, 0.12) !important;
+        --bs-heading-color: #0f172a !important;
+        --bs-link-color: #2563eb !important;
+        --bs-link-hover-color: #1d4ed8 !important;
+        --bs-primary-bg-subtle: #eff6ff !important;
+        --bs-primary-border-subtle: #bfdbfe !important;
+        --bs-primary-text-emphasis: #1d4ed8 !important;
+        --bs-success-bg-subtle: #dcfce7 !important;
+        --bs-success-border-subtle: #86efac !important;
+        --bs-success-text-emphasis: #166534 !important;
+        --bs-danger-bg-subtle: #fee2e2 !important;
+        --bs-danger-border-subtle: #fca5a5 !important;
+        --bs-danger-text-emphasis: #991b1b !important;
+        --bs-warning-bg-subtle: #fef3c7 !important;
+        --bs-warning-border-subtle: #fde68a !important;
+        --bs-warning-text-emphasis: #92400e !important;
+        --bs-info-bg-subtle: #cffafe !important;
+        --bs-info-border-subtle: #a5f3fc !important;
+        --bs-info-text-emphasis: #155e75 !important;
         --cv-surface: #ffffff !important;
         --cv-surface-elevated: #ffffff !important;
         --cv-surface-hover: #f8fafc !important;
@@ -476,6 +504,14 @@
         padding: 6px 8px !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
+    }
+
+    .reports-detail-page .p-3.rounded-2.bg-body-tertiary .text-body-secondary {
+        color: #475569 !important;
+    }
+
+    .reports-detail-page .p-3.rounded-2.bg-body-tertiary .fw-medium {
+        color: #0f172a !important;
     }
 
     /* --- 12. Signatures & footer --- */

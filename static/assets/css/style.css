@@ -4507,3 +4507,22 @@ kbd {
     border-color: var(--cv-accent);
     transform: translateY(-2px);
 }
+
+/* -------------------------------------------------------------------------- */
+/* Base print media styles                                                    */
+/* -------------------------------------------------------------------------- */
+
+@media print {
+    :root,
+    [data-bs-theme="dark"],
+    [data-bs-theme="light"] {
+        color-scheme: light !important;
+    }
+
+    body.app-body {
+        background: #ffffff !important;
+        background-color: #ffffff !important;
+        background-image: none !important;
+        color: #0f172a !important;
+    }
+}

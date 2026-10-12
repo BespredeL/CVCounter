@@ -95,23 +95,6 @@ const ThemeManager = {
     initialize() {
         this.set(CookieUtil.get("theme") || "dark");
         document.getElementById("theme-switch")?.addEventListener("click", () => this.toggle());
-
-        let printOriginalTheme = null;
-        window.addEventListener("beforeprint", () => {
-            printOriginalTheme = document.documentElement.getAttribute("data-bs-theme") || "dark";
-            document.documentElement.setAttribute("data-bs-theme", "light");
-            document.documentElement.style.setProperty("color-scheme", "light");
-            document.documentElement.style.setProperty("background-color", "#ffffff", "important");
-            document.body.style.setProperty("background-color", "#ffffff", "important");
-        });
-        window.addEventListener("afterprint", () => {
-            if (printOriginalTheme) {
-                document.documentElement.setAttribute("data-bs-theme", printOriginalTheme);
-            }
-            document.documentElement.style.removeProperty("color-scheme");
-            document.documentElement.style.removeProperty("background-color");
-            document.body.style.removeProperty("background-color");
-        });
     },
 };
 
@@ -333,6 +316,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     socket.on("connect_error", () => {
+        Diagnostics.addBreadcrumb("network", "socket_connect_error");
         const alertHtml = `
             <div class="alert alert-danger mt-3 d-flex justify-content-between" role="alert">
                 <span class="h3">${window.trans("Error connecting to the server. Contact the IT department.")}</span>
@@ -348,6 +332,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     ThemeManager.initialize();
     FullscreenManager.initialize();
+    Diagnostics.initialize();
+    initSystemDoctor();
 
     document.getElementById("btn-logout")?.addEventListener("click", async () => {
         const btn = document.getElementById("btn-logout");
@@ -367,3 +353,186 @@ document.addEventListener("DOMContentLoaded", () => {
         window.location.assign(logoutUrl);
     });
 });
+
+/**
+ * Frontend Diagnostics and Error Telemetry
+ */
+const Diagnostics = {
+    breadcrumbs: [],
+    maxBreadcrumbs: 15,
+    recentErrors: new Map(),
+
+    addBreadcrumb(category, message, data = {}) {
+        this.breadcrumbs.push({
+            ts: new Date().toISOString(),
+            category: String(category || "info"),
+            message: String(message || "").slice(0, 100),
+            data: data && typeof data === "object" ? data : {},
+        });
+        if (this.breadcrumbs.length > this.maxBreadcrumbs) {
+            this.breadcrumbs.shift();
+        }
+    },
+
+    track(eventName, props = {}) {
+        this.addBreadcrumb("event", eventName, props);
+        this.send({
+            type: "usage",
+            name: eventName,
+            props: props,
+        });
+    },
+
+    captureError(err, context = {}) {
+        const message = String(err?.message || err || "Unknown client error").slice(0, 500);
+        const stack = String(err?.stack || "").slice(0, 4000);
+        const dedupKey = `${message}:${context.filename || ""}:${context.lineno || ""}`;
+        const now = Date.now();
+        const lastSent = this.recentErrors.get(dedupKey);
+        if (lastSent && (now - lastSent) < 60000) {
+            return;
+        }
+        this.recentErrors.set(dedupKey, now);
+
+        this.addBreadcrumb("error", message);
+        this.send({
+            type: "error",
+            name: "client_javascript_error",
+            error: {
+                type: err?.name || "JavaScriptError",
+                message: message,
+                stack: stack,
+            },
+            props: {
+                url: window.location.pathname + window.location.search,
+                line: context.lineno || 0,
+                col: context.colno || 0,
+                breadcrumbs: this.breadcrumbs,
+                ...context,
+            },
+        });
+    },
+
+    send(payload) {
+        try {
+            const data = JSON.stringify(payload);
+            const endpoint = "/api/telemetry/client-event";
+            if (navigator.sendBeacon) {
+                const blob = new Blob([data], { type: "application/json" });
+                navigator.sendBeacon(endpoint, blob);
+            } else {
+                fetch(endpoint, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: data,
+                    keepalive: true,
+                }).catch(() => {});
+            }
+        } catch (_) {}
+    },
+
+    initialize() {
+        window.addEventListener("error", (event) => {
+            Diagnostics.captureError(event.error || event.message, {
+                filename: event.filename,
+                lineno: event.lineno,
+                colno: event.colno,
+            });
+        });
+
+        window.addEventListener("unhandledrejection", (event) => {
+            Diagnostics.captureError(event.reason || "Unhandled Promise rejection", {
+                type: "unhandledrejection",
+            });
+        });
+
+        document.addEventListener("click", (e) => {
+            const target = e.target.closest("button, a, input[type='submit']");
+            if (target) {
+                const label = (target.innerText || target.value || target.title || target.id || "").trim().slice(0, 40);
+                Diagnostics.addBreadcrumb("ui_click", label, {
+                    id: target.id || undefined,
+                    tagName: target.tagName,
+                });
+            }
+        }, { passive: true });
+
+        Diagnostics.addBreadcrumb("navigation", "page_load", { path: window.location.pathname });
+        window.Diagnostics = Diagnostics;
+    },
+};
+
+/**
+ * System Doctor interactive UI handler
+ */
+function initSystemDoctor() {
+    const btn = document.getElementById("btn-run-doctor");
+    const container = document.getElementById("system-doctor-results");
+    if (!btn || !container) return;
+
+    btn.addEventListener("click", async () => {
+        btn.disabled = true;
+        const origHtml = btn.innerHTML;
+        const t = (key) => (typeof window.trans === "function" ? window.trans(key) : key);
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>${t("Running diagnostics...")}`;
+        container.classList.remove("d-none");
+        container.innerHTML = `
+            <div class="p-3 text-center text-body-secondary">
+                <div class="spinner-border text-primary mb-2" role="status"></div>
+                <div>${t("Running diagnostics...")}</div>
+            </div>`;
+
+        try {
+            const res = await fetch("/settings/system_doctor");
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            renderDoctorResults(container, data, t);
+        } catch (err) {
+            container.innerHTML = `
+                <div class="alert alert-danger mb-0">
+                    <i class="bi bi-x-circle me-1"></i>${t("Failed to run diagnostics")}: ${err.message}
+                </div>`;
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
+    });
+}
+
+function renderDoctorResults(container, data, t) {
+    const checks = data.checks || [];
+    const allOk = data.all_ok;
+    const alertClass = allOk ? "alert-success" : "alert-warning";
+    const headerTitle = allOk ? t("System doctor completed. All checks passed!") : t("System doctor found issues.");
+
+    let listHtml = checks.map(c => {
+        let badgeClass = "bg-success";
+        let icon = "bi-check-circle-fill text-success";
+        if (c.status === "error") {
+            badgeClass = "bg-danger";
+            icon = "bi-x-circle-fill text-danger";
+        } else if (c.status === "warning") {
+            badgeClass = "bg-warning text-dark";
+            icon = "bi-exclamation-triangle-fill text-warning";
+        } else if (c.status === "info") {
+            badgeClass = "bg-info text-dark";
+            icon = "bi-info-circle-fill text-info";
+        }
+        return `
+            <li class="list-group-item d-flex justify-content-between align-items-start py-2">
+                <div class="ms-2 me-auto">
+                    <div class="fw-semibold"><i class="bi ${icon} me-1"></i>${t(c.title)}</div>
+                    <small class="text-body-secondary">${t(c.details) || c.details || ""}</small>
+                </div>
+                <span class="badge ${badgeClass} rounded-pill text-uppercase">${c.status}</span>
+            </li>`;
+    }).join("");
+
+    container.innerHTML = `
+        <div class="alert ${alertClass} mb-3 py-2 px-3 fw-semibold">
+            ${headerTitle}
+        </div>
+        <ul class="list-group mb-0">
+            ${listHtml}
+        </ul>`;
+}

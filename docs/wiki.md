@@ -13,6 +13,7 @@ lightweight and resource-efficient, especially when the video mode is not used.
 ### Key Features
 
 - Web dashboard with counter cards, search, status filters, and camera previews
+- Automatic 1-click installer (`install.bat` / `install.sh`) with intelligent GPU auto-detection (NVIDIA CUDA, AMD DirectML, Intel OpenVINO)
 - Real-time count updates via Socket.IO
 - Video view with recognition results (MJPEG stream)
 - Text-only modes for simplicity and resource-saving
@@ -20,10 +21,12 @@ lightweight and resource-efficient, especially when the video mode is not used.
 - Visual editor for **one or more** counting zones (polygons), each with its own color
 - Per-class count breakdown (current batch / total) on counter pages, multi-view, and reports
 - Per-counter settings modal on the dashboard
-- Reports on saved counts (including class totals, per-batch class data, and saved media)
+- Reports with location summaries, page totals, prev/next navigation, saved media, and dedicated A4 printable layout with signature block
 - Detection-triggered video recording with `idle_timeout` stop
 - Datasets: import frames, annotate, train, and apply weights to a counter
 - System information page (GPU/CUDA/PyTorch) and manual telemetry diagnostics
+- Interactive help center with live search, TOC ScrollSpy, one-click code copy, and keyboard shortcuts grid
+- Enhanced settings UI: collapsible camera cards, password visibility toggles, live unit badges, and smart search
 - Session login for settings, datasets, and selected admin actions
 - Modular architecture with pluggable detection backends
 - High-accuracy ByteTrack multi-object tracking and union-zone counting
@@ -45,7 +48,38 @@ The application uses a Flask factory pattern (`app.py`) with blueprints:
 
 ## Installation
 
-### Method 1: Manual Installation
+### Method 1: Automatic 1-Click Installation (Recommended)
+
+The universal installer script (`install.py`) automatically detects your hardware, installs the matching PyTorch and ONNX Runtime versions with hardware acceleration, sets up the virtual environment, installs dependencies, and initializes the configuration file:
+
+- **On Windows:**  
+  Double-click **`install.bat`** (or execute `install.bat` from terminal).  
+  To launch the application, double-click **`start.bat`**.
+
+- **On Linux / macOS:**  
+  ```bash
+  chmod +x install.sh start.sh
+  ./install.sh
+  ./start.sh
+  ```
+
+#### Supported Hardware Profiles:
+- **NVIDIA CUDA:** Automatically inspects GPU driver and selects compatible PyTorch CUDA build (12.4 / 12.1 / 11.8) and `onnxruntime-gpu`.
+- **AMD DirectML:** GPU acceleration on AMD Radeon cards in Windows via `torch-directml` and `onnxruntime-directml` (ROCm on Linux).
+- **Intel OpenVINO:** Acceleration on Intel CPUs and Intel Arc / Iris Xe GPUs via OpenVINO and `onnxruntime-openvino`.
+- **CPU:** Standard fallback mode for systems without a dedicated GPU.
+
+#### Installer CLI Options (`install.py`):
+```bash
+python install.py [options]
+```
+- `--profile {nvidia_cuda,amd_directml,intel_openvino,cpu}` - Force a specific hardware acceleration profile (auto-detected if omitted).
+- `--reinstall` - Force reinstallation of packages and dependencies.
+- `--no-color` - Disable ANSI colored terminal output.
+
+---
+
+### Method 2: Manual Installation
 
 1. **Clone the repository:**
    ```bash
@@ -72,8 +106,15 @@ The application uses a Flask factory pattern (`app.py`) with blueprints:
    ```bash
    pip3 install -r requirements.txt
    ```
-   > **Note:** PyTorch is not included in `requirements.txt` and must be installed separately for GPU support. See
-   comments in `requirements.txt` for CUDA/TensorRT instructions. Docker images include PyTorch pre-installed.
+   *(Optional)* For `.pt` models and training with Ultralytics:
+   ```bash
+   pip3 install -r requirements-ultralytics.txt
+   ```
+   *(Optional)* For Intel OpenVINO hardware acceleration:
+   ```bash
+   pip3 install -r requirements-openvino.txt
+   ```
+   > **Note:** PyTorch for GPU acceleration is installed separately based on hardware (see `install.py` or official PyTorch instructions). Docker images include PyTorch pre-installed.
 6. **Copy the configuration file:**
    ```bash
    mv config/config.example.json config/config.json
@@ -89,7 +130,9 @@ The application uses a Flask factory pattern (`app.py`) with blueprints:
    ```
    Default URL: `http://127.0.0.1:8080`
 
-### Method 2: Docker Installation
+---
+
+### Method 3: Docker Installation
 
 1. **Clone the repository:**
    ```bash
@@ -410,7 +453,7 @@ http://127.0.0.1:8080/counter_multi/text?locations=Cam1,Cam2
 
 Visual editor for **one or more** counting polygons. Uses a snapshot from the live stream as background.
 
-- **Add zone** / **Delete zone** — manage multiple areas
+- **Add zone** / **Delete zone** - manage multiple areas
 - Switch active zone with **Zone 1**, **Zone 2**, …
 - Draw / edit the active polygon (click points, drag vertices, rectangle, full frame)
 - Each zone has its own color; inactive zones are shown dimmed
@@ -425,11 +468,17 @@ http://127.0.0.1:8080/counter/{location}/counting_area
 
 ## Reports
 
-View saved count records with pagination. Report detail shows session-level **By class** totals and, for each batch (
-part), its class breakdown when available.
+The reports section provides comprehensive tools for inspecting counting sessions and captured media:
 
-The location report list also includes **Saved media**: captured frames and recordings, with in-browser playback (
-converted when needed) or download of the original file.
+- **Locations Overview (`/reports`):** Overview cards for all configured cameras showing total counting sessions, captured images, recorded videos, active counter status badges (Running / Stopped), and system-wide aggregate totals.
+- **Location Reports List (`/reports/{location}`):** Paginated table of sessions with page-level summary KPI totals (Total, Defect, Correct, Source counts on current page), camera status badge, and **Saved media** tab (captured frames and recordings with browser playback or download).
+- **Report Detail (`/reports/{location}/{report_id}`):** Comprehensive session metadata, custom form fields, session-level and per-batch **By class** breakdowns, quick prev/next report navigation arrows, and print action.
+- **Print & PDF Export (A4 Print Layout):** Dedicated print stylesheet (`print-report.css`) cleanly formats the report for physical A4 printing or PDF export:
+  - Automatically activates high-contrast light theme to save ink;
+  - Hides sidebars, action bars, navigation, and controls;
+  - Renders formal metadata header (location name, session start/end timestamps, report ID);
+  - Formatted metrics tables with class breakdown;
+  - Formal approval and signature block (**Responsible Person**, **Checked By**, **Date**, **Signature**).
 
 **URL:**
 
@@ -470,8 +519,15 @@ are stored under `recording.path` and listed in reports as saved media.
 
 Global configuration editor and GPU/system information. **Requires session login** (`/login`).
 
-On System Info you can send anonymized diagnostics to the configured telemetry endpoint or download a local JSON report.
-See [telemetry_api.md](telemetry_api.md).
+The Settings page (`/settings`) features:
+- **Collapsible camera cards:** Compact detection listing with **"Expand All"** and **"Collapse All"** controls;
+- **Password visibility toggles:** Eye icons for securely revealing/hiding plaintext passwords, tokens, and RTSP stream URLs;
+- **Live unit badges:** Dynamic unit badges (%, ms, px, attempts, sec) displayed directly in numeric fields;
+- **Semantic form controls:** Clear dropdowns for selecting model type (`model_type`), log level (`log_level`), default language (`default_language`), etc.;
+- **Live settings search:** Instant keyword search that auto-expands matching cards and setting sections;
+- Detailed bilingual descriptions and hints for every configuration parameter.
+
+On System Info (`/system_info`) you can inspect hardware status (GPU, CUDA, PyTorch, driver versions), send anonymized diagnostics to the configured telemetry endpoint, or download a local JSON diagnostic report. See [telemetry_api.md](telemetry_api.md).
 
 **URL:**
 
@@ -484,7 +540,11 @@ http://127.0.0.1:8080/settings/telemetry/download
 
 ## Help
 
-In-app help for UI controls, datasets, and recording.
+In-app interactive documentation center (`/page/help`):
+- **Live full-text search:** Instant search across all documentation sections with highlighting and auto-expansion;
+- **Table of Contents (TOC ScrollSpy):** Sticky navigation sidebar tracking the active section while scrolling;
+- **1-Click code copy:** Quick copy buttons for commands, configuration paths, and snippets;
+- **Keyboard shortcuts reference:** Visual cheat sheet for hotkeys (Space to toggle pause/start, `+`/`-`, numeric shortcuts, etc.).
 
 **URL:**
 
@@ -526,8 +586,8 @@ The application uses **session-based login** (Flask session cookie). Users and p
 
 **Routes:**
 
-- `/login` — sign in form
-- `/logout` — clear session
+- `/login` - sign in form
+- `/logout` - clear session
 
 **Protected routes** (`login_required`):
 
@@ -592,8 +652,9 @@ Before submitting, ensure your changes do not disrupt existing functionality.
     - **NVIDIA RTX 2060 or higher (6 GB+ VRAM):** Stable performance for YOLO models in real-time at resolutions of
       1080p and above.
 
-> **Note:** YOLO supports computation on NVIDIA GPUs using CUDA. GPUs from other manufacturers (e.g., AMD) may work but
-> require additional configuration and may have lower performance.
+> **Note:** CVCounter supports NVIDIA GPUs (CUDA), AMD Radeon GPUs (DirectML on Windows / ROCm on Linux), and Intel
+> CPUs and GPUs (OpenVINO). The universal installer (`install.py` / `install.bat` / `install.sh`) automatically detects
+> your graphics hardware and configures the optimal acceleration backend.
 
 ### 2. What are the minimum system requirements for the client?
 

@@ -13,6 +13,13 @@ from datetime import timedelta
 from threading import Lock
 from flask import Flask
 from flask_socketio import SocketIO
+
+try:
+    import colorama
+    colorama.init()
+except Exception:
+    if os.name == 'nt':
+        os.system('')
 from system.auth import auth_enabled, get_authenticated_username, setup_auth
 from system.managers.config_manager import init_config
 from system.managers.database_manager import DatabaseManager
@@ -548,7 +555,7 @@ if __name__ == '__main__':
             debug=config.get('general.debug', False),
             log_output=config.get('server.log_output', True),
             use_reloader=config.get('server.use_reloader', False),
-            allow_unsafe_werkzeug=config.get('general.allow_unsafe_werkzeug', config.get('general.debug', False))
+            allow_unsafe_werkzeug=config.get('general.allow_unsafe_werkzeug', True)
         )
     except KeyboardInterrupt:
         from system.utils.logger import Logger

@@ -1109,7 +1109,7 @@ class DatasetService:
         if to_label not in classes:
             classes.append(to_label)
         if from_label in classes and from_label != to_label:
-            # keep old class unless unused — leave for user; just ensure to_label exists
+            # keep old class unless unused - leave for user; just ensure to_label exists
             pass
         meta['classes'] = classes
         self.save_meta(name, meta)
@@ -1150,7 +1150,7 @@ class DatasetService:
         dst_store = self.store(target)
         for ann in src_store.list_annotation_files():
             doc = src_store.load(ann.stem)
-            # rename image field if needed — best effort match by stem among imported
+            # rename image field if needed - best effort match by stem among imported
             matching = [n for n in imported if Path(n).stem == ann.stem or n == doc.get('image')]
             if matching:
                 dst_store.save(matching[0], doc)
