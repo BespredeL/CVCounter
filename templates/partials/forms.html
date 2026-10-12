@@ -123,6 +123,66 @@
                     </div>
                 </div>
             </div>
+        {% elif key == 'classes' %}
+            <!-- Classes Management Section with Toggles & Model Loader -->
+            <section class="cv-form-section cv-form-section--nested cv-classes-section" data-classes-prefix="{{ prefix }}">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 pb-2 border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <h3 class="cv-form-section__title mb-0">{{ trans('Classes') }}</h3>
+                        <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace cv-classes-count" style="font-size: 0.72rem;">
+                            {{ value|length }}
+                        </span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 py-1 px-2.5 shadow-xs btn-load-model-classes"
+                                data-classes-prefix="{{ prefix }}"
+                                title="{{ trans('Load classes from model') }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-box-arrow-in-down" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M3.5 6a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5v-8a.5.5 0 0 0-.5-.5h-2a.5.5 0 0 1 0-1h2A1.5 1.5 0 0 1 14 6.5v8a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 14.5v-8A1.5 1.5 0 0 1 3.5 5h2a.5.5 0 0 1 0 1z"/>
+                                <path fill-rule="evenodd" d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/>
+                            </svg>
+                            <span>{{ trans('Load classes from model') }}</span>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 shadow-xs btn-enable-all-classes"
+                                data-classes-prefix="{{ prefix }}"
+                                title="{{ trans('Enable all') }}">
+                            <span>{{ trans('Enable all') }}</span>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 shadow-xs btn-disable-all-classes"
+                                data-classes-prefix="{{ prefix }}"
+                                title="{{ trans('Disable all') }}">
+                            <span>{{ trans('Disable all') }}</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="cv-form-section__body cv-classes-container" id="{{ field_id }}-container">
+                    {% for sub_key, sub_value in value.items() %}
+                        {% set is_dict = sub_value is mapping %}
+                        {% set class_name = sub_value.get('name', '') if is_dict else sub_value %}
+                        {% set is_enabled = sub_value.get('enabled', true) if is_dict else true %}
+                        <div class="cv-form-field cv-class-item mb-3 {% if not is_enabled %}opacity-75{% endif %}" data-class-id="{{ sub_key }}">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <label for="{{ field_id }}-{{ sub_key }}-name" class="cv-form-label d-flex align-items-center gap-2 mb-0">
+                                    <div class="form-check form-switch m-0 d-inline-flex align-items-center" style="min-height: auto;">
+                                        <input class="form-check-input cv-class-enable-switch" type="checkbox" role="switch"
+                                               name="{{ field_id }}-{{ sub_key }}-enabled"
+                                               id="{{ field_id }}-{{ sub_key }}-enabled"
+                                               value="on"
+                                               {% if is_enabled %}checked{% endif %}>
+                                    </div>
+                                    <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace px-1.5 py-0.5" style="font-size: 0.72rem;">ID {{ sub_key }}</span>
+                                    <span>{{ trans('Class name') }}</span>
+                                </label>
+                                <span class="cv-class-status-badge small fw-semibold {% if is_enabled %}text-success{% else %}text-body-secondary{% endif %}">
+                                    {% if is_enabled %}{{ trans('Active') }}{% else %}{{ trans('Disabled') }}{% endif %}
+                                </span>
+                            </div>
+                            <input type="text" id="{{ field_id }}-{{ sub_key }}-name" name="{{ field_id }}-{{ sub_key }}-name"
+                                   value="{{ class_name }}" class="form-control cv-form-control cv-class-name-input">
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
         {% else %}
             <section class="cv-form-section{% if depth > 0 %} cv-form-section--nested{% endif %}">
                 <h3 class="cv-form-section__title">{{ trans(key.replace('_', ' ')|title) }}</h3>

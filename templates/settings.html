@@ -454,6 +454,185 @@
                     }
                 });
             }
+
+            // --- Classes Management (Toggles & Dynamic Model Loading) ---
+            var transActive = {{ trans('Active')|tojson }};
+            var transDisabled = {{ trans('Disabled')|tojson }};
+            var transClassName = {{ trans('Class name')|tojson }};
+            var transLoading = {{ trans('Loading...')|tojson }};
+            var transWeightsRequired = {{ trans('Weights path is required')|tojson }};
+            var transLoadSuccess = {{ trans('Classes successfully loaded from model')|tojson }};
+            var transLoadFailed = {{ trans('Failed to extract classes from model')|tojson }};
+
+            function updateClassItemUI(switchEl) {
+                var item = switchEl.closest('.cv-class-item');
+                if (!item) return;
+                var badge = item.querySelector('.cv-class-status-badge');
+                var isChecked = switchEl.checked;
+                item.classList.toggle('opacity-75', !isChecked);
+                if (badge) {
+                    badge.textContent = isChecked ? transActive : transDisabled;
+                    badge.classList.toggle('text-success', isChecked);
+                    badge.classList.toggle('text-body-secondary', !isChecked);
+                }
+            }
+
+            // Live toggle switch handler
+            document.addEventListener('change', function (e) {
+                if (e.target && e.target.classList.contains('cv-class-enable-switch')) {
+                    updateClassItemUI(e.target);
+                }
+            });
+
+            // Enable all classes in section
+            document.addEventListener('click', function (e) {
+                var btn = e.target.closest('.btn-enable-all-classes');
+                if (!btn) return;
+                var section = btn.closest('.cv-classes-section');
+                if (!section) return;
+                var switches = section.querySelectorAll('.cv-class-enable-switch');
+                switches.forEach(function (sw) {
+                    sw.checked = true;
+                    updateClassItemUI(sw);
+                });
+            });
+
+            // Disable all classes in section
+            document.addEventListener('click', function (e) {
+                var btn = e.target.closest('.btn-disable-all-classes');
+                if (!btn) return;
+                var section = btn.closest('.cv-classes-section');
+                if (!section) return;
+                var switches = section.querySelectorAll('.cv-class-enable-switch');
+                switches.forEach(function (sw) {
+                    sw.checked = false;
+                    updateClassItemUI(sw);
+                });
+            });
+
+            // Escape HTML helper
+            function escapeHtml(str) {
+                if (str === null || str === undefined) return '';
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
+            // Load classes from model via AJAX
+            document.addEventListener('click', async function (e) {
+                var btn = e.target.closest('.btn-load-model-classes');
+                if (!btn) return;
+
+                var prefix = btn.dataset.classesPrefix || '';
+                var section = btn.closest('.cv-classes-section');
+                if (!section) return;
+
+                // Find corresponding weights_path input
+                var weightsInput = document.querySelector('input[name="' + prefix + 'weights_path"]');
+                if (!weightsInput) {
+                    var container = btn.closest('.cv-camera-card') || btn.closest('.tab-pane') || document;
+                    weightsInput = container.querySelector('input[name$="weights_path"]');
+                }
+
+                var weightsPath = weightsInput ? (weightsInput.value || '').trim() : '';
+                if (!weightsPath) {
+                    alert(transWeightsRequired);
+                    if (weightsInput) weightsInput.focus();
+                    return;
+                }
+
+                var origContent = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>' + escapeHtml(transLoading);
+
+                try {
+                    var response = await fetch('{{ url_for("settings.api_model_classes") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({ weights_path: weightsPath })
+                    });
+
+                    var data = await response.json();
+                    if (!response.ok || !data.success) {
+                        var errMsg = (data && data.error) ? data.error : transLoadFailed;
+                        alert(errMsg);
+                        return;
+                    }
+
+                    var classes = data.classes;
+                    if (!classes || typeof classes !== 'object' || Object.keys(classes).length === 0) {
+                        alert(transLoadFailed);
+                        return;
+                    }
+
+                    var containerEl = section.querySelector('.cv-classes-container');
+                    if (!containerEl) return;
+
+                    var fieldId = prefix + 'classes';
+                    var html = '';
+
+                    // Sort numerical keys properly
+                    var sortedKeys = Object.keys(classes).sort(function (a, b) {
+                        var na = parseInt(a, 10), nb = parseInt(b, 10);
+                        if (!isNaN(na) && !isNaN(nb)) return na - nb;
+                        return a.localeCompare(b);
+                    });
+
+                    sortedKeys.forEach(function (cid) {
+                        var cname = classes[cid];
+                        var safeName = escapeHtml(cname);
+                        var safeCid = escapeHtml(cid);
+                        html += '<div class="cv-form-field cv-class-item mb-3" data-class-id="' + safeCid + '">\n' +
+                            '    <div class="d-flex align-items-center justify-content-between mb-1">\n' +
+                            '        <label for="' + fieldId + '-' + safeCid + '-name" class="cv-form-label d-flex align-items-center gap-2 mb-0">\n' +
+                            '            <div class="form-check form-switch m-0 d-inline-flex align-items-center" style="min-height: auto;">\n' +
+                            '                <input class="form-check-input cv-class-enable-switch" type="checkbox" role="switch"\n' +
+                            '                       name="' + fieldId + '-' + safeCid + '-enabled"\n' +
+                            '                       id="' + fieldId + '-' + safeCid + '-enabled"\n' +
+                            '                       value="on"\n' +
+                            '                       checked>\n' +
+                            '            </div>\n' +
+                            '            <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace px-1.5 py-0.5" style="font-size: 0.72rem;">ID ' + safeCid + '</span>\n' +
+                            '            <span>' + escapeHtml(transClassName) + '</span>\n' +
+                            '        </label>\n' +
+                            '        <span class="cv-class-status-badge small fw-semibold text-success">\n' +
+                            '            ' + escapeHtml(transActive) + '\n' +
+                            '        </span>\n' +
+                            '    </div>\n' +
+                            '    <input type="text" id="' + fieldId + '-' + safeCid + '-name" name="' + fieldId + '-' + safeCid + '-name"\n' +
+                            '           value="' + safeName + '" class="form-control cv-form-control cv-class-name-input">\n' +
+                            '</div>\n';
+                    });
+
+                    containerEl.innerHTML = html;
+
+                    var countBadge = section.querySelector('.cv-classes-count');
+                    if (countBadge) {
+                        countBadge.textContent = sortedKeys.length;
+                    }
+
+                    // Temporary visual feedback
+                    btn.classList.remove('btn-outline-primary');
+                    btn.classList.add('btn-success');
+                    setTimeout(function () {
+                        btn.classList.remove('btn-success');
+                        btn.classList.add('btn-outline-primary');
+                    }, 2000);
+
+                } catch (err) {
+                    console.error('Failed to load model classes:', err);
+                    alert(transLoadFailed + ': ' + (err.message || err));
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = origContent;
+                }
+            });
         })();
     </script>
 {% endblock %}
