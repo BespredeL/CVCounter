@@ -271,6 +271,108 @@ window.AppDialog = AppDialog;
 window.appConfirm = (opts) => AppDialog.confirm(opts);
 window.appAlert = (opts) => AppDialog.alert(opts);
 
+// Override native alert to always use the stylized Bootstrap app dialog
+const _nativeAlert = window.alert;
+window.alert = function (message) {
+    if (window.AppDialog && typeof window.AppDialog.alert === "function") {
+        return window.AppDialog.alert({
+            title: typeof window.trans === "function" ? window.trans("Notice") : "Notice",
+            message: String(message ?? ""),
+            tone: "warning",
+        });
+    }
+    return _nativeAlert ? _nativeAlert.call(window, message) : undefined;
+};
+
+/**
+ * Trigger graceful application server restart via web control
+ */
+window.restartServer = async function () {
+    const title = typeof window.trans === "function" ? window.trans("Restart server") : "Restart server";
+    const message = typeof window.trans === "function"
+        ? window.trans("Are you sure you want to restart the application server? Video streams and active connections will be temporarily interrupted.")
+        : "Are you sure you want to restart the application server? Video streams and active connections will be temporarily interrupted.";
+    const confirmText = typeof window.trans === "function" ? window.trans("Restart") : "Restart";
+    const cancelText = typeof window.trans === "function" ? window.trans("Cancel") : "Cancel";
+
+    const confirmed = await window.appConfirm({
+        title: title,
+        message: message,
+        confirmText: confirmText,
+        cancelText: cancelText,
+        tone: "danger",
+    });
+
+    if (!confirmed) return;
+
+    // Show persistent restart modal
+    const restartModalEl = document.getElementById("server-restart-modal");
+    let bsModal = null;
+    if (restartModalEl && window.bootstrap) {
+        bsModal = new bootstrap.Modal(restartModalEl, { backdrop: "static", keyboard: false });
+        bsModal.show();
+    } else if (window.appAlert) {
+        window.appAlert({
+            title: title,
+            message: typeof window.trans === "function"
+                ? window.trans("Please wait, the server is restarting. This page will reload automatically.")
+                : "Please wait, the server is restarting. This page will reload automatically.",
+            tone: "info",
+        });
+    }
+
+    try {
+        const resp = await fetch("/settings/api/restart", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || (!data.ok && !data.success)) {
+            if (bsModal) bsModal.hide();
+            await window.appAlert({
+                title: typeof window.trans === "function" ? window.trans("Error") : "Error",
+                message: data.error || (typeof window.trans === "function" ? window.trans("Failed to initiate server restart") : "Failed to initiate server restart"),
+                tone: "danger",
+            });
+            return;
+        }
+    } catch (err) {
+        console.warn("Restart request sent (server is shutting down):", err);
+    }
+
+    // Poll until server is back online
+    let attempts = 0;
+    const maxAttempts = 60;
+    const pollInterval = setInterval(async () => {
+        attempts++;
+        try {
+            const check = await fetch("/?_ping=" + Date.now(), { method: "HEAD", cache: "no-store" });
+            if (check.ok || check.status === 200 || check.status === 302) {
+                clearInterval(pollInterval);
+                window.location.reload();
+            }
+        } catch (e) {
+            // Still waiting for server process to restart and bind
+        }
+        if (attempts >= maxAttempts) {
+            clearInterval(pollInterval);
+            window.location.reload();
+        }
+    }, 1500);
+};
+
+// Global click listener for any server restart trigger button
+document.addEventListener("click", function (e) {
+    const btn = e.target.closest(".btn-restart-server-trigger");
+    if (btn) {
+        e.preventDefault();
+        window.restartServer();
+    }
+});
+
 /**
  * Show flashed toasts rendered server-side
  */

@@ -143,14 +143,6 @@
                                id="settings-search-input"
                                placeholder="{{ trans('Search setting...') }}" aria-label="{{ trans('Search') }}">
                     </div>
-                    <button type="submit" form="settings-form"
-                            class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1 shadow-sm px-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
-                             class="bi bi-check2" viewBox="0 0 16 16">
-                            <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
-                        </svg>
-                        <span>{{ trans('Save') }}</span>
-                    </button>
                 </div>
             </div>
         </div>
@@ -463,6 +455,8 @@
             var transWeightsRequired = {{ trans('Weights path is required')|tojson }};
             var transLoadSuccess = {{ trans('Classes successfully loaded from model')|tojson }};
             var transLoadFailed = {{ trans('Failed to extract classes from model')|tojson }};
+            var transError = {{ trans('Error')|tojson }};
+            var transNotice = {{ trans('Notice')|tojson }};
 
             function updateClassItemUI(switchEl) {
                 var item = switchEl.closest('.cv-class-item');
@@ -510,6 +504,22 @@
                 });
             });
 
+            // Quick filter classes within a section
+            document.addEventListener('input', function (e) {
+                if (e.target && e.target.classList.contains('cv-classes-filter-input')) {
+                    var filterText = (e.target.value || '').trim().toLowerCase();
+                    var section = e.target.closest('.cv-classes-section');
+                    if (!section) return;
+                    var items = section.querySelectorAll('.cv-class-item');
+                    items.forEach(function (item) {
+                        var nameInput = item.querySelector('.cv-class-name-input');
+                        var classId = item.getAttribute('data-class-id') || '';
+                        var val = ((nameInput ? nameInput.value : '') + ' ' + classId).toLowerCase();
+                        item.style.display = (!filterText || val.indexOf(filterText) !== -1) ? '' : 'none';
+                    });
+                }
+            });
+
             // Escape HTML helper
             function escapeHtml(str) {
                 if (str === null || str === undefined) return '';
@@ -539,7 +549,15 @@
 
                 var weightsPath = weightsInput ? (weightsInput.value || '').trim() : '';
                 if (!weightsPath) {
-                    alert(transWeightsRequired);
+                    if (window.appAlert) {
+                        await window.appAlert({
+                            title: transNotice,
+                            message: transWeightsRequired,
+                            tone: 'warning'
+                        });
+                    } else {
+                        alert(transWeightsRequired);
+                    }
                     if (weightsInput) weightsInput.focus();
                     return;
                 }
@@ -559,15 +577,31 @@
                     });
 
                     var data = await response.json();
-                    if (!response.ok || !data.success) {
+                    if (!response.ok || (!data.ok && !data.success)) {
                         var errMsg = (data && data.error) ? data.error : transLoadFailed;
-                        alert(errMsg);
+                        if (window.appAlert) {
+                            await window.appAlert({
+                                title: transError,
+                                message: errMsg,
+                                tone: 'danger'
+                            });
+                        } else {
+                            alert(errMsg);
+                        }
                         return;
                     }
 
                     var classes = data.classes;
                     if (!classes || typeof classes !== 'object' || Object.keys(classes).length === 0) {
-                        alert(transLoadFailed);
+                        if (window.appAlert) {
+                            await window.appAlert({
+                                title: transError,
+                                message: transLoadFailed,
+                                tone: 'danger'
+                            });
+                        } else {
+                            alert(transLoadFailed);
+                        }
                         return;
                     }
 
@@ -588,7 +622,7 @@
                         var cname = classes[cid];
                         var safeName = escapeHtml(cname);
                         var safeCid = escapeHtml(cid);
-                        html += '<div class="cv-form-field cv-class-item mb-3" data-class-id="' + safeCid + '">\n' +
+                        html += '<div class="cv-form-field cv-class-item" data-class-id="' + safeCid + '">\n' +
                             '    <div class="d-flex align-items-center justify-content-between mb-1">\n' +
                             '        <label for="' + fieldId + '-' + safeCid + '-name" class="cv-form-label d-flex align-items-center gap-2 mb-0">\n' +
                             '            <div class="form-check form-switch m-0 d-inline-flex align-items-center" style="min-height: auto;">\n' +
@@ -601,16 +635,23 @@
                             '            <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace px-1.5 py-0.5" style="font-size: 0.72rem;">ID ' + safeCid + '</span>\n' +
                             '            <span>' + escapeHtml(transClassName) + '</span>\n' +
                             '        </label>\n' +
-                            '        <span class="cv-class-status-badge small fw-semibold text-success">\n' +
+                            '        <span class="cv-class-status-badge small fw-semibold text-success ms-2 flex-shrink-0">\n' +
                             '            ' + escapeHtml(transActive) + '\n' +
                             '        </span>\n' +
                             '    </div>\n' +
                             '    <input type="text" id="' + fieldId + '-' + safeCid + '-name" name="' + fieldId + '-' + safeCid + '-name"\n' +
-                            '           value="' + safeName + '" class="form-control cv-form-control cv-class-name-input">\n' +
+                            '           value="' + safeName + '" class="form-control cv-form-control cv-class-name-input py-1 px-2.5" style="font-size: 0.85rem;">\n' +
                             '</div>\n';
                     });
 
                     containerEl.innerHTML = html;
+
+                    var filterBar = section.querySelector('.cv-classes-filter-bar');
+                    if (filterBar) {
+                        filterBar.classList.remove('d-none');
+                        var filterInput = filterBar.querySelector('.cv-classes-filter-input');
+                        if (filterInput) filterInput.value = '';
+                    }
 
                     var countBadge = section.querySelector('.cv-classes-count');
                     if (countBadge) {
@@ -627,7 +668,16 @@
 
                 } catch (err) {
                     console.error('Failed to load model classes:', err);
-                    alert(transLoadFailed + ': ' + (err.message || err));
+                    var errMsg = transLoadFailed + ': ' + (err.message || err);
+                    if (window.appAlert) {
+                        await window.appAlert({
+                            title: transError,
+                            message: errMsg,
+                            tone: 'danger'
+                        });
+                    } else {
+                        alert(errMsg);
+                    }
                 } finally {
                     btn.disabled = false;
                     btn.innerHTML = origContent;

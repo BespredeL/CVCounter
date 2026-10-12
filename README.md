@@ -18,7 +18,7 @@ It is perfectly suited for **counting products, people, vehicle tracking, retail
 
 - 🎯 Real-time object detection
 - 🔢 Object counting in one or more zones
-- 🏷️ Per-class count breakdown (current batch / total)
+- 🏷️ Per-class count breakdown (current batch / total) and detector class management with model auto-extraction
 - 🧠 High-accuracy ByteTrack multi-object tracking
 - 🎥 Support for video streams (RTSP, webcam, files)
 - 🎬 Detection-triggered video recording with `idle_timeout` stop

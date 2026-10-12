@@ -25,7 +25,8 @@
             "polling",
             "websocket"
         ],
-        "socketio_upgrade": true
+        "socketio_upgrade": true,
+        "allow_web_control": true
     },
     "datasets": {
         "max_upload_mb": 512
@@ -87,6 +88,10 @@
         }
     },
     "detection_default": {
+        "video_show_scale": 70,
+        "video_show_quality": 50,
+        "video_fps": 0,
+        "video_reconnect_attempts": 5,
         "model_type": "auto",
         "weights_path": "config/ultralytics/models/yolov8n.pt",
         "confidence": 0.7,
@@ -94,22 +99,62 @@
         "device": 0,
         "vid_stride": 1,
         "indicator_size": 10,
-        "video_show_scale": 70,
-        "video_show_quality": 50,
-        "video_fps": 0,
-        "video_reconnect_attempts": 5,
+        "counting_area": [
+            [
+                0,
+                0
+            ],
+            [
+                100,
+                0
+            ],
+            [
+                100,
+                100
+            ],
+            [
+                0,
+                100
+            ]
+        ],
         "counting_areas": [
             {
                 "points": [
-                    [0, 0],
-                    [100, 0],
-                    [100, 100],
-                    [0, 100]
+                    [
+                        0,
+                        0
+                    ],
+                    [
+                        100,
+                        0
+                    ],
+                    [
+                        100,
+                        100
+                    ],
+                    [
+                        0,
+                        100
+                    ]
                 ],
-                "color": [67, 211, 255]
+                "color": [
+                    67,
+                    211,
+                    255
+                ]
             }
         ],
+        "counting_area_color": [
+            67,
+            211,
+            255
+        ],
         "classes": {},
+        "dataset_create": {
+            "enable": false,
+            "probability": 0.1,
+            "path": "storage/saved_images"
+        },
         "recording": {
             "enable": false,
             "path": "storage/saved_recordings",
@@ -123,6 +168,10 @@
             "label": "Label ExampleCam",
             "start_total_count": 0,
             "video_path": "",
+            "video_show_scale": 70,
+            "video_show_quality": 30,
+            "video_fps": 0,
+            "video_reconnect_attempts": 5,
             "model_type": "yolo",
             "weights_path": "config/ultralytics/models/yolov8n.pt",
             "confidence": 0.7,
@@ -130,20 +179,55 @@
             "device": 0,
             "vid_stride": 1,
             "indicator_size": 10,
-            "video_show_scale": 70,
-            "video_show_quality": 30,
-            "video_fps": 0,
-            "video_reconnect_attempts": 5,
+            "counting_area": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    100,
+                    0
+                ],
+                [
+                    100,
+                    100
+                ],
+                [
+                    0,
+                    100
+                ]
+            ],
             "counting_areas": [
                 {
                     "points": [
-                        [0, 0],
-                        [100, 0],
-                        [100, 100],
-                        [0, 100]
+                        [
+                            0,
+                            0
+                        ],
+                        [
+                            100,
+                            0
+                        ],
+                        [
+                            100,
+                            100
+                        ],
+                        [
+                            0,
+                            100
+                        ]
                     ],
-                    "color": [255, 64, 0]
+                    "color": [
+                        255,
+                        64,
+                        0
+                    ]
                 }
+            ],
+            "counting_area_color": [
+                67,
+                211,
+                255
             ],
             "classes": {},
             "dataset_create": {

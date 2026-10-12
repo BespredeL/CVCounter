@@ -953,5 +953,17 @@
     "Expand all cameras": "Expand all cameras",
     "Camera configuration": "Camera configuration",
     "Hide password": "Hide password",
-    "Show password": "Show password"
+    "Show password": "Show password",
+    "Filter classes...": "Filter classes...",
+    "No classes configured yet": "No classes configured yet",
+    "Click \"Load classes from model\" above to auto-extract classes": "Click \"Load classes from model\" above to auto-extract classes",
+    "Restart server": "Restart server",
+    "Restart application server": "Restart application server",
+    "Restart": "Restart",
+    "Restarting server...": "Restarting server...",
+    "Please wait, the server is restarting. This page will reload automatically.": "Please wait, the server is restarting. This page will reload automatically.",
+    "Are you sure you want to restart the application server? Video streams and active connections will be temporarily interrupted.": "Are you sure you want to restart the application server? Video streams and active connections will be temporarily interrupted.",
+    "Server control via web interface is disabled in configuration": "Server control via web interface is disabled in configuration",
+    "Server restart initiated. The page will reload shortly.": "Server restart initiated. The page will reload shortly.",
+    "Failed to initiate server restart": "Failed to initiate server restart"
 }

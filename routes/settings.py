@@ -31,7 +31,11 @@ def settings() -> str:
     """
     context = get_app_context()
     config = context['config']
-    return render_template('settings.html', _config=config.read_config())
+    return render_template(
+        'settings.html',
+        _config=config.read_config(),
+        allow_web_control=config.get('server.allow_web_control', True)
+    )
 
 
 @settings_bp.route('/settings_save', methods=['POST'])
@@ -91,6 +95,9 @@ def system_info() -> str:
     telemetry = get_telemetry()
     sys_info = get_system_info()
     telemetry_status = telemetry.get_queue_status()
+    context = get_app_context()
+    config = context.get('config') if context else None
+    allow_web_control = config.get('server.allow_web_control', True) if config else True
     return render_template(
         'system_info.html',
         sys_info=sys_info,
@@ -98,6 +105,7 @@ def system_info() -> str:
         telemetry_enabled=telemetry.enabled,
         telemetry_last_send=telemetry_status.get('last_send'),
         telemetry_status=telemetry_status,
+        allow_web_control=allow_web_control,
     )
 
 
@@ -225,11 +233,18 @@ def api_model_classes():
     weights_path = (data.get('weights_path') or '').strip()
 
     if not weights_path:
-        return jsonify({'ok': False, 'error': translate('Weights path is required')}), 400
+        return jsonify({
+            'ok': False,
+            'success': False,
+            'error': translate('Weights path is required')
+        }), 400
 
+    from system.utils.paths import resolve_project_path
     context = get_app_context()
     config = context.get('config') if context else None
-    resolved_path = config.resolve_path(weights_path) if config else weights_path
+    resolved_path = config.resolve_path(weights_path) if config else resolve_project_path(weights_path)
+    if not resolved_path:
+        resolved_path = weights_path
 
     from system.object_detection.metadata import extract_model_classes
     classes_dict, source = extract_model_classes(resolved_path)
@@ -237,6 +252,7 @@ def api_model_classes():
     if not classes_dict:
         return jsonify({
             'ok': False,
+            'success': False,
             'error': translate('Classes not found or model file does not exist')
         }), 404
 
@@ -245,8 +261,46 @@ def api_model_classes():
 
     return jsonify({
         'ok': True,
+        'success': True,
         'classes': formatted_classes,
         'source': source or 'model',
         'count': len(formatted_classes)
+    })
+
+
+@settings_bp.route('/settings/api/restart', methods=['POST'])
+@settings_bp.route('/api/server/restart', methods=['POST'])
+@login_required
+def api_server_restart():
+    """
+    Restart the application server process via web control.
+    Requires authentication and server.allow_web_control to be enabled.
+
+    Returns:
+        Response: JSON status indicating restart was scheduled
+    """
+    from system.utils.server_control import is_web_control_allowed, schedule_server_restart
+
+    context = get_app_context()
+    if not is_web_control_allowed(context):
+        return jsonify({
+            'ok': False,
+            'success': False,
+            'error': translate('Server control via web interface is disabled in configuration')
+        }), 403
+
+    ok, message = schedule_server_restart(context=context, delay=0.8)
+    if not ok:
+        return jsonify({
+            'ok': False,
+            'success': False,
+            'error': translate(message)
+        }), 400
+
+    return jsonify({
+        'ok': True,
+        'success': True,
+        'message': translate('Server restart initiated. The page will reload shortly.'),
+        'delay': 2
     })
 

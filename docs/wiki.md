@@ -283,6 +283,7 @@ For auto-capture into a dataset inbox, set `dataset_create.path` to
 | `socketio_async_mode` | Socket.IO async mode                            | `threading`                |
 | `socketio_transports` | Socket.IO transport list                        | `["polling", "websocket"]` |
 | `socketio_upgrade`    | Allow transport upgrade                         | `true`                     |
+| `allow_web_control`   | Enable process management and server restarts via the web interface | `true`                     |
 
 ## User Parameters `users`
 
@@ -521,10 +522,12 @@ Global configuration editor and GPU/system information. **Requires session login
 
 The Settings page (`/settings`) features:
 - **Collapsible camera cards:** Compact detection listing with **"Expand All"** and **"Collapse All"** controls;
+- **Detection class management & auto-extraction:** Per-detector class toggle switches, bulk controls ("All", "Invert", "Disable all"), and a **"Load classes from model"** button that queries `/settings/api/model_classes` to extract class labels directly from weights (.onnx, .pt, sidecars);
 - **Password visibility toggles:** Eye icons for securely revealing/hiding plaintext passwords, tokens, and RTSP stream URLs;
 - **Live unit badges:** Dynamic unit badges (%, ms, px, attempts, sec) displayed directly in numeric fields;
 - **Semantic form controls:** Clear dropdowns for selecting model type (`model_type`), log level (`log_level`), default language (`default_language`), etc.;
 - **Live settings search:** Instant keyword search that auto-expands matching cards and setting sections;
+- **1-Click Server Restart:** Safe application server process restart directly from the web interface (when `server.allow_web_control: true`), with automatic reconnect and zero port collisions;
 - Detailed bilingual descriptions and hints for every configuration parameter.
 
 On System Info (`/system_info`) you can inspect hardware status (GPU, CUDA, PyTorch, driver versions), send anonymized diagnostics to the configured telemetry endpoint, or download a local JSON diagnostic report. See [telemetry_api.md](telemetry_api.md).
@@ -534,7 +537,8 @@ On System Info (`/system_info`) you can inspect hardware status (GPU, CUDA, PyTo
 ```
 http://127.0.0.1:8080/settings
 http://127.0.0.1:8080/system_info
-http://127.0.0.1:8080/settings/telemetry/send   (POST)
+http://127.0.0.1:8080/settings/api/restart        (POST)
+http://127.0.0.1:8080/settings/telemetry/send     (POST)
 http://127.0.0.1:8080/settings/telemetry/download
 ```
 

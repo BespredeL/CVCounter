@@ -84,6 +84,11 @@
                        href="{{ url_for('settings.telemetry_download') }}">
                         <i class="bi bi-download me-1"></i>{{ trans('Download diagnostics JSON') }}
                     </a>
+                    {% if allow_web_control %}
+                        <button type="button" class="btn btn-outline-danger btn-sm btn-restart-server-trigger">
+                            <i class="bi bi-arrow-clockwise me-1"></i>{{ trans('Restart server') }}
+                        </button>
+                    {% endif %}
                 </div>
             </div>
         </div>

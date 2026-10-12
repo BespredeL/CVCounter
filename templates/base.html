@@ -236,6 +236,22 @@
 </div>
 <!-- END: App dialog -->
 
+<!-- START: Server restart modal -->
+<div class="modal fade" id="server-restart-modal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content text-center p-4 shadow-lg border-0">
+            <div class="my-3">
+                <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+            <h5 class="fw-bold mb-2">{{ trans('Restarting server...') }}</h5>
+            <p class="text-body-secondary small mb-0">{{ trans('Please wait, the server is restarting. This page will reload automatically.') }}</p>
+        </div>
+    </div>
+</div>
+<!-- END: Server restart modal -->
+
 <!-- START: Scripts -->
 <script>
     window.APP_I18N = {{ translations|tojson }};

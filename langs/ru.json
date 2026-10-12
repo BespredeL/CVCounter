@@ -953,5 +953,17 @@
     "Expand all cameras": "Развернуть все камеры",
     "Camera configuration": "Конфигурация камеры",
     "Hide password": "Скрыть пароль",
-    "Show password": "Показать пароль"
+    "Show password": "Показать пароль",
+    "Filter classes...": "Фильтр классов...",
+    "No classes configured yet": "Классы пока не настроены",
+    "Click \"Load classes from model\" above to auto-extract classes": "Нажмите «Загрузить классы из модели» выше для авто-извлечения",
+    "Restart server": "Перезапустить сервер",
+    "Restart application server": "Перезапустить сервер приложения",
+    "Restart": "Перезапустить",
+    "Restarting server...": "Перезапуск сервера...",
+    "Please wait, the server is restarting. This page will reload automatically.": "Пожалуйста, подождите, выполняется перезапуск сервера. Страница обновится автоматически.",
+    "Are you sure you want to restart the application server? Video streams and active connections will be temporarily interrupted.": "Вы уверены, что хотите перезапустить сервер приложения? Видеопотоки и активные соединения будут кратковременно перезапущены.",
+    "Server control via web interface is disabled in configuration": "Управление сервером через веб-интерфейс отключено в конфигурации",
+    "Server restart initiated. The page will reload shortly.": "Перезапуск сервера запущен. Страница скоро обновится.",
+    "Failed to initiate server restart": "Не удалось запустить перезапуск сервера"
 }

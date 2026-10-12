@@ -33,18 +33,19 @@ CANONICAL_CAMERA_KEYS: List[str] = [
     "device",
     "vid_stride",
     "indicator_size",
-    # 3. Model & Backend-Specific Options
+    # 3. Counting Areas (Zones)
+    "counting_area",
+    "counting_areas",
+    "counting_area_color",
+    # 4. Model & Backend-Specific Options
     "model_config_path",
     "input_size",
     "backend",
     "target",
     "providers",
-    # 4. Classes & Detection Areas
+    # 5. Classes Management
     "classes",
-    "counting_areas",
-    "counting_area",
-    "counting_area_color",
-    # 5. Dataset Generation & Video Recording Subsystems
+    # 6. Dataset Generation & Video Recording Subsystems
     "dataset_create",
     "recording",
 ]
@@ -64,7 +65,13 @@ CANONICAL_DEFAULTS: Dict[str, Any] = {
     "device": 0,
     "vid_stride": 1,
     "indicator_size": 10,
-    "classes": {},
+    "counting_area": [
+        [0, 0],
+        [100, 0],
+        [100, 100],
+        [0, 100]
+    ],
+    "counting_area_color": [67, 211, 255],
     "counting_areas": [
         {
             "points": [
@@ -76,6 +83,7 @@ CANONICAL_DEFAULTS: Dict[str, Any] = {
             "color": [67, 211, 255]
         }
     ],
+    "classes": {},
     "dataset_create": {
         "enable": False,
         "probability": 0.1,

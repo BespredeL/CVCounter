@@ -568,4 +568,5 @@ if __name__ == '__main__':
 
         logger = Logger()
         logger.error(f"Fatal error in main: {e}")
+        logger.log_exception()
         raise
