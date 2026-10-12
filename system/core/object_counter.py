@@ -155,8 +155,19 @@ class ObjectCounter:
         # Init recorder (async video writer) if enabled for this detection
         self._init_recorder()
 
-        # Init model
-        classes_list = list(map(int, self.classes.keys())) if self.classes else None
+        # Init model: filter active classes if configured
+        active_classes = []
+        for cls_id, cls_entry in (self.classes or {}).items():
+            try:
+                cid = int(cls_id)
+            except (ValueError, TypeError):
+                continue
+            if isinstance(cls_entry, dict):
+                if cls_entry.get('enabled', True):
+                    active_classes.append(cid)
+            else:
+                active_classes.append(cid)
+        classes_list = active_classes if (self.classes and active_classes) else None
         self.model = load_detector(
             model_type=self.model_type,
             weights=self.weights,
@@ -297,6 +308,9 @@ class ObjectCounter:
         if self.classes:
             label = self.classes.get(str(class_id), self.classes.get(class_id))
             if label:
+                if isinstance(label, dict):
+                    name = label.get('name')
+                    return str(name) if (name is not None and str(name).strip()) else str(class_id)
                 return str(label)
 
         return trans('Class {id}', id=class_id)
@@ -315,11 +329,16 @@ class ObjectCounter:
         if not self.classes:
             return ids
 
-        for key in self.classes.keys():
+        for key, val in self.classes.items():
             try:
-                ids.add(int(key))
+                cid = int(key)
             except (TypeError, ValueError):
                 continue
+            if isinstance(val, dict):
+                if val.get('enabled', True):
+                    ids.add(cid)
+            else:
+                ids.add(cid)
         return ids
 
     def _by_class_payload(self) -> list[dict]:

@@ -210,3 +210,43 @@ def telemetry_client_event():
         return jsonify({'ok': True}), 200
     except Exception:
         return jsonify({'ok': False}), 200
+
+
+@settings_bp.route('/settings/api/model_classes', methods=['POST'])
+@login_required
+def api_model_classes():
+    """
+    Extract detection classes from the specified model weights file.
+
+    Returns:
+        Response: JSON payload with extracted classes and source
+    """
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    weights_path = (data.get('weights_path') or '').strip()
+
+    if not weights_path:
+        return jsonify({'ok': False, 'error': translate('Weights path is required')}), 400
+
+    context = get_app_context()
+    config = context.get('config') if context else None
+    resolved_path = config.resolve_path(weights_path) if config else weights_path
+
+    from system.object_detection.metadata import extract_model_classes
+    classes_dict, source = extract_model_classes(resolved_path)
+
+    if not classes_dict:
+        return jsonify({
+            'ok': False,
+            'error': translate('Classes not found or model file does not exist')
+        }), 404
+
+    # Normalize to string keys for JSON transport
+    formatted_classes = {str(k): str(v) for k, v in classes_dict.items()}
+
+    return jsonify({
+        'ok': True,
+        'classes': formatted_classes,
+        'source': source or 'model',
+        'count': len(formatted_classes)
+    })
+
