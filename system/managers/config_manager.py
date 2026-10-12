@@ -61,6 +61,18 @@ class ConfigManager:
                 if not isinstance(config_data, dict):
                     raise InvalidConfigError("Configuration must be a JSON object")
 
+                from system.utils.camera_schema import align_full_config
+                aligned_data, changed = align_full_config(config_data)
+                if changed:
+                    config_data = aligned_data
+                    try:
+                        with open(self._config_path, 'w', encoding='utf-8') as config_file_w:
+                            json.dump(config_data, config_file_w, indent=4, ensure_ascii=False)
+                    except Exception:
+                        pass
+                else:
+                    config_data = aligned_data
+
                 # Validate configuration
                 validate_config(config_data, self._config_path, raise_on_error=True)
 
@@ -181,11 +193,34 @@ class ConfigManager:
         try:
             current_config = self.read_config()
 
+            # Pre-process structured class form entries
+            # e.g. detections-<loc>-classes-<id>-name and detections-<loc>-classes-<id>-enabled
+            structured_classes = {}
+            for key in list(form_data.keys()):
+                if '-classes-' in key:
+                    parts = self._split_form_key(key, current_config)
+                    if len(parts) >= 3 and parts[-3] == 'classes' and parts[-1] in ('name', 'enabled'):
+                        prefix_path = tuple(parts[:-3])
+                        cls_id = str(parts[-2])
+                        if prefix_path not in structured_classes:
+                            structured_classes[prefix_path] = {}
+                        if cls_id not in structured_classes[prefix_path]:
+                            structured_classes[prefix_path][cls_id] = {'name': '', 'enabled': False}
+                        if parts[-1] == 'name':
+                            structured_classes[prefix_path][cls_id]['name'] = str(form_data[key])
+                        elif parts[-1] == 'enabled':
+                            val = form_data[key]
+                            is_on = (val in (True, 'true', 'on', '1', 1) if not isinstance(val, str) else val.lower() in ('true', 'on', '1'))
+                            structured_classes[prefix_path][cls_id]['enabled'] = is_on
+
             for key, value in form_data.items():
                 keys = self._split_form_key(key, current_config)
                 if keys and keys[0] == 'detections' and keys[-1] in (
                         'counting_area', 'counting_area_color', 'counting_areas'
                 ):
+                    continue
+
+                if keys and len(keys) >= 3 and keys[-3] == 'classes' and keys[-1] in ('name', 'enabled'):
                     continue
 
                 current_level = current_config
@@ -203,6 +238,16 @@ class ConfigManager:
                     if isinstance(value, str) and value.lower() in ['true', 'false', 'on', 'off']:
                         value = value.lower() in ['true', 'on']
                 current_level[keys[-1]] = value
+
+            # Apply structured classes
+            for prefix_path, classes_dict in structured_classes.items():
+                target = current_config
+                for part in prefix_path:
+                    target = target.setdefault(part, {})
+                target['classes'] = classes_dict
+
+            from system.utils.camera_schema import align_full_config
+            current_config, _ = align_full_config(current_config)
 
             validate_config(current_config, self._config_path, raise_on_error=True)
             self._config = current_config
