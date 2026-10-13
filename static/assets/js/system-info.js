@@ -15,7 +15,9 @@
     const endpoints = Object.assign({
         runtimesStatus: '/settings/api/runtimes/status',
         runtimesInstall: '/settings/api/runtimes/install',
-        runtimesInstallStatus: '/settings/api/runtimes/install/status'
+        runtimesInstallStatus: '/settings/api/runtimes/install/status',
+        logs: '/settings/api/logs',
+        logsClear: '/settings/api/logs/clear'
     }, window.SYSTEM_INFO_ENDPOINTS || {});
 
     function escapeHtml(str) {
@@ -325,8 +327,270 @@
             });
         }
 
-        // Initial load
+        // Initial runtimes load
         loadRuntimes();
+
+        // -------------------------------------------------------------
+        // Log Viewer Implementation
+        // -------------------------------------------------------------
+        function initLogViewer() {
+            const logTerminal = document.getElementById('log-terminal');
+            if (!logTerminal) return;
+
+            const refreshLogsBtn = document.getElementById('btn-refresh-logs');
+            const copyLogsBtn = document.getElementById('btn-copy-logs');
+            const copyLogsText = document.getElementById('btn-copy-logs-text');
+            const clearLogsBtn = document.getElementById('btn-clear-logs');
+            const levelFilterSelect = document.getElementById('log-level-filter');
+            const linesLimitSelect = document.getElementById('log-lines-limit');
+            const searchInput = document.getElementById('log-search-input');
+            const searchClearBtn = document.getElementById('log-search-clear');
+            const autoRefreshSwitch = document.getElementById('log-auto-refresh');
+            const autoScrollSwitch = document.getElementById('log-auto-scroll');
+            const scrollBottomBtn = document.getElementById('log-scroll-bottom-btn');
+            const metaInfoBadge = document.getElementById('log-meta-info');
+            const fileBadge = document.getElementById('log-file-badge');
+
+            let logAutoRefreshTimer = null;
+            let currentRawLogs = '';
+            let isFetchingLogs = false;
+            let searchDebounceTimer = null;
+
+            function formatLogLine(line, searchQ) {
+                // Match standard Python Logger pattern: "YYYY-MM-DD HH:MM:SS - LEVEL - message"
+                const match = line.match(/^(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}(?:,\d+)?)\s*-\s*([A-Z]+)\s*-\s*(.*)$/);
+                if (match) {
+                    const ts = escapeHtml(match[1]);
+                    const level = match[2];
+                    let msg = escapeHtml(match[3]);
+
+                    let levelStyle = 'color: #94a3b8; background: rgba(148,163,184,0.12);';
+                    if (level === 'INFO') {
+                        levelStyle = 'color: #38bdf8; background: rgba(56,189,248,0.14);';
+                    } else if (level === 'WARNING') {
+                        levelStyle = 'color: #fbbf24; background: rgba(251,191,36,0.16);';
+                    } else if (level === 'ERROR') {
+                        levelStyle = 'color: #f87171; background: rgba(248,113,113,0.18); font-weight: 700;';
+                    } else if (level === 'DEBUG') {
+                        levelStyle = 'color: #a78bfa; background: rgba(167,139,250,0.14);';
+                    }
+
+                    if (searchQ) {
+                        const regex = new RegExp('(' + searchQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+                        msg = msg.replace(regex, '<mark style="background:#fef08a;color:#1e293b;padding:0 2px;border-radius:2px;">$1</mark>');
+                    }
+
+                    return `<div class="cv-log-row py-0.5"><span class="text-secondary opacity-75 me-2">${ts}</span><span class="badge font-monospace px-1.5 py-0.5 me-2" style="${levelStyle}">${level}</span><span>${msg}</span></div>`;
+                } else {
+                    let escapedLine = escapeHtml(line);
+                    if (searchQ) {
+                        const regex = new RegExp('(' + searchQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+                        escapedLine = escapedLine.replace(regex, '<mark style="background:#fef08a;color:#1e293b;padding:0 2px;border-radius:2px;">$1</mark>');
+                    }
+                    return `<div class="cv-log-row py-0.5 text-body-secondary">${escapedLine}</div>`;
+                }
+            }
+
+            function scrollToBottom() {
+                if (logTerminal) {
+                    logTerminal.scrollTop = logTerminal.scrollHeight;
+                }
+            }
+
+            function fetchLogs(silent = false) {
+                if (isFetchingLogs) return;
+                isFetchingLogs = true;
+
+                const lines = linesLimitSelect ? linesLimitSelect.value : '100';
+                const level = levelFilterSelect ? levelFilterSelect.value : '';
+                const q = searchInput ? searchInput.value.trim() : '';
+
+                if (!silent && (!logTerminal.textContent.trim() || logTerminal.querySelector('.spinner-border'))) {
+                    logTerminal.innerHTML = `
+                        <div class="text-body-secondary text-center py-4">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            <span>${escapeHtml(t('Loading logs...'))}</span>
+                        </div>
+                    `;
+                }
+
+                const url = `${endpoints.logs}?lines=${encodeURIComponent(lines)}&level=${encodeURIComponent(level)}&q=${encodeURIComponent(q)}`;
+
+                fetch(url)
+                    .then(res => res.json())
+                    .then(data => {
+                        isFetchingLogs = false;
+                        if (!data.ok) {
+                            logTerminal.innerHTML = `<div class="text-danger py-2">${escapeHtml(data.error || t('Failed to load logs.'))}</div>`;
+                            return;
+                        }
+
+                        if (fileBadge && data.path) {
+                            fileBadge.textContent = data.path;
+                        }
+
+                        if (metaInfoBadge) {
+                            if (data.exists) {
+                                metaInfoBadge.textContent = `${data.total_lines} ${t('lines')} | ${data.file_size_formatted} | ${data.mtime || ''}`;
+                            } else {
+                                metaInfoBadge.textContent = t('Log file not found');
+                            }
+                        }
+
+                        currentRawLogs = (data.lines || []).join('\n');
+
+                        if (!data.lines || data.lines.length === 0) {
+                            logTerminal.innerHTML = `<div class="text-body-secondary text-center py-4"><em>${escapeHtml(t('No logs matching current filter'))}</em></div>`;
+                            return;
+                        }
+
+                        const wasAtBottom = (logTerminal.scrollHeight - logTerminal.clientHeight <= logTerminal.scrollTop + 40);
+                        const html = data.lines.map(l => formatLogLine(l, q)).join('');
+                        logTerminal.innerHTML = html;
+
+                        if (autoScrollSwitch && autoScrollSwitch.checked) {
+                            scrollToBottom();
+                        } else if (wasAtBottom) {
+                            scrollToBottom();
+                        }
+                    })
+                    .catch(err => {
+                        isFetchingLogs = false;
+                        logTerminal.innerHTML = `<div class="text-danger py-2">${escapeHtml(err.message)}</div>`;
+                    });
+            }
+
+            // Copy logs
+            if (copyLogsBtn) {
+                copyLogsBtn.addEventListener('click', async function () {
+                    if (!currentRawLogs) return;
+                    try {
+                        await navigator.clipboard.writeText(currentRawLogs);
+                        const origText = copyLogsText ? copyLogsText.textContent : '';
+                        if (copyLogsText) copyLogsText.textContent = t('Copied!');
+                        copyLogsBtn.classList.replace('btn-outline-secondary', 'btn-success');
+                        setTimeout(() => {
+                            if (copyLogsText) copyLogsText.textContent = origText;
+                            copyLogsBtn.classList.replace('btn-success', 'btn-outline-secondary');
+                        }, 2000);
+                    } catch (err) {
+                        console.error('Failed to copy logs:', err);
+                    }
+                });
+            }
+
+            // Clear logs
+            if (clearLogsBtn) {
+                clearLogsBtn.addEventListener('click', async function () {
+                    const confirmed = window.confirm(t('Are you sure you want to clear the application log file?'));
+                    if (!confirmed) return;
+
+                    clearLogsBtn.disabled = true;
+                    try {
+                        const res = await fetch(endpoints.logsClear, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+                        const data = await res.json();
+                        if (data.ok) {
+                            fetchLogs(false);
+                        } else {
+                            alert(data.error || t('Failed to clear log file'));
+                        }
+                    } catch (err) {
+                        alert(err.message || t('Request error'));
+                    } finally {
+                        clearLogsBtn.disabled = false;
+                    }
+                });
+            }
+
+            // Filter changes
+            if (levelFilterSelect) {
+                levelFilterSelect.addEventListener('change', () => fetchLogs(false));
+            }
+            if (linesLimitSelect) {
+                linesLimitSelect.addEventListener('change', () => fetchLogs(false));
+            }
+
+            // Search input
+            if (searchInput) {
+                searchInput.addEventListener('input', function () {
+                    const val = this.value.trim();
+                    if (searchClearBtn) {
+                        searchClearBtn.classList.toggle('d-none', !val);
+                    }
+                    if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+                    searchDebounceTimer = setTimeout(() => fetchLogs(true), 300);
+                });
+            }
+            if (searchClearBtn) {
+                searchClearBtn.addEventListener('click', function () {
+                    if (searchInput) {
+                        searchInput.value = '';
+                        searchClearBtn.classList.add('d-none');
+                        fetchLogs(false);
+                    }
+                });
+            }
+
+            // Refresh button
+            if (refreshLogsBtn) {
+                refreshLogsBtn.addEventListener('click', () => fetchLogs(false));
+            }
+
+            // Scroll detection for "Scroll to bottom" button
+            if (logTerminal && scrollBottomBtn) {
+                logTerminal.addEventListener('scroll', function () {
+                    const isNearBottom = (logTerminal.scrollHeight - logTerminal.clientHeight <= logTerminal.scrollTop + 50);
+                    scrollBottomBtn.classList.toggle('d-none', isNearBottom);
+                });
+                const bottomInnerBtn = scrollBottomBtn.querySelector('button');
+                if (bottomInnerBtn) {
+                    bottomInnerBtn.addEventListener('click', function () {
+                        scrollToBottom();
+                        if (autoScrollSwitch) autoScrollSwitch.checked = true;
+                    });
+                }
+            }
+
+            // Auto-refresh timer
+            function startAutoRefresh() {
+                stopAutoRefresh();
+                if (autoRefreshSwitch && autoRefreshSwitch.checked) {
+                    logAutoRefreshTimer = setInterval(() => {
+                        fetchLogs(true);
+                    }, 5000);
+                }
+            }
+
+            function stopAutoRefresh() {
+                if (logAutoRefreshTimer) {
+                    clearInterval(logAutoRefreshTimer);
+                    logAutoRefreshTimer = null;
+                }
+            }
+
+            if (autoRefreshSwitch) {
+                autoRefreshSwitch.addEventListener('change', function () {
+                    if (this.checked) {
+                        startAutoRefresh();
+                        fetchLogs(true);
+                    } else {
+                        stopAutoRefresh();
+                    }
+                });
+            }
+
+            // Start initial logs load & auto-refresh
+            fetchLogs(false);
+            startAutoRefresh();
+        }
+
+        initLogViewer();
     }
 
     if (document.readyState === 'loading') {

@@ -36,5 +36,21 @@ class TestSettingsApi(unittest.TestCase):
         self.assertTrue(data.get('ok'))
         self.assertIn('export', data)
 
+    def test_logs_endpoint(self):
+        self._login()
+        resp = self.client.get('/settings/api/logs?lines=20')
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertTrue(data.get('ok'))
+        self.assertIn('lines', data)
+        self.assertIn('total_lines', data)
+        self.assertIn('file_size_formatted', data)
+
+    def test_logs_download_endpoint(self):
+        self._login()
+        resp = self.client.get('/settings/api/logs/download')
+        # Either 200 with text/plain attachment, or 404 if log file does not exist yet
+        self.assertIn(resp.status_code, [200, 404])
+
 if __name__ == '__main__':
     unittest.main()
