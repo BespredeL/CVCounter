@@ -197,3 +197,52 @@ def schedule_server_restart(
     thread.start()
 
     return True, "Server restart scheduled successfully"
+
+
+def execute_process_shutdown() -> None:
+    """
+    Terminate the server application process cleanly.
+    """
+    logger = Logger()
+    logger.info("Executing server shutdown...")
+    os._exit(0)
+
+
+def schedule_server_shutdown(
+    context: Optional[Dict[str, Any]] = None,
+    delay: float = 0.8,
+    execute: bool = True
+) -> Tuple[bool, str]:
+    """
+    Schedule a graceful server shutdown with an initial delay to allow
+    the HTTP response to be flushed to the client.
+
+    Args:
+        context (dict, optional): Application context.
+        delay (float): Seconds to delay before initiating shutdown.
+        execute (bool): Whether to actually terminate the process (False for dry-run/testing).
+
+    Returns:
+        tuple: (success: bool, message: str)
+    """
+    if context is None:
+        context = get_app_context()
+
+    if not is_web_control_allowed(context):
+        return False, "Server control via web interface is disabled in configuration"
+
+    def _worker():
+        time.sleep(max(0.1, delay))
+        try:
+            cleanup_app_resources(context)
+        except Exception as e:
+            Logger().error(f"Error during pre-shutdown cleanup: {e}")
+
+        if execute:
+            execute_process_shutdown()
+
+    thread = threading.Thread(target=_worker, daemon=True, name="ServerShutdownWorker")
+    thread.start()
+
+    return True, "Server shutdown scheduled successfully"
+

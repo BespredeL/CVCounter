@@ -884,7 +884,6 @@
     "Collapse all": "Collapse all",
     "Expand all": "Expand all",
     "Class ID": "Class ID",
-    "Class name": "Class name",
     "Russian": "Russian",
     "English": "English",
     "Configure counting polygon": "Configure counting polygon",
@@ -965,5 +964,14 @@
     "Are you sure you want to restart the application server? Video streams and active connections will be temporarily interrupted.": "Are you sure you want to restart the application server? Video streams and active connections will be temporarily interrupted.",
     "Server control via web interface is disabled in configuration": "Server control via web interface is disabled in configuration",
     "Server restart initiated. The page will reload shortly.": "Server restart initiated. The page will reload shortly.",
-    "Failed to initiate server restart": "Failed to initiate server restart"
+    "Failed to initiate server restart": "Failed to initiate server restart",
+    "Stop server": "Stop server",
+    "Server stopped": "Server stopped",
+    "The application server has been shut down. To resume work, start the server process manually.": "The application server has been shut down. To resume work, start the server process manually.",
+    "Are you sure you want to stop the application server? Web interface access and video streams will be terminated. A manual start will be required.": "Are you sure you want to stop the application server? Web interface access and video streams will be terminated. A manual start will be required.",
+    "Failed to initiate server shutdown": "Failed to initiate server shutdown",
+    "Server shutdown initiated. The application process will stop.": "Server shutdown initiated. The application process will stop.",
+    "Server shutdown scheduled successfully": "Server shutdown scheduled successfully",
+    "Server control": "Server control",
+    "Diagnostics data": "Diagnostics data"
 }

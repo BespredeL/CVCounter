@@ -1,7 +1,7 @@
 {
     "Active": "Активно",
     "Disabled": "Отключено",
-    "Class name": "Имя класса",
+    "Class name": "Название класса",
     "Loading...": "Загрузка...",
     "Load classes from model": "Загрузить классы из модели",
     "Enable all": "Включить все",
@@ -884,7 +884,6 @@
     "Collapse all": "Свернуть все",
     "Expand all": "Развернуть все",
     "Class ID": "ID класса",
-    "Class name": "Название класса",
     "Russian": "Русский",
     "English": "Английский",
     "Configure counting polygon": "Настроить полигон подсчета",
@@ -962,8 +961,17 @@
     "Restart": "Перезапустить",
     "Restarting server...": "Перезапуск сервера...",
     "Please wait, the server is restarting. This page will reload automatically.": "Пожалуйста, подождите, выполняется перезапуск сервера. Страница обновится автоматически.",
-    "Are you sure you want to restart the application server? Video streams and active connections will be temporarily interrupted.": "Вы уверены, что хотите перезапустить сервер приложения? Видеопотоки и активные соединения будут кратковременно перезапущены.",
+    "Are you sure you want to restart the application server? Video streams and active connections will be temporarily interrupted.": "Вы уверены, что хотите перезапустить сервер приложения? Видеопотоки и активные соединения будут остановлены.",
     "Server control via web interface is disabled in configuration": "Управление сервером через веб-интерфейс отключено в конфигурации",
     "Server restart initiated. The page will reload shortly.": "Перезапуск сервера запущен. Страница скоро обновится.",
-    "Failed to initiate server restart": "Не удалось запустить перезапуск сервера"
+    "Failed to initiate server restart": "Не удалось запустить перезапуск сервера",
+    "Stop server": "Остановить сервер",
+    "Server stopped": "Сервер остановлен",
+    "The application server has been shut down. To resume work, start the server process manually.": "Сервер приложения успешно остановлен. Для возобновления работы запустите сервер вручную.",
+    "Are you sure you want to stop the application server? Web interface access and video streams will be terminated. A manual start will be required.": "Вы уверены, что хотите остановить сервер приложения? Доступ к веб-интерфейсу и видеопотокам будет прекращен. Для запуска потребуется ручной старт.",
+    "Failed to initiate server shutdown": "Не удалось инициировать остановку сервера",
+    "Server shutdown initiated. The application process will stop.": "Инициирована остановка сервера. Процесс приложения будет завершен.",
+    "Server shutdown scheduled successfully": "Остановка сервера успешно запланирована",
+    "Server control": "Управление сервером",
+    "Diagnostics data": "Данные диагностики"
 }

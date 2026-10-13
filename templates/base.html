@@ -252,6 +252,20 @@
 </div>
 <!-- END: Server restart modal -->
 
+<!-- START: Server shutdown modal -->
+<div class="modal fade" id="server-shutdown-modal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content text-center p-4 shadow-lg border-0">
+            <div class="my-3 text-danger">
+                <i class="bi bi-power" style="font-size: 3rem;"></i>
+            </div>
+            <h5 class="fw-bold mb-2">{{ trans('Server stopped') }}</h5>
+            <p class="text-body-secondary small mb-0">{{ trans('The application server has been shut down. To resume work, start the server process manually.') }}</p>
+        </div>
+    </div>
+</div>
+<!-- END: Server shutdown modal -->
+
 <!-- START: Scripts -->
 <script>
     window.APP_I18N = {{ translations|tojson }};

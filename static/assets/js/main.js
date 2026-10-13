@@ -364,12 +364,78 @@ window.restartServer = async function () {
     }, 1500);
 };
 
-// Global click listener for any server restart trigger button
+/**
+ * Trigger graceful application server shutdown via web control
+ */
+window.shutdownServer = async function () {
+    const title = typeof window.trans === "function" ? window.trans("Stop server") : "Stop server";
+    const message = typeof window.trans === "function"
+        ? window.trans("Are you sure you want to stop the application server? Web interface access and video streams will be terminated. A manual start will be required.")
+        : "Are you sure you want to stop the application server? Web interface access and video streams will be terminated. A manual start will be required.";
+    const confirmText = typeof window.trans === "function" ? window.trans("Stop server") : "Stop server";
+    const cancelText = typeof window.trans === "function" ? window.trans("Cancel") : "Cancel";
+
+    const confirmed = await window.appConfirm({
+        title: title,
+        message: message,
+        confirmText: confirmText,
+        cancelText: cancelText,
+        tone: "danger",
+    });
+
+    if (!confirmed) return;
+
+    // Show persistent shutdown modal
+    const shutdownModalEl = document.getElementById("server-shutdown-modal");
+    let bsModal = null;
+    if (shutdownModalEl && window.bootstrap) {
+        bsModal = new bootstrap.Modal(shutdownModalEl, { backdrop: "static", keyboard: false });
+        bsModal.show();
+    } else if (window.appAlert) {
+        window.appAlert({
+            title: title,
+            message: typeof window.trans === "function"
+                ? window.trans("The application server has been shut down. To resume work, start the server process manually.")
+                : "The application server has been shut down. To resume work, start the server process manually.",
+            tone: "danger",
+        });
+    }
+
+    try {
+        const resp = await fetch("/settings/api/shutdown", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || (!data.ok && !data.success)) {
+            if (bsModal) bsModal.hide();
+            await window.appAlert({
+                title: typeof window.trans === "function" ? window.trans("Error") : "Error",
+                message: data.error || (typeof window.trans === "function" ? window.trans("Failed to initiate server shutdown") : "Failed to initiate server shutdown"),
+                tone: "danger",
+            });
+        }
+    } catch (err) {
+        // Expected since the server process terminates
+        console.warn("Shutdown request sent (server is shutting down):", err);
+    }
+};
+
+// Global click listener for server restart / shutdown triggers
 document.addEventListener("click", function (e) {
-    const btn = e.target.closest(".btn-restart-server-trigger");
-    if (btn) {
+    const restartBtn = e.target.closest(".btn-restart-server-trigger");
+    if (restartBtn) {
         e.preventDefault();
         window.restartServer();
+        return;
+    }
+    const shutdownBtn = e.target.closest(".btn-shutdown-server-trigger");
+    if (shutdownBtn) {
+        e.preventDefault();
+        window.shutdownServer();
     }
 });
 

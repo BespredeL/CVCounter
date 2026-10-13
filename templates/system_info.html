@@ -68,26 +68,106 @@
                         {% endif %}
                     </p>
                 {% endif %}
-                <div class="d-flex flex-wrap gap-2">
-                    <button type="button" class="btn btn-outline-success btn-sm" id="btn-run-doctor">
-                        <i class="bi bi-heart-pulse me-1"></i>{{ trans('Run system doctor') }}
-                    </button>
-                    <button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#feedbackModal">
-                        <i class="bi bi-chat-left-dots me-1"></i>{{ trans('Report a problem') }}
-                    </button>
-                    <form method="POST" action="{{ url_for('settings.telemetry_send') }}">
-                        <button type="submit" class="btn btn-outline-warning btn-sm">
-                            <i class="bi bi-cloud-arrow-up me-1"></i>{{ trans('Send diagnostics now') }}
+                <div class="pt-3 mt-1 border-top d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <button type="button"
+                                class="btn btn-success btn-sm d-inline-flex align-items-center gap-1 shadow-sm"
+                                id="btn-run-doctor">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                 class="bi bi-heart-pulse" viewBox="0 0 16 16">
+                                <path d="m8 2.748-.717-.737C5.6.281 2.514.878 1.4 3.053.918 3.995.78 5.323 1.508 7H.43c-2.128-5.697 4.165-8.83 7.394-5.857q.09.083.176.171a3 3 0 0 1 .176-.17c3.23-2.974 9.522.159 7.394 5.856h-1.078c.728-1.677.59-3.005.108-3.947C13.486.878 10.4.28 8.717 2.01zM2.212 10h1.315C4.593 11.183 6.05 12.458 8 13.795c1.949-1.337 3.407-2.612 4.473-3.795h1.315c-1.265 1.566-3.14 3.25-5.788 5-2.648-1.75-4.523-3.434-5.788-5"/>
+                                <path d="M10.464 3.314a.5.5 0 0 0-.945.049L7.921 8.956 6.464 5.314a.5.5 0 0 0-.88-.091L3.732 8H.5a.5.5 0 0 0 0 1H4a.5.5 0 0 0 .416-.223l1.473-2.209 1.647 4.118a.5.5 0 0 0 .945-.049l1.598-5.593 1.457 3.642A.5.5 0 0 0 12 9h3.5a.5.5 0 0 0 0-1h-3.162z"/>
+                            </svg>
+                            <span>{{ trans('Run system doctor') }}</span>
                         </button>
-                    </form>
-                    <a class="btn btn-outline-primary btn-sm"
-                       href="{{ url_for('settings.telemetry_download') }}">
-                        <i class="bi bi-download me-1"></i>{{ trans('Download diagnostics JSON') }}
-                    </a>
+                        <button type="button"
+                                class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1"
+                                data-bs-toggle="modal" data-bs-target="#feedbackModal">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                 class="bi bi-chat-left-dots" viewBox="0 0 16 16">
+                                <path d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4.414A2 2 0 0 0 3 11.586l-2 2V2a1 1 0 0 1 1-1zM2 0a2 2 0 0 0-2 2v12.793a.5.5 0 0 0 .854.353l2.853-2.853A1 1 0 0 1 4.414 12H14a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2z"/>
+                                <path d="M5 6a1 1 0 1 1-2 0 1 1 0 0 1 2 0m4 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0m4 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/>
+                            </svg>
+                            <span>{{ trans('Report a problem') }}</span>
+                        </button>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-primary btn-sm dropdown-toggle d-inline-flex align-items-center gap-1"
+                                    type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                     class="bi bi-cloud-arrow-up" viewBox="0 0 16 16">
+                                    <path fill-rule="evenodd"
+                                          d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708z"/>
+                                    <path d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383m.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z"/>
+                                </svg>
+                                <span>{{ trans('Diagnostics data') }}</span>
+                            </button>
+                            <ul class="dropdown-menu shadow-sm">
+                                <li>
+                                    <form method="POST" action="{{ url_for('settings.telemetry_send') }}" class="m-0">
+                                        <button type="submit"
+                                                class="dropdown-item d-flex align-items-center gap-2 py-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                 fill="currentColor" class="bi bi-send" viewBox="0 0 16 16">
+                                                <path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576zm6.787-8.201L1.591 6.602l4.339 2.76z"/>
+                                            </svg>
+                                            <span>{{ trans('Send diagnostics now') }}</span>
+                                        </button>
+                                    </form>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2"
+                                       href="{{ url_for('settings.telemetry_download') }}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                             fill="currentColor" class="bi bi-download" viewBox="0 0 16 16">
+                                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
+                                            <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/>
+                                        </svg>
+                                        <span>{{ trans('Download diagnostics JSON') }}</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
                     {% if allow_web_control %}
-                        <button type="button" class="btn btn-outline-danger btn-sm btn-restart-server-trigger">
-                            <i class="bi bi-arrow-clockwise me-1"></i>{{ trans('Restart server') }}
-                        </button>
+                        <div class="dropdown ms-auto">
+                            <button class="btn btn-outline-danger btn-sm dropdown-toggle d-inline-flex align-items-center gap-1"
+                                    type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                     class="bi bi-power" viewBox="0 0 16 16">
+                                    <path d="M7.5 1v7h1V1z"/>
+                                    <path d="M3 8.812a5 5 0 0 1 2.578-4.375l-.485-.874A6 6 0 1 0 11 3.616l-.501.865A5 5 0 1 1 3 8.812"/>
+                                </svg>
+                                <span>{{ trans('Server control') }}</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li>
+                                    <button type="button"
+                                            class="dropdown-item d-flex align-items-center gap-2 py-2 btn-restart-server-trigger">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                             fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
+                                            <path fill-rule="evenodd"
+                                                  d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+                                            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
+                                        </svg>
+                                        <span>{{ trans('Restart server') }}</span>
+                                    </button>
+                                </li>
+                                <li>
+                                    <hr class="dropdown-divider my-1">
+                                </li>
+                                <li>
+                                    <button type="button"
+                                            class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger btn-shutdown-server-trigger">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                             fill="currentColor" class="bi bi-power" viewBox="0 0 16 16">
+                                            <path d="M7.5 1v7h1V1z"/>
+                                            <path d="M3 8.812a5 5 0 0 1 2.578-4.375l-.485-.874A6 6 0 1 0 11 3.616l-.501.865A5 5 0 1 1 3 8.812"/>
+                                        </svg>
+                                        <span>{{ trans('Stop server') }}</span>
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
                     {% endif %}
                 </div>
             </div>
@@ -147,7 +227,8 @@
                                 {{ trans('Description of the problem') }} <span class="text-danger">*</span>
                             </label>
                             <textarea class="form-control" id="feedbackComment" name="comment" rows="4"
-                                      placeholder="{{ trans('Describe what happened, what camera or detector model was used...') }}" required></textarea>
+                                      placeholder="{{ trans('Describe what happened, what camera or detector model was used...') }}"
+                                      required></textarea>
                         </div>
                         <div class="mb-3">
                             <label for="feedbackEmail" class="form-label">
@@ -157,14 +238,16 @@
                                    placeholder="name@example.com">
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="includeLogsCheck" name="include_logs" value="1" checked>
+                            <input class="form-check-input" type="checkbox" id="includeLogsCheck" name="include_logs"
+                                   value="1" checked>
                             <label class="form-check-label text-body-secondary small" for="includeLogsCheck">
                                 {{ trans('Include anonymized diagnostics and recent logs') }}
                             </label>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">{{ trans('Cancel') }}</button>
+                        <button type="button" class="btn btn-secondary btn-sm"
+                                data-bs-dismiss="modal">{{ trans('Cancel') }}</button>
                         <button type="submit" class="btn btn-primary btn-sm">
                             <i class="bi bi-send me-1"></i>{{ trans('Send report') }}
                         </button>

@@ -304,3 +304,41 @@ def api_server_restart():
         'delay': 2
     })
 
+
+@settings_bp.route('/settings/api/shutdown', methods=['POST'])
+@settings_bp.route('/api/server/shutdown', methods=['POST'])
+@login_required
+def api_server_shutdown():
+    """
+    Shut down the application server process via web control.
+    Requires authentication and server.allow_web_control to be enabled.
+
+    Returns:
+        Response: JSON status indicating shutdown was scheduled
+    """
+    from system.utils.server_control import is_web_control_allowed, schedule_server_shutdown
+
+    context = get_app_context()
+    if not is_web_control_allowed(context):
+        return jsonify({
+            'ok': False,
+            'success': False,
+            'error': translate('Server control via web interface is disabled in configuration')
+        }), 403
+
+    ok, message = schedule_server_shutdown(context=context, delay=0.8)
+    if not ok:
+        return jsonify({
+            'ok': False,
+            'success': False,
+            'error': translate(message)
+        }), 400
+
+    return jsonify({
+        'ok': True,
+        'success': True,
+        'message': translate('Server shutdown initiated. The application process will stop.'),
+        'delay': 1
+    })
+
+
