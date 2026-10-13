@@ -342,3 +342,144 @@ def api_server_shutdown():
     })
 
 
+# --------------------------------------------------------------------------------
+# AI Runtimes & Model Export APIs
+# --------------------------------------------------------------------------------
+
+@settings_bp.route('/settings/api/runtimes/status', methods=['GET'])
+@login_required
+def api_runtimes_status():
+    """
+    Get current AI runtimes, installed packages, and GPU accelerator status.
+
+    Returns:
+        Response: JSON payload with runtime statuses
+    """
+    from system.utils.runtimes import get_runtime_status, runtime_manager
+
+    status = get_runtime_status()
+    install_job = runtime_manager.get_install_status()
+    return jsonify({
+        'ok': True,
+        'runtimes': status,
+        'install_job': install_job,
+    })
+
+
+@settings_bp.route('/settings/api/runtimes/install', methods=['POST'])
+@login_required
+def api_runtimes_install():
+    """
+    Launch background installation of an AI runtime package bundle.
+
+    Returns:
+        Response: JSON payload with job initiation status
+    """
+    from system.utils.runtimes import runtime_manager
+
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    bundle = (data.get('bundle') or '').strip()
+
+    if not bundle:
+        return jsonify({
+            'ok': False,
+            'error': translate('Bundle name is required')
+        }), 400
+
+    result = runtime_manager.start_install(bundle)
+    status_code = 200 if result.get('ok') else 400
+    return jsonify(result), status_code
+
+
+@settings_bp.route('/settings/api/runtimes/install/status', methods=['GET'])
+@login_required
+def api_runtimes_install_status():
+    """
+    Get current status and live console logs of the runtime package installer.
+
+    Returns:
+        Response: JSON payload with installer status and logs
+    """
+    from system.utils.runtimes import runtime_manager
+
+    return jsonify({
+        'ok': True,
+        'job': runtime_manager.get_install_status()
+    })
+
+
+@settings_bp.route('/settings/api/models/list', methods=['GET'])
+@login_required
+def api_models_list():
+    """
+    List exportable and available models in the project.
+
+    Returns:
+        Response: JSON payload with model files list
+    """
+    from system.utils.model_exporter import model_export_manager
+
+    models = model_export_manager.list_exportable_models()
+    return jsonify({
+        'ok': True,
+        'models': models,
+    })
+
+
+@settings_bp.route('/settings/api/models/export', methods=['POST'])
+@login_required
+def api_models_export():
+    """
+    Start background export of a YOLO model to ONNX or TensorRT Engine.
+
+    Returns:
+        Response: JSON payload with export job launch result
+    """
+    from system.utils.model_exporter import model_export_manager
+
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    weights_path = (data.get('weights') or data.get('weights_path') or '').strip()
+    export_format = (data.get('format') or 'onnx').strip().lower()
+    half = bool(data.get('half', False))
+    imgsz = int(data.get('imgsz') or 640)
+    device = data.get('device') or 'auto'
+    dynamic = bool(data.get('dynamic', False))
+    workspace = int(data.get('workspace') or 4)
+
+    if not weights_path:
+        return jsonify({
+            'ok': False,
+            'error': translate('Weights path is required')
+        }), 400
+
+    result = model_export_manager.start_export(
+        weights_path=weights_path,
+        export_format=export_format,
+        half=half,
+        imgsz=imgsz,
+        device=device,
+        dynamic=dynamic,
+        workspace=workspace,
+    )
+    status_code = 200 if result.get('ok') else 400
+    return jsonify(result), status_code
+
+
+@settings_bp.route('/settings/api/models/export/status', methods=['GET'])
+@login_required
+def api_models_export_status():
+    """
+    Get current status and logs of the YOLO model exporter.
+
+    Returns:
+        Response: JSON payload with export status, progress logs, and result path
+    """
+    from system.utils.model_exporter import model_export_manager
+
+    return jsonify({
+        'ok': True,
+        'export': model_export_manager.get_export_status()
+    })
+
+
+
