@@ -360,6 +360,17 @@
             {% elif value is string and (value|length > 80 or '\n' in value) %}
                 <textarea id="{{ field_id }}" name="{{ field_id }}" rows="3"
                           class="form-control cv-form-control cv-form-control--textarea">{{ value }}</textarea>
+            {% elif key == 'weights_path' %}
+                <div class="input-group cv-input-group">
+                    <input type="text" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                           class="form-control cv-form-control cv-weights-path-input font-monospace">
+                    <button class="btn btn-outline-primary btn-model-export-trigger px-2.5" type="button"
+                            title="{{ trans('Optimize & Export Model (ONNX / TensorRT)') }}"
+                            data-weights-input-id="{{ field_id }}">
+                        <i class="bi bi-magic me-1"></i>
+                        <span>{{ trans('Export') }}</span>
+                    </button>
+                </div>
             {% else %}
                 <input type="text" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
                        class="form-control cv-form-control">

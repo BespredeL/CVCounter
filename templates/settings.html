@@ -289,6 +289,142 @@
             </div>
         </div>
     </div>
+
+    <!-- START: Model Export & Optimization Modal -->
+    <div class="modal fade" id="modelExportModal" tabindex="-1" aria-labelledby="modelExportModalLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header">
+                    <h5 class="modal-title d-flex align-items-center gap-2" id="modelExportModalLabel">
+                        <i class="bi bi-magic text-primary"></i>
+                        <span>{{ trans('Optimize & Export Model') }}</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="btn-close-export-modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Source weights field -->
+                    <div class="mb-3">
+                        <label for="exportSourceWeights" class="form-label fw-semibold small text-body-secondary mb-1">
+                            {{ trans('Source Model Weights (.pt)') }} <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="text" class="form-control font-monospace" id="exportSourceWeights" placeholder="config/ultralytics/models/yolov8n.pt" required>
+                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="btn-dropdown-models">
+                                {{ trans('Choose Model') }}
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" id="exportModelsDropdownList" style="max-height: 250px; overflow-y: auto;">
+                                <li><span class="dropdown-item-text text-body-secondary small">{{ trans('Loading models...') }}</span></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Target format radio pills -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-body-secondary mb-2 d-block">
+                            {{ trans('Target Format') }}
+                        </label>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label class="card h-100 p-2.5 border cursor-pointer target-format-card" for="exportFormatOnnx" style="cursor: pointer;">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <input class="form-check-input mt-0" type="radio" name="exportFormatRadio" id="exportFormatOnnx" value="onnx" checked>
+                                        <div>
+                                            <div class="fw-bold d-flex align-items-center gap-1">
+                                                <i class="bi bi-box text-primary"></i> ONNX (.onnx)
+                                            </div>
+                                            <div class="small text-body-secondary" style="font-size: 0.78rem;">
+                                                {{ trans('Cross-platform inference (CPU, DirectML, CUDA). Portable.') }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="card h-100 p-2.5 border cursor-pointer target-format-card" for="exportFormatEngine" style="cursor: pointer;">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <input class="form-check-input mt-0" type="radio" name="exportFormatRadio" id="exportFormatEngine" value="engine">
+                                        <div>
+                                            <div class="fw-bold d-flex align-items-center gap-1">
+                                                <i class="bi bi-lightning-charge text-warning"></i> TensorRT Engine (.engine)
+                                            </div>
+                                            <div class="small text-body-secondary" style="font-size: 0.78rem;">
+                                                {{ trans('Maximum speed on NVIDIA GPU. Hardware-specific compiled engine.') }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dependency warning / installation alert -->
+                    <div id="exportDependencyAlert" class="alert alert-warning py-2 px-3 small d-none align-items-center justify-content-between mb-3" role="alert">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <span id="exportDependencyMsg"></span>
+                        </div>
+                        <a href="{{ url_for('settings.system_info') }}" target="_blank" class="btn btn-warning btn-sm py-0 px-2 fw-semibold">
+                            {{ trans('Go to System Info') }}
+                        </a>
+                    </div>
+
+                    <!-- Optimization options accordion -->
+                    <div class="accordion mb-3" id="exportOptionsAccordion">
+                        <div class="accordion-item border">
+                            <h2 class="accordion-header" id="headingExportOpts">
+                                <button class="accordion-button collapsed py-2 px-3 small fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseExportOpts" aria-expanded="false" aria-controls="collapseExportOpts">
+                                    <i class="bi bi-sliders me-2"></i>{{ trans('Advanced Export Options (FP16, Image Size)') }}
+                                </button>
+                            </h2>
+                            <div id="collapseExportOpts" class="accordion-collapse collapse" aria-labelledby="headingExportOpts" data-bs-parent="#exportOptionsAccordion">
+                                <div class="accordion-body py-2.5 px-3">
+                                    <div class="row g-2">
+                                        <div class="col-md-6">
+                                            <div class="form-check form-switch pt-1">
+                                                <input class="form-check-input" type="checkbox" role="switch" id="exportHalfFp16" checked>
+                                                <label class="form-check-label small fw-semibold" for="exportHalfFp16">
+                                                    {{ trans('FP16 Half Precision') }}
+                                                </label>
+                                                <div class="text-body-secondary small" style="font-size: 0.75rem;">
+                                                    {{ trans('Significantly accelerates inference on modern GPUs') }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="exportImgSize" class="form-label small fw-semibold mb-1">{{ trans('Image Size (px)') }}</label>
+                                            <input type="number" class="form-control form-control-sm font-monospace" id="exportImgSize" value="640" min="128" max="1920" step="32">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Terminal log container -->
+                    <div id="exportProgressSection" class="d-none">
+                        <div class="d-flex align-items-center justify-content-between mb-1.5">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="spinner-border spinner-border-sm text-primary" id="exportSpinner" role="status"></span>
+                                <span class="small fw-semibold" id="exportStatusBadge">{{ trans('Exporting model...') }}</span>
+                            </div>
+                        </div>
+                        <pre class="bg-dark text-light p-3 rounded mb-0" id="exportLogTerminal"
+                             style="max-height: 220px; overflow-y: auto; font-family: monospace; font-size: 0.8rem; white-space: pre-wrap; line-height: 1.35;"></pre>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" id="btn-cancel-export">{{ trans('Close') }}</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-start-export">
+                        <i class="bi bi-play-fill me-1"></i>{{ trans('Start Export') }}
+                    </button>
+                    <button type="button" class="btn btn-success btn-sm d-none" id="btn-apply-exported-model">
+                        <i class="bi bi-check2-circle me-1"></i>{{ trans('Use this exported model') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- END: Model Export & Optimization Modal -->
 {% endblock %}
 
 {% block footer_assets %}
@@ -683,6 +819,270 @@
                     btn.innerHTML = origContent;
                 }
             });
+
+            // --- Model Export & Optimization Modal Logic ---
+            var exportModalEl = document.getElementById('modelExportModal');
+            if (exportModalEl) {
+                var exportModal = new bootstrap.Modal(exportModalEl);
+                var exportSourceInput = document.getElementById('exportSourceWeights');
+                var exportDropdownList = document.getElementById('exportModelsDropdownList');
+                var exportFormatRadios = document.querySelectorAll('input[name="exportFormatRadio"]');
+                var exportHalfCheckbox = document.getElementById('exportHalfFp16');
+                var exportImgSizeInput = document.getElementById('exportImgSize');
+                var exportDepAlert = document.getElementById('exportDependencyAlert');
+                var exportDepMsg = document.getElementById('exportDependencyMsg');
+                var btnStartExport = document.getElementById('btn-start-export');
+                var btnCancelExport = document.getElementById('btn-cancel-export');
+                var btnCloseExportModal = document.getElementById('btn-close-export-modal');
+                var btnApplyExported = document.getElementById('btn-apply-exported-model');
+                var exportProgressSec = document.getElementById('exportProgressSection');
+                var exportLogTerminal = document.getElementById('exportLogTerminal');
+                var exportStatusBadge = document.getElementById('exportStatusBadge');
+                var exportSpinner = document.getElementById('exportSpinner');
+
+                var activeTargetInput = null;
+                var exportPollInterval = null;
+                var cachedRuntimes = null;
+                var lastExportedPath = null;
+
+                function getSelectedFormat() {
+                    var checked = document.querySelector('input[name="exportFormatRadio"]:checked');
+                    return checked ? checked.value : 'onnx';
+                }
+
+                function checkDependencies() {
+                    if (!cachedRuntimes) return;
+                    var fmt = getSelectedFormat();
+                    var gpu = cachedRuntimes.gpu || {};
+                    var onnx = cachedRuntimes.onnx || {};
+                    var trt = cachedRuntimes.tensorrt || {};
+
+                    exportDepAlert.classList.add('d-none');
+                    btnStartExport.disabled = false;
+
+                    if (fmt === 'engine') {
+                        if (!gpu.has_nvidia_gpu) {
+                            exportDepMsg.textContent = "{{ trans('TensorRT Engine export requires an NVIDIA GPU, none was detected.') }}";
+                            exportDepAlert.classList.remove('d-none');
+                            btnStartExport.disabled = true;
+                        } else if (!trt.export_ready) {
+                            exportDepMsg.textContent = "{{ trans('Package tensorrt is not installed. Please install it on the System Info page.') }}";
+                            exportDepAlert.classList.remove('d-none');
+                        }
+                    } else if (fmt === 'onnx') {
+                        if (!onnx.export_ready) {
+                            exportDepMsg.textContent = "{{ trans('Package onnx is not installed. Please install it on the System Info page.') }}";
+                            exportDepAlert.classList.remove('d-none');
+                        }
+                    }
+                }
+
+                exportFormatRadios.forEach(function (radio) {
+                    radio.addEventListener('change', checkDependencies);
+                });
+
+                function loadAvailableModels() {
+                    if (!exportDropdownList) return;
+                    exportDropdownList.innerHTML = '<li><span class="dropdown-item-text text-body-secondary small">{{ trans('Loading models...') }}</span></li>';
+
+                    fetch('{{ url_for("settings.api_models_list") }}')
+                        .then(function (res) { return res.json(); })
+                        .then(function (data) {
+                            if (!data.ok || !data.models || data.models.length === 0) {
+                                exportDropdownList.innerHTML = '<li><span class="dropdown-item-text text-body-secondary small">{{ trans('No .pt models found') }}</span></li>';
+                                return;
+                            }
+                            var itemsHtml = '';
+                            data.models.forEach(function (m) {
+                                itemsHtml += '<li><button class="dropdown-item py-1.5 px-3 small d-flex align-items-center justify-content-between btn-select-model" type="button" data-path="' + escapeHtml(m.path) + '">' +
+                                    '<span class="fw-semibold font-monospace">' + escapeHtml(m.name) + '</span>' +
+                                    '<span class="badge bg-light text-dark ms-2 font-monospace">' + m.size_mb + ' MB</span>' +
+                                    '</button></li>';
+                            });
+                            exportDropdownList.innerHTML = itemsHtml;
+
+                            exportDropdownList.querySelectorAll('.btn-select-model').forEach(function (btn) {
+                                btn.addEventListener('click', function () {
+                                    var p = this.getAttribute('data-path');
+                                    if (p && exportSourceInput) exportSourceInput.value = p;
+                                });
+                            });
+                        })
+                        .catch(function () {
+                            exportDropdownList.innerHTML = '<li><span class="dropdown-item-text text-danger small">{{ trans('Failed to load models list') }}</span></li>';
+                        });
+                }
+
+                function fetchRuntimesStatus() {
+                    fetch('{{ url_for("settings.api_runtimes_status") }}')
+                        .then(function (res) { return res.json(); })
+                        .then(function (data) {
+                            if (data.ok && data.runtimes) {
+                                cachedRuntimes = data.runtimes;
+                                checkDependencies();
+                            }
+                        })
+                        .catch(function () {});
+                }
+
+                // Open modal trigger
+                document.addEventListener('click', function (e) {
+                    var trigger = e.target.closest('.btn-model-export-trigger');
+                    if (!trigger) return;
+
+                    var inputId = trigger.getAttribute('data-weights-input-id');
+                    var targetInput = inputId ? document.getElementById(inputId) : null;
+                    if (!targetInput) {
+                        var container = trigger.closest('.input-group') || trigger.closest('.cv-form-field');
+                        targetInput = container ? container.querySelector('input') : null;
+                    }
+
+                    activeTargetInput = targetInput;
+                    var currentVal = targetInput ? (targetInput.value || '').trim() : '';
+
+                    if (exportSourceInput) {
+                        exportSourceInput.value = currentVal;
+                    }
+
+                    exportProgressSec.classList.add('d-none');
+                    btnApplyExported.classList.add('d-none');
+                    btnStartExport.classList.remove('d-none');
+                    btnStartExport.disabled = false;
+                    btnCancelExport.disabled = false;
+                    btnCloseExportModal.disabled = false;
+                    lastExportedPath = null;
+
+                    loadAvailableModels();
+                    fetchRuntimesStatus();
+                    exportModal.show();
+                });
+
+                // Start export handler
+                if (btnStartExport) {
+                    btnStartExport.addEventListener('click', function () {
+                        var weightsVal = exportSourceInput ? exportSourceInput.value.trim() : '';
+                        if (!weightsVal) {
+                            alert("{{ trans('Please specify the source weights path.') }}");
+                            if (exportSourceInput) exportSourceInput.focus();
+                            return;
+                        }
+
+                        var fmt = getSelectedFormat();
+                        var half = exportHalfCheckbox ? exportHalfCheckbox.checked : false;
+                        var imgsz = exportImgSizeInput ? parseInt(exportImgSizeInput.value, 10) || 640 : 640;
+
+                        btnStartExport.disabled = true;
+                        btnCancelExport.disabled = true;
+                        btnCloseExportModal.disabled = true;
+                        btnApplyExported.classList.add('d-none');
+
+                        exportProgressSec.classList.remove('d-none');
+                        exportSpinner.classList.remove('d-none');
+                        exportStatusBadge.textContent = "{{ trans('Starting export...') }}";
+                        exportLogTerminal.textContent = "{{ trans('Submitting export job...') }}\n";
+
+                        fetch('{{ url_for("settings.api_models_export") }}', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                weights: weightsVal,
+                                format: fmt,
+                                half: half,
+                                imgsz: imgsz
+                            })
+                        })
+                        .then(function (res) { return res.json(); })
+                        .then(function (data) {
+                            if (!data.ok) {
+                                exportSpinner.classList.add('d-none');
+                                exportStatusBadge.innerHTML = '<span class="text-danger">{{ trans('Error') }}: ' + escapeHtml(data.error || 'Export failed') + '</span>';
+                                btnStartExport.disabled = false;
+                                btnCancelExport.disabled = false;
+                                btnCloseExportModal.disabled = false;
+                                return;
+                            }
+                            startExportPolling();
+                        })
+                        .catch(function (err) {
+                            exportSpinner.classList.add('d-none');
+                            exportStatusBadge.innerHTML = '<span class="text-danger">{{ trans('Request error') }}: ' + escapeHtml(err.message) + '</span>';
+                            btnStartExport.disabled = false;
+                            btnCancelExport.disabled = false;
+                            btnCloseExportModal.disabled = false;
+                        });
+                    });
+                }
+
+                function startExportPolling() {
+                    if (exportPollInterval) clearInterval(exportPollInterval);
+                    exportPollInterval = setInterval(checkExportStatus, 1500);
+                }
+
+                function checkExportStatus() {
+                    fetch('{{ url_for("settings.api_models_export_status") }}')
+                        .then(function (res) { return res.json(); })
+                        .then(function (data) {
+                            if (!data.ok || !data.export) return;
+                            var exp = data.export;
+
+                            if (exp.logs && exp.logs.length > 0) {
+                                exportLogTerminal.textContent = exp.logs.join('\n');
+                                exportLogTerminal.scrollTop = exportLogTerminal.scrollHeight;
+                            }
+
+                            if (exp.status === 'completed') {
+                                clearInterval(exportPollInterval);
+                                exportPollInterval = null;
+                                exportSpinner.classList.add('d-none');
+                                exportStatusBadge.innerHTML = '<span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i>{{ trans('Export completed!') }}</span>';
+                                btnCancelExport.disabled = false;
+                                btnCloseExportModal.disabled = false;
+                                btnStartExport.classList.add('d-none');
+
+                                if (exp.result_path) {
+                                    lastExportedPath = exp.result_path;
+                                    btnApplyExported.classList.remove('d-none');
+                                }
+                            } else if (exp.status === 'error') {
+                                clearInterval(exportPollInterval);
+                                exportPollInterval = null;
+                                exportSpinner.classList.add('d-none');
+                                exportStatusBadge.innerHTML = '<span class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>{{ trans('Export failed') }}: ' + escapeHtml(exp.error || '') + '</span>';
+                                btnStartExport.disabled = false;
+                                btnCancelExport.disabled = false;
+                                btnCloseExportModal.disabled = false;
+                            }
+                        })
+                        .catch(function () {});
+                }
+
+                // Apply exported model path to input
+                if (btnApplyExported) {
+                    btnApplyExported.addEventListener('click', function () {
+                        if (lastExportedPath && activeTargetInput) {
+                            activeTargetInput.value = lastExportedPath;
+                            // Trigger change event
+                            var event = new Event('change', { bubbles: true });
+                            activeTargetInput.dispatchEvent(event);
+
+                            // Optional: auto-adjust model_type dropdown if present in the same section
+                            var formSection = activeTargetInput.closest('.cv-camera-card') || activeTargetInput.closest('.tab-pane') || activeTargetInput.closest('form');
+                            if (formSection) {
+                                var modelTypeSelect = formSection.querySelector('select[name$="model_type"]');
+                                if (modelTypeSelect) {
+                                    var fmt = getSelectedFormat();
+                                    if (fmt === 'onnx') {
+                                        modelTypeSelect.value = 'onnx';
+                                    } else if (fmt === 'engine') {
+                                        modelTypeSelect.value = 'yolo';
+                                    }
+                                }
+                            }
+                        }
+                        exportModal.hide();
+                    });
+                }
+            }
         })();
     </script>
 {% endblock %}
