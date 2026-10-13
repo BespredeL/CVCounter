@@ -293,107 +293,127 @@
     <!-- START: Model Export & Optimization Modal -->
     <div class="modal fade" id="modelExportModal" tabindex="-1" aria-labelledby="modelExportModalLabel" aria-hidden="true" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content shadow-lg border-0">
-                <div class="modal-header">
-                    <h5 class="modal-title d-flex align-items-center gap-2" id="modelExportModalLabel">
-                        <i class="bi bi-magic text-primary"></i>
-                        <span>{{ trans('Optimize & Export Model') }}</span>
-                    </h5>
+            <div class="modal-content shadow-lg border-0" style="border-radius: var(--cv-radius, 12px);">
+                <div class="modal-header border-bottom">
+                    <div>
+                        <h5 class="modal-title d-flex align-items-center gap-2 mb-0" id="modelExportModalLabel">
+                            <i class="bi bi-magic text-primary"></i>
+                            <span>{{ trans('Optimize & Export Model') }}</span>
+                        </h5>
+                        <p class="text-body-secondary small mb-0 mt-1" style="font-size: 0.8rem;">
+                            {{ trans('Export PyTorch (.pt) weights to high-performance inference formats') }}
+                        </p>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="btn-close-export-modal"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body p-3 p-md-4">
                     <!-- Source weights field -->
                     <div class="mb-3">
                         <label for="exportSourceWeights" class="form-label fw-semibold small text-body-secondary mb-1">
                             {{ trans('Source Model Weights (.pt)') }} <span class="text-danger">*</span>
                         </label>
                         <div class="input-group">
-                            <input type="text" class="form-control font-monospace" id="exportSourceWeights" placeholder="config/ultralytics/models/yolov8n.pt" required>
-                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="btn-dropdown-models">
-                                {{ trans('Choose Model') }}
+                            <input type="text" class="form-control font-monospace" id="exportSourceWeights" placeholder="config/ultralytics/models/yolo11m.pt" required>
+                            <button class="btn btn-outline-secondary dropdown-toggle d-inline-flex align-items-center gap-1.5" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="btn-dropdown-models">
+                                <i class="bi bi-folder2-open"></i>
+                                <span>{{ trans('Choose Model') }}</span>
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end" id="exportModelsDropdownList" style="max-height: 250px; overflow-y: auto;">
+                            <ul class="dropdown-menu dropdown-menu-end shadow" id="exportModelsDropdownList" style="max-height: 250px; overflow-y: auto;">
                                 <li><span class="dropdown-item-text text-body-secondary small">{{ trans('Loading models...') }}</span></li>
                             </ul>
                         </div>
+                        <div id="exportWeightsHint" class="form-text small mt-1"></div>
                     </div>
 
-                    <!-- Target format radio pills -->
+                    <!-- Target format cards -->
                     <div class="mb-3">
-                        <label class="form-label fw-semibold small text-body-secondary mb-2 d-block">
-                            {{ trans('Target Format') }}
+                        <label class="form-label fw-semibold small text-body-secondary mb-2 d-flex align-items-center justify-content-between">
+                            <span>{{ trans('Target Format') }}</span>
+                            <span class="badge bg-body-secondary text-body-secondary fw-normal font-monospace" style="font-size: 0.72rem;">YOLO export</span>
                         </label>
                         <div class="row g-2">
                             <div class="col-md-6">
-                                <label class="card h-100 p-2.5 border cursor-pointer target-format-card" for="exportFormatOnnx" style="cursor: pointer;">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <input class="form-check-input mt-0" type="radio" name="exportFormatRadio" id="exportFormatOnnx" value="onnx" checked>
-                                        <div>
-                                            <div class="fw-bold d-flex align-items-center gap-1">
-                                                <i class="bi bi-box text-primary"></i> ONNX (.onnx)
+                                <div class="cv-format-card p-3 h-100 cursor-pointer user-select-none position-relative active" data-format="onnx" id="cardFormatOnnx">
+                                    <input class="d-none" type="radio" name="exportFormatRadio" id="exportFormatOnnx" value="onnx" checked>
+                                    <div class="d-flex align-items-start gap-2.5">
+                                        <div class="format-card-icon rounded-2 p-2 d-flex align-items-center justify-content-center text-primary bg-primary-subtle flex-shrink-0">
+                                            <i class="bi bi-box fs-5"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                                <span class="fw-bold text-body">ONNX</span>
+                                                <span class="badge bg-primary-subtle text-primary font-monospace px-1.5 py-0.5">.onnx</span>
                                             </div>
-                                            <div class="small text-body-secondary" style="font-size: 0.78rem;">
+                                            <p class="small text-body-secondary mb-0" style="font-size: 0.78rem; line-height: 1.35;">
                                                 {{ trans('Cross-platform inference (CPU, DirectML, CUDA). Portable.') }}
-                                            </div>
+                                            </p>
                                         </div>
                                     </div>
-                                </label>
+                                </div>
                             </div>
                             <div class="col-md-6">
-                                <label class="card h-100 p-2.5 border cursor-pointer target-format-card" for="exportFormatEngine" style="cursor: pointer;">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <input class="form-check-input mt-0" type="radio" name="exportFormatRadio" id="exportFormatEngine" value="engine">
-                                        <div>
-                                            <div class="fw-bold d-flex align-items-center gap-1">
-                                                <i class="bi bi-lightning-charge text-warning"></i> TensorRT Engine (.engine)
+                                <div class="cv-format-card p-3 h-100 cursor-pointer user-select-none position-relative" data-format="engine" id="cardFormatEngine">
+                                    <input class="d-none" type="radio" name="exportFormatRadio" id="exportFormatEngine" value="engine">
+                                    <div class="d-flex align-items-start gap-2.5">
+                                        <div class="format-card-icon rounded-2 p-2 d-flex align-items-center justify-content-center text-warning bg-warning-subtle flex-shrink-0">
+                                            <i class="bi bi-lightning-charge fs-5"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                                <span class="fw-bold text-body">TensorRT Engine</span>
+                                                <span class="badge bg-warning-subtle text-warning font-monospace px-1.5 py-0.5">.engine</span>
                                             </div>
-                                            <div class="small text-body-secondary" style="font-size: 0.78rem;">
+                                            <p class="small text-body-secondary mb-0" style="font-size: 0.78rem; line-height: 1.35;">
                                                 {{ trans('Maximum speed on NVIDIA GPU. Hardware-specific compiled engine.') }}
-                                            </div>
+                                            </p>
                                         </div>
                                     </div>
-                                </label>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Dependency warning / installation alert -->
-                    <div id="exportDependencyAlert" class="alert alert-warning py-2 px-3 small d-none align-items-center justify-content-between mb-3" role="alert">
+                    <div id="exportDependencyAlert" class="alert alert-warning py-2.5 px-3 small d-none align-items-center justify-content-between mb-3 rounded-3" role="alert">
                         <div class="d-flex align-items-center gap-2">
-                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <i class="bi bi-exclamation-triangle-fill text-warning flex-shrink-0"></i>
                             <span id="exportDependencyMsg"></span>
                         </div>
-                        <a href="{{ url_for('settings.system_info') }}" target="_blank" class="btn btn-warning btn-sm py-0 px-2 fw-semibold">
-                            {{ trans('Go to System Info') }}
+                        <a href="{{ url_for('settings.system_info') }}" target="_blank" class="btn btn-warning btn-sm py-1 px-2.5 fw-semibold d-inline-flex align-items-center gap-1 flex-shrink-0">
+                            <i class="bi bi-box-arrow-up-right"></i>
+                            <span>{{ trans('Go to System Info') }}</span>
                         </a>
                     </div>
 
-                    <!-- Optimization options accordion -->
-                    <div class="accordion mb-3" id="exportOptionsAccordion">
-                        <div class="accordion-item border">
-                            <h2 class="accordion-header" id="headingExportOpts">
-                                <button class="accordion-button collapsed py-2 px-3 small fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseExportOpts" aria-expanded="false" aria-controls="collapseExportOpts">
-                                    <i class="bi bi-sliders me-2"></i>{{ trans('Advanced Export Options (FP16, Image Size)') }}
-                                </button>
-                            </h2>
-                            <div id="collapseExportOpts" class="accordion-collapse collapse" aria-labelledby="headingExportOpts" data-bs-parent="#exportOptionsAccordion">
-                                <div class="accordion-body py-2.5 px-3">
-                                    <div class="row g-2">
-                                        <div class="col-md-6">
-                                            <div class="form-check form-switch pt-1">
-                                                <input class="form-check-input" type="checkbox" role="switch" id="exportHalfFp16" checked>
-                                                <label class="form-check-label small fw-semibold" for="exportHalfFp16">
-                                                    {{ trans('FP16 Half Precision') }}
-                                                </label>
-                                                <div class="text-body-secondary small" style="font-size: 0.75rem;">
-                                                    {{ trans('Significantly accelerates inference on modern GPUs') }}
-                                                </div>
+                    <!-- Optimization options card -->
+                    <div class="card border rounded-3 mb-3" style="background: var(--cv-surface-elevated, #1e2128); border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
+                        <div class="card-header py-2 px-3 border-0 bg-transparent">
+                            <button class="btn btn-link btn-sm text-decoration-none text-body p-0 d-flex align-items-center justify-content-between w-100" 
+                                    type="button" data-bs-toggle="collapse" data-bs-target="#collapseExportOpts" aria-expanded="false" aria-controls="collapseExportOpts">
+                                <span class="fw-semibold small d-flex align-items-center gap-2">
+                                    <i class="bi bi-sliders text-primary"></i>
+                                    <span>{{ trans('Advanced Export Options (FP16, Image Size)') }}</span>
+                                </span>
+                                <i class="bi bi-chevron-down small text-body-secondary"></i>
+                            </button>
+                        </div>
+                        <div id="collapseExportOpts" class="collapse">
+                            <div class="card-body pt-2 pb-3 px-3 border-top" style="border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch pt-1">
+                                            <input class="form-check-input" type="checkbox" role="switch" id="exportHalfFp16" checked>
+                                            <label class="form-check-label small fw-semibold" for="exportHalfFp16">
+                                                {{ trans('FP16 Half Precision') }}
+                                            </label>
+                                            <div class="text-body-secondary small" style="font-size: 0.75rem;">
+                                                {{ trans('Significantly accelerates inference on modern GPUs') }}
                                             </div>
                                         </div>
-                                        <div class="col-md-6">
-                                            <label for="exportImgSize" class="form-label small fw-semibold mb-1">{{ trans('Image Size (px)') }}</label>
-                                            <input type="number" class="form-control form-control-sm font-monospace" id="exportImgSize" value="640" min="128" max="1920" step="32">
-                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="exportImgSize" class="form-label small fw-semibold mb-1">{{ trans('Image Size (px)') }}</label>
+                                        <input type="number" class="form-control form-control-sm font-monospace" id="exportImgSize" value="640" min="128" max="1920" step="32">
                                     </div>
                                 </div>
                             </div>
@@ -402,23 +422,25 @@
 
                     <!-- Terminal log container -->
                     <div id="exportProgressSection" class="d-none">
-                        <div class="d-flex align-items-center justify-content-between mb-1.5">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
                             <div class="d-flex align-items-center gap-2">
                                 <span class="spinner-border spinner-border-sm text-primary" id="exportSpinner" role="status"></span>
                                 <span class="small fw-semibold" id="exportStatusBadge">{{ trans('Exporting model...') }}</span>
                             </div>
                         </div>
-                        <pre class="bg-dark text-light p-3 rounded mb-0" id="exportLogTerminal"
-                             style="max-height: 220px; overflow-y: auto; font-family: monospace; font-size: 0.8rem; white-space: pre-wrap; line-height: 1.35;"></pre>
+                        <pre class="bg-dark text-light p-3 rounded-3 mb-0" id="exportLogTerminal"
+                             style="max-height: 220px; overflow-y: auto; font-family: monospace; font-size: 0.8rem; white-space: pre-wrap; line-height: 1.35; border: 1px solid var(--cv-border, rgba(255,255,255,0.1));"></pre>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" id="btn-cancel-export">{{ trans('Close') }}</button>
-                    <button type="button" class="btn btn-primary btn-sm" id="btn-start-export">
-                        <i class="bi bi-play-fill me-1"></i>{{ trans('Start Export') }}
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal" id="btn-cancel-export">{{ trans('Close') }}</button>
+                    <button type="button" class="btn btn-primary btn-sm px-3 d-inline-flex align-items-center gap-1.5" id="btn-start-export">
+                        <i class="bi bi-play-fill"></i>
+                        <span>{{ trans('Start Export') }}</span>
                     </button>
-                    <button type="button" class="btn btn-success btn-sm d-none" id="btn-apply-exported-model">
-                        <i class="bi bi-check2-circle me-1"></i>{{ trans('Use this exported model') }}
+                    <button type="button" class="btn btn-success btn-sm px-3 d-none d-inline-flex align-items-center gap-1.5" id="btn-apply-exported-model">
+                        <i class="bi bi-check2-circle"></i>
+                        <span>{{ trans('Use this exported model') }}</span>
                     </button>
                 </div>
             </div>
@@ -825,8 +847,10 @@
             if (exportModalEl) {
                 var exportModal = new bootstrap.Modal(exportModalEl);
                 var exportSourceInput = document.getElementById('exportSourceWeights');
+                var exportWeightsHint = document.getElementById('exportWeightsHint');
                 var exportDropdownList = document.getElementById('exportModelsDropdownList');
                 var exportFormatRadios = document.querySelectorAll('input[name="exportFormatRadio"]');
+                var formatCards = document.querySelectorAll('.cv-format-card');
                 var exportHalfCheckbox = document.getElementById('exportHalfFp16');
                 var exportImgSizeInput = document.getElementById('exportImgSize');
                 var exportDepAlert = document.getElementById('exportDependencyAlert');
@@ -849,6 +873,28 @@
                     var checked = document.querySelector('input[name="exportFormatRadio"]:checked');
                     return checked ? checked.value : 'onnx';
                 }
+
+                function updateFormatCardsVisual(selectedFmt) {
+                    formatCards.forEach(function (card) {
+                        var fmt = card.getAttribute('data-format');
+                        var radio = card.querySelector('input[type="radio"]');
+                        if (fmt === selectedFmt) {
+                            card.classList.add('active');
+                            if (radio) radio.checked = true;
+                        } else {
+                            card.classList.remove('active');
+                            if (radio) radio.checked = false;
+                        }
+                    });
+                }
+
+                formatCards.forEach(function (card) {
+                    card.addEventListener('click', function () {
+                        var fmt = this.getAttribute('data-format');
+                        updateFormatCardsVisual(fmt);
+                        checkDependencies();
+                    });
+                });
 
                 function checkDependencies() {
                     if (!cachedRuntimes) return;
@@ -878,7 +924,10 @@
                 }
 
                 exportFormatRadios.forEach(function (radio) {
-                    radio.addEventListener('change', checkDependencies);
+                    radio.addEventListener('change', function () {
+                        updateFormatCardsVisual(this.value);
+                        checkDependencies();
+                    });
                 });
 
                 function loadAvailableModels() {
@@ -896,7 +945,7 @@
                             data.models.forEach(function (m) {
                                 itemsHtml += '<li><button class="dropdown-item py-1.5 px-3 small d-flex align-items-center justify-content-between btn-select-model" type="button" data-path="' + escapeHtml(m.path) + '">' +
                                     '<span class="fw-semibold font-monospace">' + escapeHtml(m.name) + '</span>' +
-                                    '<span class="badge bg-light text-dark ms-2 font-monospace">' + m.size_mb + ' MB</span>' +
+                                    '<span class="badge bg-body-secondary text-body ms-2 font-monospace">' + m.size_mb + ' MB</span>' +
                                     '</button></li>';
                             });
                             exportDropdownList.innerHTML = itemsHtml;
@@ -904,9 +953,16 @@
                             exportDropdownList.querySelectorAll('.btn-select-model').forEach(function (btn) {
                                 btn.addEventListener('click', function () {
                                     var p = this.getAttribute('data-path');
-                                    if (p && exportSourceInput) exportSourceInput.value = p;
+                                    if (p && exportSourceInput) {
+                                        exportSourceInput.value = p;
+                                        if (exportWeightsHint) exportWeightsHint.textContent = '';
+                                    }
                                 });
                             });
+
+                            if (exportSourceInput && !exportSourceInput.value.trim() && data.models.length > 0) {
+                                exportSourceInput.value = data.models[0].path;
+                            }
                         })
                         .catch(function () {
                             exportDropdownList.innerHTML = '<li><span class="dropdown-item-text text-danger small">{{ trans('Failed to load models list') }}</span></li>';
@@ -940,9 +996,27 @@
                     activeTargetInput = targetInput;
                     var currentVal = targetInput ? (targetInput.value || '').trim() : '';
 
-                    if (exportSourceInput) {
-                        exportSourceInput.value = currentVal;
+                    var convertedVal = currentVal;
+                    var wasCompiled = false;
+                    if (/\.(engine|onnx|trt)$/i.test(currentVal)) {
+                        convertedVal = currentVal.replace(/\.(engine|onnx|trt)$/i, '.pt');
+                        wasCompiled = true;
                     }
+
+                    if (exportSourceInput) {
+                        exportSourceInput.value = convertedVal;
+                    }
+
+                    if (exportWeightsHint) {
+                        if (wasCompiled) {
+                            exportWeightsHint.innerHTML = '<span class="text-info d-flex align-items-center gap-1.5"><i class="bi bi-info-circle-fill"></i><span>{{ trans('Source .pt model suggested for export') }}</span></span>';
+                        } else {
+                            exportWeightsHint.textContent = '';
+                        }
+                    }
+
+                    // Reset selected format to ONNX by default
+                    updateFormatCardsVisual('onnx');
 
                     exportProgressSec.classList.add('d-none');
                     btnApplyExported.classList.add('d-none');

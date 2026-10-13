@@ -4591,6 +4591,40 @@ kbd {
     transform: translateY(-2px);
 }
 
+/* --- Model Export Format Cards --- */
+.cv-format-card {
+    background: var(--cv-surface-elevated, #1e2128);
+    border: 1px solid var(--cv-border, rgba(255, 255, 255, 0.1)) !important;
+    border-radius: var(--cv-radius, 12px);
+    cursor: pointer;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.15s ease, background-color 0.18s ease;
+}
+
+.cv-format-card:hover {
+    border-color: var(--cv-border-strong, rgba(255, 255, 255, 0.22)) !important;
+    background: var(--cv-surface, #232730);
+    transform: translateY(-1px);
+}
+
+.cv-format-card.active[data-format="onnx"] {
+    border-color: var(--bs-primary, #0d6efd) !important;
+    box-shadow: 0 0 0 1px var(--bs-primary, #0d6efd), 0 4px 12px rgba(13, 110, 253, 0.15);
+    background: rgba(13, 110, 253, 0.06);
+}
+
+.cv-format-card.active[data-format="engine"] {
+    border-color: var(--bs-warning, #ffc107) !important;
+    box-shadow: 0 0 0 1px var(--bs-warning, #ffc107), 0 4px 12px rgba(255, 193, 7, 0.15);
+    background: rgba(255, 193, 7, 0.06);
+}
+
+.cv-format-card .format-card-icon {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Base print media styles                                                    */
 /* -------------------------------------------------------------------------- */
