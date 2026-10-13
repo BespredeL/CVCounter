@@ -176,12 +176,13 @@
         <div id="system-doctor-results" class="d-none cv-card p-3 mb-3"></div>
 
         <!-- START: AI Runtimes & Hardware Acceleration Card -->
-        <div class="cv-card mb-3" id="ai-runtimes-card">
+        <div class="cv-card overflow-hidden mb-3" id="ai-runtimes-card">
             <div class="p-3 border-start border-primary border-3">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
                     <div>
                         <h2 class="h5 mb-1 d-flex align-items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="text-primary flex-shrink-0" viewBox="0 0 16 16">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor"
+                                 class="text-primary flex-shrink-0" viewBox="0 0 16 16">
                                 <path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14A2.5 2.5 0 0 1 11.5 14v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0m-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3zM5 5h6v6H5z"/>
                             </svg>
                             <span>{{ trans('AI Runtimes & Hardware Acceleration') }}</span>
@@ -190,9 +191,13 @@
                             {{ trans('Status of inference backends (ONNX, TensorRT, PyTorch) and one-click package installation.') }}
                         </p>
                     </div>
-                    <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1.5" id="btn-refresh-runtimes">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                            <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2"
+                            id="btn-refresh-runtimes">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                             viewBox="0 0 16 16">
+                            <path fill-rule="evenodd"
+                                  d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
                             <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
                         </svg>
                         <span>{{ trans('Refresh') }}</span>
@@ -252,7 +257,8 @@
                 <form method="POST" action="{{ url_for('settings.feedback_send') }}">
                     <div class="modal-header">
                         <h5 class="modal-title d-flex align-items-center gap-2" id="feedbackModalLabel">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="text-info flex-shrink-0" viewBox="0 0 16 16">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                 class="text-info flex-shrink-0" viewBox="0 0 16 16">
                                 <path d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4.414A2 2 0 0 0 3 11.586l-2 2V2a1 1 0 0 1 1-1zM2 0a2 2 0 0 0-2 2v12.793a.5.5 0 0 0 .854.353l2.853-2.853A1 1 0 0 1 4.414 12H14a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2z"/>
                                 <path d="M5 6a1 1 0 1 1-2 0 1 1 0 0 1 2 0m4 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0m4 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/>
                             </svg>
@@ -288,7 +294,8 @@
                         <button type="button" class="btn btn-secondary btn-sm"
                                 data-bs-dismiss="modal">{{ trans('Cancel') }}</button>
                         <button type="submit" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                                 viewBox="0 0 16 16">
                                 <path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576zm6.787-8.201L1.591 6.602l4.339 2.76z"/>
                             </svg>
                             <span>{{ trans('Send report') }}</span>
@@ -301,23 +308,28 @@
     <!-- END: Feedback Modal -->
 
     <!-- START: Runtime Install Modal -->
-    <div class="modal fade" id="runtimeInstallModal" tabindex="-1" aria-labelledby="runtimeInstallModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal fade" id="runtimeInstallModal" tabindex="-1" aria-labelledby="runtimeInstallModalLabel"
+         aria-hidden="true" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content shadow-lg border-0">
                 <div class="modal-header">
                     <h5 class="modal-title d-flex align-items-center gap-2" id="runtimeInstallModalLabel">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="text-primary flex-shrink-0" viewBox="0 0 16 16">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor"
+                             class="text-primary flex-shrink-0" viewBox="0 0 16 16">
                             <path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5 8 5.961 14.154 3.5zm.564 1.426L14.5 4.67v6.66l-5.75 2.3V7.27l5.75-2.3-5.75-2.431zM7.25 7.27v6.36L1.5 11.33V4.67l5.75 2.6zm0-4.731L1.5 4.67 7.25 7.27V2.539z"/>
                         </svg>
                         <span id="installModalTitle">{{ trans('Package Installation') }}</span>
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="btn-close-install-modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+                            id="btn-close-install-modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <div class="d-flex align-items-center gap-2">
-                            <span class="spinner-border spinner-border-sm text-primary" id="installSpinner" role="status"></span>
-                            <span class="fw-semibold" id="installStatusText">{{ trans('Installation in progress...') }}</span>
+                            <span class="spinner-border spinner-border-sm text-primary" id="installSpinner"
+                                  role="status"></span>
+                            <span class="fw-semibold"
+                                  id="installStatusText">{{ trans('Installation in progress...') }}</span>
                         </div>
                         <span class="badge bg-primary" id="installBundleBadge">bundle</span>
                     </div>
@@ -325,10 +337,14 @@
                          style="max-height: 340px; overflow-y: auto; font-family: monospace; font-size: 0.82rem; white-space: pre-wrap; line-height: 1.4;"></pre>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" id="btn-cancel-install">{{ trans('Close') }}</button>
-                    <button type="button" class="btn btn-primary btn-sm d-none d-inline-flex align-items-center gap-1.5" id="btn-refresh-after-install">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                            <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"
+                            id="btn-cancel-install">{{ trans('Close') }}</button>
+                    <button type="button" class="btn btn-primary btn-sm d-none d-inline-flex align-items-center gap-2"
+                            id="btn-refresh-after-install">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                             viewBox="0 0 16 16">
+                            <path fill-rule="evenodd"
+                                  d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
                             <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
                         </svg>
                         <span>{{ trans('Refresh page') }}</span>
@@ -341,312 +357,6 @@
 {% endblock %}
 
 {% block footer_assets %}
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const runtimesContainer = document.getElementById('runtimes-container');
-    const refreshBtn = document.getElementById('btn-refresh-runtimes');
-    const installModal = new bootstrap.Modal(document.getElementById('runtimeInstallModal'));
-    const installLogTerminal = document.getElementById('installLogTerminal');
-    const installStatusText = document.getElementById('installStatusText');
-    const installSpinner = document.getElementById('installSpinner');
-    const installBundleBadge = document.getElementById('installBundleBadge');
-    const installModalTitle = document.getElementById('installModalTitle');
-    const refreshAfterInstallBtn = document.getElementById('btn-refresh-after-install');
-    const closeInstallBtn = document.getElementById('btn-close-install-modal');
-    const cancelInstallBtn = document.getElementById('btn-cancel-install');
-
-    let pollInterval = null;
-
-    function escapeHtml(str) {
-        if (!str) return '';
-        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-
-    function loadRuntimes() {
-        if (!runtimesContainer) return;
-        runtimesContainer.innerHTML = `
-            <div class="col-12 text-center py-3 text-body-secondary">
-                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-                <span>{{ trans('Loading runtime status...') }}</span>
-            </div>
-        `;
-
-        fetch('/settings/api/runtimes/status')
-            .then(res => res.json())
-            .then(data => {
-                if (!data.ok || !data.runtimes) {
-                    runtimesContainer.innerHTML = `<div class="col-12 text-danger">{{ trans('Failed to load runtime information.') }}</div>`;
-                    return;
-                }
-                renderRuntimes(data.runtimes);
-            })
-            .catch(err => {
-                runtimesContainer.innerHTML = `<div class="col-12 text-danger">{{ trans('Error loading runtime information') }}: ${escapeHtml(err.message)}</div>`;
-            });
-    }
-
-    function formatProviders(providers) {
-        if (!providers || !Array.isArray(providers) || providers.length === 0) {
-            return '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">CPU</span>';
-        }
-        return providers.map(p => {
-            if (p === 'TensorrtExecutionProvider') return '<span class="badge bg-warning-subtle text-warning border border-warning-subtle me-1 mb-1">TensorRT</span>';
-            if (p === 'CUDAExecutionProvider') return '<span class="badge bg-success-subtle text-success border border-success-subtle me-1 mb-1">CUDA</span>';
-            if (p === 'DmlExecutionProvider') return '<span class="badge bg-info-subtle text-info border border-info-subtle me-1 mb-1">DirectML</span>';
-            if (p === 'OpenVINOExecutionProvider') return '<span class="badge bg-info-subtle text-info border border-info-subtle me-1 mb-1">OpenVINO</span>';
-            if (p === 'CPUExecutionProvider') return '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle me-1 mb-1">CPU</span>';
-            return `<span class="badge bg-light text-dark border me-1 mb-1">${escapeHtml(p.replace('ExecutionProvider', ''))}</span>`;
-        }).join('');
-    }
-
-    function renderRuntimes(r) {
-        const gpu = r.gpu || {};
-        const pkgs = r.packages || {};
-        const onnx = r.onnx || {};
-        const trt = r.tensorrt || {};
-
-        let cardsHtml = '';
-
-        // 1. GPU & PyTorch CUDA
-        const hasGpu = gpu.has_nvidia_gpu;
-        const cudaOk = gpu.cuda_available;
-        const torchPkg = pkgs.torch || {};
-        cardsHtml += `
-            <div class="col-12 col-md-6 col-xl-3">
-                <div class="card h-100 border rounded-3 p-3 d-flex flex-column" style="background: var(--cv-surface-elevated, #1e2128); border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
-                    <div class="d-flex align-items-center justify-content-between mb-2.5">
-                        <span class="fw-bold d-flex align-items-center gap-1.5 text-body">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="text-success flex-shrink-0" viewBox="0 0 16 16"><path d="M2 2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm12 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM4 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4m6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4"/></svg>
-                            <span>NVIDIA CUDA</span>
-                        </span>
-                        ${cudaOk
-                            ? `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">${escapeHtml(trans('Active'))}</span>`
-                            : `<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">${escapeHtml(trans('CPU Mode'))}</span>`}
-                    </div>
-                    <div class="mb-3">
-                        <p class="small mb-1.5 text-body-secondary">${escapeHtml(trans('Device'))}: <strong class="text-body">${escapeHtml(gpu.device_name || trans('Not detected'))}</strong></p>
-                        <p class="small mb-1.5 text-body-secondary">${escapeHtml(trans('CUDA Version'))}: <strong class="text-body">${escapeHtml(gpu.cuda_version || '-')}</strong></p>
-                        <p class="small mb-0 text-body-secondary">PyTorch: <strong class="text-body">${escapeHtml(torchPkg.version || '-')}</strong></p>
-                    </div>
-                    <div class="pt-2.5 border-top mt-auto" style="border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
-                        <div class="btn btn-sm w-100 disabled d-inline-flex align-items-center justify-content-center gap-1.5 ${cudaOk ? 'btn-outline-success text-success border-success-subtle' : 'btn-outline-secondary text-body-secondary'}" style="pointer-events: none; opacity: 0.95;">
-                            ${cudaOk
-                                ? `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="flex-shrink-0" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>`
-                                : `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="flex-shrink-0" viewBox="0 0 16 16"><path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14A2.5 2.5 0 0 1 11.5 14v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0m-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3zM5 5h6v6H5z"/></svg>`}
-                            <span>${escapeHtml(cudaOk ? trans('CUDA is ready for GPU acceleration') : trans('CPU Mode'))}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // 2. ONNX & ONNX Runtime
-        const onnxPkg = pkgs.onnx || {};
-        const onnxSlimPkg = pkgs.onnxslim || {};
-        const ortPkg = pkgs.onnxruntime || {};
-        const onnxExportReady = onnx.export_ready;
-        cardsHtml += `
-            <div class="col-12 col-md-6 col-xl-3">
-                <div class="card h-100 border rounded-3 p-3 d-flex flex-column" style="background: var(--cv-surface-elevated, #1e2128); border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
-                    <div class="d-flex align-items-center justify-content-between mb-2.5">
-                        <span class="fw-bold d-flex align-items-center gap-1.5 text-body">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="text-primary flex-shrink-0" viewBox="0 0 16 16"><path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5 8 5.961 14.154 3.5zm.564 1.426L14.5 4.67v6.66l-5.75 2.3V7.27l5.75-2.3-5.75-2.431zM7.25 7.27v6.36L1.5 11.33V4.67l5.75 2.6zm0-4.731L1.5 4.67 7.25 7.27V2.539z"/></svg>
-                            <span>ONNX Runtime</span>
-                        </span>
-                        ${ortPkg.installed
-                            ? `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">v${escapeHtml(ortPkg.version || 'OK')}</span>`
-                            : `<span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">${escapeHtml(trans('Not installed'))}</span>`}
-                    </div>
-                    <div class="mb-3">
-                        <div class="small mb-1.5 text-body-secondary d-flex align-items-center gap-1">
-                            <span>${escapeHtml(trans('Export Tools'))}:</span>
-                            <span class="badge ${onnxExportReady ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-danger-subtle text-danger border border-danger-subtle'}">
-                                ${escapeHtml(onnxExportReady ? trans('Ready') : trans('Missing onnx'))}
-                            </span>
-                            ${onnxSlimPkg.installed ? '<span class="badge bg-body-tertiary border text-body-secondary font-monospace" style="font-size: 0.7rem;">slim</span>' : ''}
-                        </div>
-                        <div class="small mb-0 text-body-secondary">
-                            <div class="mb-1">${escapeHtml(trans('Execution Providers'))}:</div>
-                            <div class="d-flex flex-wrap align-items-center pt-0.5">
-                                ${formatProviders(ortPkg.providers)}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="pt-2.5 border-top mt-auto" style="border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
-                        <button type="button" class="btn btn-outline-primary btn-sm w-100 btn-install-bundle d-inline-flex align-items-center justify-content-center gap-1.5" data-bundle="onnx_export">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></svg>
-                            <span>${escapeHtml(onnxExportReady ? trans('Update ONNX Tools') : trans('Install ONNX Tools'))}</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // 3. TensorRT (.engine)
-        const trtPkg = pkgs.tensorrt || {};
-        const trtSupported = trt.supported_on_hardware;
-        const trtReady = trt.export_ready;
-        cardsHtml += `
-            <div class="col-12 col-md-6 col-xl-3">
-                <div class="card h-100 border rounded-3 p-3 d-flex flex-column" style="background: var(--cv-surface-elevated, #1e2128); border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
-                    <div class="d-flex align-items-center justify-content-between mb-2.5">
-                        <span class="fw-bold d-flex align-items-center gap-1.5 text-body">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="text-warning flex-shrink-0" viewBox="0 0 16 16"><path d="M11.251.068a.5.5 0 0 1 .227.58L9.677 6.5H13a.5.5 0 0 1 .364.843l-8 8.5a.5.5 0 0 1-.842-.49L6.323 9.5H3a.5.5 0 0 1-.364-.843l8-8.5a.5.5 0 0 1 .615-.09z"/></svg>
-                            <span>TensorRT</span>
-                        </span>
-                        ${trtPkg.installed
-                            ? `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">v${escapeHtml(trtPkg.version || 'OK')}</span>`
-                            : (trtSupported
-                                ? `<span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">${escapeHtml(trans('Not installed'))}</span>`
-                                : `<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">${escapeHtml(trans('GPU Required'))}</span>`)}
-                    </div>
-                    <div class="mb-3">
-                        <p class="small mb-1.5 text-body-secondary">${escapeHtml(trans('Format'))}: <strong class="text-body font-monospace">.engine / .trt</strong></p>
-                        <p class="small mb-0 text-body-secondary">
-                            ${escapeHtml(trans('Status'))}: 
-                            <strong class="${trtReady ? 'text-success' : (trtSupported ? 'text-warning' : 'text-secondary')}">
-                                ${escapeHtml(trtReady ? trans('Ready for Engine Export') : (trtSupported ? trans('Requires tensorrt package') : trans('NVIDIA GPU required')))}
-                            </strong>
-                        </p>
-                    </div>
-                    <div class="pt-2.5 border-top mt-auto" style="border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
-                        <button type="button" class="btn btn-outline-warning btn-sm w-100 btn-install-bundle d-inline-flex align-items-center justify-content-center gap-1.5" 
-                                data-bundle="tensorrt" ${trtSupported ? '' : 'disabled title="' + escapeHtml(trans('Requires NVIDIA GPU')) + '"'}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M11.251.068a.5.5 0 0 1 .227.58L9.677 6.5H13a.5.5 0 0 1 .364.843l-8 8.5a.5.5 0 0 1-.842-.49L6.323 9.5H3a.5.5 0 0 1-.364-.843l8-8.5a.5.5 0 0 1 .615-.09z"/></svg>
-                            <span>${escapeHtml(trtPkg.installed ? trans('Update TensorRT') : trans('Install TensorRT'))}</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // 4. OpenVINO
-        const ovPkg = pkgs.openvino || {};
-        cardsHtml += `
-            <div class="col-12 col-md-6 col-xl-3">
-                <div class="card h-100 border rounded-3 p-3 d-flex flex-column" style="background: var(--cv-surface-elevated, #1e2128); border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
-                    <div class="d-flex align-items-center justify-content-between mb-2.5">
-                        <span class="fw-bold d-flex align-items-center gap-1.5 text-body">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="text-info flex-shrink-0" viewBox="0 0 16 16"><path d="M8 2a.5.5 0 0 1 .5.5V4a.5.5 0 0 1-1 0V2.5A.5.5 0 0 1 8 2M3.732 3.732a.5.5 0 0 1 .707 0l.707.707a.5.5 0 1 1-.707.707l-.707-.707a.5.5 0 0 1 0-.707M12.268 3.732a.5.5 0 0 1 0 .707l-.707.707a.5.5 0 1 1-.707-.707l.707-.707a.5.5 0 0 1 .707 0M8 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4m-1 2a1 1 0 1 1 2 0 1 1 0 0 1-2 0"/><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-7a7 7 0 0 0-6.058 10.518A7 7 0 1 0 14.058 11.518 7 7 0 0 0 8 1"/></svg>
-                            <span>OpenVINO</span>
-                        </span>
-                        ${ovPkg.installed
-                            ? `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">v${escapeHtml(ovPkg.version || 'OK')}</span>`
-                            : `<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">${escapeHtml(trans('Not installed'))}</span>`}
-                    </div>
-                    <div class="mb-3">
-                        <p class="small mb-1.5 text-body-secondary">${escapeHtml(trans('Acceleration'))}: <strong class="text-body">${escapeHtml(trans('Intel CPU / iGPU'))}</strong></p>
-                        <p class="small mb-0 text-body-secondary">${escapeHtml(trans('Format'))}: <strong class="text-body font-monospace">.xml / .bin</strong></p>
-                    </div>
-                    <div class="pt-2.5 border-top mt-auto" style="border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
-                        <button type="button" class="btn btn-outline-info btn-sm w-100 btn-install-bundle d-inline-flex align-items-center justify-content-center gap-1.5" data-bundle="openvino">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M8 2a.5.5 0 0 1 .5.5V4a.5.5 0 0 1-1 0V2.5A.5.5 0 0 1 8 2M3.732 3.732a.5.5 0 0 1 .707 0l.707.707a.5.5 0 1 1-.707.707l-.707-.707a.5.5 0 0 1 0-.707M12.268 3.732a.5.5 0 0 1 0 .707l-.707.707a.5.5 0 1 1-.707-.707l.707-.707a.5.5 0 0 1 .707 0M8 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4m-1 2a1 1 0 1 1 2 0 1 1 0 0 1-2 0"/><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-7a7 7 0 0 0-6.058 10.518A7 7 0 1 0 14.058 11.518 7 7 0 0 0 8 1"/></svg>
-                            <span>${escapeHtml(ovPkg.installed ? trans('Update OpenVINO') : trans('Install OpenVINO'))}</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        runtimesContainer.innerHTML = cardsHtml;
-
-        // Attach install button listeners
-        document.querySelectorAll('.btn-install-bundle').forEach(btn => {
-            btn.addEventListener('click', function () {
-                const bundle = this.getAttribute('data-bundle');
-                startBundleInstall(bundle);
-            });
-        });
-    }
-
-    function startBundleInstall(bundle) {
-        if (!bundle) return;
-        installBundleBadge.textContent = bundle;
-        installModalTitle.textContent = '{{ trans('Installing') }} ' + bundle;
-        installLogTerminal.textContent = '{{ trans('Initializing pip installation...') }}\n';
-        installStatusText.textContent = '{{ trans('Installation in progress...') }}';
-        installSpinner.classList.remove('d-none');
-        refreshAfterInstallBtn.classList.add('d-none');
-        closeInstallBtn.disabled = true;
-        cancelInstallBtn.disabled = true;
-
-        installModal.show();
-
-        fetch('/settings/api/runtimes/install', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ bundle: bundle }),
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (!data.ok) {
-                installStatusText.textContent = '{{ trans('Error') }}: ' + (data.error || 'Failed to start');
-                installSpinner.classList.add('d-none');
-                closeInstallBtn.disabled = false;
-                cancelInstallBtn.disabled = false;
-                return;
-            }
-            startPolling();
-        })
-        .catch(err => {
-            installStatusText.textContent = '{{ trans('Error') }}: ' + err.message;
-            installSpinner.classList.add('d-none');
-            closeInstallBtn.disabled = false;
-            cancelInstallBtn.disabled = false;
-        });
-    }
-
-    function startPolling() {
-        if (pollInterval) clearInterval(pollInterval);
-        pollInterval = setInterval(checkInstallStatus, 1500);
-    }
-
-    function checkInstallStatus() {
-        fetch('/settings/api/runtimes/install/status')
-            .then(res => res.json())
-            .then(data => {
-                if (!data.ok || !data.job) return;
-                const job = data.job;
-
-                if (job.logs && job.logs.length > 0) {
-                    installLogTerminal.textContent = job.logs.join('\n');
-                    installLogTerminal.scrollTop = installLogTerminal.scrollHeight;
-                }
-
-                if (job.status === 'success') {
-                    clearInterval(pollInterval);
-                    pollInterval = null;
-                    installSpinner.classList.add('d-none');
-                    installStatusText.innerHTML = '<span class="text-success d-inline-flex align-items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg><span>{{ trans('Installation completed successfully!') }}</span></span>';
-                    refreshAfterInstallBtn.classList.remove('d-none');
-                    closeInstallBtn.disabled = false;
-                    cancelInstallBtn.disabled = false;
-                    loadRuntimes();
-                } else if (job.status === 'error') {
-                    clearInterval(pollInterval);
-                    pollInterval = null;
-                    installSpinner.classList.add('d-none');
-                    installStatusText.innerHTML = `<span class="text-danger d-inline-flex align-items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg><span>{{ trans('Installation failed') }}: ${escapeHtml(job.error || '')}</span></span>`;
-                    closeInstallBtn.disabled = false;
-                    cancelInstallBtn.disabled = false;
-                }
-            })
-            .catch(() => {});
-    }
-
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', loadRuntimes);
-    }
-
-    if (refreshAfterInstallBtn) {
-        refreshAfterInstallBtn.addEventListener('click', function () {
-            window.location.reload();
-        });
-    }
-
-    // Initial load
-    loadRuntimes();
-});
-</script>
+    <script src="{{ url_for('static', filename='assets/js/system-info.js') }}"></script>
 {% endblock %}
 
