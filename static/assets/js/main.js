@@ -657,8 +657,9 @@ function initSystemDoctor() {
             renderDoctorResults(container, data, t);
         } catch (err) {
             container.innerHTML = `
-                <div class="alert alert-danger mb-0">
-                    <i class="bi bi-x-circle me-1"></i>${t("Failed to run diagnostics")}: ${err.message}
+                <div class="alert alert-danger mb-0 d-flex align-items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="flex-shrink-0" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293z"/></svg>
+                    <div>${t("Failed to run diagnostics")}: ${err.message}</div>
                 </div>`;
         } finally {
             btn.disabled = false;
@@ -673,24 +674,34 @@ function renderDoctorResults(container, data, t) {
     const alertClass = allOk ? "alert-success" : "alert-warning";
     const headerTitle = allOk ? t("System doctor completed. All checks passed!") : t("System doctor found issues.");
 
+    const icons = {
+        success: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="text-success flex-shrink-0" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>`,
+        error: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="text-danger flex-shrink-0" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293z"/></svg>`,
+        warning: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="text-warning flex-shrink-0" viewBox="0 0 16 16"><path d="M7.938 2.016A.13.13 0 0 1 8.002 2a.13.13 0 0 1 .063.016.15.15 0 0 1 .054.057l6.857 11.667c.036.06.035.124.002.183a.2.2 0 0 1-.054.06.1.1 0 0 1-.066.017H1.146a.1.1 0 0 1-.066-.017.2.2 0 0 1-.054-.06.18.18 0 0 1 .002-.183L7.884 2.073a.15.15 0 0 1 .054-.057zm1.044-.45a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767z"/><path d="M7.002 12a1 1 0 1 1 2 0 1 1 0 0 1-2 0M7.1 5.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0z"/></svg>`,
+        info: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="text-info flex-shrink-0" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2"/></svg>`
+    };
+
     let listHtml = checks.map(c => {
         let badgeClass = "bg-success";
-        let icon = "bi-check-circle-fill text-success";
+        let iconSvg = icons.success;
         if (c.status === "error") {
             badgeClass = "bg-danger";
-            icon = "bi-x-circle-fill text-danger";
+            iconSvg = icons.error;
         } else if (c.status === "warning") {
             badgeClass = "bg-warning text-dark";
-            icon = "bi-exclamation-triangle-fill text-warning";
+            iconSvg = icons.warning;
         } else if (c.status === "info") {
             badgeClass = "bg-info text-dark";
-            icon = "bi-info-circle-fill text-info";
+            iconSvg = icons.info;
         }
         return `
             <li class="list-group-item d-flex justify-content-between align-items-start py-2">
                 <div class="ms-2 me-auto">
-                    <div class="fw-semibold"><i class="bi ${icon} me-1"></i>${t(c.title)}</div>
-                    <small class="text-body-secondary">${t(c.details) || c.details || ""}</small>
+                    <div class="fw-semibold d-flex align-items-center gap-2">
+                        ${iconSvg}
+                        <span>${t(c.title)}</span>
+                    </div>
+                    <small class="text-body-secondary ms-4 d-block">${t(c.details) || c.details || ""}</small>
                 </div>
                 <span class="badge ${badgeClass} rounded-pill text-uppercase">${c.status}</span>
             </li>`;

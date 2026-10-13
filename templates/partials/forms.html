@@ -364,10 +364,12 @@
                 <div class="input-group cv-input-group">
                     <input type="text" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
                            class="form-control cv-form-control cv-weights-path-input font-monospace">
-                    <button class="btn btn-outline-primary btn-model-export-trigger px-2.5" type="button"
+                    <button class="btn btn-outline-primary btn-model-export-trigger px-2.5 d-inline-flex align-items-center" type="button"
                             title="{{ trans('Optimize & Export Model (ONNX / TensorRT)') }}"
                             data-weights-input-id="{{ field_id }}">
-                        <i class="bi bi-magic me-1"></i>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="me-1.5 flex-shrink-0" viewBox="0 0 16 16">
+                            <path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14A2.5 2.5 0 0 1 11.5 14v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0m-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3zM5 5h6v6H5z"/>
+                        </svg>
                         <span>{{ trans('Export') }}</span>
                     </button>
                 </div>
