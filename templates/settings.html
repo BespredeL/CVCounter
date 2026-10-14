@@ -183,7 +183,7 @@
                     <div class="settings-layout__form">
                         <div class="settings-layout__toolbar d-flex flex-wrap justify-content-between align-items-center gap-2 sticky-top">
                             <div class="d-flex align-items-center gap-2 min-w-0">
-                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-inline-flex align-items-center gap-1 px-2.5 py-1.5"
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-inline-flex align-items-center gap-1 px-3 py-2"
                                       id="settings-toolbar-section-badge">
                                     <span id="settings-toolbar-section-icon">{{ section_icon('general') }}</span>
                                     <span id="settings-toolbar-section-title"
@@ -220,7 +220,7 @@
                                         {% if key == 'detections' %}
                                             <div class="d-flex align-items-center gap-2 flex-shrink-0">
                                                 <button type="button"
-                                                        class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 py-1 px-2.5 shadow-xs"
+                                                        class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 py-1 px-3 shadow-xs"
                                                         id="btn-collapse-all-cameras"
                                                         title="{{ trans('Collapse all cameras') }}">
                                                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13"
@@ -232,7 +232,7 @@
                                                     <span>{{ trans('Collapse all') }}</span>
                                                 </button>
                                                 <button type="button"
-                                                        class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 py-1 px-2.5 shadow-xs"
+                                                        class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 py-1 px-3 shadow-xs"
                                                         id="btn-expand-all-cameras"
                                                         title="{{ trans('Expand all cameras') }}">
                                                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13"
@@ -320,7 +320,7 @@
                         <div class="input-group">
                             <input type="text" class="form-control font-monospace" id="exportSourceWeights"
                                    placeholder="config/ultralytics/models/yolo11m.pt" required>
-                            <button class="btn btn-outline-secondary dropdown-toggle d-inline-flex align-items-center gap-1.5"
+                            <button class="btn btn-outline-secondary dropdown-toggle d-inline-flex align-items-center gap-2"
                                     type="button" data-bs-toggle="dropdown" aria-expanded="false"
                                     id="btn-dropdown-models">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor"
@@ -356,8 +356,8 @@
                                         <div class="d-flex align-items-center gap-2">
                                             <span class="format-icon-badge format-icon-badge--onnx d-flex align-items-center justify-content-center">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17"
-                                                     fill="currentColor" viewBox="0 0 16 16">
-                                                    <path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5 8 5.961 14.154 3.5zm.564 1.426L14.5 4.67v6.66l-5.75 2.3V7.27l5.75-2.3-5.75-2.431zM7.25 7.27v6.36L1.5 11.33V4.67l5.75 2.6zm0-4.731L1.5 4.67 7.25 7.27V2.539z"/>
+                                                     fill="currentColor" class="bi bi-box" viewBox="0 0 16 16">
+                                                    <path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5 8 5.961 14.154 3.5zM15 4.239l-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464z"/>
                                                 </svg>
                                             </span>
                                             <span class="fw-bold fs-6 text-body">ONNX</span>
@@ -387,7 +387,8 @@
                                         <div class="d-flex align-items-center gap-2">
                                             <span class="format-icon-badge format-icon-badge--engine d-flex align-items-center justify-content-center">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17"
-                                                     fill="currentColor" viewBox="0 0 16 16">
+                                                     fill="currentColor" class="bi bi-lightning-charge-fill"
+                                                     viewBox="0 0 16 16">
                                                     <path d="M11.251.068a.5.5 0 0 1 .227.58L9.677 6.5H13a.5.5 0 0 1 .364.843l-8 8.5a.5.5 0 0 1-.842-.49L6.323 9.5H3a.5.5 0 0 1-.364-.843l8-8.5a.5.5 0 0 1 .615-.09z"/>
                                                 </svg>
                                             </span>
@@ -414,7 +415,7 @@
 
                     <!-- Dependency warning / installation alert -->
                     <div id="exportDependencyAlert"
-                         class="alert alert-warning py-2.5 px-3 small d-none align-items-center justify-content-between mb-3 rounded-3"
+                         class="alert alert-warning py-3 px-3 small d-none align-items-center justify-content-between mb-3 rounded-3"
                          role="alert">
                         <div class="d-flex align-items-center gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
@@ -424,7 +425,7 @@
                             <span id="exportDependencyMsg"></span>
                         </div>
                         <a href="{{ url_for('settings.system_info') }}" target="_blank"
-                           class="btn btn-warning btn-sm py-1 px-2.5 fw-semibold d-inline-flex align-items-center gap-1.5 flex-shrink-0">
+                           class="btn btn-warning btn-sm py-1 px-3 fw-semibold d-inline-flex align-items-center gap-2 flex-shrink-0">
                             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
                                  viewBox="0 0 16 16">
                                 <path fill-rule="evenodd"
@@ -502,7 +503,7 @@
                 <div class="modal-footer border-top">
                     <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal"
                             id="btn-cancel-export">{{ trans('Close') }}</button>
-                    <button type="button" class="btn btn-primary btn-sm px-3 d-inline-flex align-items-center gap-1.5"
+                    <button type="button" class="btn btn-primary btn-sm px-3 d-inline-flex align-items-center gap-2"
                             id="btn-start-export">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
                              viewBox="0 0 16 16">
@@ -511,7 +512,7 @@
                         <span>{{ trans('Start Export') }}</span>
                     </button>
                     <button type="button"
-                            class="btn btn-success btn-sm px-3 d-none d-inline-flex align-items-center gap-1.5"
+                            class="btn btn-success btn-sm px-3 d-none d-inline-flex align-items-center gap-2"
                             id="btn-apply-exported-model">
                         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor"
                              viewBox="0 0 16 16">

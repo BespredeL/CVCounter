@@ -246,10 +246,10 @@ class ObjectCounter:
                 sleep_time = self.DEFAULT_PAUSED_SLEEP_TIME if self.paused else self.DEFAULT_SLEEP_TIME
                 time.sleep(sleep_time)
             except Exception as e:
-                self.logger.error(f"Lost connection to camera! | {self.location}: {e}")
+                self.logger.error(f"Error processing frame | {self.location}: {e}")
                 self.logger.log_exception()
-                get_telemetry().track('stream_lost', {'location': self.location, 'reason': 'exception'})
-                self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
+                get_telemetry().track('stream_lost', {'location': self.location, 'reason': 'exception', 'error': str(e)})
+                self.notif_manager.notify(trans(f"Counter processing error: {e}"), 'danger')
                 self.notif_manager.event('counter_status', {'status': 'error', 'location': self.location})
                 time.sleep(self.DEFAULT_PAUSED_SLEEP_TIME)
 

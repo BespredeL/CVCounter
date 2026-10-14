@@ -81,6 +81,50 @@ def is_backend_available(model_type: str) -> bool:
     return norm in _REGISTRY
 
 
+def is_tensorrt_available() -> bool:
+    """
+    Check if dependencies for TensorRT inference are installed and usable.
+    """
+    try:
+        import tensorrt  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+def find_fallback_weights(weights: Optional[str]) -> Optional[str]:
+    """
+    Find an alternative weights file (.pt or .onnx) when the requested format
+    (e.g., .engine / .trt) cannot be loaded on the current system.
+    """
+    if not weights:
+        return None
+    p = Path(weights)
+    candidates = []
+    # If Ultralytics / YOLO backend is available, prefer .pt
+    if is_backend_available('yolo'):
+        candidates.append(p.with_suffix('.pt'))
+    # If ONNX Runtime is available, candidate .onnx
+    if is_backend_available('onnx') or is_backend_available('opencv'):
+        candidates.append(p.with_suffix('.onnx'))
+    # Also check general .pt / .onnx
+    candidates.append(p.with_suffix('.pt'))
+    candidates.append(p.with_suffix('.onnx'))
+
+    for cand in candidates:
+        if cand.is_file():
+            return str(cand)
+
+    # If no file with same stem exists, check common default models in the same directory
+    if p.parent.is_dir():
+        for fallback_name in ('yolov8n.pt', 'yolo11n.pt', 'yolo11m.pt', 'yolov8n.onnx', 'yolo11n.onnx'):
+            cand = p.parent / fallback_name
+            if cand.is_file():
+                return str(cand)
+
+    return None
+
+
 def available_model_types() -> list[str]:
     """
     Get a list of model types whose runtime dependencies are currently installed.
@@ -133,7 +177,19 @@ def resolve_model_type(model_type: Optional[str] = None, weights: Optional[str] 
     if ext in ('.xml', '.bin'):
         return 'openvino' if is_backend_available('openvino') else 'opencv'
 
-    if ext in ('.pt', '.pth', '.engine', '.trt'):
+    if ext in ('.pt', '.pth'):
+        return 'yolo'
+
+    if ext in ('.engine', '.trt'):
+        if is_tensorrt_available():
+            return 'yolo'
+        fallback = find_fallback_weights(weights)
+        if fallback:
+            fb_ext = Path(fallback).suffix.lower()
+            if fb_ext in ('.pt', '.pth'):
+                return 'yolo'
+            elif fb_ext == '.onnx':
+                return 'onnx' if is_backend_available('onnx') else 'opencv'
         return 'yolo'
 
     # Fallback when extension is unknown
@@ -179,7 +235,46 @@ def load_detector(model_type: str, weights: str, **kwargs) -> BaseObjectDetectio
     Returns:
         BaseObjectDetectionService: The loaded detector instance.
     """
+    from system.utils.utils import pr_color
+
+    ext = Path(weights).suffix.lower() if weights else ''
+
+    # Guard against .engine / .trt when tensorrt is not installed
+    if ext in ('.engine', '.trt') and not is_tensorrt_available():
+        fallback = find_fallback_weights(weights)
+        if fallback and fallback != weights:
+            pr_color(
+                f"[WARN] Weights '{weights}' is a TensorRT engine, but module 'tensorrt' is not installed. "
+                f"Falling back to '{fallback}'.",
+                'yellow'
+            )
+            weights = fallback
+            if model_type == 'auto' or (model_type or '').strip().lower() in ('yolo', 'ultralytics'):
+                model_type = 'auto'
+        else:
+            raise ModelLoadingError(
+                f"Model '{weights}' requires the 'tensorrt' package and an NVIDIA GPU, but 'tensorrt' is not installed. "
+                f"Please use a .pt or .onnx model."
+            )
+
     resolved_type = resolve_model_type(model_type, weights)
     detector = create_detector(resolved_type)
-    detector.load_model(weights, **kwargs)
+
+    try:
+        detector.load_model(weights, **kwargs)
+    except Exception as e:
+        if ext in ('.engine', '.trt'):
+            fallback = find_fallback_weights(weights)
+            if fallback and fallback != weights:
+                pr_color(
+                    f"[WARN] Failed to load TensorRT engine '{weights}': {e}. "
+                    f"Falling back to '{fallback}'.",
+                    'yellow'
+                )
+                fallback_type = resolve_model_type(model_type, fallback)
+                detector = create_detector(fallback_type)
+                detector.load_model(fallback, **kwargs)
+                return detector
+        raise
+
     return detector

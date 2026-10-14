@@ -252,46 +252,48 @@
         <!-- START: Application Logs Card -->
         <div class="cv-card overflow-hidden mt-3 mb-3" id="system-logs-card">
             <div class="p-3 border-start border-info border-3">
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2.5">
-                    <div>
-                        <h2 class="h5 mb-1 d-flex align-items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor"
-                                 class="text-info flex-shrink-0" viewBox="0 0 16 16">
-                                <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5z"/>
-                                <path d="M4.5 12.5A.5.5 0 0 1 5 12h3a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5m0-2A.5.5 0 0 1 5 10h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5m0-2A.5.5 0 0 1 5 8h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5"/>
-                            </svg>
-                            <span>{{ trans('Application Logs') }}</span>
-                            <span id="log-file-badge" class="badge bg-body-secondary text-body font-monospace fw-normal ms-1" style="font-size: 0.75rem;">cvcounter.log</span>
-                        </h2>
-                        <div class="text-body-secondary small mb-0 d-flex align-items-center gap-2 flex-wrap">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                    <div class="d-flex flex-column gap-1">
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            <h2 class="h5 mb-0 d-flex align-items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor"
+                                     class="text-info flex-shrink-0" viewBox="0 0 16 16">
+                                    <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5z"/>
+                                    <path d="M4.5 12.5A.5.5 0 0 1 5 12h3a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5m0-2A.5.5 0 0 1 5 10h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5m0-2A.5.5 0 0 1 5 8h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5"/>
+                                </svg>
+                                <span>{{ trans('Application Logs') }}</span>
+                            </h2>
+                            <span id="log-file-badge" class="badge bg-body-tertiary text-body-secondary border font-monospace fw-normal" style="font-size: 0.75rem; padding: 0.25rem 0.55rem;">cvcounter.log</span>
+                        </div>
+                        <div class="text-body-secondary small d-flex align-items-center gap-2 flex-wrap">
                             <span>{{ trans('Live log stream from storage/logs/cvcounter.log with filtering and auto-refresh.') }}</span>
-                            <span id="log-meta-info" class="badge bg-body-tertiary text-body-secondary font-monospace border"></span>
+                            <span id="log-meta-info" class="badge bg-body-tertiary text-body-secondary font-monospace border" style="font-size: 0.72rem; padding: 0.2rem 0.5rem;"></span>
                         </div>
                     </div>
                     <!-- Right Actions -->
-                    <div class="d-flex flex-wrap align-items-center gap-1.5">
-                        <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1.5" id="btn-refresh-logs" title="{{ trans('Refresh') }}">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1.5 px-2.5 py-1" id="btn-refresh-logs" title="{{ trans('Refresh') }}">
                             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
                                 <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
                                 <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
                             </svg>
                             <span>{{ trans('Refresh') }}</span>
                         </button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1.5" id="btn-copy-logs" title="{{ trans('Copy logs') }}">
+                        <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1.5 px-2.5 py-1" id="btn-copy-logs" title="{{ trans('Copy logs') }}">
                             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
                                 <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/>
-                                <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/>
+                                <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 1 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/>
                             </svg>
                             <span id="btn-copy-logs-text">{{ trans('Copy') }}</span>
                         </button>
-                        <a href="{{ url_for('settings.api_download_logs') }}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1.5" id="btn-download-logs" title="{{ trans('Download log') }}">
+                        <a href="{{ url_for('settings.api_download_logs') }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1.5 px-2.5 py-1 text-decoration-none" id="btn-download-logs" title="{{ trans('Download log') }}">
                             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
                                 <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
                                 <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/>
                             </svg>
                             <span>{{ trans('Download') }}</span>
                         </a>
-                        <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1.5" id="btn-clear-logs" title="{{ trans('Clear logs') }}">
+                        <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1.5 px-2.5 py-1" id="btn-clear-logs" title="{{ trans('Clear logs') }}">
                             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
                                 <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
                                 <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
@@ -302,48 +304,52 @@
                 </div>
 
                 <!-- Filters toolbar -->
-                <div class="row g-2 align-items-center mb-2.5 pt-2 border-top" style="border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
-                    <div class="col-auto">
-                        <select class="form-select form-select-sm" id="log-level-filter" style="width: auto;">
-                            <option value="">{{ trans('All levels') }}</option>
-                            <option value="INFO">INFO</option>
-                            <option value="WARNING">WARNING</option>
-                            <option value="ERROR">ERROR</option>
-                            <option value="DEBUG">DEBUG</option>
-                        </select>
-                    </div>
-                    <div class="col-auto">
-                        <select class="form-select form-select-sm" id="log-lines-limit" style="width: auto;">
-                            <option value="50">50 {{ trans('lines') }}</option>
-                            <option value="100" selected>100 {{ trans('lines') }}</option>
-                            <option value="250">250 {{ trans('lines') }}</option>
-                            <option value="500">500 {{ trans('lines') }}</option>
-                            <option value="1000">1000 {{ trans('lines') }}</option>
-                        </select>
-                    </div>
-                    <div class="col">
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text bg-body-tertiary border-end-0">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="text-body-secondary" viewBox="0 0 16 16">
-                                    <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
-                                </svg>
-                            </span>
-                            <input type="text" class="form-control border-start-0" id="log-search-input" placeholder="{{ trans('Search logs...') }}">
-                            <button class="btn btn-outline-secondary d-none" type="button" id="log-search-clear">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
-                                    <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/>
-                                </svg>
-                            </button>
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2.5 pt-3 mb-3 border-top" style="border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
+                    <!-- Left: Filters & Search -->
+                    <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1" style="min-width: 0;">
+                        <div style="min-width: 125px;">
+                            <select class="form-select form-select-sm" id="log-level-filter">
+                                <option value="">{{ trans('All levels') }}</option>
+                                <option value="INFO">INFO</option>
+                                <option value="WARNING">WARNING</option>
+                                <option value="ERROR">ERROR</option>
+                                <option value="DEBUG">DEBUG</option>
+                            </select>
+                        </div>
+                        <div style="min-width: 120px;">
+                            <select class="form-select form-select-sm" id="log-lines-limit">
+                                <option value="50">50 {{ trans('lines') }}</option>
+                                <option value="100" selected>100 {{ trans('lines') }}</option>
+                                <option value="250">250 {{ trans('lines') }}</option>
+                                <option value="500">500 {{ trans('lines') }}</option>
+                                <option value="1000">1000 {{ trans('lines') }}</option>
+                            </select>
+                        </div>
+                        <div class="flex-grow-1" style="min-width: 200px; max-width: 380px;">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-body-tertiary border-end-0 text-body-secondary">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+                                    </svg>
+                                </span>
+                                <input type="text" class="form-control border-start-0" id="log-search-input" placeholder="{{ trans('Search logs...') }}">
+                                <button class="btn btn-outline-secondary d-none" type="button" id="log-search-clear" title="{{ trans('Clear') }}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-auto d-flex align-items-center gap-3">
-                        <div class="form-check form-switch m-0 d-flex align-items-center gap-1.5">
-                            <input class="form-check-input mt-0" type="checkbox" role="switch" id="log-auto-refresh" checked>
-                            <label class="form-check-label small user-select-none" for="log-auto-refresh">{{ trans('Auto-refresh') }}</label>
+                    <!-- Right: Auto-refresh and Scroll-to-bottom switches -->
+                    <div class="d-flex align-items-center gap-3 ms-sm-auto flex-shrink-0 pt-1 pt-sm-0">
+                        <div class="form-check form-switch m-0 d-flex align-items-center">
+                            <input class="form-check-input my-0" type="checkbox" role="switch" id="log-auto-refresh" checked style="cursor: pointer;">
+                            <label class="form-check-label small user-select-none text-body-secondary ms-2" for="log-auto-refresh" style="cursor: pointer;">{{ trans('Auto-refresh') }}</label>
                         </div>
-                        <div class="form-check form-switch m-0 d-flex align-items-center gap-1.5">
-                            <input class="form-check-input mt-0" type="checkbox" role="switch" id="log-auto-scroll" checked>
-                            <label class="form-check-label small user-select-none" for="log-auto-scroll">{{ trans('Scroll to bottom') }}</label>
+                        <div class="form-check form-switch m-0 d-flex align-items-center">
+                            <input class="form-check-input my-0" type="checkbox" role="switch" id="log-auto-scroll" checked style="cursor: pointer;">
+                            <label class="form-check-label small user-select-none text-body-secondary ms-2" for="log-auto-scroll" style="cursor: pointer;">{{ trans('Scroll to bottom') }}</label>
                         </div>
                     </div>
                 </div>

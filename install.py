@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-CVCounterWEB - Универсальный автоматический установщик системы.
+CVCounter - Универсальный автоматический установщик системы.
 Автоматически определяет доступное оборудование (NVIDIA GPU, AMD GPU, Intel GPU/CPU)
 и устанавливает все необходимые зависимости для максимального аппаратного ускорения.
 """
@@ -14,13 +14,88 @@ import re
 import argparse
 from pathlib import Path
 
-# Принудительная установка кодировки UTF-8 для вывода в консоль
-if sys.platform == "win32":
+# Настройка консоли Windows для корректного отображения шрифтов и кодировок
+def setup_windows_console():
+    """Настройка Windows консоли: включение UTF-8, TrueType шрифта Consolas и ANSI escape-последовательностей."""
+    if sys.platform != "win32":
+        return
+
+    import ctypes
+    from ctypes import wintypes
+
+    kernel32 = ctypes.windll.kernel32
+
+    # Настройка типов ctypes для 64-бит Windows
+    kernel32.GetStdHandle.restype = wintypes.HANDLE
+    kernel32.GetStdHandle.argtypes = [wintypes.DWORD]
+    kernel32.SetConsoleOutputCP.argtypes = [wintypes.UINT]
+    kernel32.SetConsoleCP.argtypes = [wintypes.UINT]
+    kernel32.CreateFileW.restype = wintypes.HANDLE
+    kernel32.CreateFileW.argtypes = [
+        wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD,
+        ctypes.c_void_p, wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE
+    ]
+
+    # 1. Принудительно включаем кодировку UTF-8 (65001) для вывода и ввода
     try:
-        sys.stdout.reconfigure(encoding='utf-8')
-        sys.stderr.reconfigure(encoding='utf-8')
+        kernel32.SetConsoleOutputCP(65001)
+        kernel32.SetConsoleCP(65001)
     except Exception:
         pass
+
+    # 2. Переключаем шрифт консоли на TrueType Consolas (гарантирует наличие кириллических глифов)
+    try:
+        class COORD(ctypes.Structure):
+            _fields_ = [('X', ctypes.c_short), ('Y', ctypes.c_short)]
+
+        class CONSOLE_FONT_INFOEX(ctypes.Structure):
+            _fields_ = [
+                ('cbSize', wintypes.ULONG),
+                ('nFont', wintypes.DWORD),
+                ('dwFontSize', COORD),
+                ('FontFamily', wintypes.UINT),
+                ('FontWeight', wintypes.UINT),
+                ('FaceName', wintypes.WCHAR * 32)
+            ]
+
+        # Пытаемся применить к CONOUT$ и к StdHandle(-11)
+        for handle_fn in [
+            lambda: kernel32.CreateFileW("CONOUT$", 0x40000000 | 0x80000000, 2, None, 3, 0, None),
+            lambda: kernel32.GetStdHandle(-11)
+        ]:
+            h = handle_fn()
+            if h and h != -1 and h != wintypes.HANDLE(-1).value:
+                info = CONSOLE_FONT_INFOEX()
+                info.cbSize = ctypes.sizeof(CONSOLE_FONT_INFOEX)
+                info.FaceName = "Consolas"
+                info.FontFamily = 54
+                info.FontWeight = 400
+                info.dwFontSize.Y = 16
+                if kernel32.SetCurrentConsoleFontEx(h, False, ctypes.byref(info)):
+                    if handle_fn != (lambda: kernel32.GetStdHandle(-11)):
+                        kernel32.CloseHandle(h)
+                    break
+                kernel32.CloseHandle(h)
+    except Exception:
+        pass
+
+    # 3. Включаем поддержку ANSI escape-последовательностей (цвета в Windows cmd)
+    try:
+        h_out = kernel32.GetStdHandle(-11)
+        mode = wintypes.DWORD()
+        if h_out and kernel32.GetConsoleMode(h_out, ctypes.byref(mode)):
+            kernel32.SetConsoleMode(h_out, mode.value | 0x0004)
+    except Exception:
+        pass
+
+    # 4. Настраиваем потоки Python на UTF-8 с безопасной заменой нераспознанных символов
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
+setup_windows_console()
 
 # Цветовое оформление консоли
 class Colors:
@@ -59,16 +134,16 @@ def pr_step(step: int, total: int, title: str):
     pr("-" * 60, Colors.CYAN)
 
 def pr_ok(text: str):
-    pr(f"  ✓ {text}", Colors.GREEN)
+    pr(f"  [OK] {text}", Colors.GREEN)
 
 def pr_info(text: str):
-    pr(f"  ℹ {text}", Colors.BLUE)
+    pr(f"  [i]  {text}", Colors.BLUE)
 
 def pr_warn(text: str):
-    pr(f"  ⚠ {text}", Colors.YELLOW, bold=True)
+    pr(f"  [!]  {text}", Colors.YELLOW, bold=True)
 
 def pr_err(text: str):
-    pr(f"  ✖ {text}", Colors.RED, bold=True)
+    pr(f"  [X]  {text}", Colors.RED, bold=True)
 
 
 ROOT_DIR = Path(__file__).resolve().parent
@@ -77,6 +152,73 @@ REQUIREMENTS_ULTRALYTICS = ROOT_DIR / "requirements-ultralytics.txt"
 REQUIREMENTS_OPENVINO = ROOT_DIR / "requirements-openvino.txt"
 CONFIG_EXAMPLE = ROOT_DIR / "config" / "config.example.json"
 CONFIG_FILE = ROOT_DIR / "config" / "config.json"
+
+
+# --------------------------------------------------------------------------------
+# Системные компоненты (Visual C++ Redistributable)
+# --------------------------------------------------------------------------------
+
+def ensure_vcredist() -> bool:
+    """Проверка и автоматическая установка Microsoft Visual C++ 2015-2022 Redistributable (x64)."""
+    if sys.platform != "win32":
+        return True
+
+    system_root = os.environ.get("SystemRoot", r"C:\Windows")
+    vc_dll = os.path.join(system_root, "System32", "vcruntime140_1.dll")
+    if os.path.exists(vc_dll):
+        pr_ok("Microsoft Visual C++ 2015-2022 Redistributable (x64) установлен")
+        return True
+
+    pr_warn("Microsoft Visual C++ 2015-2022 Redistributable (x64) не найден!")
+    pr_info("Он необходим для запуска PyTorch (c10.dll) и ONNX Runtime.")
+    pr_info("Запуск автоматической загрузки и установки vc_redist.x64.exe...")
+
+    url = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
+    temp_dir = Path(os.environ.get("TEMP", "."))
+    installer_path = temp_dir / "vc_redist.x64.exe"
+
+    downloaded = False
+    try:
+        import urllib.request
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=40) as response, open(installer_path, 'wb') as out_file:
+            shutil.copyfileobj(response, out_file)
+        if installer_path.exists() and installer_path.stat().st_size > 5_000_000:
+            downloaded = True
+    except Exception as e:
+        pr_warn(f"Загрузка через urllib не удалась ({e}), пробуем curl...")
+
+    if not downloaded:
+        try:
+            res = subprocess.run(["curl.exe", "-fSLo", str(installer_path), url], timeout=60, check=False)
+            if res.returncode == 0 and installer_path.exists() and installer_path.stat().st_size > 5_000_000:
+                downloaded = True
+        except Exception:
+            pass
+
+    if downloaded:
+        try:
+            pr_info("Установка Visual C++ Redistributable в тихом режиме...")
+            subprocess.run([str(installer_path), "/install", "/quiet", "/norestart"], timeout=120, check=False)
+            if not os.path.exists(vc_dll):
+                pr_info("Запрос подтверждения администратора (UAC) для установки...")
+                subprocess.run([str(installer_path), "/install", "/norestart"], timeout=180, check=False)
+
+            if installer_path.exists():
+                try:
+                    installer_path.unlink()
+                except Exception:
+                    pass
+
+            if os.path.exists(vc_dll):
+                pr_ok("Microsoft Visual C++ Redistributable (x64) успешно установлен!")
+                return True
+        except Exception as e:
+            pr_err(f"Ошибка выполнения установщика Visual C++: {e}")
+
+    pr_err("Не удалось автоматически установить Visual C++ Redistributable.")
+    pr_info("Пожалуйста, установите его вручную: https://aka.ms/vs/17/release/vc_redist.x64.exe")
+    return False
 
 
 # --------------------------------------------------------------------------------
@@ -92,13 +234,27 @@ def detect_nvidia_gpu() -> dict:
         "cuda_max": None,
     }
 
-    # Поиск nvidia-smi
+    # Поиск nvidia-smi в PATH, System32, NVSMI и DriverStore (Windows DCH)
     nvidia_smi_cmd = shutil.which("nvidia-smi")
     if not nvidia_smi_cmd and sys.platform == "win32":
-        for possible_path in [
+        candidates = [
             r"C:\Windows\System32\nvidia-smi.exe",
-            r"C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe"
-        ]:
+            r"C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe",
+            r"C:\Windows\SysWOW64\nvidia-smi.exe",
+        ]
+        # Поиск в каталоге хранилища драйверов Windows (DriverStore)
+        ds_root = r"C:\Windows\System32\DriverStore\FileRepository"
+        if os.path.isdir(ds_root):
+            try:
+                for entry in os.scandir(ds_root):
+                    if entry.is_dir() and entry.name.lower().startswith("nv"):
+                        cand = os.path.join(entry.path, "nvidia-smi.exe")
+                        if os.path.isfile(cand):
+                            candidates.append(cand)
+            except Exception:
+                pass
+
+        for possible_path in candidates:
             if os.path.exists(possible_path):
                 nvidia_smi_cmd = possible_path
                 break
@@ -190,12 +346,12 @@ def detect_hardware_profile(force_profile: str = None) -> dict:
         driver = nv.get("driver_version")
         cuda = nv.get("cuda_max")
         # Анализ поддерживаемой версии CUDA
-        cuda_major = 12
+        cuda_major = 12.0
         if cuda:
             try:
                 cuda_major = float(cuda.split()[0])
             except Exception:
-                cuda_major = 12
+                cuda_major = 12.0
 
         return {
             "profile": "nvidia_cuda",
@@ -203,6 +359,18 @@ def detect_hardware_profile(force_profile: str = None) -> dict:
             "driver_version": driver,
             "cuda_version": cuda,
             "cuda_major": cuda_major,
+            "all_gpus": all_gpus
+        }
+
+    # Резервная проверка NVIDIA через список адаптеров (актуально для Windows Sandbox, VM, minimal DCH)
+    if any(k in all_gpus_str for k in ["nvidia", "geforce", "rtx", "gtx", "quadro", "tesla"]):
+        nv_name = next((g for g in all_gpus if any(k in g.lower() for k in ["nvidia", "geforce", "rtx", "gtx", "quadro", "tesla"])), "NVIDIA GeForce GPU")
+        return {
+            "profile": "nvidia_cuda",
+            "name": nv_name,
+            "driver_version": "NVIDIA Windows Driver",
+            "cuda_version": "12.x",
+            "cuda_major": 12.0,
             "all_gpus": all_gpus
         }
 
@@ -304,9 +472,15 @@ def is_package_installed(pkg_name: str) -> bool:
 # --------------------------------------------------------------------------------
 
 def check_python_compatibility():
-    """Проверка совместимости версии Python."""
+    """Проверка совместимости версии Python и изоляции окружения."""
     major, minor = sys.version_info[:2]
     pr_info(f"Текущая версия Python: {sys.version.split()[0]} ({sys.executable})")
+
+    in_venv = sys.prefix != sys.base_prefix
+    if in_venv:
+        pr_ok(f"Изолированное виртуальное окружение: активно ({sys.prefix})")
+    else:
+        pr_warn("Внимание: скрипт запущен вне изолированного окружения (рекомендуется запуск через install.bat)")
 
     if (major, minor) < (3, 10):
         pr_warn(f"Python {major}.{minor} может быть устаревшим. Рекомендуется Python 3.11 для работы с нейросетями.")
@@ -317,22 +491,43 @@ def check_python_compatibility():
         pr_ok(f"Версия Python {major}.{minor} отлично подходит для нейросетей!")
 
 
+def check_torch_cuda_compatibility(hw: dict) -> tuple[bool, str]:
+    """Проверяет, поддерживает ли установленный PyTorch данную видеокарту."""
+    try:
+        import torch
+        if not torch.cuda.is_available():
+            return False, "CUDA недоступна в установленном пакете PyTorch"
+
+        cap = torch.cuda.get_device_capability()
+        target_sm = f"sm_{cap[0]}{cap[1]}"
+        archs = torch.cuda.get_arch_list()
+
+        # Для Blackwell (RTX 50-series: 5070 / 5080 / 5090 - sm_120, sm_100)
+        if cap[0] >= 12 and target_sm not in archs:
+            return False, f"Архитектура {target_sm} ({hw.get('name', 'GPU')}) не поддерживается установленным PyTorch (требуется CUDA 12.8+)"
+
+        # Быстрый пробный запуск тензора на CUDA для проверки отсутствия ошибок драйвера/ядер
+        t = torch.zeros(1, device='cuda')
+        del t
+        return True, f"{torch.__version__} (CUDA {torch.version.cuda}, {target_sm})"
+    except Exception as e:
+        return False, str(e)
+
+
 def install_hardware_pytorch(hw: dict, reinstall: bool = False) -> bool:
     """Установка PyTorch и TorchVision с аппаратным ускорением."""
     profile = hw["profile"]
 
     if not reinstall and is_package_installed("torch"):
-        # Проверим, работает ли уже CUDA, если профиль NVIDIA
         if profile == "nvidia_cuda":
-            try:
-                import torch
-                if torch.cuda.is_available():
-                    pr_ok(f"PyTorch уже установлен с поддержкой CUDA: {torch.__version__} (CUDA {torch.version.cuda})")
-                    return True
-                else:
-                    pr_info("PyTorch установлен, но без поддержки CUDA. Выполняется установка версии с CUDA...")
-            except Exception:
-                pass
+            compatible, desc = check_torch_cuda_compatibility(hw)
+            if compatible:
+                pr_ok(f"PyTorch уже установлен и полностью совместим с GPU: {desc}")
+                return True
+            else:
+                pr_warn(f"Установленный PyTorch несовместим с текущей видеокартой: {desc}")
+                pr_info("Удаление несовместимой сборки PyTorch...")
+                run_pip(["uninstall", "-y", "torch", "torchvision"])
         else:
             pr_ok("PyTorch уже установлен.")
             return True
@@ -341,19 +536,28 @@ def install_hardware_pytorch(hw: dict, reinstall: bool = False) -> bool:
 
     if profile == "nvidia_cuda":
         cuda_major = hw.get("cuda_major", 12)
-        if cuda_major >= 12.0:
-            pr_info(f"Обнаружен драйвер с поддержкой CUDA {hw.get('cuda_version')} -> Установка PyTorch (CUDA 12.4+)...")
-            cmd = ["install", "torch", "torchvision", "--index-url", "https://download.pytorch.org/whl/cu124"]
+        gpu_name = hw.get("name", "").lower()
+        is_blackwell = any(k in gpu_name for k in ["5070", "5080", "5090", "5060", "blackwell", "sm_120", "b100", "b200"])
+
+        if is_blackwell or cuda_major >= 12.0:
+            pr_info(f"Обнаружен видеоадаптер NVIDIA ({hw.get('name')}) -> Установка PyTorch с поддержкой CUDA 12.8+ (RTX 50xx Blackwell / Ada / Ampere)...")
+            cmd = ["install", "--force-reinstall", "torch", "torchvision", "--index-url", "https://download.pytorch.org/whl/cu128"]
+            success = run_pip(cmd, "Установка PyTorch и TorchVision (CUDA 12.8)")
+            if not success and not is_blackwell:
+                pr_warn("Не удалось установить PyTorch через cu128. Пробуем cu124...")
+                cmd = ["install", "--force-reinstall", "torch", "torchvision", "--index-url", "https://download.pytorch.org/whl/cu124"]
+                success = run_pip(cmd, "Установка PyTorch и TorchVision (CUDA 12.4)")
         else:
             pr_info("Установка PyTorch для CUDA 11.8...")
-            cmd = ["install", "torch", "torchvision", "--index-url", "https://download.pytorch.org/whl/cu118"]
+            cmd = ["install", "--force-reinstall", "torch", "torchvision", "--index-url", "https://download.pytorch.org/whl/cu118"]
+            success = run_pip(cmd, "Установка PyTorch и TorchVision (CUDA 11.8)")
     else:
         pr_info("Установка легковесной CPU-версии PyTorch...")
         cmd = ["install", "torch", "torchvision", "--index-url", "https://download.pytorch.org/whl/cpu"]
+        success = run_pip(cmd, "Установка PyTorch и TorchVision")
 
-    success = run_pip(cmd, "Установка PyTorch и TorchVision")
     if not success and profile == "nvidia_cuda":
-        pr_warn("Не удалось установить PyTorch с CUDA через cu124. Пробуем универсальную установку...")
+        pr_warn("Пробуем универсальную установку PyTorch...")
         cmd_fallback = ["install", "torch", "torchvision"]
         success = run_pip(cmd_fallback, "Резервная установка PyTorch")
 
@@ -492,15 +696,26 @@ def verify_installation(hw: dict) -> bool:
 
         if hw["profile"] == "nvidia_cuda":
             if cuda_ok:
-                pr(f"  [OK] PyTorch: {torch_ver} | CUDA Активна: ДА ({device_name})", Colors.GREEN)
+                compatible, desc = check_torch_cuda_compatibility(hw)
+                if not compatible:
+                    pr(f"  [!] PyTorch: {torch_ver} | Видеокарта {device_name} не поддерживается текущей сборкой!", Colors.YELLOW, bold=True)
+                    pr(f"      Причина: {desc}", Colors.YELLOW)
+                    pr("      Рекомендуется: pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128", Colors.YELLOW)
+                    all_ok = False
+                else:
+                    pr(f"  [OK] PyTorch: {torch_ver} | CUDA Активна: ДА ({device_name})", Colors.GREEN)
             else:
-                pr(f"  [ВНИМАНИЕ] PyTorch: {torch_ver} | CUDA: Нет доступа к GPU", Colors.YELLOW)
-                pr("       (Возможно, требуется обновить драйвер NVIDIA или перезагрузить компьютер)", Colors.YELLOW)
+                pr(f"  [!] PyTorch: {torch_ver} | CUDA: Нет доступа к GPU", Colors.YELLOW)
+                pr("      (Возможно, требуется обновить драйвер NVIDIA или перезагрузить компьютер)", Colors.YELLOW)
                 all_ok = False
         else:
             pr(f"  [OK] PyTorch: {torch_ver} (Режим: {device_name})", Colors.GREEN)
     except Exception as e:
+        err_str = str(e)
         pr(f"  [ОШИБКА] PyTorch: {e}", Colors.RED)
+        if "126" in err_str or "c10.dll" in err_str or "vcruntime" in err_str.lower():
+            pr_warn("       -> Причина: отсутствует Microsoft Visual C++ 2015-2022 Redistributable (x64)!")
+            pr_info("       -> Ссылка для установки: https://aka.ms/vs/17/release/vc_redist.x64.exe")
         all_ok = False
 
     # 2. Проверка ONNX Runtime
@@ -517,7 +732,11 @@ def verify_installation(hw: dict) -> bool:
         else:
             pr(f"  [OK] ONNX Runtime: {ort.__version__} | Провайдеры: {prov_str}", Colors.GREEN)
     except Exception as e:
+        err_str = str(e)
         pr(f"  [ОШИБКА] ONNX Runtime: {e}", Colors.RED)
+        if "126" in err_str or "onnxruntime_pybind11_state" in err_str:
+            pr_warn("       -> Причина: отсутствует Microsoft Visual C++ 2015-2022 Redistributable (x64)!")
+            pr_info("       -> Ссылка для установки: https://aka.ms/vs/17/release/vc_redist.x64.exe")
         all_ok = False
 
     # 3. Проверка OpenCV
@@ -574,7 +793,7 @@ def verify_installation(hw: dict) -> bool:
         else:
             pr("  -> ./start.sh  или  venv/bin/python app.py", Colors.YELLOW, bold=True)
         print()
-        pr("  Адрес веб-интерфейса в браузере: http://127.0.0.1:5000  (или http://localhost:8080)", Colors.CYAN)
+        pr("  Адрес веб-интерфейса в браузере: http://127.0.0.1:8080", Colors.CYAN)
         pr("  Логин/пароль по умолчанию: admin / admin (измените в настройках)", Colors.CYAN)
         print()
     else:
@@ -590,7 +809,7 @@ def verify_installation(hw: dict) -> bool:
 # --------------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description="Автоматический установщик CVCounterWEB")
+    parser = argparse.ArgumentParser(description="Автоматический установщик CVCounter")
     parser.add_argument("--profile", choices=["nvidia_cuda", "amd_directml", "intel_openvino", "cpu"], help="Принудительный выбор аппаратного профиля")
     parser.add_argument("--reinstall", action="store_true", help="Переустановить даже существующие пакеты")
     parser.add_argument("--no-color", action="store_true", help="Отключить цветовой вывод")
@@ -601,13 +820,15 @@ def main():
 
     print()
     pr("==================================================================", Colors.CYAN, bold=True)
-    pr("                CVCounterWEB - АВТОМАТИЧЕСКИЙ УСТАНОВЩИК          ", Colors.CYAN, bold=True)
+    pr("                CVCounter - АВТОМАТИЧЕСКИЙ УСТАНОВЩИК          ", Colors.CYAN, bold=True)
     pr("     Интеллектуальная настройка окружения и видеокарты (GPU)      ", Colors.CYAN)
     pr("==================================================================", Colors.CYAN, bold=True)
 
-    # Шаг 1: Проверка Python
-    pr_step(1, 6, "Проверка версии интерпретатора Python")
+    # Шаг 1: Проверка Python и системных библиотек
+    pr_step(1, 6, "Проверка окружения и системных библиотек")
     check_python_compatibility()
+    if sys.platform == "win32":
+        ensure_vcredist()
 
     # Шаг 2: Анализ оборудования и видеокарты
     pr_step(2, 6, "Определение видеокарты и оборудования")

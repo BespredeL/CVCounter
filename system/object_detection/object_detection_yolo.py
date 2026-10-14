@@ -7,6 +7,7 @@
 # Website: https://bespredel.name
 
 import gc
+from pathlib import Path
 from typing import Optional
 from numpy import ndarray
 
@@ -34,6 +35,7 @@ from system.utils.utils import pr_color
 class ObjectDetectionYOLO(BaseObjectDetectionService):
     def __init__(self) -> None:
         self.model = None
+        self.weights = None
         self.confidence = 0.5
         self.iou = 0.7
         self.device = 'cpu'
@@ -61,15 +63,43 @@ class ObjectDetectionYOLO(BaseObjectDetectionService):
         if self.model is None:
             raise ModelNotFoundError('Model is not loaded')
 
-        results = self.model.predict(
-            image,
-            conf=self.confidence,
-            iou=self.iou,
-            device=self.device,
-            vid_stride=self.vid_stride,
-            classes=self.classes_list,
-            verbose=kwargs.get('verbose', self.verbose),
-        )
+        try:
+            results = self.model.predict(
+                image,
+                conf=self.confidence,
+                iou=self.iou,
+                device=self.device,
+                vid_stride=self.vid_stride,
+                classes=self.classes_list,
+                verbose=kwargs.get('verbose', self.verbose),
+            )
+        except Exception as e:
+            if hasattr(self, 'weights') and self.weights and Path(self.weights).suffix.lower() in ('.engine', '.trt'):
+                from system.object_detection.registry import find_fallback_weights
+                fallback = find_fallback_weights(self.weights)
+                if fallback and Path(fallback).suffix.lower() == '.pt':
+                    pr_color(f"[WARN] TensorRT prediction failed ({e}). Falling back to '{fallback}'...", 'yellow')
+                    self.load_model(
+                        fallback,
+                        confidence=self.confidence,
+                        iou=self.iou,
+                        device=self.device,
+                        vid_stride=self.vid_stride,
+                        classes_list=self.classes_list,
+                    )
+                    results = self.model.predict(
+                        image,
+                        conf=self.confidence,
+                        iou=self.iou,
+                        device=self.device,
+                        vid_stride=self.vid_stride,
+                        classes=self.classes_list,
+                        verbose=kwargs.get('verbose', self.verbose),
+                    )
+                else:
+                    raise
+            else:
+                raise
 
         boxes = results[0].boxes
         boxes_xyxy = boxes.xyxy.cpu().numpy()
@@ -92,6 +122,7 @@ class ObjectDetectionYOLO(BaseObjectDetectionService):
         if not weights:
             raise ModelNotFoundError('Model is not found')
 
+        self.weights = weights
         self.confidence = kwargs.get('confidence', 0.5)
         self.iou = kwargs.get('iou', 0.7)
         self.device = kwargs.get('device', 'cpu')
@@ -105,9 +136,46 @@ class ObjectDetectionYOLO(BaseObjectDetectionService):
                 "Install it via 'pip install ultralytics' or use model_type='onnx' with ONNX Runtime (MIT)."
             )
 
+        ext = Path(weights).suffix.lower() if weights else ''
+        if ext in ('.engine', '.trt'):
+            from system.object_detection.registry import is_tensorrt_available, find_fallback_weights
+            if not is_tensorrt_available():
+                fallback = find_fallback_weights(weights)
+                if fallback and Path(fallback).suffix.lower() == '.pt':
+                    pr_color(
+                        f"[WARN] TensorRT (.engine) is not available ('tensorrt' module not installed). "
+                        f"Falling back to '{fallback}'.",
+                        'yellow'
+                    )
+                    weights = fallback
+                    self.weights = fallback
+                    ext = '.pt'
+                else:
+                    raise ModelLoadingError(
+                        f"Model '{weights}' requires the 'tensorrt' package and NVIDIA GPU. "
+                        f"Please use a .pt or .onnx model."
+                    )
+
         try:
             self.model = YOLO(weights)
+            # If TensorRT engine, do quick warmup verification to catch missing backend or CUDA mismatch early
+            if ext in ('.engine', '.trt'):
+                import numpy as np
+                dummy = np.zeros((64, 64, 3), dtype=np.uint8)
+                self.model.predict(dummy, device=self.device, verbose=False)
         except Exception as e:
+            if ext in ('.engine', '.trt'):
+                from system.object_detection.registry import find_fallback_weights
+                fallback = find_fallback_weights(weights)
+                if fallback and Path(fallback).suffix.lower() == '.pt':
+                    pr_color(
+                        f"[WARN] TensorRT engine '{weights}' failed to initialize ({e}). "
+                        f"Falling back to '{fallback}'.",
+                        'yellow'
+                    )
+                    self.model = YOLO(fallback)
+                    self.weights = fallback
+                    return
             raise ModelLoadingError(f"Error loading model: {e}")
 
     def get_classes(self) -> dict[int, str]:

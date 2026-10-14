@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 # ! python3
 
-# Developed for CVCounterWEB
-# ByteTrack: Multi-Object Tracking by Associating Every Detection Box
-# High-performance, lightweight, rock-solid Kalman tracking with 2-stage association.
+# Developed by: Aleksandr Kireev
+# Created: 08.10.2026
+# Updated: 08.10.2026
+# Website: https://bespredel.name
 
 from __future__ import annotations
 

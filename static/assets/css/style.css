@@ -4684,6 +4684,59 @@ kbd {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Application Log Viewer Header & Toolbar                                    */
+/* -------------------------------------------------------------------------- */
+
+#system-logs-card .btn-outline-secondary {
+    border-color: var(--cv-border, rgba(255, 255, 255, 0.14));
+    color: var(--bs-body-color);
+    background: transparent;
+    transition: all 0.15s ease-in-out;
+}
+
+#system-logs-card .btn-outline-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: var(--cv-border-strong, rgba(255, 255, 255, 0.25));
+    color: var(--bs-body-color);
+}
+
+#system-logs-card .btn-outline-danger {
+    border-color: rgba(248, 113, 113, 0.35);
+    color: #f87171;
+    background: transparent;
+    transition: all 0.15s ease-in-out;
+}
+
+#system-logs-card .btn-outline-danger:hover {
+    background-color: rgba(248, 113, 113, 0.15);
+    border-color: rgba(248, 113, 113, 0.6);
+    color: #ef4444;
+}
+
+#system-logs-card .form-select-sm,
+#system-logs-card .input-group-sm .form-control,
+#system-logs-card .input-group-sm .input-group-text {
+    background-color: var(--cv-surface, #16181d);
+    border-color: var(--cv-border, rgba(255, 255, 255, 0.14));
+    font-size: 0.8125rem;
+}
+
+#system-logs-card .form-select-sm:focus,
+#system-logs-card .input-group-sm .form-control:focus {
+    border-color: #06b6d4;
+    box-shadow: 0 0 0 0.15rem rgba(6, 182, 212, 0.2);
+}
+
+#system-logs-card .form-check-input {
+    cursor: pointer;
+}
+
+#system-logs-card .form-check-input:checked {
+    background-color: #06b6d4;
+    border-color: #06b6d4;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Base print media styles                                                    */
 /* -------------------------------------------------------------------------- */
 

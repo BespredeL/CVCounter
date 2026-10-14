@@ -1,6 +1,6 @@
 # CVCounter Telemetry API
 
-Client module in CVCounterWEB sends anonymized diagnostics to your HTTP endpoint. No third-party analytics SDKs are used.
+Client module in CVCounter sends anonymized diagnostics to your HTTP endpoint. No third-party analytics SDKs are used.
 
 Default client endpoint: `https://bespredel.name/api/cvcounter/telemetry`
 
@@ -25,7 +25,7 @@ Automatic sending is **off** by default (`telemetry.enabled: false`). Manual sen
   "schema_version": 1,
   "sent_at": "2026-07-26T06:00:00Z",
   "install_id": "uuid",
-  "app_version": "5.8.0",
+  "app_version": "5.9.0",
   "mode": "auto|manual|replay",
   "system": {
     "python_version": "3.11.x",
@@ -35,7 +35,7 @@ Automatic sending is **off** by default (`telemetry.enabled: false`). Manual sen
     "machine": "AMD64",
     "processor": "...",
     "cpu_count": 8,
-    "app_version": "5.8.0",
+    "app_version": "5.9.0",
     "py_torch_version": "...",
     "py_torch_cuda_available": true,
     "openvino_version": "...",

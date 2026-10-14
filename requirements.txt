@@ -11,15 +11,6 @@
 # To manually install requirements with CUDA run:
 #   pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu118
 #
-# To manually install requirements with TensorRT run:
-#   !!! Replace ${TENSORRT_PATH} with the path to TensorRT on your system,
-#       for example: C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT\v8.6.1.6
-#       or set the environment variable TENSORRT_PATH
-#   pip install "${TENSORRT_PATH}\graphsurgeon\graphsurgeon-0.4.6-py2.py3-none-any.whl"
-#   pip install "${TENSORRT_PATH}\uff\uff-0.6.9-py2.py3-none-any.whl"
-#   pip install "${TENSORRT_PATH}\onnx_graphsurgeon\onnx_graphsurgeon-0.3.12-py2.py3-none-any.whl"
-#   pip install "${TENSORRT_PATH}\python\tensorrt-8.6.1-cp311-none-win_amd64.whl"
-#
 
 # Core Web & App -----------------------------
 filterpy==1.4.5

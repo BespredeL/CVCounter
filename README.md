@@ -30,8 +30,9 @@ It is perfectly suited for **counting products, people, vehicle tracking, retail
 - 🚀 Automatic 1-click installer with hardware GPU detection (NVIDIA CUDA, AMD DirectML, Intel OpenVINO)
 - 🧩 Modular architecture with detector registry and auto-detection by file extension (`auto`)
 - 🧠 Multiple backends: ONNX Runtime, OpenVINO, OpenCV DNN, Ultralytics YOLO / TensorRT
-- ⚡ Model Optimization & Export: Export YOLO to ONNX and TensorRT Engine (.engine) from settings with FP16 support
+- ⚡ Model Optimization & Export: Export YOLO to ONNX and TensorRT Engine (.engine) from settings with FP16 support and automatic fallback to .pt/.onnx
 - 🛠️ AI Runtimes Center: Monitor and install inference packages (ONNX, TensorRT, OpenVINO) in 1 click via System Info
+- 📜 Interactive Application Log Viewer: Real-time terminal console on the System Info page with level filtering (INFO/WARN/ERR), keyword search, auto-refresh, download, and log clearing
 - 🔐 Session login for settings, datasets, and admin actions
 - 📡 Optional anonymized telemetry (errors/usage) and manual diagnostics
 

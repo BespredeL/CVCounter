@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 # ! python3
 
-# Developed for CVCounterWEB
-# Compatibility shim: redirects legacy Sort tracker to the improved BYTETracker.
-# Removed legacy unused imports (matplotlib, scikit-image, MOT benchmark CLI).
+# Developed by: Aleksandr Kireev
+# Created: 01.11.2023
+# Updated: 08.10.2026
+# Website: https://bespredel.name
 
 from __future__ import annotations
 

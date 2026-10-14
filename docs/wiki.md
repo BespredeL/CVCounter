@@ -527,10 +527,15 @@ The Settings page (`/settings`) features:
 - **Live unit badges:** Dynamic unit badges (%, ms, px, attempts, sec) displayed directly in numeric fields;
 - **Semantic form controls:** Clear dropdowns for selecting model type (`model_type`), log level (`log_level`), default language (`default_language`), etc.;
 - **Live settings search:** Instant keyword search that auto-expands matching cards and setting sections;
-- **1-Click Server Restart:** Safe application server process restart directly from the web interface (when `server.allow_web_control: true`), with automatic reconnect and zero port collisions;
+- **Model Optimization & Export (ONNX / TensorRT):** Built-in wizard for exporting YOLO models (.pt) to ONNX and TensorRT Engine (.engine) formats with FP16 support, parameter validation, and 1-click application to cameras;
+- **1-Click Server Restart & Shutdown:** Safe management of the web server process from the web interface (when `server.allow_web_control: true`) with clean resource teardown and auto-reconnect;
 - Detailed bilingual descriptions and hints for every configuration parameter.
 
-On System Info (`/system_info`) you can inspect hardware status (GPU, CUDA, PyTorch, driver versions), send anonymized diagnostics to the configured telemetry endpoint, or download a local JSON diagnostic report. See [telemetry_api.md](telemetry_api.md).
+On System Info (`/system_info`) you can access:
+- **Hardware Status:** GPU specifications (NVIDIA CUDA, VRAM, driver), CPU architecture, memory, and PyTorch environment details;
+- **AI Runtimes Center:** Status of inference backends (CUDA, ONNX Runtime, TensorRT, OpenVINO) with 1-click background package installation;
+- **Interactive Application Log Viewer:** Real-time terminal console streaming from `storage/logs/cvcounter.log` with color-coded level badges (INFO, WARNING, ERROR, DEBUG), level filtering, keyword search, auto-refresh (every 5s), auto-scroll, clipboard copy, log file download, and safe truncation;
+- **Diagnostics & Telemetry:** Send anonymized diagnostic bundles or download local JSON reports. See [telemetry_api.md](telemetry_api.md).
 
 **URL:**
 
@@ -538,6 +543,12 @@ On System Info (`/system_info`) you can inspect hardware status (GPU, CUDA, PyTo
 http://127.0.0.1:8080/settings
 http://127.0.0.1:8080/system_info
 http://127.0.0.1:8080/settings/api/restart        (POST)
+http://127.0.0.1:8080/settings/api/shutdown       (POST)
+http://127.0.0.1:8080/settings/api/logs           (GET)
+http://127.0.0.1:8080/settings/api/logs/download  (GET)
+http://127.0.0.1:8080/settings/api/logs/clear     (POST)
+http://127.0.0.1:8080/settings/api/runtimes/status(GET)
+http://127.0.0.1:8080/settings/api/models/export  (POST)
 http://127.0.0.1:8080/settings/telemetry/send     (POST)
 http://127.0.0.1:8080/settings/telemetry/download
 ```
