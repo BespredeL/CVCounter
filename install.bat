@@ -102,7 +102,7 @@ goto :install_failed
 
 :install_success
 echo ====================================================================
-echo   INSTALLATION COMPLETED! / УСТАНОВКА УСПЕШНО ЗАВЕРШЕНА!
+echo   INSTALLATION COMPLETED SUCCESSFULLY!
 echo ====================================================================
 echo.
 echo   To launch the application, run: start.bat
@@ -123,13 +123,13 @@ exit /b %EXIT_CODE%
 
 
 :: ====================================================================
-:: ПОДПРОГРАММЫ ПОИСКА И УСТАНОВКИ PYTHON
+:: PYTHON DETECTION AND INSTALLATION SUBROUTINES
 :: ====================================================================
 
 :detect_python
 set "PYTHON_EXE="
 
-:: 1. Проверка через системный лаунчер py (3.11, 3.12, 3.10)
+:: 1. Check using the Python launcher (3.11, 3.12, 3.10)
 for /f "delims=" %%I in ('py -3.11 -c "import sys; print(sys.executable)" 2^>nul') do (
     set "PYTHON_EXE=%%I"
     goto :detect_done
@@ -143,7 +143,7 @@ for /f "delims=" %%I in ('py -3.10 -c "import sys; print(sys.executable)" 2^>nul
     goto :detect_done
 )
 
-:: 2. Проверка типичных путей установки Python на Windows
+:: 2. Check common Python installation paths on Windows
 for %%P in (
     "%LocalAppData%\Programs\Python\Python311\python.exe"
     "%ProgramFiles%\Python311\python.exe"
@@ -165,7 +165,7 @@ for %%P in (
     )
 )
 
-:: 3. Проверка команды python в PATH (исключая заглушку Microsoft Store и неподдерживаемые версии)
+:: 3. Check python in PATH (exclude Microsoft Store aliases and unsupported versions)
 for /f "delims=" %%I in ('python -c "import sys; print(sys.executable) if sys.version_info.major == 3 and sys.version_info.minor in (10, 11, 12) else sys.exit(1)" 2^>nul') do (
     set "PYTHON_EXE=%%I"
     goto :detect_done
@@ -188,14 +188,14 @@ set "PY_INSTALLER=%TEMP%\python-3.11.9-amd64.exe"
 
 if exist "!PY_INSTALLER!" del /f /q "!PY_INSTALLER!" >nul 2>&1
 
-echo [*] Загрузка официального установщика Python 3.11.9...
+echo [*] Downloading the official Python 3.11.9 installer...
 
 set "DOWNLOAD_OK=0"
 
-:: Метод 1: curl.exe
+:: Method 1: curl.exe
 where curl.exe >nul 2>&1
 if !errorlevel! equ 0 (
-    echo   -> Скачивание через curl...
+    echo   - Downloading with curl...
     curl.exe -fSLo "!PY_INSTALLER!" "!PY_URL!"
     if exist "!PY_INSTALLER!" (
         for %%A in ("!PY_INSTALLER!") do (
@@ -204,9 +204,9 @@ if !errorlevel! equ 0 (
     )
 )
 
-:: Метод 2: PowerShell (если curl недоступен или не загрузил файл)
+:: Method 2: PowerShell (if curl is unavailable or download failed)
 if "!DOWNLOAD_OK!"=="0" (
-    echo   -> Скачивание через PowerShell...
+    echo   - Downloading with PowerShell...
     powershell -NoProfile -ExecutionPolicy Bypass -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $ProgressPreference = 'SilentlyContinue'; try { (New-Object System.Net.WebClient).DownloadFile('!PY_URL!', '!PY_INSTALLER!'); exit 0 } catch { exit 1 }"
     if exist "!PY_INSTALLER!" (
         for %%A in ("!PY_INSTALLER!") do (
@@ -215,20 +215,20 @@ if "!DOWNLOAD_OK!"=="0" (
     )
 )
 
-:: Если установщик скачан, выполняем тихую установку
+:: Run a silent installation if the installer was downloaded
 if "!DOWNLOAD_OK!"=="1" (
-    echo [*] Установщик загружен. Выполняется автоматическая тихая установка...
-    echo [*] Пожалуйста, подождите [обычно занимает около 20-40 секунд]...
+    echo [*] Installer downloaded. Running silent installation...
+    echo [*] Please wait [usually takes about 20-40 seconds]...
     start /wait "" "!PY_INSTALLER!" /quiet InstallAllUsers=0 PrependPath=1 Include_test=0 Include_pip=1 Include_launcher=1 SimpleInstall=1
     del /f /q "!PY_INSTALLER!" >nul 2>&1
     call :detect_python
     if defined PYTHON_EXE exit /b 0
 )
 
-:: Метод 3: winget (запасной вариант)
+:: Method 3: winget (fallback)
 where winget.exe >nul 2>&1
 if !errorlevel! equ 0 (
-    echo [*] Попытка установки через Windows Package Manager [winget]...
+    echo [*] Trying to install through Windows Package Manager [winget]...
     winget install Python.Python.3.11 --silent --accept-package-agreements --accept-source-agreements --scope user
     call :detect_python
     if defined PYTHON_EXE exit /b 0
@@ -246,13 +246,13 @@ set "VC_INSTALLER=%TEMP%\vc_redist.x64.exe"
 
 if exist "!VC_INSTALLER!" del /f /q "!VC_INSTALLER!" >nul 2>&1
 
-echo [*] Загрузка vc_redist.x64.exe с серверов Microsoft...
+echo [*] Downloading vc_redist.x64.exe from Microsoft servers...
 
 set "VC_DOWNLOAD_OK=0"
 
 where curl.exe >nul 2>&1
 if !errorlevel! equ 0 (
-    echo   -> Скачивание через curl...
+    echo   - Downloading with curl...
     curl.exe -fSLo "!VC_INSTALLER!" "!VC_URL!"
     if exist "!VC_INSTALLER!" (
         for %%A in ("!VC_INSTALLER!") do (
@@ -262,7 +262,7 @@ if !errorlevel! equ 0 (
 )
 
 if "!VC_DOWNLOAD_OK!"=="0" (
-    echo   -> Скачивание через PowerShell...
+    echo   - Downloading with PowerShell...
     powershell -NoProfile -ExecutionPolicy Bypass -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $ProgressPreference = 'SilentlyContinue'; try { (New-Object System.Net.WebClient).DownloadFile('!VC_URL!', '!VC_INSTALLER!'); exit 0 } catch { exit 1 }"
     if exist "!VC_INSTALLER!" (
         for %%A in ("!VC_INSTALLER!") do (
@@ -272,30 +272,30 @@ if "!VC_DOWNLOAD_OK!"=="0" (
 )
 
 if "!VC_DOWNLOAD_OK!"=="1" (
-    echo [*] Установка Visual C++ 2015-2022 Redistributable...
-    echo [*] Пожалуйста, подождите [обычно занимает 5-15 секунд]...
+    echo [*] Installing Visual C++ 2015-2022 Redistributable...
+    echo [*] Please wait [usually takes 5-15 seconds]...
     start /wait "" "!VC_INSTALLER!" /install /quiet /norestart
     if not exist "%SystemRoot%\System32\vcruntime140_1.dll" (
-        echo [*] Запуск установщика с запросом подтверждения UAC...
+        echo [*] Launching the installer with a UAC confirmation prompt...
         start /wait "" "!VC_INSTALLER!" /install /norestart
     )
     del /f /q "!VC_INSTALLER!" >nul 2>&1
     if exist "%SystemRoot%\System32\vcruntime140_1.dll" (
-        echo   * Visual C++ Redistributable успешно установлен.
+        echo   * Visual C++ Redistributable installed successfully.
         exit /b 0
     )
 )
 
 where winget.exe >nul 2>&1
 if !errorlevel! equ 0 (
-    echo [*] Попытка установки через Windows Package Manager [winget]...
+    echo [*] Trying to install through Windows Package Manager [winget]...
     winget install Microsoft.VCRedist.2015+.x64 --silent --accept-package-agreements --accept-source-agreements
     if exist "%SystemRoot%\System32\vcruntime140_1.dll" (
-        echo   * Visual C++ Redistributable успешно установлен.
+        echo   * Visual C++ Redistributable installed successfully.
         exit /b 0
     )
 )
 
-echo [!] Не удалось автоматически установить Visual C++ Redistributable.
-echo Скачайте и установите его вручную: https://aka.ms/vs/17/release/vc_redist.x64.exe
+echo [!] Could not install Visual C++ Redistributable automatically.
+echo Download and install it manually: https://aka.ms/vs/17/release/vc_redist.x64.exe
 exit /b 0

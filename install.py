@@ -16,84 +16,32 @@ from pathlib import Path
 
 # Настройка консоли Windows для корректного отображения шрифтов и кодировок
 def setup_windows_console():
-    """Настройка Windows консоли: включение UTF-8, TrueType шрифта Consolas и ANSI escape-последовательностей."""
+    """Configure Windows console code pages and Python streams for UTF-8 output."""
     if sys.platform != "win32":
         return
 
     import ctypes
-    from ctypes import wintypes
-
     kernel32 = ctypes.windll.kernel32
 
-    # Настройка типов ctypes для 64-бит Windows
-    kernel32.GetStdHandle.restype = wintypes.HANDLE
-    kernel32.GetStdHandle.argtypes = [wintypes.DWORD]
-    kernel32.SetConsoleOutputCP.argtypes = [wintypes.UINT]
-    kernel32.SetConsoleCP.argtypes = [wintypes.UINT]
-    kernel32.CreateFileW.restype = wintypes.HANDLE
-    kernel32.CreateFileW.argtypes = [
-        wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD,
-        ctypes.c_void_p, wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE
-    ]
-
-    # 1. Принудительно включаем кодировку UTF-8 (65001) для вывода и ввода
+    # UTF-8 console code pages. install.bat also sets PYTHONUTF8 and PYTHONIOENCODING.
     try:
         kernel32.SetConsoleOutputCP(65001)
         kernel32.SetConsoleCP(65001)
     except Exception:
         pass
 
-    # 2. Переключаем шрифт консоли на TrueType Consolas (гарантирует наличие кириллических глифов)
-    try:
-        class COORD(ctypes.Structure):
-            _fields_ = [('X', ctypes.c_short), ('Y', ctypes.c_short)]
+    # Reconfigure Python output streams so Cyrillic text is emitted as UTF-8.
+    for stream_name in ("stdout", "stderr", "stdin"):
+        stream = getattr(sys, stream_name, None)
+        if stream is not None and hasattr(stream, "reconfigure"):
+            try:
+                if stream_name == "stdin":
+                    stream.reconfigure(encoding="utf-8", errors="replace")
+                else:
+                    stream.reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
 
-        class CONSOLE_FONT_INFOEX(ctypes.Structure):
-            _fields_ = [
-                ('cbSize', wintypes.ULONG),
-                ('nFont', wintypes.DWORD),
-                ('dwFontSize', COORD),
-                ('FontFamily', wintypes.UINT),
-                ('FontWeight', wintypes.UINT),
-                ('FaceName', wintypes.WCHAR * 32)
-            ]
-
-        # Пытаемся применить к CONOUT$ и к StdHandle(-11)
-        for handle_fn in [
-            lambda: kernel32.CreateFileW("CONOUT$", 0x40000000 | 0x80000000, 2, None, 3, 0, None),
-            lambda: kernel32.GetStdHandle(-11)
-        ]:
-            h = handle_fn()
-            if h and h != -1 and h != wintypes.HANDLE(-1).value:
-                info = CONSOLE_FONT_INFOEX()
-                info.cbSize = ctypes.sizeof(CONSOLE_FONT_INFOEX)
-                info.FaceName = "Consolas"
-                info.FontFamily = 54
-                info.FontWeight = 400
-                info.dwFontSize.Y = 16
-                if kernel32.SetCurrentConsoleFontEx(h, False, ctypes.byref(info)):
-                    if handle_fn != (lambda: kernel32.GetStdHandle(-11)):
-                        kernel32.CloseHandle(h)
-                    break
-                kernel32.CloseHandle(h)
-    except Exception:
-        pass
-
-    # 3. Включаем поддержку ANSI escape-последовательностей (цвета в Windows cmd)
-    try:
-        h_out = kernel32.GetStdHandle(-11)
-        mode = wintypes.DWORD()
-        if h_out and kernel32.GetConsoleMode(h_out, ctypes.byref(mode)):
-            kernel32.SetConsoleMode(h_out, mode.value | 0x0004)
-    except Exception:
-        pass
-
-    # 4. Настраиваем потоки Python на UTF-8 с безопасной заменой нераспознанных символов
-    try:
-        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
-    except Exception:
-        pass
 
 setup_windows_console()
 
