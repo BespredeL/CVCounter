@@ -186,7 +186,7 @@ class BYTETracker:
         self.frame_count = 0
         self._next_id = 0
 
-    def update(self, dets: np.ndarray = np.empty((0, 6))) -> np.ndarray:
+    def update(self, dets: Optional[np.ndarray] = None) -> np.ndarray:
         """
         Process detections for current frame and return active tracks.
 

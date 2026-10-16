@@ -15,7 +15,12 @@ import zipfile
 from pathlib import Path
 from typing import Any, Optional
 
-import cv2
+try:
+    import cv2
+    _cv2_import_error: Exception | None = None
+except ImportError as exc:
+    cv2 = None
+    _cv2_import_error = exc
 
 from system.datasets.annotation_store import AnnotationStore
 from system.datasets.exporters import IMAGE_EXTENSIONS
