@@ -253,8 +253,9 @@
             <!-- Custom Fields Section (Global or Detection-Specific) -->
             {% set is_detection = prefix.startswith('detections-') %}
             {% set current_loc = prefix.replace('detections-', '').rstrip('-') if is_detection else '' %}
-            <section class="cv-form-section{% if depth > 0 %} cv-form-section--nested{% endif %} cv-custom-fields-section"
-                     data-custom-fields-prefix="{{ prefix }}">
+            <section
+                    class="cv-form-section{% if depth > 0 %} cv-form-section--nested{% endif %} cv-custom-fields-section"
+                    data-custom-fields-prefix="{{ prefix }}">
                 <div class="cv-form-section__header d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
                     <div class="d-flex align-items-center gap-2">
                         <h3 class="cv-form-section__title mb-0 fs-6">{{ trans('Custom Fields') }}</h3>
@@ -268,11 +269,14 @@
                             <span class="badge bg-info-subtle text-info-emphasis" style="font-size: 0.72rem;">
                                 {{ trans('Detection Specific') }}
                             </span>
-                            <button type="button" class="btn btn-outline-primary btn-sm py-1 px-2.5 d-inline-flex align-items-center gap-1 btn-add-custom-field"
+                            <button type="button"
+                                    class="btn btn-outline-primary btn-sm py-1 px-2.5 d-inline-flex align-items-center gap-1 btn-add-custom-field"
                                     data-scope="detection" data-location="{{ current_loc }}" style="font-size: 0.8rem;"
                                     title="{{ trans('Add field') }}">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
-                                    <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
+                                     class="bi bi-plus-lg" viewBox="0 0 16 16">
+                                    <path fill-rule="evenodd"
+                                          d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/>
                                 </svg>
                                 <span>{{ trans('Add field') }}</span>
                             </button>
@@ -280,11 +284,14 @@
                             <span class="badge bg-primary-subtle text-primary-emphasis" style="font-size: 0.72rem;">
                                 {{ trans('Global for all counters') }}
                             </span>
-                            <button type="button" class="btn btn-outline-primary btn-sm py-1 px-2.5 d-inline-flex align-items-center gap-1 btn-add-custom-field"
+                            <button type="button"
+                                    class="btn btn-outline-primary btn-sm py-1 px-2.5 d-inline-flex align-items-center gap-1 btn-add-custom-field"
                                     data-scope="global" data-location="" style="font-size: 0.8rem;"
                                     title="{{ trans('Add field') }}">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
-                                    <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
+                                     class="bi bi-plus-lg" viewBox="0 0 16 16">
+                                    <path fill-rule="evenodd"
+                                          d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/>
                                 </svg>
                                 <span>{{ trans('Add field') }}</span>
                             </button>
@@ -321,28 +328,45 @@
                     <div class="d-flex align-items-center gap-2 min-w-0">
                         <span class="cv-custom-field-card__icon-box">
                             {% if field_type == 'number' %}
-                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-123 text-success" viewBox="0 0 16 16"><path d="M2.873 11.297V4.142H1.699L0 5.379v1.137l1.64-1.18h.06v5.961zm3.213-5.09v-.063c0-.618.44-1.169 1.196-1.169.676 0 1.174.44 1.174 1.106 0 .606-.439 1.132-.974 1.533-.45.34-1.01.737-1.353 1.05v.982h3.424v-1.045H7.39v-.064c.266-.237.603-.496.953-.76.77-.584 1.488-1.28 1.488-2.28 0-1.282-1.02-2.197-2.45-2.197-1.47 0-2.38 1.015-2.38 2.221v.72h1.085zm6.541 2.228h-.128c-.287 0-.584-.047-.845-.14v.05c0 .647.464 1.09 1.157 1.09.688 0 1.18-.456 1.18-1.115 0-.616-.479-1.094-1.127-1.094-.176 0-.361.026-.51.087v-1.05c.143.045.303.069.458.069.605 0 1.04-.415 1.04-.98 0-.549-.399-.95-1.022-.95-.623 0-1.04.417-1.04.996v.195H11.5v-.268c0-1.19.89-2.02 2.22-2.02 1.34 0 2.23.834 2.23 2.012 0 .67-.32 1.258-.87 1.637.675.367 1.04 1.01 1.04 1.765 0 1.255-.956 2.146-2.39 2.146-1.42 0-2.37-.91-2.37-2.187v-.337h1.085z"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
+                                     class="bi bi-123 text-success" viewBox="0 0 16 16"><path
+                                        d="M2.873 11.297V4.142H1.699L0 5.379v1.137l1.64-1.18h.06v5.961zm3.213-5.09v-.063c0-.618.44-1.169 1.196-1.169.676 0 1.174.44 1.174 1.106 0 .606-.439 1.132-.974 1.533-.45.34-1.01.737-1.353 1.05v.982h3.424v-1.045H7.39v-.064c.266-.237.603-.496.953-.76.77-.584 1.488-1.28 1.488-2.28 0-1.282-1.02-2.197-2.45-2.197-1.47 0-2.38 1.015-2.38 2.221v.72h1.085zm6.541 2.228h-.128c-.287 0-.584-.047-.845-.14v.05c0 .647.464 1.09 1.157 1.09.688 0 1.18-.456 1.18-1.115 0-.616-.479-1.094-1.127-1.094-.176 0-.361.026-.51.087v-1.05c.143.045.303.069.458.069.605 0 1.04-.415 1.04-.98 0-.549-.399-.95-1.022-.95-.623 0-1.04.417-1.04.996v.195H11.5v-.268c0-1.19.89-2.02 2.22-2.02 1.34 0 2.23.834 2.23 2.012 0 .67-.32 1.258-.87 1.637.675.367 1.04 1.01 1.04 1.765 0 1.255-.956 2.146-2.39 2.146-1.42 0-2.37-.91-2.37-2.187v-.337h1.085z"/></svg>
                             {% elif field_type == 'textarea' %}
-                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-text-paragraph text-info" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2 12.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5m0-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m0-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m4-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
+                                     class="bi bi-text-paragraph text-info" viewBox="0 0 16 16"><path
+                                        fill-rule="evenodd"
+                                        d="M2 12.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5m0-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m0-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m4-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5"/></svg>
                             {% elif field_type in ('date', 'datetime-local') %}
-                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-calendar3 text-warning" viewBox="0 0 16 16"><path d="M14 0H2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M1 3.857C1 3.384 1.448 3 2 3h12c.552 0 1 .384 1 .857v10.286c0 .473-.448.857-1 .857H2c-.552 0-1-.384-1-.857z"/><path d="M6.5 7a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m-9 3a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m-9 3a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
+                                     class="bi bi-calendar3 text-warning" viewBox="0 0 16 16"><path
+                                        d="M14 0H2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M1 3.857C1 3.384 1.448 3 2 3h12c.552 0 1 .384 1 .857v10.286c0 .473-.448.857-1 .857H2c-.552 0-1-.384-1-.857z"/><path
+                                        d="M6.5 7a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m-9 3a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m-9 3a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/></svg>
                             {% elif field_type == 'select' %}
-                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-menu-button-wide text-primary" viewBox="0 0 16 16"><path d="M0 1.5A1.5 1.5 0 0 1 1.5 0h13A1.5 1.5 0 0 1 16 1.5v2A1.5 1.5 0 0 1 14.5 5h-13A1.5 1.5 0 0 1 0 3.5zM1.5 1a.5.5 0 0 0-.5.5v2a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-2a.5.5 0 0 0-.5-.5z"/><path d="M2 2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5m10.823.323-.396-.396A.25.25 0 0 1 12.604 2h.792a.25.25 0 0 1 .177.427l-.396.396a.25.25 0 0 1-.354 0M0 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm1 3v2a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2zm14-1V8a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v2zM2 8.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0 4a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
+                                     class="bi bi-menu-button-wide text-primary" viewBox="0 0 16 16"><path
+                                        d="M0 1.5A1.5 1.5 0 0 1 1.5 0h13A1.5 1.5 0 0 1 16 1.5v2A1.5 1.5 0 0 1 14.5 5h-13A1.5 1.5 0 0 1 0 3.5zM1.5 1a.5.5 0 0 0-.5.5v2a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-2a.5.5 0 0 0-.5-.5z"/><path
+                                        d="M2 2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5m10.823.323-.396-.396A.25.25 0 0 1 12.604 2h.792a.25.25 0 0 1 .177.427l-.396.396a.25.25 0 0 1-.354 0M0 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm1 3v2a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2zm14-1V8a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v2zM2 8.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0 4a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5"/></svg>
                             {% else %}
-                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-fonts text-primary" viewBox="0 0 16 16"><path d="M12.258 3h-8.51l-.083 2.46h.479c.26-1.544.758-1.783 2.693-1.845l.424-.013v7.827c0 .663-.144.82-1.3.923v.52h4.082v-.52c-1.162-.103-1.306-.26-1.306-.923V3.602l.431.013c1.934.062 2.434.301 2.693 1.846h.479z"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
+                                     class="bi bi-fonts text-primary" viewBox="0 0 16 16"><path
+                                        d="M12.258 3h-8.51l-.083 2.46h.479c.26-1.544.758-1.783 2.693-1.845l.424-.013v7.827c0 .663-.144.82-1.3.923v.52h4.082v-.52c-1.162-.103-1.306-.26-1.306-.923V3.602l.431.013c1.934.062 2.434.301 2.693 1.846h.479z"/></svg>
                             {% endif %}
                         </span>
                         <span class="cv-custom-field-card__title text-truncate cv-custom-field-header-label">{{ field_label }}</span>
-                        <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace" style="font-size: 0.7rem;">#{{ key }}</span>
-                        <span class="badge bg-primary-subtle text-primary-emphasis font-monospace cv-custom-field-badge-type" style="font-size: 0.68rem;">{{ field_type }}</span>
+                        <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace"
+                              style="font-size: 0.7rem;">#{{ key }}</span>
+                        <span class="badge bg-primary-subtle text-primary-emphasis font-monospace cv-custom-field-badge-type"
+                              style="font-size: 0.68rem;">{{ field_type }}</span>
                     </div>
-                    <button type="button" class="btn btn-outline-danger btn-sm py-0.5 px-2 d-inline-flex align-items-center gap-1 btn-delete-custom-field flex-shrink-0"
+                    <button type="button"
+                            class="btn btn-outline-danger btn-sm py-0.5 px-2 d-inline-flex align-items-center gap-1 btn-delete-custom-field flex-shrink-0"
                             data-field-name="{{ key }}"
                             data-field-label="{{ field_label }}"
                             data-scope="{{ 'detection' if is_detection else 'global' }}"
                             {% if is_detection %}data-location="{{ current_loc }}"{% endif %}
                             title="{{ trans('Delete field') }}">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-trash3" viewBox="0 0 16 16">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor"
+                             class="bi bi-trash3" viewBox="0 0 16 16">
                             <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5M11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.058l-.5-8.5a.5.5 0 0 1 .47-.528M8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5m2.47.528a.5.5 0 0 1 .528-.47.5.5 0 0 1 .47.528l-.5 8.5a.5.5 0 0 1-.998-.058z"/>
                         </svg>
                         <span class="small d-none d-sm-inline">{{ trans('Delete') }}</span>
@@ -353,19 +377,24 @@
                 {% set field_options = value.get('options', []) if value is mapping else [] %}
                 <div class="cv-custom-field-card__grid">
                     <div class="cv-custom-field-card__item">
-                        <label for="{{ field_id }}-label" class="cv-custom-field-card__label">{{ trans('Display label') }}</label>
+                        <label for="{{ field_id }}-label"
+                               class="cv-custom-field-card__label">{{ trans('Display label') }}</label>
                         <input type="text" id="{{ field_id }}-label" name="{{ field_id }}-label"
-                               value="{{ field_label }}" class="form-control cv-custom-field-card__input cv-custom-field-input-label"
+                               value="{{ field_label }}"
+                               class="form-control cv-custom-field-card__input cv-custom-field-input-label"
                                placeholder="{{ trans('Display label') }}" required>
                     </div>
                     <div class="cv-custom-field-card__item">
-                        <label for="{{ field_id }}-name" class="cv-custom-field-card__label">{{ trans('Field ID') }}</label>
+                        <label for="{{ field_id }}-name"
+                               class="cv-custom-field-card__label">{{ trans('Field ID') }}</label>
                         <input type="text" id="{{ field_id }}-name" name="{{ field_id }}-name"
-                               value="{{ field_name_val }}" class="form-control font-monospace cv-custom-field-card__input"
+                               value="{{ field_name_val }}"
+                               class="form-control font-monospace cv-custom-field-card__input"
                                pattern="^[a-zA-Z0-9_]+$" placeholder="id_name" required>
                     </div>
                     <div class="cv-custom-field-card__item">
-                        <label for="{{ field_id }}-type" class="cv-custom-field-card__label">{{ trans('Field type') }}</label>
+                        <label for="{{ field_id }}-type"
+                               class="cv-custom-field-card__label">{{ trans('Field type') }}</label>
                         {% set custom_field_types = [
                             ('text', trans('Text') ~ ' (text)'),
                             ('number', trans('Number') ~ ' (number)'),
@@ -377,22 +406,26 @@
                         <select id="{{ field_id }}-type" name="{{ field_id }}-type"
                                 class="form-select cv-custom-field-card__input cv-custom-field-type-select">
                             {% for cft, cft_label in custom_field_types %}
-                                <option value="{{ cft }}" {% if field_type == cft %}selected{% endif %}>{{ cft_label }}</option>
+                                <option value="{{ cft }}"
+                                        {% if field_type == cft %}selected{% endif %}>{{ cft_label }}</option>
                             {% endfor %}
                         </select>
                     </div>
                     <div class="cv-custom-field-card__item">
-                        <label for="{{ field_id }}-default_value" class="cv-custom-field-card__label">{{ trans('Default value') }}</label>
+                        <label for="{{ field_id }}-default_value"
+                               class="cv-custom-field-card__label">{{ trans('Default value') }}</label>
                         <input type="text" id="{{ field_id }}-default_value" name="{{ field_id }}-default_value"
                                value="{{ field_default }}" class="form-control cv-custom-field-card__input"
                                placeholder="{{ trans('Optional default value') }}">
                     </div>
                     <div class="cv-custom-field-card__options cv-custom-field-options-row {% if field_type != 'select' %}d-none{% endif %}">
                         <div class="d-flex align-items-center justify-content-between mb-1">
-                            <label for="{{ field_id }}-options" class="cv-custom-field-card__label fw-semibold text-primary">
+                            <label for="{{ field_id }}-options"
+                                   class="cv-custom-field-card__label fw-semibold text-primary">
                                 {{ trans('Options (one per line)') }}
                             </label>
-                            <span class="text-body-secondary" style="font-size: 0.7rem;">{{ trans('List of selectable options (one per line)') }}</span>
+                            <span class="text-body-secondary"
+                                  style="font-size: 0.7rem;">{{ trans('List of selectable options (one per line)') }}</span>
                         </div>
                         {% set opt_text = field_options|join('\n') if (field_options is iterable and field_options is not string) else field_options %}
                         <textarea id="{{ field_id }}-options" name="{{ field_id }}-options" rows="2"

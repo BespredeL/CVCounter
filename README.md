@@ -1,217 +1,213 @@
-# CVCounter - Real-Time Object Detection & Counting System
+# CVCounter - Система детекции и подсчёта объектов
 
 [![Website](https://img.shields.io/badge/website-bespredel.github.io-4dabf7.svg)](https://bespredel.github.io/cvcounter/)
-[![Readme EN](https://img.shields.io/badge/README-EN-blue.svg)](https://github.com/BespredeL/CVCounter/blob/master/README.md)
-[![Readme RU](https://img.shields.io/badge/README-RU-blue.svg)](https://github.com/BespredeL/CVCounter/blob/master/README_RU.md)
+[![Readme EN](https://img.shields.io/badge/README-EN-blue.svg)](https://github.com/BespredeL/CVCounter/blob/master/README_EN.md)
+[![Readme RU](https://img.shields.io/badge/README-RU-blue.svg)](https://github.com/BespredeL/CVCounter/blob/master/README.md)
 [![GitHub license](https://img.shields.io/badge/license-AGPL--3.0-458a7b.svg)](https://github.com/BespredeL/CVCounter/blob/master/LICENSE)
 
-🧠 Production-ready computer vision system for real-time object detection, tracking, and counting
+🧠 Готовая система компьютерного зрения для детекции, трекинга и подсчёта объектов в реальном времени
 
-CVCounter is a flexible and scalable computer vision solution designed to detect, track, and count objects in real time
-using video streams.
+CVCounter - это гибкая и масштабируемая система компьютерного зрения, предназначенная для анализа видеопотока с
+возможностью подсчёта объектов.
 
-It is perfectly suited for **counting products, people, vehicle tracking, retail analytics, and surveillance systems.**
+Подходит для задач: **подсчёт продукции, людей, транспорта, аналитика и видеонаблюдение.**
 
----
+## ✨ Возможности
 
-## ✨ Features
+- 🎯 Детекция объектов в реальном времени
+- 🔢 Подсчёт объектов в одной или нескольких зонах
+- 🏷️ Разбивка количества по классам детекции (партия / всего) и управление классами детектора с автозагрузкой из модели
+- 🧠 Высокоточный трекинг объектов ByteTrack (multi-object tracking)
+- 🎥 Поддержка видеопотоков (RTSP, камера, файлы)
+- 🎬 Запись видео по детекции с остановкой по `idle_timeout`
+- 📚 Датасеты: импорт, разметка, обучение YOLO и применение весов к счётчику
+- ⚡ Оптимизация под real-time
+- 📊 Подготовка данных для аналитики и отчётов с разбивкой по классам, сохранёнными медиа и версией для печати A4
+- 📝 Управление пользовательскими полями форм: создание и удаление полей в 1 клик на странице настроек (глобально и индивидуально для камер; типы: text, number, textarea, date, datetime-local, select)
+- 🖨️ Экспорт и печать отчётов (A4 Print Layout) с официальной шапкой и блоком подписей
+- 📖 Интерактивный центр справки с живым поиском
+- 🚀 Автоматическая установка в 1 клик с автоопределением GPU (NVIDIA CUDA, AMD DirectML, Intel OpenVINO)
+- 🧩 Модульная архитектура с реестром детекторов и автоопределением по расширению файла (`auto`)
+- 🧠 Несколько бэкендов: ONNX Runtime, OpenVINO, OpenCV DNN, Ultralytics YOLO / TensorRT
+- ⚡ Экспорт и оптимизация моделей: экспорт YOLO в ONNX и TensorRT Engine (.engine) прямо из настроек с поддержкой FP16 и автоматическим fallback на .pt/.onnx
+- 🛠️ Центр AI-рантаймов: мониторинг и доустановка библиотек инференса (ONNX, TensorRT, OpenVINO) в 1 клик на странице «Информация о системе»
+- 📜 Интерактивный просмотр логов: терминальная консоль реального времени на странице «Информация о системе» с фильтрацией уровней (INFO/WARN/ERR), поиском, автообновлением, скачиванием и очисткой
+- 🔐 Сессионный вход для настроек, датасетов и админ-действий
+- 📡 Опциональная обезличенная телеметрия (ошибки/использование) и ручная диагностика
 
-- 🎯 Real-time object detection
-- 🔢 Object counting in one or more zones
-- 🏷️ Per-class count breakdown (current batch / total) and detector class management with model auto-extraction
-- 🧠 High-accuracy ByteTrack multi-object tracking
-- 🎥 Support for video streams (RTSP, webcam, files)
-- 🎬 Detection-triggered video recording with `idle_timeout` stop
-- 📚 Datasets: import, annotate, train YOLO, and apply weights to a counter
-- ⚡ Optimized for real-time performance
-- 📊 Analytics-ready reports with per-class totals, saved media playback, and A4 print layout
-- 📝 Custom Form Fields Management: Create and delete form fields with 1 click in web Settings without manual JSON editing, both globally and per-detector (types: text, number, multiline textarea, date, date & time, dropdown select)
-- 🖨️ Clean A4 print and PDF export with metadata header and signature block
-- 📖 Interactive help center with live search
-- 🚀 Automatic 1-click installer with hardware GPU detection (NVIDIA CUDA, AMD DirectML, Intel OpenVINO)
-- 🧩 Modular architecture with detector registry and auto-detection by file extension (`auto`)
-- 🧠 Multiple backends: ONNX Runtime, OpenVINO, OpenCV DNN, Ultralytics YOLO / TensorRT
-- ⚡ Model Optimization & Export: Export YOLO to ONNX and TensorRT Engine (.engine) from settings with FP16 support and automatic fallback to .pt/.onnx
-- 🛠️ AI Runtimes Center: Monitor and install inference packages (ONNX, TensorRT, OpenVINO) in 1 click via System Info
-- 📜 Interactive Application Log Viewer: Real-time terminal console on the System Info page with level filtering (INFO/WARN/ERR), keyword search, auto-refresh, download, and log clearing
-- 🔐 Session login for settings, datasets, and admin actions
-- 📡 Optional anonymized telemetry (errors/usage) and manual diagnostics
-
-> **Help improve CVCounter**  
-> If you can, please enable telemetry (`telemetry.enabled: true` in Settings).  
-> Anonymized error and usage data helps find issues faster and improve the app. Thank you!  
-> Frames, camera URLs, and the full config are **never sent**.
-> Manual diagnostics are available on the **System info** page (account login). Details: [
+> **Помогите развитию CVCounter**  
+> Если можете - включите телеметрию (`telemetry.enabled: true` в настройках).  
+> Обезличенные данные об ошибках и использовании помогают быстрее находить проблемы и улучшать приложение. Спасибо!  
+> Кадры, URL камер и полный config **не отправляются**.
+> Ручная диагностика доступна на странице **Информация о системе** (вход в аккаунт). Подробнее: [
 `docs/telemetry_api.md`](docs/telemetry_api.md).
 
 ---
 
-## 🚀 Use Cases
+## 🚀 Применение
 
-- People counting (shops, malls)
-- Vehicle counting (traffic analytics)
-- Security & surveillance
-- Smart city solutions
-- Retail analytics
-- Industrial monitoring
-
----
-
-## 🧠 How It Works
-
-1. Video stream is captured
-2. Object detection model processes frames
-3. Tracker assigns IDs to objects
-4. Objects entering any counting zone are counted
-5. Totals, batches, and per-class breakdown are shown and can be saved to reports
+- Подсчёт людей (магазины, ТЦ)
+- Подсчёт транспорта
+- Системы безопасности
+- Smart City
+- Ритейл аналитика
+- Промышленность
 
 ---
 
-## 📦 Installation
+### 🧠 Как это работает
 
-### Method 1: Automatic 1-Click Installation (Recommended)
+1. Получение видеопотока
+2. Детекция объектов
+3. Присвоение ID (трекинг)
+4. Подсчёт при попадании в любую из зон подсчёта
+5. Отображение итогов, партий и разбивки по классам; сохранение в отчёты
 
-The installer script automatically detects your GPU hardware (NVIDIA GeForce/RTX with CUDA, AMD Radeon with DirectML,
-Intel Arc/CPU with OpenVINO), creates the virtual environment, installs the required packages, and prepares the
-configuration:
+---
 
-- **On Windows:**  
-  Double-click **`install.bat`** (or run `install.bat` in CMD/PowerShell).  
-  To launch the application, double-click **`start.bat`**.
+## 📦 Установка
 
-- **On Linux / macOS:**
+### Вариант 1: Автоматическая установка в один клик (Рекомендуется)
+
+Скрипт установщика самостоятельно определит установленную видеокарту (NVIDIA GeForce/RTX с нужной версией CUDA, AMD
+Radeon с DirectML, Intel Arc/CPU с OpenVINO), создаст виртуальное окружение, установит все необходимые библиотеки и
+подготовит конфигурацию:
+
+- **В Windows:**  
+  Просто дважды кликните по файлу **`install.bat`** (или запустите в терминале `install.bat`).  
+  Для запуска приложения дважды кликните **`start.bat`**.
+
+- **В Linux / macOS:**
   ```bash
   chmod +x install.sh start.sh
   ./install.sh
   ./start.sh
   ```
 
-> **Installer CLI options (`install.py`):**
-> - `--profile [nvidia_cuda|amd_directml|intel_openvino|cpu]` - Manually force hardware profile (auto-detected if
-    omitted)
-> - `--reinstall` - Force reinstallation of packages
-> - `--no-color` - Disable ANSI colored console output
+> **Параметры командной строки установщика (`install.py`):**
+> - `--profile [nvidia_cuda|amd_directml|intel_openvino|cpu]` - принудительный выбор аппаратного профиля ускорения (если
+    опущен, определяется автоматически)
+> - `--reinstall` - принудительная переустановка пакетов
+> - `--no-color` - отключение цветного ANSI-вывода в консоли
 
 ---
 
-### Method 2: Manual Installation
+### Вариант 2: Ручная установка
 
-1. **Clone the repository:**
+1. **Клонируйте репозиторий:**
    ```bash
    git clone https://github.com/BespredeL/CVCounter.git
    ```
-2. **Navigate to the project directory:**
+2. **Перейдите в директорию проекта:**
    ```bash
    cd CVCounter
    ```
-3. **Install virtual environment:**
+3. **Установите виртуальное окружение:**
    ```bash
    python3 -m venv venv
    ```
-4. **Activate virtual environment:**
-    - On Windows:
+4. **Активируйте виртуальное окружение:**
+    - В Windows:
       ```bash
       .\venv\Scripts\activate
       ```
-    - On Linux/Mac:
+    - В Linux/Mac:
       ```bash
       source venv/bin/activate
       ```
-5. **Install core dependencies:**
+5. **Установите базовые зависимости:**
    ```bash
    pip3 install -r requirements.txt
    ```
-   *(Optional)* For `.pt` models and training with Ultralytics:
+   *(Опционально)* Для работы с моделями `.pt` и обучения через Ultralytics:
    ```bash
    pip3 install -r requirements-ultralytics.txt
    ```
-   *(Optional)* For Intel OpenVINO hardware acceleration:
+   *(Опционально)* Для аппаратного ускорения Intel OpenVINO:
    ```bash
    pip3 install -r requirements-openvino.txt
    ```
-6. **Rename the configuration file:**
+6. **Переименуйте файл конфигурации:**
    ```bash
    mv config/config.example.json config/config.json
    ```
-7. **Configure `config/config.json`: set video source, model path, and `model_type` (`auto` by default).**
-8. **Run the application:**
+7. **Настройте `config/config.json`: укажите видеоисточник, путь к модели и `model_type` (`auto` по умолчанию).**
+8. **Запустите приложение:**
    ```bash
    python app.py
    ```
 
 ---
 
-### Method 3: Docker Installation
+### Вариант 3: Установка через Docker
 
-1. **Clone the repository:**
+1. **Клонируйте репозиторий:**
    ```bash
    git clone https://github.com/BespredeL/CVCounter.git
    ```
-2. **Navigate to the project directory:**
+2. **Перейдите в директорию проекта:**
    ```bash
    cd CVCounter
    ```
-3. **Build and run using Docker Compose:**
+3. **Соберите и запустите с помощью Docker Compose:**
    ```bash
    docker-compose up --build
    ```
 
 ---
 
-## 🚀 Usage
+## 🚀 Использование
 
-**This solution provides the following modes:**
+**В этом решении реализованы следующие режимы:**
 
-1. **Main view** - counter values and video with recognition results
-2. **Text view** - counter values only (lower client load)
-3. **Multi view** - several counters on one page (batch, total, per-class breakdown)
-4. **Datasets** - import frames, annotate, train YOLO, apply `best.pt` to a counter
-5. **Reports** - count history and saved media (frames / recordings)
+1. **Основной вид** - значения счётчиков и видео с результатом распознавания
+2. **Текстовый вид** - только значения счётчиков (меньше нагрузка на клиент)
+3. **Общий экран (multi)** - несколько счётчиков на одной странице (партия, итог, разбивка по классам)
+4. **Датасеты** - импорт кадров, разметка, обучение YOLO и применение `best.pt` к счётчику
+5. **Отчёты** - история подсчётов и сохранённые медиа (кадры / записи)
 
-After several options, I decided to implement it with Flask, i.e., as a mini website solution, as it allows avoiding the
-installation of any
-additional software on clients. Moreover, this solution is not resource-intensive for clients (except for the main view
-with video).
+После нескольких вариантов, принял решение реализации на Flask, т.е решение в виде мини веб-сайта,
+так как такое решение позволяет избежать установки какого либо дополнительного софта на клиенты.
+А так же это решение не требовательно к клиентам в плане потребления ресурсов (за исключением основного вида с видео)
 
-I managed to run 6 simultaneous counts (without video output), and 5 counts with video output.
+Мне удалось запустить 6 одновременных подсчетов (без вывода видео), и 5 подсчетов с выводом видео.<br>
 
-Server specifications:
+Характеристики сервера:
 
 - AMD Ryzen 5 3600
-- GeForce GTX 1050 Ti (4GB)
+- GeForce GTX 1050 Ti (4Гб)
 
-You can run the browser in kiosk mode to prevent exiting it (for example, for Google Chrome, you can specify "--kiosk
---start-fullscreen" at
-startup).
+Вы можете запускать браузер в режиме киоска, для предотвращения выхода из него (например для Google Chrome при запуске
+можно указать "
+--kiosk --start-fullscreen")
 
 **P.S.:**
 
-- Friends, if you don't mind, please don't remove my copyright at the bottom of the page. It doesn't cost you anything,
-  but it makes me
-  happy.
-- All of this was implemented without any specifications and nobody believed in success, so there is currently some
-  chaos, but I will try to
-  redo everything more correctly =)
-- If this solution helped you, you can sponsor me by sending the word "Thanks". Contact details are below =)
-- If you need help with the implementation, we can discuss it =).
+- Друзья, если вас не затруднит, не убирайте, пожалуйста, мой копирайт внизу страницы. Вам это ничего не стоит, а мне
+  приятно.
+- Всё это реализовано без какого либо ТЗ и никто не верил в успех, поэтому пока что есть некоторая хаотичность, но
+  постараюсь всё переделать
+  более правильно =)
+- Если вам помогло это решение, вы можете проспонсировать меня отправив слово "Спасибо". Ссылки на контакты ниже =)
+- Если нужна помощь с внедрением, можем обсудить =).
 
 ---
 
-## 📚 Datasets and Training
+## 📚 Датасеты и обучение
 
-Web **Datasets** section:
+Веб-раздел **Датасеты**:
 
-1. Create a dataset and import frames (camera / upload / ZIP / recordings)
-2. Annotate with boxes or polygons (optional Track ID and attributes)
-3. Train model from the UI
-4. Apply `best.pt` to the chosen counter
+1. Создайте датасет и импортируйте кадры (камера / upload / ZIP / записи)
+2. Разметьте боксы или полигоны (опционально Track ID и атрибуты)
+3. Запустите обучение модели из UI
+4. Примените `best.pt` к нужному счётчику
 
-In-app training runs through `system.training` / `TrainingJobManager`.
+Обучение из UI идёт через `system.training` / `TrainingJobManager`.
 
-For auto-capture into a dataset inbox, set `dataset_create.path` to:
-`storage/datasets/<name>/images/inbox` (shown on the dataset page).
+Для авто-захвата кадров в inbox укажите в `dataset_create.path`:
+`storage/datasets/<name>/images/inbox` (путь показан на странице датасета).
 
-Optional offline CLI:
+Опциональный офлайн-CLI:
 
 ```bash
 python train.py list
@@ -219,33 +215,33 @@ python train.py train --config road-cam-test --epochs 100
 python train.py export --config road-cam-test --export onnx
 ```
 
-Details: [docs/wiki.md](docs/wiki.md).
+Подробнее: [docs/wiki_ru.md](docs/wiki_ru.md).
 
 ---
 
-## 🧠 Detection Backends
+## 🧠 Системы детекции
 
-Detectors are registered via `system/object_detection/registry.py`. Set the `model_type` field in the configuration (or
-use `"auto"` for automatic format detection).
+Детекторы подключаются через реестр (`system/object_detection/registry.py`). В конфигурации задаётся поле `model_type` (
+или `"auto"` для автоопределения).
 
-| `model_type`               | Backend                                                        | License    | Model formats                                 |
+| `model_type`               | Бэкенд                                                         | Лицензия   | Форматы моделей                               |
 |----------------------------|----------------------------------------------------------------|------------|-----------------------------------------------|
-| `auto` (default)           | Automatic backend selection based on file extension            | -          | `.onnx`, `.engine`, `.xml`, `.pt`, `.weights` |
+| `auto` (по умолчанию)      | Автоматический выбор бэкенда по расширению файла               | -          | `.onnx`, `.engine`, `.xml`, `.pt`, `.weights` |
 | `onnx`, `onnxruntime`      | [ONNX Runtime](https://onnxruntime.ai/)                        | MIT        | `.onnx` (YOLOv5–v11, YOLOv10, RT-DETR)        |
 | `openvino`, `openvino_dnn` | [Intel OpenVINO](https://www.intel.com/openvino)               | Apache-2.0 | `.xml`/`.bin`, `.onnx`                        |
-| `opencv`, `opencv_dnn`     | [OpenCV DNN](https://docs.opencv.org/)                         | Apache-2.0 | `.onnx`, `.pb`, Darknet (`.weights` + `.cfg`) |
+| `opencv`, `opencv_dnn`     | [OpenCV DNN](https://docs.opencv.org)                          | Apache-2.0 | `.onnx`, `.pb`, Darknet (`.weights` + `.cfg`) |
 | `yolo`, `ultralytics`      | [Ultralytics YOLO](https://github.com/ultralytics/ultralytics) | AGPL-3.0   | `.pt`, TensorRT `.engine`                     |
 
-### Configuration examples
+### Примеры конфигурации
 
-**Automatic selection (recommended):**
+**Автоматический выбор (рекомендуется):**
 
 ```json
 "model_type": "auto",
 "weights_path": "config/ultralytics/models/yolo11n.onnx"
 ```
 
-**ONNX Runtime (high performance, cross-platform):**
+**ONNX Runtime (высокая скорость, кроссплатформенность):**
 
 ```json
 "model_type": "onnx",
@@ -257,7 +253,7 @@ use `"auto"` for automatic format detection).
 ]
 ```
 
-**Intel OpenVINO (optimized for CPU, iGPU, Arc, NPU):**
+**Intel OpenVINO (оптимизация под CPU, iGPU, Arc, NPU):**
 
 ```json
 "model_type": "openvino",
@@ -273,7 +269,7 @@ use `"auto"` for automatic format detection).
 "device": 0
 ```
 
-**Darknet via OpenCV:**
+**OpenCV DNN + Darknet:**
 
 ```json
 "model_type": "opencv_dnn",
@@ -282,30 +278,30 @@ use `"auto"` for automatic format detection).
 "input_size": 416
 ```
 
-Export YOLO model to ONNX:
+Экспорт модели YOLO в ONNX:
 
 ```bash
 yolo export model=config/ultralytics/models/yolov8n.pt format=onnx
 ```
 
-### Optional detection parameters
+### Дополнительные параметры детекции
 
-| Parameter           | Applies to             | Description                                                                  |
-|---------------------|------------------------|------------------------------------------------------------------------------|
-| `weights_path`      | all                    | Path to the model file                                                       |
-| `model_config_path` | OpenCV Darknet         | Path to `.cfg`                                                               |
-| `input_size`        | OpenCV, ONNX, OpenVINO | Input size: integer or `[width, height]`, auto-detected or `640`             |
-| `backend`           | OpenCV                 | `OPENCV`, `CUDA`, `DEFAULT`, etc.                                            |
-| `target`            | OpenCV                 | `CPU`, `CUDA`, `CUDA_FP16`, etc.                                             |
-| `providers`         | ONNX                   | ONNX Runtime provider list (`CUDAExecutionProvider`, `CPUExecutionProvider`) |
-| `confidence`, `iou` | all                    | Detection thresholds                                                         |
-| `device`            | YOLO, ONNX, OpenVINO   | Device (`0`, `cpu`, `GPU`, `AUTO`, etc.)                                     |
-| `vid_stride`        | YOLO                   | Frame stride during inference                                                |
-| `classes`           | all                    | Class filter and UI labels `{ "0": "person" }` (shown in "By class")         |
+| Параметр            | Применимо к            | Описание                                                                           |
+|---------------------|------------------------|------------------------------------------------------------------------------------|
+| `weights_path`      | все                    | Путь к файлу модели                                                                |
+| `model_config_path` | OpenCV Darknet         | Путь к `.cfg`                                                                      |
+| `input_size`        | OpenCV, ONNX, OpenVINO | Размер входа: число или `[width, height]`, по умолчанию авто из модели или `640`   |
+| `backend`           | OpenCV                 | `OPENCV`, `CUDA`, `DEFAULT` и др.                                                  |
+| `target`            | OpenCV                 | `CPU`, `CUDA`, `CUDA_FP16` и др.                                                   |
+| `providers`         | ONNX                   | Список провайдеров ONNX Runtime (`CUDAExecutionProvider`, `CPUExecutionProvider`)  |
+| `confidence`, `iou` | все                    | Пороги детекции                                                                    |
+| `device`            | YOLO, ONNX, OpenVINO   | Устройство (`0`, `cpu`, `GPU`, `AUTO` и т.д.)                                      |
+| `vid_stride`        | YOLO                   | Шаг кадров при инференсе                                                           |
+| `classes`           | все                    | Фильтр и подписи классов `{ "0": "person" }` (имена видны в разбивке «По классам») |
 
-### Adding a custom detector
+### Добавление своего детектора
 
-1. Create a class that inherits from `BaseObjectDetectionService`:
+1. Создайте класс, наследующий `BaseObjectDetectionService`:
 
 ```python
 from system.object_detection.base_object_detection import BaseObjectDetectionService, DetectionResult
@@ -322,99 +318,99 @@ class ObjectDetectionMy(BaseObjectDetectionService):
         ...
 ```
 
-2. Import the module in `system/object_detection/__init__.py`.
-3. Set `"model_type": "my_detector"` in the configuration.
+2. Импортируйте модуль в `system/object_detection/__init__.py`.
+3. Укажите `"model_type": "my_detector"` в конфигурации.
 
 ---
 
-## ⚙️ Configuration
+## ⚙️ Конфигурация
 
 ```json5
 {
     general: {
-        // enable debug mode
+        // включить режим отладки
         debug: true,
-        // path to log file
+        // путь к файлу журнала
         log_path: "storage/logs/cvcounter.log",
-        // minimal log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+        // минимальный уровень журнала: DEBUG, INFO, WARNING, ERROR, CRITICAL
         log_level: "INFO",
-        // enable console log output (recommended false in production)
+        // включить вывод журнала в консоль (рекомендуется false в рабочей среде)
         log_console: false,
-        // default language
+        // язык по умолчанию
         default_language: "ru",
-        // allow unsafe operations in werkzeug
+        // разрешить небезопасные операции в werkzeug
         allow_unsafe_werkzeug: false,
-        // show button changing theme
+        // показать кнопку изменения темы
         button_change_theme: true,
-        // show button fullscreen
+        // показать кнопку перехода в полноэкранный режим
         button_fullscreen: true,
-        // show back button
+        // показать кнопку назад
         button_backward: false,
-        // show save capture button
+        // показать кнопку сохранения кадра
         button_save_capture: false,
-        // show collapsed keyboard
+        // показать клавиатуры свернутыми
         collapsed_keyboard: true,
     },
     server: {
-        // server host
+        // адрес сервера
         host: "0.0.0.0",
-        // server port
+        // порт сервера
         port: 8080,
-        // enable reloader mode
+        // включить режим перезагрузки
         use_reloader: false,
-        // enable log output
+        // включить вывод журнала
         log_output: true,
-        // socketio key
+        // socketio ключ
         socketio_key: "",
         // allowed origins
         allowed_origins: "*",
     },
     users: {
-        // login:password default admin:admin
+        // логин:пароль по умолчанию admin:admin
         admin: "scrypt:32768:8:1$rsdPYhqaQqpXQQ0o$aa3359c86228b4cee5fe8c4ed694db4b371fa7fab5100fa7b446db7e1ed8077e3bb63228d4a1899aeeef9b8d15f8e8bdbcc3457f020bcb3ec320332c76b5896b",
     },
     db: {
-        // database connection
+        // подключение к базе данных
         uri: "sqlite:///system/database.db",
-        // table prefix
+        // префикс таблиц
         prefix: "",
     },
     telemetry: {
-        // automatic sending is off by default
+        // автоотправка выключена по умолчанию
         enabled: false,
-        // receiver URL on your website
+        // URL приёмника на вашем сайте
         endpoint: "https://bespredel.name/api/cvcounter/telemetry",
-        // include exception events
+        // отправлять исключения
         send_errors: true,
-        // include usage events
+        // отправлять события использования
         send_usage: true,
-        // background flush interval (sec)
+        // интервал фоновой отправки (сек)
         flush_interval_sec: 300,
-        // queue/batch limits (keep telemetry off the hot path)
+        // лимиты очереди/пакета (чтобы не нагружать систему)
         max_batch_size: 50,
         max_queue_size: 200,
         max_stack_chars: 8000,
         error_dedup_sec: 120,
-        // HTTP timeout (sec)
+        // таймаут HTTP (сек)
         timeout_sec: 5,
-        // optional HMAC secret for request body signature
+        // опциональный HMAC-секрет для подписи тела запроса
         hmac_secret: "",
     },
     form: {
-        // show defect form
+        // показать форму брака
         defect_show: true,
-        // show correction form
+        // показать форму коррекции
         correct_show: true,
-        // custom fields configuration (global for all counters)
-        // can be added and deleted with 1 click in Settings UI
-        // supported types: text, number, textarea, date, datetime-local, select
+        // конфигурация пользовательских полей (общие для всех счётчиков)
+        // можно добавлять и удалять в 1 клик на странице Настроек
+        // поддерживаемые типы: text, number, textarea, date, datetime-local, select
         custom_fields: {
             field_one: {
-                // field name
+                // название поля
                 name: "field_one",
-                // field label
+                // подпись поля
                 label: "Field One",
-                // field type: text | number | textarea | date | datetime-local | select
+                // тип поля: text | number | textarea | date | datetime-local | select
                 type: "text",
             },
             field_two: {
@@ -426,38 +422,38 @@ class ObjectDetectionMy(BaseObjectDetectionService):
         },
     },
     detection_default: {
-        // model type: yolo | opencv | opencv_dnn | onnx | onnxruntime
+        // тип модели: yolo | opencv | opencv_dnn | onnx | onnxruntime
         model_type: "yolo",
-        // path to model (.pt, .onnx, .weights, etc.)
+        // путь к модели (.pt, .onnx, .weights и т.д.)
         weights_path: "config/ultralytics/models/yolov8n.pt",
-        // Darknet config path (.cfg), for opencv/opencv_dnn only
+        // путь к конфигу Darknet (.cfg), только для opencv/opencv_dnn
         // model_config_path: "config/models/yolov4.cfg",
-        // model input size (integer or [width, height]), for opencv/onnx
+        // размер входа модели (число или [width, height]), для opencv/onnx
         // input_size: 640,
-        // OpenCV DNN backend/target (OPENCV, CUDA, CPU, etc.)
+        // OpenCV DNN backend/target (OPENCV, CUDA, CPU и т.д.)
         // backend: "CUDA",
         // target: "CUDA",
-        // ONNX Runtime providers
+        // провайдеры ONNX Runtime
         // providers: ["CUDAExecutionProvider", "CPUExecutionProvider"],
-        // scale of video preview
+        // масштаб вывода видео на странице
         video_show_scale: 50,
-        // quality of video preview
+        // качество вывода видео на странице
         video_show_quality: 50,
-        // manual FPS setting (0 - automatic installation)
+        // ручная установка FPS (0 - автоматическая установка)
         video_fps: 0,
-        // max camera connection attempts on start and after stream loss
+        // макс. попыток подключения к камере при старте и после обрыва потока
         video_reconnect_attempts: 5,
-        // confidence threshold
+        // порог доверия
         confidence: 0.7,
-        // iou threshold
+        // порог iou
         iou: 0.7,
-        // computing device (see ultralytics / ONNX Runtime docs)
+        // указывает вычислительное устройство (см. документацию ultralytics / ONNX Runtime)
         device: 0,
-        // video stream stride
+        // шаг видеопотока
         vid_stride: 1,
-        // size of indicator
+        // размер индикатора
         indicator_size: 10,
-        // counting zones (preferred; one or more polygons)
+        // зоны подсчёта (предпочтительный формат; можно несколько полигонов)
         counting_areas: [
             {
                 points: [
@@ -486,7 +482,7 @@ class ObjectDetectionMy(BaseObjectDetectionService):
                 // BGR
             },
         ],
-        // legacy: first zone (kept in sync when saving from the zone editor)
+        // legacy: первая зона (синхронизируется при сохранении из редактора)
         counting_area: [
             [
                 0,
@@ -510,56 +506,56 @@ class ObjectDetectionMy(BaseObjectDetectionService):
             211,
             255
         ],
-        // classes to detect and labels for the "By class" UI (empty = all classes)
-        // example: { "0": "Product 1", "1": "Product 2" }
+        // классы для обнаружения и подписи в UI «По классам» (пусто = все классы)
+        // пример: { "0": "Продукт 1", "1": "Продукт 2" }
         classes: {},
-        // video recording configuration for all recognitions
+        // конфигурация записи видео для всех распознаваний
         recording: {
-            // enable video recording
+            // включить запись видео
             enable: false,
-            // path to storage folder
+            // путь к папке хранения
             path: "storage/saved_recordings",
-            // video size (percentage)
+            // размер видео (в процентах)
             scale: 100,
-            // video quality
+            // качество видео
             quality: 80,
-            // seconds without detections before stopping recording (0 = keep until counter reset)
-            // recording starts when objects are detected
+            // секунды без распознаваний до остановки записи (0 - писать до сброса счётчика)
+            // запись стартует при детекции объектов
             idle_timeout: 30,
         },
     },
     detections: {
-        // detection configs
+        // конфигурации обнаружения
         ExampleCam: {
-            // name
+            // наименование подсчета (используется в адресе страницы, должно быть на латинице)
             label: "Label ExampleCam",
-            // label
+            // число с которого начинается подсчет (по умолчанию 0, но если необходимо начать с какого-то числа, то можно указать)
             start_total_count: 0,
-            // start total count
+            // путь к видеофайлу или источнику камеры
             video_path: "",
-            // path to video file or camera src
+            // масштаб вывода видео на странице
             video_show_scale: 70,
-            // scale of video preview
+            // качество вывода видео на странице
             video_show_quality: 30,
-            // quality of video preview
+            // ручная установка FPS (необязательно)
             video_fps: 0,
-            // manual FPS setting (optional)
-            // max camera connection attempts (optional, inherits from detection_default)
+            // макс. попыток подключения к камере (необязательно, наследуется из detection_default)
             video_reconnect_attempts: 5,
-            // model type: yolo | opencv | opencv_dnn | onnx | onnxruntime
+            // тип модели: yolo | opencv | opencv_dnn | onnx | onnxruntime
             model_type: "yolo",
-            // path to model Yolov8
+            // путь к модели
             weights_path: "config/ultralytics/models/yolov8n.pt",
+            // порог доверия
             confidence: 0.7,
-            // confidence threshold
+            // порог iou
             iou: 0.7,
-            // iou threshold
+            // вычислительное устройство (см. документацию ultralytics / ONNX Runtime)
             device: 0,
-            // computing device (see ultralytics / ONNX Runtime docs)
+            // шаг видеопотока
             vid_stride: 1,
-            // video stream stride
+            // размер индикатора
             indicator_size: 10,
-            // counting zones (object is counted when entering any zone)
+            // зоны подсчёта (можно несколько; объект считается при попадании в любую)
             counting_areas: [
                 {
                     points: [
@@ -610,9 +606,9 @@ class ObjectDetectionMy(BaseObjectDetectionService):
                 64,
                 0
             ],
-            // classes to detect and labels for the per-class breakdown
+            // классы (объекты) для обнаружения и подписи в разбивке
             classes: {},
-            // camera-specific custom fields (extend or override global form custom fields)
+            // пользовательские поля формы, специфичные для этой камеры (дополняют или переопределяют общие)
             custom_fields: {
                 batch_number: {
                     name: "batch_number",
@@ -620,27 +616,27 @@ class ObjectDetectionMy(BaseObjectDetectionService):
                     type: "number",
                 },
             },
+            // автоматическое создание набора данных
             dataset_create: {
-                // automatic dataset creation
+                // включить создание набора данных
                 enable: true,
-                // enable dataset creation
+                // вероятность создания изображения набора данных (число от 0.01 до 1, где 0.01 - 1% и 1 - 100%)
                 probability: 0.05,
-                // probability of creating a dataset image (number from 0.01 to 1, where 0.01 is 1% and 1 is 100%)
+                // путь для сохранения (для раздела Datasets: storage/datasets/<name>/images/inbox)
                 path: "storage/datasets/ExampleCam/images/inbox",
-                // for Datasets UI inbox: storage/datasets/<name>/images/inbox
             },
-            // detection video recording configuration
+            // конфигурация записи видео для обнаружения
             recording: {
-                // enable video recording
+                // включить запись видео
                 enable: false,
-                // path to storage folder
+                // путь к папке хранения
                 path: "storage/saved_recordings",
-                // video size (percentage)
+                // размер видео (в процентах)
                 scale: 100,
-                // video quality
+                // качество видео
                 quality: 80,
-                // seconds without detections before stopping recording (0 = until reset)
-                // recording starts on detection, not continuously from counter start
+                // секунды без распознаваний до остановки записи (0 - до сброса)
+                // запись стартует при детекции, а не непрерывно с запуска счётчика
                 idle_timeout: 15,
             },
         },
@@ -650,28 +646,28 @@ class ObjectDetectionMy(BaseObjectDetectionService):
 
 ---
 
-## 📸 Screenshots
+## 📸 Скриншоты
 
-<img src="docs/en/images/Index.png" alt="Home page">
-<img src="docs/en/images/ReportsIndex.png" alt="Home Reports">
-<img src="docs/en/images/ReportsItems.png" alt="Counter Reports">
-<img src="docs/en/images/ReportsItemShow.png" alt="View the report">
-<img src="docs/en/images/Help.png" alt="Help page">
-<img src="docs/en/images/Settings.png" alt="Settings">
-<img src="docs/en/images/SystemInfo.png" alt="System Information">
-<img src="docs/en/images/CounterVideo.png" alt="Video Counter">
-<img src="docs/en/images/CounterText.png" alt="Text Counter">
-<img src="docs/en/images/CounterMultiText.png" alt="Multi Counters">
-<img src="docs/en/images/CounterArea.png" alt="Setting up a counting area">
-<img src="docs/en/images/CounterModalSetting.png" alt="Camera Setup">
+<img src="docs/ru/images/Index.png" alt="Главная страница">
+<img src="docs/ru/images/ReportsIndex.png" alt="Главная отчетов">
+<img src="docs/ru/images/ReportsItems.png" alt="Отчеты счетчика">
+<img src="docs/ru/images/ReportsItemShow.png" alt="Просмотра отчета">
+<img src="docs/ru/images/Help.png" alt="Помощь">
+<img src="docs/ru/images/Settings.png" alt="Настройки">
+<img src="docs/ru/images/SystemInfo.png" alt="Системная информация">
+<img src="docs/ru/images/CounterVideo.png" alt="Счетчик с видео">
+<img src="docs/ru/images/CounterText.png" alt="Счетчик с текстом">
+<img src="docs/ru/images/CounterMultiText.png" alt="Мульти счетчики">
+<img src="docs/ru/images/CounterArea.png" alt="Настройка зоны подсчета">
+<img src="docs/ru/images/CounterModalSetting.png" alt="Настройка камеры">
 
-_P.S.: Not the best example in the screenshots. Couldn't find anything better than an open-access camera (((_
+_P.S.: Не лучший пример на скриншотах. Не нашел ничего лучше, чем камера в открытом доступе (((_
 
 ---
 
-## 👨‍💻 Author
+## 👨‍💻 Автор
 
-Aleksandr Kireev
+Александр Киреев
 
 Website: [https://bespredel.name](https://bespredel.name)<br>
 E-mail: [hello@bespredel.name](mailto:hello@bespredel.name)<br>
@@ -679,25 +675,25 @@ GitHub: [https://github.com/BespredeL](https://github.com/BespredeL)
 
 ---
 
-## 🔗 Links
+## 🔗 Ссылки
 
-Website: [https://cvcounter.github.io/](https://cvcounter.github.io/)<br>
-Telemetry API docs: [docs/telemetry_api.md](docs/telemetry_api.md)<br>
-Wiki (EN): [docs/wiki.md](docs/wiki.md)<br>
+Сайт: [https://cvcounter.github.io/](https://cvcounter.github.io/)<br>
+Документация телеметрии: [docs/telemetry_api.md](docs/telemetry_api.md)<br>
+Wiki (RU): [docs/wiki_ru.md](docs/wiki_ru.md)<br>
 Ultralytics: [https://github.com/ultralytics](https://github.com/ultralytics)<br>
 OpenCV: [https://opencv.org/](https://opencv.org/)<br>
 ONNX Runtime: [https://onnxruntime.ai/](https://onnxruntime.ai/)
 
 ---
 
-## 📄 License
+## 📄 Лицензия
 
-**AGPL-3.0 License**: This [OSI-approved](https://opensource.org/licenses/) open-source license is ideal for students
-and enthusiasts,
-promoting open collaboration and knowledge sharing.
+**AGPL-3.0 License**: Эта [OSI-approved](https://opensource.org/licenses/) лицензия с открытым исходным кодом идеально
+подходит для
+студентов и энтузиастов, способствуя открытому сотрудничеству и обмену знаниями.
 
 ---
 
-## ⭐ Support
+## ⭐ Поддержка
 
-If you find this project useful, give it a star ⭐
+Буду признателен за звезду ⭐ на GitHub, если проект оказался полезным.

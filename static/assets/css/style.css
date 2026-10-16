@@ -2120,9 +2120,11 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
         border-radius: var(--cv-radius);
         scrollbar-width: none;
     }
+
     .settings-layout__nav::-webkit-scrollbar {
         display: none;
     }
+
     .settings-layout__nav .list-group-item {
         flex: 0 0 auto;
         white-space: nowrap;
@@ -2130,6 +2132,7 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
         padding: 0.4rem 0.85rem !important;
         font-size: 0.825rem;
     }
+
     .settings-layout__nav .list-group-item .badge {
         font-size: 0.65rem;
         padding: 0.2rem 0.45rem !important;
@@ -2141,28 +2144,34 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
         margin-left: 0 !important;
         width: 100%;
     }
+
     .settings-intro-card .input-group {
         min-width: 100% !important;
         max-width: 100% !important;
     }
+
     .settings-layout__form {
         padding: 0.75rem;
         border-radius: var(--cv-radius);
     }
+
     .settings-layout__toolbar {
         margin: -0.75rem -0.75rem 0.75rem;
         padding: 0.65rem 0.75rem;
         border-radius: var(--cv-radius) var(--cv-radius) 0 0;
     }
+
     .settings-pane-header {
         flex-direction: column;
         align-items: stretch !important;
         gap: 0.65rem;
     }
+
     .settings-pane-header > .d-flex:last-child {
         display: flex;
         width: 100%;
     }
+
     .settings-pane-header .btn {
         flex: 1 1 auto;
         justify-content: center;
@@ -2170,21 +2179,26 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
         padding-right: 0.5rem;
         font-size: 0.775rem;
     }
+
     .cv-camera-card__header {
         padding: 0.65rem 0.75rem !important;
         gap: 0.5rem !important;
     }
+
     .cv-camera-card__icon {
         width: 2rem !important;
         height: 2rem !important;
         min-width: 2rem !important;
     }
+
     .cv-camera-card__body {
         padding: 0.75rem !important;
     }
+
     .cv-custom-field-card {
         padding: 0.65rem 0.75rem !important;
     }
+
     .cv-classes-container {
         max-height: min(340px, 50vh);
     }
