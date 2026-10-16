@@ -1,12 +1,11 @@
 /**
+ * Computer Vision Counter (CVCounter)
+ * Dashboard modal - per-counter detection settings.
+ *
  * Developed by: Aleksandr Kireev
  * Created: 04.06.2026
  * Updated: 08.06.2026
  * Website: https://bespredel.name
- */
-
-/**
- * Dashboard modal - per-counter detection settings
  */
 const CounterSettingsModal = {
     /**
@@ -80,6 +79,52 @@ const CounterSettingsModal = {
     },
 
     /**
+     * Load the form HTML for the specified location
+     *
+     * @param {string} location - The location identifier
+     * @returns {Promise<void>}
+     */
+    loadForm(location) {
+        const self = this;
+        this.setLoading();
+
+        return fetch(this.formUrl(location), {
+            headers: {"X-Requested-With": "XMLHttpRequest"},
+        })
+            .then((r) => {
+                if (r.status === 401) {
+                    window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+                    return null;
+                }
+                if (!r.ok) {
+                    throw new Error(`HTTP ${r.status}`);
+                }
+                return r.text();
+            })
+            .then((html) => {
+                if (!html) {
+                    return;
+                }
+                const body = document.getElementById("counterSettingsModalBody");
+                const saveBtn = document.getElementById("counterSettingsSaveBtn");
+                if (body) {
+                    body.innerHTML = html;
+                }
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                }
+                self.bindFormSubmit();
+            })
+            .catch(() => {
+                const body = document.getElementById("counterSettingsModalBody");
+                if (body) {
+                    body.innerHTML = `<p class="text-danger mb-0">${window.trans("Request failed")}</p>`;
+                }
+                showToast(window.trans("Request failed"), "danger");
+            });
+    },
+
+    /**
      * Bind the form submit event
      *
      * @returns {void}
@@ -113,8 +158,20 @@ const CounterSettingsModal = {
                 headers: {"X-Requested-With": "XMLHttpRequest"},
                 body: new URLSearchParams(new FormData(form)),
             })
-                .then((r) => r.json())
+                .then((r) => {
+                    if (r.status === 401) {
+                        window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+                        return null;
+                    }
+                    if (!r.ok) {
+                        throw new Error(`HTTP ${r.status}`);
+                    }
+                    return r.json();
+                })
                 .then((data) => {
+                    if (!data) {
+                        return;
+                    }
                     showToast(window.trans("Settings saved"), "success");
                     if (data?.restart_recommended) {
                         showToast(window.trans("Stop and start the counter to apply all changes"), "info");
@@ -133,6 +190,357 @@ const CounterSettingsModal = {
         };
 
         form.addEventListener("submit", this._formSubmitHandler);
+    },
+
+    /**
+     * Transliterate and slugify string into valid identifier (Latin letters, digits, underscores)
+     *
+     * @param {string} text - The input text
+     * @returns {string} Sanitized field ID
+     */
+    slugifyIdentifier(text) {
+        if (!text) return "";
+        const ruMap = {
+            "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "e", "ж": "zh",
+            "з": "z", "и": "i", "й": "y", "к": "k", "л": "l", "м": "m", "н": "n", "о": "o",
+            "п": "p", "р": "r", "с": "s", "т": "t", "у": "u", "ф": "f", "х": "kh", "ц": "ts",
+            "ч": "ch", "ш": "sh", "щ": "shch", "ъ": "", "ы": "y", "ь": "", "э": "e", "ю": "yu", "я": "ya",
+        };
+        const str = String(text).toLowerCase().trim();
+        let result = "";
+        for (let i = 0; i < str.length; i++) {
+            const ch = str[i];
+            if (Object.prototype.hasOwnProperty.call(ruMap, ch)) {
+                result += ruMap[ch];
+            } else if (/[a-z0-9]/.test(ch)) {
+                result += ch;
+            } else if (/[\s\-_.,/\\|:;+*!@#$%^&()\[\]{}<>=~`'"]/.test(ch)) {
+                result += "_";
+            }
+        }
+        return result.replace(/_+/g, "_").replace(/^_+|_+$/g, "");
+    },
+
+    /**
+     * Bind custom field management events (Add modal, Delete, Type change)
+     *
+     * @returns {void}
+     */
+    bindCustomFields() {
+        const self = this;
+        const modalAddEl = document.getElementById("addCustomFieldModal");
+        const formAdd = document.getElementById("form-add-custom-field");
+        const errAdd = document.getElementById("add-custom-field-error");
+        const btnSubmit = document.getElementById("btn-submit-add-custom-field");
+        const spinner = document.getElementById("spinner-add-custom-field");
+        const selectScope = document.getElementById("new_field_scope");
+        const selectType = document.getElementById("new_field_type");
+        const rowOptions = document.getElementById("row-field-options");
+        const inputLabel = document.getElementById("new_field_label");
+        const inputName = document.getElementById("new_field_name");
+        const btnRegenId = document.getElementById("btn-regen-field-id");
+        let isNameManuallyEdited = false;
+
+        if (inputLabel && inputName) {
+            inputLabel.addEventListener("input", () => {
+                if (!isNameManuallyEdited) {
+                    inputName.value = self.slugifyIdentifier(inputLabel.value);
+                }
+            });
+            inputName.addEventListener("input", () => {
+                isNameManuallyEdited = inputName.value.trim().length > 0;
+            });
+        }
+
+        if (btnRegenId && inputLabel && inputName) {
+            btnRegenId.addEventListener("click", () => {
+                inputName.value = self.slugifyIdentifier(inputLabel.value);
+                isNameManuallyEdited = false;
+                inputName.focus();
+            });
+        }
+
+        if (selectType && rowOptions) {
+            selectType.addEventListener("change", () => {
+                if (selectType.value === "select") {
+                    rowOptions.classList.remove("d-none");
+                    rowOptions.querySelector("textarea")?.focus();
+                } else {
+                    rowOptions.classList.add("d-none");
+                }
+            });
+        }
+
+        if (modalAddEl) {
+            modalAddEl.addEventListener("show.bs.modal", () => {
+                setTimeout(() => {
+                    const backdrops = document.querySelectorAll(".modal-backdrop");
+                    if (backdrops.length > 1) {
+                        backdrops[backdrops.length - 1].style.zIndex = "1065";
+                    }
+                }, 0);
+            });
+            modalAddEl.addEventListener("hidden.bs.modal", () => {
+                if (document.querySelector(".modal.show")) {
+                    document.body.classList.add("modal-open");
+                }
+            });
+        }
+
+        document.addEventListener("change", (e) => {
+            const typeSelect = e.target.closest(".cv-custom-field-type-select");
+            if (!typeSelect) return;
+            const card = typeSelect.closest(".cv-custom-field-card");
+            if (!card) return;
+
+            const isSelect = typeSelect.value === "select";
+            const optionsRow = card.querySelector(".cv-custom-field-options-row");
+            const optionsInput = card.querySelector(".cv-custom-field-options-input");
+            const typeBadge = card.querySelector(".cv-custom-field-badge-type");
+            const iconBox = card.querySelector(".cv-custom-field-card__icon-box");
+
+            if (typeBadge) {
+                typeBadge.textContent = typeSelect.value;
+            }
+            if (iconBox) {
+                const ftype = typeSelect.value;
+                if (ftype === "number") {
+                    iconBox.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-123 text-success" viewBox="0 0 16 16"><path d="M2.873 11.297V4.142H1.699L0 5.379v1.137l1.64-1.18h.06v5.961zm3.213-5.09v-.063c0-.618.44-1.169 1.196-1.169.676 0 1.174.44 1.174 1.106 0 .606-.439 1.132-.974 1.533-.45.34-1.01.737-1.353 1.05v.982h3.424v-1.045H7.39v-.064c.266-.237.603-.496.953-.76.77-.584 1.488-1.28 1.488-2.28 0-1.282-1.02-2.197-2.45-2.197-1.47 0-2.38 1.015-2.38 2.221v.72h1.085zm6.541 2.228h-.128c-.287 0-.584-.047-.845-.14v.05c0 .647.464 1.09 1.157 1.09.688 0 1.18-.456 1.18-1.115 0-.616-.479-1.094-1.127-1.094-.176 0-.361.026-.51.087v-1.05c.143.045.303.069.458.069.605 0 1.04-.415 1.04-.98 0-.549-.399-.95-1.022-.95-.623 0-1.04.417-1.04.996v.195H11.5v-.268c0-1.19.89-2.02 2.22-2.02 1.34 0 2.23.834 2.23 2.012 0 .67-.32 1.258-.87 1.637.675.367 1.04 1.01 1.04 1.765 0 1.255-.956 2.146-2.39 2.146-1.42 0-2.37-.91-2.37-2.187v-.337h1.085z"/></svg>';
+                } else if (ftype === "textarea") {
+                    iconBox.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-text-paragraph text-info" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2 12.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5m0-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m0-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m4-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5"/></svg>';
+                } else if (ftype === "date" || ftype === "datetime-local") {
+                    iconBox.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-calendar3 text-warning" viewBox="0 0 16 16"><path d="M14 0H2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M1 3.857C1 3.384 1.448 3 2 3h12c.552 0 1 .384 1 .857v10.286c0 .473-.448.857-1 .857H2c-.552 0-1-.384-1-.857z"/></svg>';
+                } else if (ftype === "select") {
+                    iconBox.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-menu-button-wide text-primary" viewBox="0 0 16 16"><path d="M0 1.5A1.5 1.5 0 0 1 1.5 0h13A1.5 1.5 0 0 1 16 1.5v2A1.5 1.5 0 0 1 14.5 5h-13A1.5 1.5 0 0 1 0 3.5zM1.5 1a.5.5 0 0 0-.5.5v2a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-2a.5.5 0 0 0-.5-.5z"/><path d="M2 2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5m10.823.323-.396-.396A.25.25 0 0 1 12.604 2h.792a.25.25 0 0 1 .177.427l-.396.396a.25.25 0 0 1-.354 0M0 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm1 3v2a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2zm14-1V8a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v2zM2 8.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0 4a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5"/></svg>';
+                } else {
+                    iconBox.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-fonts text-primary" viewBox="0 0 16 16"><path d="M12.258 3h-8.51l-.083 2.46h.479c.26-1.544.758-1.783 2.693-1.845l.424-.013v7.827c0 .663-.144.82-1.3.923v.52h4.082v-.52c-1.162-.103-1.306-.26-1.306-.923V3.602l.431.013c1.934.062 2.434.301 2.693 1.846h.479z"/></svg>';
+                }
+            }
+
+            if (optionsRow) {
+                if (isSelect) {
+                    optionsRow.classList.remove("d-none");
+                    if (optionsInput) {
+                        optionsInput.disabled = false;
+                        optionsInput.focus();
+                    }
+                } else {
+                    optionsRow.classList.add("d-none");
+                    if (optionsInput) {
+                        optionsInput.disabled = true;
+                    }
+                }
+            }
+        });
+
+        document.addEventListener("input", (e) => {
+            const labelInput = e.target.closest(".cv-custom-field-input-label");
+            if (!labelInput) return;
+            const card = labelInput.closest(".cv-custom-field-card");
+            if (!card) return;
+            const headerLabel = card.querySelector(".cv-custom-field-header-label");
+            if (headerLabel) {
+                headerLabel.textContent = labelInput.value.trim() || card.dataset.fieldName || "";
+            }
+        });
+
+        // Open Add Custom Field Modal on click
+        document.addEventListener("click", (e) => {
+            const btnAdd = e.target.closest(".btn-add-custom-field");
+            if (!btnAdd) return;
+
+            const inCounterModal = btnAdd.closest("#counterSettingsModal");
+            if (!inCounterModal && !modalAddEl) return;
+
+            e.preventDefault();
+            const loc = btnAdd.dataset.location || self._location || "";
+            const scope = btnAdd.dataset.scope || (loc ? "detection" : "global");
+            isNameManuallyEdited = false;
+
+            if (formAdd) formAdd.reset();
+            if (errAdd) {
+                errAdd.classList.add("d-none");
+                errAdd.textContent = "";
+            }
+            if (rowOptions) rowOptions.classList.add("d-none");
+
+            if (selectScope) {
+                if (scope === "detection" && loc) {
+                    const targetVal = "detection:" + loc;
+                    const matchOption = Array.from(selectScope.options).find((opt) => opt.value === targetVal);
+                    if (matchOption) {
+                        selectScope.value = targetVal;
+                    } else {
+                        const newOpt = document.createElement("option");
+                        newOpt.value = targetVal;
+                        newOpt.textContent = loc;
+                        selectScope.appendChild(newOpt);
+                        selectScope.value = targetVal;
+                    }
+                } else {
+                    selectScope.value = "global";
+                }
+            }
+
+            if (modalAddEl) {
+                const modalInst = bootstrap.Modal.getOrCreateInstance(modalAddEl);
+                modalInst.show();
+                setTimeout(() => {
+                    inputLabel?.focus();
+                }, 200);
+            }
+        });
+
+        // Submit Add Custom Field
+        if (formAdd) {
+            formAdd.addEventListener("submit", (e) => {
+                e.preventDefault();
+                if (errAdd) {
+                    errAdd.classList.add("d-none");
+                    errAdd.textContent = "";
+                }
+
+                const formData = new FormData(formAdd);
+                const scopeTarget = formData.get("scope_target") || "global";
+                let scope = "global";
+                let loc = "";
+                if (scopeTarget.startsWith("detection:")) {
+                    scope = "detection";
+                    loc = scopeTarget.substring("detection:".length);
+                }
+
+                const name = (formData.get("name") || "").trim();
+                const label = (formData.get("label") || "").trim();
+                const type = formData.get("type") || "text";
+                const options = formData.get("options") || "";
+                const defaultValue = (formData.get("default_value") || "").trim();
+
+                if (!name) {
+                    if (errAdd) {
+                        errAdd.textContent = window.trans("Field name (ID) is required");
+                        errAdd.classList.remove("d-none");
+                    }
+                    return;
+                }
+
+                if (!/^[a-zA-Z0-9_]+$/.test(name)) {
+                    if (errAdd) {
+                        errAdd.textContent = window.trans("Invalid field ID. Use Latin letters, digits, and underscores.");
+                        errAdd.classList.remove("d-none");
+                    }
+                    return;
+                }
+
+                const payload = {
+                    scope: scope,
+                    location: loc,
+                    name: name,
+                    label: label || name,
+                    type: type,
+                    options: options,
+                    default_value: defaultValue,
+                };
+
+                if (btnSubmit) btnSubmit.disabled = true;
+                if (spinner) spinner.classList.remove("d-none");
+
+                fetch("/settings/api/custom_fields/add", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Requested-With": "XMLHttpRequest",
+                    },
+                    body: JSON.stringify(payload),
+                })
+                    .then((res) => res.json())
+                    .then((data) => {
+                        if (data && data.ok) {
+                            showToast(data.message || window.trans("Field added successfully"), "success");
+                            if (modalAddEl) {
+                                const modalInst = bootstrap.Modal.getInstance(modalAddEl);
+                                modalInst?.hide();
+                            }
+                            if (self._location) {
+                                self.loadForm(self._location);
+                            }
+                        } else {
+                            const msg = (data && data.error) ? data.error : window.trans("Failed to add field");
+                            if (errAdd) {
+                                errAdd.textContent = msg;
+                                errAdd.classList.remove("d-none");
+                            } else {
+                                showToast(msg, "danger");
+                            }
+                        }
+                    })
+                    .catch((err) => {
+                        const msg = (err && err.message) ? err.message : window.trans("Failed to add field");
+                        if (errAdd) {
+                            errAdd.textContent = msg;
+                            errAdd.classList.remove("d-none");
+                        } else {
+                            showToast(msg, "danger");
+                        }
+                    })
+                    .finally(() => {
+                        if (btnSubmit) btnSubmit.disabled = false;
+                        if (spinner) spinner.classList.add("d-none");
+                    });
+            });
+        }
+
+        // Delete Custom Field
+        document.addEventListener("click", (e) => {
+            const btnDelete = e.target.closest(".btn-delete-custom-field");
+            if (!btnDelete) return;
+            const inCounterModal = btnDelete.closest("#counterSettingsModal");
+            if (!inCounterModal) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const fieldName = btnDelete.dataset.fieldName;
+            const fieldLabel = btnDelete.dataset.fieldLabel || fieldName;
+            const loc = btnDelete.dataset.location || self._location || "";
+            const scope = btnDelete.dataset.scope || (loc ? "detection" : "global");
+
+            const confirmMsg = (window.trans ? window.trans("Are you sure you want to delete field \"{name}\"?", {name: fieldLabel}) : null)
+                || `Are you sure you want to delete field "${fieldLabel}"?`;
+
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+
+            btnDelete.disabled = true;
+            fetch("/settings/api/custom_fields/delete", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+                body: JSON.stringify({
+                    scope: scope,
+                    location: loc,
+                    name: fieldName,
+                }),
+            })
+                .then((res) => res.json())
+                .then((data) => {
+                    if (data && data.ok) {
+                        showToast(data.message || window.trans("Field deleted successfully"), "success");
+                        if (self._location) {
+                            self.loadForm(self._location);
+                        }
+                    } else {
+                        btnDelete.disabled = false;
+                        showToast((data && data.error) ? data.error : window.trans("Failed to delete field"), "danger");
+                    }
+                })
+                .catch((err) => {
+                    btnDelete.disabled = false;
+                    showToast((err && err.message) ? err.message : window.trans("Failed to delete field"), "danger");
+                });
+        });
     },
 
     /**
@@ -161,29 +569,8 @@ const CounterSettingsModal = {
             subtitleEl.textContent = `${title} · ${location}`;
         }
 
-        this.setLoading();
         modal.show();
-
-        fetch(this.formUrl(location))
-            .then((r) => r.text())
-            .then((html) => {
-                const body = document.getElementById("counterSettingsModalBody");
-                const saveBtn = document.getElementById("counterSettingsSaveBtn");
-                if (body) {
-                    body.innerHTML = html;
-                }
-                if (saveBtn) {
-                    saveBtn.disabled = false;
-                }
-                this.bindFormSubmit();
-            })
-            .catch(() => {
-                const body = document.getElementById("counterSettingsModalBody");
-                if (body) {
-                    body.innerHTML = `<p class="text-danger mb-0">${window.trans("Request failed")}</p>`;
-                }
-                showToast(window.trans("Request failed"), "danger");
-            });
+        this.loadForm(location);
     },
 
     /**
@@ -193,6 +580,8 @@ const CounterSettingsModal = {
      */
     initialize() {
         const self = this;
+
+        this.bindCustomFields();
 
         document.getElementById("counter-dashboard")?.addEventListener("click", (e) => {
             const settingsBtn = e.target.closest("[data-action=settings]");

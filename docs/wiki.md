@@ -1,547 +1,535 @@
-# CVCounter Wiki
+# CVCounter — Documentation (Wiki)
 
-Welcome to the documentation for the **CVCounter** project!
+[![Website](https://img.shields.io/badge/website-bespredel.github.io-4dabf7.svg)](https://bespredel.github.io/cvcounter/)
+[![Author](https://img.shields.io/badge/author-bespredel.name-8a2be2.svg)](https://bespredel.name)
+[![Wiki RU](https://img.shields.io/badge/Wiki-RU-blue.svg)](wiki_ru.md)
+[![Wiki EN](https://img.shields.io/badge/Wiki-EN-blue.svg)](wiki.md)
+[![License](https://img.shields.io/badge/license-AGPL--3.0-458a7b.svg)](https://github.com/BespredeL/CVCounter/blob/master/LICENSE)
 
-# Project Description
-
-CVCounter is a web-based system for detecting, tracking, and counting objects in video streams. It serves as a simple and convenient tool for monitoring object flows (e.g., entry and exit or conveyor systems).
-
-This solution does not require additional client-side software and works on any device with a browser. The project is lightweight and resource-efficient, especially when the video mode is not used.
-
-### Key Features
-
-- Web dashboard with counter cards, search, status filters, and camera previews
-- Real-time count updates via Socket.IO
-- Video view with recognition results (MJPEG stream)
-- Text-only modes for simplicity and resource-saving
-- Multi-counter display for monitoring N locations simultaneously (e.g., entry and exit)
-- Visual editor for **one or more** counting zones (polygons), each with its own color
-- Per-class count breakdown (current batch / total) on counter pages, multi-view, and reports
-- Per-counter settings modal on the dashboard
-- Reports on saved counts (including class totals and per-batch class data)
-- System information page (GPU/CUDA/PyTorch)
-- Modular architecture with pluggable detection backends
-- SORT multi-object tracking and union-zone counting
-- Support for RTSP streams, USB cameras, and video files
-
-### Architecture
-
-The application uses a Flask factory pattern (`app.py`) with blueprints:
-
-| Blueprint | Module | Purpose |
-|-----------|--------|---------|
-| `main` | `routes/main.py` | Dashboard, static pages |
-| `counters` | `routes/counters.py` | Counter UI, API, MJPEG stream |
-| `reports` | `routes/reports.py` | Saved count reports |
-| `settings` | `routes/settings.py` | Global config editor (auth required) |
+Welcome to the comprehensive technical documentation for **CVCounter**!
 
 ---
 
-## Installation
+## 📑 Table of Contents
 
-### Method 1: Manual Installation
+1. [Overview & Features](#-overview--features)
+2. [Application Architecture](#-application-architecture)
+3. [Installation & Deployment](#-installation--deployment)
+4. [Detection Systems & Inference](#-detection-systems--inference)
+5. [Complete Configuration Guide (`config.json`)](#-complete-configuration-guide-configjson)
+6. [Web Interface & Operation Modes](#-web-interface--operation-modes)
+7. [Datasets, Annotation & Model Training](#-datasets-annotation--model-training)
+8. [REST API Reference](#-rest-api-reference)
+9. [Authentication & Security](#-authentication--security)
+10. [Real-Time Events (Socket.IO)](#-real-time-events-socketio)
+11. [Frequently Asked Questions (FAQ)](#-frequently-asked-questions-faq)
+12. [Contributing & License](#-contributing--license)
 
-1. **Clone the repository:**
+---
+
+## 🧠 Overview & Features
+
+**CVCounter** is a production-grade, scalable computer vision system designed for real-time object detection, tracking, and counting in video streams. Built as a self-hosted Flask web application, it requires no client-side software installations: operators interact with the system via standard web browsers across PCs, tablets, or touch terminals.
+
+### Key Capabilities:
+
+- 🎯 **Multi-Zone Counting:** Interactive visual polygon editor (arbitrary number of zones per counter, custom BGR colors, union mask logic).
+- 🔄 **ByteTrack Multi-Object Tracking:** High-accuracy tracker maintaining persistent IDs between frames to prevent double-counting.
+- 🏷️ **Per-Class Breakdown:** Real-time counters showing both total counts and current batch counts partitioned by detection classes.
+- 🎥 **Flexible Video Inputs:** RTSP/RTMP network camera streams, local webcams (USB/V4L2), and pre-recorded video files.
+- 🎬 **Event-Driven Recording:** Video clips start recording automatically upon object detection and stop following a configurable `idle_timeout`.
+- 🧠 **Multi-Engine Inference:** Seamless runtime selection between ONNX Runtime, Intel OpenVINO, OpenCV DNN, and Ultralytics YOLO.
+- 📚 **Full Dataset Workflow:** In-browser frame capture, bounding box/polygon annotation, active learning, autolabeling, YOLO training, and 1-click model weight deployment.
+- 📊 **Reports & Analytics:** Paginated session history, defect and manual correction logs, saved media playback, and A4 print-ready layouts with sign-off blocks.
+- 🚀 **1-Click Installer:** Cross-platform scripts (`install.bat` / `install.sh`) automatically detecting GPUs (NVIDIA CUDA, AMD DirectML, Intel Arc / OpenVINO).
+- 🛠️ **AI Runtimes Center:** In-app inspection and automated installation of missing inference libraries (CUDA, TensorRT, OpenVINO).
+- 🔐 **Security:** Session authentication, administrative protection for settings and datasets, and scrypt password hashing.
+
+---
+
+## 🏛️ Application Architecture
+
+The system is organized into modular blueprints utilizing Flask's Application Factory pattern:
+
+```
+CVCounter/
+├── app.py                      # Application entrypoint, blueprint & socketio registration
+├── train.py                    # Standalone CLI training & export utility for YOLO
+├── install.py                  # Cross-platform automated setup script
+├── config/                     # Configuration files & model storage
+│   ├── config.json             # Active configuration file
+│   ├── config.example.json     # Reference default configuration
+│   ├── database.sqlite         # SQLite database (sessions, batch history)
+│   └── ultralytics/            # Ultralytics YOLO models and configs
+├── routes/                     # Blueprint controllers
+│   ├── main.py                 # Dashboard, authentication, static pages
+│   ├── counters.py             # Counters, MJPEG streaming, zone editor, counting API
+│   ├── reports.py              # Reports viewer, saved media, export
+│   ├── datasets.py             # Datasets, annotation, training controllers
+│   └── settings.py             # Configuration editor, system diagnostics, AI runtimes
+├── system/                     # Core system modules
+│   ├── core/                   # Tracking and counting logic (ObjectCounter)
+│   ├── object_detection/       # Detection backend abstractions and registry
+│   ├── managers/               # Video streams, database, notifications, training
+│   ├── datasets/               # Annotation storage and dataset services
+│   ├── training/               # Model training pipelines and export tools
+│   └── utils/                  # I18n, telemetry, input validators, logger
+├── static/                     # CSS, JS, fonts, and UI assets
+├── templates/                  # Jinja2 templates
+└── storage/                    # Logs, saved clips, snapshots, datasets
+```
+
+### Core Blueprints:
+
+| Blueprint | Module | URL Prefix | Purpose |
+|---|---|---|---|
+| `main` | `routes/main.py` | `/` | Dashboard, authentication (`/login`, `/logout`), help (`/page/help`) |
+| `counters` | `routes/counters.py` | `/` | Counter screens, MJPEG video, zone editor, batch recording |
+| `reports` | `routes/reports.py` | `/reports` | Session histories, captured media viewer, printable A4 layouts |
+| `datasets` | `routes/datasets.py` | `/datasets` | Data preparation, image annotation, model training (*auth*) |
+| `settings` | `routes/settings.py` | `/settings`, `/system_info` | Configurator, system diagnostics, log terminal, runtimes (*auth*) |
+
+---
+
+## 📦 Installation & Deployment
+
+### Method 1: Automatic 1-Click Installation (Recommended)
+
+The installer script `install.py` inspects your hardware, provisions the appropriate PyTorch and ONNX Runtime packages with hardware acceleration, configures a virtual environment, and creates initial configs:
+
+- **Windows:** Double-click **`install.bat`**. Launch the app with **`start.bat`**.
+- **Linux / macOS:**
+  ```bash
+  chmod +x install.sh start.sh
+  ./install.sh
+  ./start.sh
+  ```
+
+#### Supported Acceleration Profiles:
+- **`nvidia_cuda`:** Detects NVIDIA driver versions and installs compatible PyTorch builds (CUDA 12.4 / 12.1 / 11.8) and `onnxruntime-gpu`.
+- **`amd_directml`:** DirectX DirectML acceleration (`torch-directml`, `onnxruntime-directml`) on AMD Radeon GPUs in Windows (ROCm in Linux).
+- **`intel_openvino`:** Neural network optimization for Intel Core/Xeon CPUs, integrated iGPUs, Intel Arc discrete GPUs, and NPUs.
+- **`cpu`:** Universal fallback profile for systems without dedicated graphics.
+
+Installer options:
+```bash
+python install.py --profile nvidia_cuda  # Force hardware acceleration profile
+python install.py --reinstall            # Force package reinstallation
+python install.py --no-color             # Disable ANSI colored output
+```
+
+---
+
+### Method 2: Manual Installation
+
+1. Clone the repository:
    ```bash
    git clone https://github.com/BespredeL/CVCounter.git
-   ```
-2. **Navigate to the project directory:**
-   ```bash
    cd CVCounter
    ```
-3. **Create a virtual environment:**
+2. Create and activate a virtual environment:
    ```bash
+   # Linux/macOS:
    python3 -m venv venv
+   source venv/bin/activate
+
+   # Windows:
+   python -m venv venv
+   .\venv\Scripts\activate
    ```
-4. **Activate the virtual environment:**
-   - On Windows:
-     ```bash
-     .\venv\Scripts\activate
-     ```
-   - On Linux/Mac:
-     ```bash
-     source venv/bin/activate
-     ```
-5. **Install dependencies:**
+3. Install dependencies:
    ```bash
-   pip3 install -r requirements.txt
+   pip install -r requirements.txt
+   
+   # Optional: For YOLO training and .pt weights
+   pip install -r requirements-ultralytics.txt
+
+   # Optional: For Intel OpenVINO acceleration
+   pip install -r requirements-openvino.txt
    ```
-   > **Note:** PyTorch is not included in `requirements.txt` and must be installed separately for GPU support. See comments in `requirements.txt` for CUDA/TensorRT instructions. Docker images include PyTorch pre-installed.
-6. **Copy the configuration file:**
+4. Prepare configuration:
    ```bash
-   mv config/config.example.json config/config.json
+   cp config/config.example.json config/config.json
    ```
-   On Windows:
-   ```bash
-   copy config\config.example.json config\config.json
-   ```
-7. **Edit `config/config.json`:** set video sources, model paths, and `model_type` for each detection.
-8. **Run the application:**
+5. Run the application:
    ```bash
    python app.py
    ```
-   Default URL: `http://127.0.0.1:8080`
-
-### Method 2: Docker Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/BespredeL/CVCounter.git
-   ```
-2. **Navigate to the project directory:**
-   ```bash
-   cd CVCounter
-   ```
-3. **Build and run using Docker Compose:**
-   ```bash
-   docker-compose up --build
-   ```
+   Open `http://localhost:8080`. Default login credentials: `admin` / `admin`.
 
 ---
 
-# Detection Backends
-
-Detectors are registered via a plugin registry (`system/object_detection/registry.py`). Set `model_type` in the configuration.
-
-| `model_type` | Backend | Model formats |
-|--------------|---------|---------------|
-| `yolo` | [Ultralytics YOLO](https://github.com/ultralytics/ultralytics) | `.pt` |
-| `opencv`, `opencv_dnn` | [OpenCV DNN](https://docs.opencv.org) | `.onnx`, `.pb`, Darknet (`.weights` + `.cfg`) |
-| `onnx`, `onnxruntime` | [ONNX Runtime](https://onnxruntime.ai/) | `.onnx` (YOLO export) |
-
-### Configuration Examples
-
-**Ultralytics YOLO (default):**
-```json
-"model_type": "yolo",
-"weights_path": "config/ultralytics/models/yolov8n.pt",
-"device": 0
-```
-
-**OpenCV DNN + ONNX:**
-```json
-"model_type": "opencv",
-"weights_path": "config/opencv/models/yolov8n.onnx",
-"input_size": 640,
-"backend": "CUDA",
-"target": "CUDA"
-```
-
-**Darknet via OpenCV:**
-```json
-"model_type": "opencv_dnn",
-"weights_path": "config/opencv_dnn/models/yolov4.weights",
-"model_config_path": "config/opencv_dnn/models/yolov4.cfg",
-"input_size": 416
-```
-
-**ONNX Runtime:**
-```json
-"model_type": "onnx",
-"weights_path": "config/onnx/models/yolov8n.onnx",
-"input_size": 640,
-"providers": ["CUDAExecutionProvider", "CPUExecutionProvider"]
-```
-
-### Additional Detection Parameters
-
-| Parameter | Applies to | Description |
-|-----------|------------|-------------|
-| `weights_path` | all | Path to model file |
-| `model_config_path` | OpenCV Darknet | Path to `.cfg` file |
-| `input_size` | OpenCV, ONNX | Input size: number or `[width, height]`, default `640` |
-| `backend` | OpenCV | `OPENCV`, `CUDA`, `DEFAULT`, etc. |
-| `target` | OpenCV | `CPU`, `CUDA`, `CUDA_FP16`, etc. |
-| `providers` | ONNX | List of ONNX Runtime providers |
-| `confidence`, `iou` | all | Detection thresholds |
-| `device` | YOLO, ONNX | Compute device (`0`, `cpu`, etc.) |
-| `vid_stride` | YOLO | Frame stride during inference |
-| `classes` | all | Class filter and UI labels, e.g. `{ "0": "person" }` (shown in "By class") |
-
-### Export YOLO to ONNX
+### Method 3: Docker Deployment
 
 ```bash
-yolo export model=config/ultralytics/models/yolov8n.pt format=onnx
+docker-compose up --build
 ```
-
-### Training
-
-Use `train.py` for training and exporting YOLO models (separate from the web application).
-
-### Adding a Custom Detector
-
-1. Create a class inheriting `BaseObjectDetectionService` and decorate it with `@register('my_detector')`.
-2. Import the module in `system/object_detection/__init__.py`.
-3. Set `"model_type": "my_detector"` in the configuration.
+Mounted volumes ensure persistent storage for configuration (`config/`) and media/logs (`storage/`).
 
 ---
 
-# Configuration
+## 🧠 Detection Systems & Inference
 
-**All primary configurations are stored in `config/config.json`** (copy from `config/config.example.json`).
+The registry (`system/object_detection/registry.py`) decouples computer vision engines via the unified `BaseObjectDetectionService` interface.
 
-## General Parameters `general`
+### Supported `model_type` Options:
 
-| Parameter | Description | Default Value |
-|-----------|-------------|---------------|
-| `debug` | Enable debug mode | `true` |
-| `system_check` | Print GPU/CUDA/PyTorch info on startup | `true` |
-| `log_path` | Path to the log file | `storage/logs/cvcounter.log` |
-| `log_level` | Minimum log level | `INFO` |
-| `log_console` | Enable logging to console | `false` |
-| `default_language` | Default language (`ru`, `en`) | `ru` |
-| `allow_unsafe_werkzeug` | Allow unsafe operations in Werkzeug | `false` |
-| `button_change_theme` | Show theme change button | `true` |
-| `button_fullscreen` | Show fullscreen button | `true` |
-| `button_backward` | Show back button | `false` |
-| `button_save_capture` | Show save capture button | `false` |
-| `collapsed_keyboard` | Show on-screen keyboards collapsed | `true` |
+| `model_type` | Engine | License | Formats | Best Use Case |
+|---|---|---|---|---|
+| **`auto`** | Auto-selection | — | `.onnx`, `.pt`, `.engine`, `.xml` | **Default.** Selects backend automatically based on model file extension |
+| **`onnx`**, `onnxruntime` | [ONNX Runtime](https://onnxruntime.ai/) | MIT | `.onnx` (YOLOv5–v11, RT-DETR) | Maximum cross-platform throughput (CUDA, DirectML, CPU) |
+| **`openvino`**, `openvino_dnn` | [Intel OpenVINO](https://www.intel.com/openvino) | Apache-2.0 | `.xml`/`.bin`, `.onnx` | Peak performance on Intel CPUs, Arc GPUs, and integrated iGPUs |
+| **`yolo`**, `ultralytics` | [Ultralytics YOLO](https://github.com/ultralytics/ultralytics) | AGPL-3.0 | `.pt`, `.engine` (TensorRT) | Native PyTorch models, TensorRT engines, model training |
+| **`opencv`**, `opencv_dnn` | [OpenCV DNN](https://docs.opencv.org) | Apache-2.0 | `.onnx`, Darknet (`.weights` + `.cfg`) | Lightweight operation without heavy PyTorch dependencies |
 
-## Server Parameters `server`
+### Sample Detection Configurations
 
-| Parameter | Description | Default Value |
-|-----------|-------------|---------------|
-| `host` | Server address | `0.0.0.0` |
-| `port` | Server port | `8080` |
-| `use_reloader` | Enable reload mode | `false` |
-| `log_output` | Enable log output | `false` |
-| `secret_key` | Flask secret key (auto-generated if empty) | `""` |
-| `allowed_origins` | Allowed address for Access-Control-Allow-Origin | `*` |
-| `socketio_async_mode` | Socket.IO async mode | `threading` |
-| `socketio_transports` | Socket.IO transport list | `["polling", "websocket"]` |
-| `socketio_upgrade` | Allow transport upgrade | `true` |
+**Automatic Backend (Recommended):**
+```json
+{
+  "model_type": "auto",
+  "weights_path": "config/ultralytics/models/yolo11n.onnx"
+}
+```
 
-## User Parameters `users`
+**ONNX Runtime with Hardware Execution Providers:**
+```json
+{
+  "model_type": "onnx",
+  "weights_path": "config/ultralytics/models/yolo11n.onnx",
+  "input_size": 640,
+  "providers": ["CUDAExecutionProvider", "CPUExecutionProvider"]
+}
+```
 
-| Parameter | Description | Default Value |
-|-----------|-------------|---------------|
-| `admin` | Username → password hash (scrypt) | scrypt hash (default password: `admin`) |
+**Intel OpenVINO:**
+```json
+{
+  "model_type": "openvino",
+  "weights_path": "config/ultralytics/models/yolo11n.onnx",
+  "device": "CPU"
+}
+```
 
-> Passwords are stored as scrypt hashes, not plaintext. Default credentials: `admin` / `admin`.
+**Ultralytics YOLO / TensorRT Engine:**
+```json
+{
+  "model_type": "yolo",
+  "weights_path": "config/ultralytics/models/yolo11n.engine",
+  "device": 0
+}
+```
 
-## Database `db`
+### Adding a Custom Detection Backend
 
-| Parameter | Description | Default Value |
-|-----------|-------------|---------------|
-| `uri` | Database connection URI | `sqlite:///system/db/database.sqlite` |
-| `prefix` | Table prefix | `""` |
+1. Subclass `BaseObjectDetectionService`:
+   ```python
+   from system.object_detection.base_object_detection import BaseObjectDetectionService, DetectionResult
+   from system.object_detection.registry import register
 
-## Telemetry `telemetry`
+   @register('my_detector')
+   class MyDetector(BaseObjectDetectionService):
+       def load_model(self, weights: str, **kwargs) -> None:
+           # Initialize your detector model
+           pass
 
-Optional anonymized diagnostics sent to your HTTP API. See [telemetry_api.md](telemetry_api.md).
-
-| Parameter | Description | Default Value |
-|-----------|-------------|---------------|
-| `enabled` | Enable automatic usage/error sending | `false` |
-| `endpoint` | HTTPS endpoint URL | `https://bespredel.name/api/cvcounter/telemetry` |
-| `send_errors` | Include exception events | `true` |
-| `send_usage` | Include usage events | `true` |
-| `flush_interval_sec` | Background flush interval | `300` |
-| `max_batch_size` | Max events per POST | `50` |
-| `max_queue_size` | In-memory queue capacity (drop on full) | `200` |
-| `max_stack_chars` | Max stack trace length | `8000` |
-| `error_dedup_sec` | Dedup window for noisy events | `120` |
-| `timeout_sec` | HTTP timeout | `5` |
-| `hmac_secret` | Optional shared secret for `X-CVCounter-Signature` | `""` |
-
-Manual send and JSON download are available on the System Info page even when `enabled` is `false`.
-
-## Form Parameters `form`
-
-| Parameter | Description | Default Value |
-|-----------|-------------|---------------|
-| `defect_show` | Show defect form | `true` |
-| `correct_show` | Show correction form | `true` |
-| `custom_fields` | Custom field definitions (object) | see `config.example.json` |
-
-`custom_fields` is an object where each key is a field ID. Supported types: `text`, `date`, `datetime-local`, `textarea`, `select` (with `options` array).
-
-## Default Detection Configuration `detection_default`
-
-| Parameter | Description | Default Value |
-|-----------|-------------|---------------|
-| `model_type` | Model type | `yolo` |
-| `weights_path` | Model path | `config/ultralytics/models/yolov8n.pt` |
-| `confidence` | Confidence threshold | `0.7` |
-| `iou` | IOU threshold | `0.7` |
-| `device` | Compute device | `0` |
-| `vid_stride` | Video stream step | `1` |
-| `indicator_size` | Indicator size | `10` |
-| `video_show_scale` | Video display scale on the page (%) | `70` |
-| `video_show_quality` | Video display quality on the page (%) | `50` |
-| `video_fps` | Manual FPS setting (0 = automatic) | `0` |
-| `video_reconnect_attempts` | Max camera connection attempts on start and after stream loss; counter stops when exhausted | `5` |
-| `counting_areas` | Preferred list of counting zones (`points` + optional BGR `color`) | see `config.example.json` |
-| `counting_area` | Legacy single polygon (alias of the first zone) | `[[0,0],[100,0],[100,100],[0,100]]` |
-| `counting_area_color` | Legacy first-zone color (BGR) | `[67, 211, 255]` |
-| `classes` | Detection class filter and labels for "By class" UI | `{}` |
-
-## Default Video Recording `detection_default`.`recording`
-
-| Parameter | Description | Default Value |
-|-----------|-------------|---------------|
-| `enable` | Enable recording | `false` |
-| `path` | Video saving path | `storage/saved_recordings` |
-| `scale` | Video size (in percent) | `50` |
-| `quality` | Video quality | `70` |
-
-## Detection Configurations `detections`.`ExampleCam`
-
-Each key in `detections` is a counter `location` (Latin characters, used in URLs).
-
-| Parameter | Description | Default Value |
-|-----------|-------------|---------------|
-| `label` | Counter display label | `Label ExampleCam` |
-| `start_total_count` | Initial counter value | `0` |
-| `video_path` | Path to video file or camera source | `""` |
-| `model_type` | Model type | `yolo` |
-| `weights_path` | Model path | `config/ultralytics/models/yolov8n.pt` |
-| `confidence` | Confidence threshold | `0.7` |
-| `iou` | IOU threshold | `0.7` |
-| `device` | Compute device | `0` |
-| `vid_stride` | Video stream step | `1` |
-| `indicator_size` | Indicator size | `10` |
-| `video_show_scale` | Video display scale (%) | `70` |
-| `video_show_quality` | Video display quality (%) | `30` |
-| `video_fps` | Manual FPS (0 = automatic) | `0` |
-| `video_reconnect_attempts` | Max connection attempts (inherits from `detection_default` if omitted) | `5` |
-| `counting_areas` | Counting zones list (union mask; object counted in any zone) | see `config.example.json` |
-| `counting_area` | Legacy single polygon (alias of the first zone) | `[[0,0],[100,0],[100,100],[0,100]]` |
-| `counting_area_color` | Legacy first-zone color (BGR) | `[255, 64, 0]` |
-| `classes` | Detection class filter and labels for "By class" UI | `{}` |
-| `dataset_create.enable` | Enable dataset creation | `true` |
-| `dataset_create.probability` | Probability of image saving (0.01–1) | `0.05` |
-| `dataset_create.path` | Path for saving dataset images | `storage/saved_images/ExampleCam` |
-| `recording.enable` | Enable recording | `true` |
-| `recording.path` | Video save path (inherits from `detection_default` if omitted) | `storage/saved_recordings` |
-| `recording.scale` | Video size (in percent) | `80` |
-| `recording.quality` | Video quality | `60` |
+       def detect(self, image, **kwargs) -> DetectionResult:
+           # Run inference: return boxes_xyxy, confidences, classes
+           pass
+   ```
+2. Import the module inside `system/object_detection/__init__.py`.
+3. Set `"model_type": "my_detector"` in camera settings.
 
 ---
 
-# Interface
+## ⚙️ Complete Configuration Guide (`config.json`)
 
-Default base URL: `http://127.0.0.1:8080`
+The configuration file is divided into logical sections:
 
-## Dashboard
+### 1. `general` — Global Application Settings
 
-The home page displays counter cards with status badges (running/paused/stopped), search, status filters, camera preview thumbnails, and transport controls (start/pause/stop).
+| Key | Description | Default |
+|---|---|---|
+| `debug` | Enable Flask debug mode | `true` |
+| `system_check` | Print GPU/CUDA/PyTorch environment summary on startup | `true` |
+| `log_path` | Application log file location | `"storage/logs/cvcounter.log"` |
+| `log_level` | Minimum logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`) | `"INFO"` |
+| `log_console` | Mirror log output to terminal standard output | `false` |
+| `default_language` | UI language (`"ru"`, `"en"`) | `"ru"` |
+| `allow_unsafe_werkzeug` | Allow running Werkzeug server in production environments | `true` |
+| `button_change_theme` | Display dark/light theme switch button | `true` |
+| `button_fullscreen` | Display fullscreen toggle button | `true` |
+| `button_backward` | Display back navigation button | `false` |
+| `button_save_capture` | Display manual snapshot button on counter views | `false` |
+| `collapsed_keyboard` | Show on-screen keyboard initially collapsed | `true` |
 
-**URL:**
+### 2. `server` — Web Server Options
+
+| Key | Description | Default |
+|---|---|---|
+| `host` | Network listening address (`"0.0.0.0"` binds all adapters) | `"0.0.0.0"` |
+| `port` | HTTP server port | `8080` |
+| `use_reloader` | Auto-reload server process on code modification | `false` |
+| `log_output` | Log incoming HTTP requests | `false` |
+| `secret_key` | Flask session secret key (auto-generated if empty) | `""` |
+| `allowed_origins` | CORS policy for Socket.IO | `"*"` |
+| `socketio_async_mode` | Asynchronous runtime (`"threading"`, `"eventlet"`, `"gevent"`) | `"threading"` |
+| `socketio_transports` | Allowed transport mechanisms | `["polling", "websocket"]` |
+| `socketio_upgrade` | Permit transport upgrades from polling to WebSocket | `true` |
+| `allow_web_control` | Allow server restart and shutdown actions from UI | `true` |
+
+### 3. `datasets` — Dataset Limits
+
+| Key | Description | Default |
+|---|---|---|
+| `max_upload_mb` | Maximum file size for image/ZIP uploads in MB | `512` |
+
+### 4. `users` — Authentication Accounts
+
+Passwords are stored as scrypt hashes:
+```json
+"users": {
+    "admin": "scrypt:32768:8:1$rsdPYhqaQqpXQQ0o$aa3359c86228b4cee5fe8c4ed694db4b371fa7fab5100fa7b446db7e1ed8077e3bb63228d4a1899aeeef9b8d15f8e8bdbcc3457f020bcb3ec320332c76b5896b"
+}
 ```
-http://127.0.0.1:8080/
-```
+*(Default credentials: `admin` / `admin`)*.
 
-## Main View (Video)
+### 5. `db` — Database Connection
 
-Displays the video feed with counters showing detected objects. Primary interface for real-time monitoring. The sidebar includes totals, current batch, and an expandable **By class** list (`current / total` per detection class).
+| Key | Description | Default |
+|---|---|---|
+| `uri` | SQLAlchemy database connection URI | `"sqlite:///config/database.sqlite"` |
+| `prefix` | Table prefix for database tables | `""` |
 
-**URL:**
-```
-http://127.0.0.1:8080/counter/{location}
-```
-or
-```
-http://127.0.0.1:8080/counter/{location}/video
-```
+### 6. `telemetry` — Optional Diagnostics
 
-## Text View
+| Key | Description | Default |
+|---|---|---|
+| `enabled` | Automatic transmission of anonymized error reports | `false` |
+| `endpoint` | HTTPS receiver endpoint URL | `"https://bespredel.name/api/cvcounter/telemetry"` |
+| `send_errors` | Send unhandled exceptions | `true` |
+| `send_usage` | Send anonymized system usage events | `true` |
+| `flush_interval_sec`| Interval for sending background telemetry batches (sec) | `300` |
+| `timeout_sec` | HTTP timeout for telemetry requests | `5` |
+| `hmac_secret` | Secret key for signing requests (`X-CVCounter-Signature`) | `""` |
 
-Shows only counter values without video. Suitable for low-resource devices. Shares the same sidebar with the **By class** breakdown.
+### 7. `form` — Batch Form Custom Fields
 
-**URL:**
-```
-http://127.0.0.1:8080/counter/{location}/text
-```
+Configures dynamic metadata fields collected during counting (e.g., lot number, shift, operator):
+- `defect_show`: Display defect count entry form (`true`/`false`).
+- `correct_show`: Display manual count correction form (`true`/`false`).
+- `custom_fields`: Field definitions dictionary. Supported types: `text`, `number`, `textarea`, `date`, `datetime-local`, `select` (with `options` array).
 
-## Multi-Counter View
+### 8. `detection_default` and `detections.<location>`
 
-Displays N counters simultaneously on one fullscreen page. Replaces the legacy dual-counter view. Each card shows the current batch, total, and an expandable per-class list; values update via Socket.IO.
+Cameras configured under `detections` inherit missing values from `detection_default`:
 
-**URL:**
-```
-http://127.0.0.1:8080/counter_multi/text?locations=Cam1,Cam2
-```
-
-> **Legacy:** `/counter_dual/text/{location_first}/{location_second}` redirects to the multi-counter view.
-
-## Counting Area Editor
-
-Visual editor for **one or more** counting polygons. Uses a snapshot from the live stream as background.
-
-- **Add zone** / **Delete zone** — manage multiple areas
-- Switch active zone with **Zone 1**, **Zone 2**, …
-- Draw / edit the active polygon (click points, drag vertices, rectangle, full frame)
-- Each zone has its own color; inactive zones are shown dimmed
-- Objects are counted when their center enters **any** zone (union mask)
-- On save, `counting_areas` is written and legacy `counting_area` / `counting_area_color` are synced from the first zone
-
-**URL:**
-```
-http://127.0.0.1:8080/counter/{location}/counting_area
-```
-
-## Reports
-
-View saved count records with pagination. Report detail shows session-level **By class** totals and, for each batch (part), its class breakdown when available.
-
-**URL:**
-```
-http://127.0.0.1:8080/reports
-http://127.0.0.1:8080/reports/{location}
-http://127.0.0.1:8080/reports/{location}/{report_id}
-```
-
-## Settings and System Info
-
-Global configuration editor and GPU/system information. **Requires HTTP Basic Auth.**
-
-On System Info you can send anonymized diagnostics to the configured telemetry endpoint or download a local JSON report. See [telemetry_api.md](telemetry_api.md).
-
-**URL:**
-```
-http://127.0.0.1:8080/settings
-http://127.0.0.1:8080/system_info
-http://127.0.0.1:8080/settings/telemetry/send   (POST)
-http://127.0.0.1:8080/settings/telemetry/download
-```
-
-## Help
-
-In-app help page.
-
-**URL:**
-```
-http://127.0.0.1:8080/page/help
-```
+| Key | Description | Example |
+|---|---|---|
+| `label` | Human-readable camera display title | `"Packaging Line #1"` |
+| `video_path` | RTSP stream URL, video file path, or webcam index (`0`, `1`) | `"rtsp://admin:12345@192.168.1.10:554/ch1"` |
+| `start_total_count` | Initial total count value | `0` |
+| `model_type` | Model backend (`auto`, `yolo`, `onnx`, `openvino`, `opencv`) | `"auto"` |
+| `weights_path` | Model file path | `"config/ultralytics/models/yolo11n.onnx"` |
+| `confidence` | Minimum detection confidence score (0.0 – 1.0) | `0.6` |
+| `iou` | Non-Maximum Suppression (IoU) threshold | `0.7` |
+| `device` | Inference execution device (`0`, `"cpu"`, `"GPU"`, `"AUTO"`) | `0` |
+| `vid_stride` | Frame stride (1: process all frames, 2: process every second frame) | `1` |
+| `video_show_scale` | Downscaled stream resolution for browser streaming (%) | `70` |
+| `video_show_quality` | JPEG compression quality for stream frames (1–100) | `50` |
+| `video_fps` | Manual frame rate lock (0: match source) | `0` |
+| `video_reconnect_attempts` | Connection retry limit before entering error state | `5` |
+| `counting_areas` | Array of polygonal counting areas with BGR colors | `[{"points": [[0,0],[100,0],[100,100],[0,100]], "color": [67,211,255]}]` |
+| `classes` | Class filter and custom labels for per-class counts | `{"0": "Carton", "1": "Pallet"}` |
+| `recording.enable` | Enable event-driven video recording | `false` |
+| `recording.path` | Destination directory for recorded clips | `"storage/saved_recordings"` |
+| `recording.idle_timeout` | Idle seconds without detections before closing video clip | `30` |
 
 ---
 
-# API Endpoints
+## 🖥️ Web Interface & Operation Modes
 
-Counter control and data endpoints (no auth required unless noted):
+### 1. Dashboard (`/`)
+The command center:
+- Live status badges for all counters (*Running*, *Paused*, *Stopped*).
+- Real-time video thumbnails.
+- Quick actions: Start, Pause, Stop, Reset, and Settings modal.
+- Search and status filtering.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/counter/{location}/bootstrap` | Start counter thread in background |
-| GET | `/start_count/{location}` | Resume counting |
-| GET | `/pause_count/{location}` | Pause counting |
-| GET | `/stop_count/{location}` | Stop thread and cleanup |
-| POST | `/save_count/{location}` | Persist count and custom fields to DB |
-| GET | `/reset_count/{location}` | Reset total count |
-| POST | `/reset_count_current/{location}` | Reset current session count |
-| GET | `/save_capture/{location}` | Save current frame snapshot |
-| GET | `/counter_get_frames/{location}` | MJPEG video stream |
-| GET | `/counter/{location}/preview` | Dashboard thumbnail JPEG |
-| GET | `/counter/{location}/settings/form` | HTML partial for settings modal |
-| POST | `/counter/{location}/settings` | Save per-counter detection settings |
-| GET | `/counter/{location}/counting_area/data` | JSON: `counting_areas` (+ legacy `counting_area` / color) |
-| GET | `/counter/{location}/counting_area/snapshot` | Single JPEG frame for editor |
-| POST | `/counter/{location}/counting_area` | Save zones (`counting_areas` JSON body; legacy fields synced) |
-| POST | `/settings_save` | Save global config (**auth required**) |
+### 2. Video Counter View (`/counter/<location>`)
+Primary workstation for line operators:
+- Real-time video canvas with detection bounding boxes, tracker trails, and active zones.
+- Metrics sidebar: **Total Count**, **Current Batch**, **Defects**, and **Corrections**.
+- Collapsible **By Classes** breakdown showing `batch / total` statistics.
+- Batch data entry form with database persistence.
 
----
+### 3. Text-Only View (`/counter/<location>/text`)
+High-efficiency view stripped of video streaming:
+- Extremely low bandwidth and CPU consumption.
+- Optimal for battery-powered warehouse handhelds and tablets.
 
-# Authentication
+### 4. Multi-Counter Grid (`/counter_multi/text?locations=Cam1,Cam2`)
+Unified dashboard monitoring multiple lines simultaneously.
 
-The application uses **HTTP Basic Auth** (Flask-HTTPAuth). Passwords are stored as scrypt hashes in `config/config.json` under `users`.
+### 5. Interactive Zone Editor (`/counter/<location>/counting_area`)
+Visual polygon tool operating directly over a camera freeze-frame:
+- Create multiple polygons with distinct colors.
+- Add, drag, and delete polygon vertices.
+- Preset templates: "Full Frame", "Centered Rectangle".
+- Immediate bidirectional sync with `config.json`.
 
-**Protected routes:**
-- `/settings`
-- `/settings_save`
-- `/system_info`
-
-**Public routes:** counter pages, reports, dashboard, and all counter API endpoints.
-
----
-
-# Real-time (Socket.IO)
-
-The server emits events to connected clients (no client-to-server handlers):
-
-| Event | Source | Payload |
-|-------|--------|---------|
-| `{location}_count` | ObjectCounter | `{total, current, defect, correct, pending_*, by_class: [{id, name, total, current}, ...]}` |
-| `{location}_notification` | NotificationManager | `{type, message}` |
-| `counter_status_event` | NotificationManager | `{data: {status, location}}` |
-
-Counter statuses: `started`, `paused`, `stopped`, `error`.
-
-Socket.IO transport is configured via `server.socketio_async_mode`, `server.socketio_transports`, and `server.socketio_upgrade` in the config.
+### 6. Reports & A4 Printing (`/reports`)
+- Searchable and paginated shift and batch history.
+- Integrated video player and snapshot viewer for captured media.
+- Dedicated A4 print layout: auto-light theme, stripped interface controls, formal metric tables, and approval sign-off blocks.
 
 ---
 
-# Contributing to the Project
+## 📚 Datasets, Annotation & Model Training
 
-Contributions to the project are always welcome! To make changes, follow these steps:
+The `/datasets` suite provides end-to-end tooling for custom vision models:
 
-- Fork this repository.
-- Create a new branch.
-  ```bash
-  git checkout -b feature/your-feature
-  ```
-- Make your changes and commit them.
-  ```bash
-  git commit -m "Added a new feature"
-  ```
-- Push your changes.
-  ```bash
-  git push origin feature/your-feature
-  ```
-- Submit a PR (Pull Request) for review.
-
-Before submitting, ensure your changes do not disrupt existing functionality.
+1. **Dataset Creation:** Name, task selection (Detection / Segmentation), and class definitions.
+2. **Data Ingestion:**
+   - Upload local image folders or ZIP archives;
+   - Live camera snapshots;
+   - Interval-based frame capture from active video feeds;
+   - Extracting frames from event recordings.
+3. **Annotation:**
+   - Bounding box and segmentation polygon tools;
+   - Persistent Track IDs and object attribute tags;
+   - Quick "copy previous annotations" shortcut for high-frame-rate sequences;
+   - **Autolabeling:** Automated pre-annotation using standard foundation models;
+   - **Active Learning:** Prioritizing uncertain frames to maximize training efficiency.
+4. **Model Training:**
+   - Select base models (YOLO11, YOLOv8, etc.);
+   - Configure epochs, batch sizes, and image resolution;
+   - Real-time training progress graphs;
+   - Deploy `best.pt` model weights to any counter with 1 click.
 
 ---
 
-# Frequently Asked Questions (FAQ)
+## 🔌 REST API Reference
 
-### 1. What are the minimum system requirements for the server?
+### Counter Operations (`routes/counters.py`)
 
-- **Processor:** Modern 4-core processor (e.g., Intel Core i5 or AMD Ryzen 5).
-- **RAM:** At least 8 GB (16 GB or more is recommended for stable video stream processing).
-- **Storage:** SSD for storing datasets and logs.
-- **GPU:** A GPU significantly speeds up processing and reduces system load. Minimum GPU requirements:
-  - **NVIDIA GTX 1050 (2 GB VRAM):** Suitable for low-frame-rate image processing.
-  - **NVIDIA GTX 1660 (6 GB VRAM):** Recommended for real-time video streams and high-resolution videos (up to 720p).
-  - **NVIDIA RTX 2060 or higher (6 GB+ VRAM):** Stable performance for YOLO models in real-time at resolutions of 1080p and above.
+| Method | URL | Description |
+|---|---|---|
+| `GET` | `/counter/<location>/bootstrap` | Initialize and start background counter thread |
+| `GET`, `POST` | `/start_count/<location>` | Start or resume counting |
+| `GET`, `POST` | `/pause_count/<location>` | Pause counting |
+| `GET`, `POST` | `/stop_count/<location>` | Stop counter thread and release video resource |
+| `POST` | `/save_count/<location>` | Save current batch and form data to database |
+| `GET`, `POST` | `/reset_count/<location>` | Reset total counter to zero |
+| `POST` | `/reset_count_current/<location>` | Reset current batch counter |
+| `POST` | `/update_pending_counts/<location>` | Modify temporary uncommitted count / defect values |
+| `GET`, `POST` | `/save_capture/<location>` | Save single camera frame snapshot to storage |
+| `GET`, `POST` | `/counter/<location>/capture/interval` | Configure automated interval image capture |
+| `GET` | `/counter_get_frames/<location>` | Stream live MJPEG video feed |
+| `GET` | `/counter/<location>/preview` | Fetch latest JPEG preview thumbnail |
+| `GET` | `/counter/<location>/settings/form` | Render HTML camera settings form for modals |
+| `POST` | `/counter/<location>/settings` | Save camera detection parameters |
+| `GET` | `/counter/<location>/counting_area/data` | Retrieve JSON coordinates of counting areas |
+| `GET` | `/counter/<location>/counting_area/snapshot` | Fetch still frame for the zone editor canvas |
+| `POST` | `/counter/<location>/counting_area` | Save updated counting area polygon coordinates |
 
-> **Note:** YOLO supports computation on NVIDIA GPUs using CUDA. GPUs from other manufacturers (e.g., AMD) may work but require additional configuration and may have lower performance.
+### Settings & System (`routes/settings.py` — Authentication Required)
 
-### 2. What are the minimum system requirements for the client?
+| Method | URL | Description |
+|---|---|---|
+| `POST` | `/settings_save` | Save global system configuration |
+| `POST` | `/settings/api/detections/add` | Add a new camera to configuration |
+| `POST` | `/settings/api/detections/<location>/delete` | Remove a camera from configuration |
+| `POST` | `/settings/api/custom_fields/add` | Create a dynamic form field |
+| `POST` | `/settings/api/custom_fields/delete` | Delete a dynamic form field |
+| `POST` | `/settings/api/model_classes` | Inspect model file and extract class names automatically |
+| `GET` | `/settings/api/runtimes/status` | Check installed hardware acceleration runtimes |
+| `POST` | `/settings/api/runtimes/install` | Trigger automated installation of an inference runtime |
+| `GET` | `/settings/api/runtimes/install/status` | Poll runtime installation progress |
+| `GET` | `/settings/api/models/list` | List available model files in system directories |
+| `POST` | `/settings/api/models/export` | Start model export task (ONNX, TensorRT Engine) |
+| `GET` | `/settings/api/models/export/status` | Monitor model export progress |
+| `GET` | `/settings/api/logs` | Fetch real-time system logs with filtering |
+| `GET` | `/settings/api/logs/download` | Download full log file |
+| `POST` | `/settings/api/logs/clear` | Clear log file |
+| `POST` | `/settings/api/restart` | Restart the web server process |
+| `POST` | `/settings/api/shutdown` | Shut down the web server process |
 
-Any device with a web browser capable of running JavaScript.
+### Datasets (`routes/datasets.py` — Authentication Required)
 
-### 3. How do I add a new camera/counter?
+| Method | URL | Description |
+|---|---|---|
+| `GET` | `/datasets/api/list` | List all datasets and their statuses |
+| `POST` | `/datasets/api/create` | Create a new dataset |
+| `DELETE` | `/datasets/api/<name>` | Delete a dataset |
+| `GET` | `/datasets/api/<name>/summary` | Get image counts, class statistics, and annotations |
+| `POST` | `/datasets/api/<name>/capture-camera` | Capture frame from camera directly to dataset |
+| `POST` | `/datasets/api/<name>/import/upload` | Upload images or ZIP archive to dataset |
+| `POST` | `/datasets/api/<name>/split` | Automatically split images into train/val subsets |
+| `GET`, `POST`| `/datasets/api/<name>/annotations/<image>` | Read or write annotations for an image |
+| `POST` | `/datasets/api/<name>/autolabel` | Batch auto-annotate dataset images |
+| `POST` | `/datasets/api/<name>/train` | Launch YOLO model training job |
+| `GET` | `/datasets/api/training/status` | Monitor training metrics and progress |
+| `POST` | `/datasets/api/training/cancel` | Cancel active training run |
+| `POST` | `/datasets/api/training/apply-weights` | Deploy `best.pt` weights to a camera detector |
 
-Add a new entry under `detections` in `config/config.json`. The key becomes the `location` used in URLs (use Latin characters). Restart the application or use the dashboard to bootstrap the counter.
+---
 
-### 4. How do I display multiple counters on one screen?
+## 🔐 Authentication & Security
 
-Use the multi-counter view:
+- Session management uses cryptographically signed Flask session cookies.
+- Credentials and scrypt password hashes are managed under `users` in `config/config.json`.
+- When `users` is left empty, the application operates in open access mode.
+- Protected endpoints (`@login_required`):
+  - `/settings` (all configuration and runtime actions);
+  - `/system_info` (system diagnostics, log console);
+  - `/datasets` (all dataset creation, labeling, and training tasks).
+- Public endpoints: Dashboard, counter monitors, reports viewer, and help center.
+
+---
+
+## ⚡ Real-Time Events (Socket.IO)
+
+Browser clients receive instant updates via WebSocket/Socket.IO connections:
+
+| Event Name | Payload | Purpose |
+|---|---|---|
+| `{location}_count` | `{total, current, defect, correct, pending_*, by_class: [...]}` | Live count values and class breakdown |
+| `{location}_notification` | `{type: "success"|"warning"|"error", message: "..."}` | Operator notifications (saved batch, camera alert) |
+| `counter_status_event` | `{data: {status: "started"|"paused"|"stopped"|"error", location: "..."}}` | Camera stream lifecycle state change |
+
+---
+
+## ❓ Frequently Asked Questions (FAQ)
+
+### 1. What are the recommended server hardware specifications?
+- **CPU:** Quad-core processor (Intel Core i5 / AMD Ryzen 5 or better).
+- **RAM:** Minimum 8 GB (16 GB recommended for multiple concurrent streams).
+- **GPU:**
+  - *NVIDIA GeForce GTX 1050 Ti (4 GB):* Up to 5–6 concurrent live streams with YOLOv8n/YOLO11n.
+  - *NVIDIA RTX 3060 / 4060 (8–12 GB):* 15–20 real-time streams or smooth local model training.
+  - *Intel Arc / integrated iGPUs:* Excellent hardware acceleration via OpenVINO without discrete graphics.
+
+### 2. How can I lock down the workstation for line operators?
+Run Chrome or Chromium in kiosk mode:
+```bash
+google-chrome --kiosk --start-fullscreen http://localhost:8080/counter/Line1
 ```
-http://127.0.0.1:8080/counter_multi/text?locations=Cam1,Cam2,Cam3
-```
-You can also select multiple counters on the dashboard and open them together.
 
-### 5. What should I do if the video does not display?
+### 3. What should I do if the RTSP stream drops frequently?
+Increase `video_reconnect_attempts` (e.g., to `10` or `20`) in camera settings. The engine will transparently reconnect upon temporary network glitches.
 
-Check the camera's functionality and ensure it is correctly connected. Verify `video_path` in the configuration. If the camera is unreachable, the counter retries up to `video_reconnect_attempts` times (default `5`, set in `detection_default` or per counter) and then stops with an error status. Check logs at `storage/logs/cvcounter.log`.
-
-### 6. What should I do if Socket.IO does not connect?
-
-Check `server.socketio_async_mode` (use `threading` with Werkzeug), `server.socketio_transports` (include `polling` for compatibility), and `server.allowed_origins`.
-
-### 7. Where are the logs stored?
-
-Default log path: `storage/logs/cvcounter.log` (configurable via `general.log_path`).
-
-### 8. How do I prevent the counting interface from being closed?
-
-You can run the browser in kiosk mode to prevent users from exiting it. For example, with Google Chrome, use the `--kiosk --start-fullscreen` options.
+### 4. Where are saved video recordings and snapshots stored?
+All media is stored inside `storage/` (`storage/saved_recordings` and `storage/saved_images`), and can be browsed and downloaded from **Reports ➔ Saved Media**.
 
 ---
 
-# License
+## 🤝 Contributing & License
 
-The project is distributed under the AGPL-3.0 license. Details can be found in the [LICENSE](https://github.com/BespredeL/CVCounter/blob/master/LICENSE) file.
+Contributions, bug reports, and pull requests are warmly welcomed:
+1. Fork [BespredeL/CVCounter](https://github.com/BespredeL/CVCounter).
+2. Create your feature branch (`git checkout -b feature/my-feature`).
+3. Commit your changes (`git commit -m 'Add awesome feature'`).
+4. Push to branch (`git push origin feature/my-feature`) and open a Pull Request.
+
+Distributed under the open-source **[GNU AGPLv3](https://github.com/BespredeL/CVCounter/blob/master/LICENSE)** license.

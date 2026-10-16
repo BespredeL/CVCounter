@@ -1,12 +1,11 @@
 /**
+ * Computer Vision Counter (CVCounter)
+ * Client-side i18n translation helper.
+ *
  * Developed by: Aleksandr Kireev
  * Created: 04.06.2026
  * Updated: 08.06.2026
  * Website: https://bespredel.name
- */
-
-/**
- * Client-side i18n (window.APP_I18N is rendered from the server in base.html).
  */
 (function (global) {
     "use strict";

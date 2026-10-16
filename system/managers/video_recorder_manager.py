@@ -2,12 +2,11 @@
 # ! python3
 # Developed by: Aleksandr Kireev
 # Created: 03.12.2025
-# Updated: 03.12.2025
+# Updated: 30.07.2026
 # Website: https://bespredel.name
 
 import os
 import re
-import time
 from queue import Queue, Full, Empty
 from threading import Thread, Event
 from typing import Optional
@@ -28,7 +27,7 @@ class VideoRecorderManager:
         recorder.start()
         recorder.push_frame(frame)  # in the work cycle
         ...
-        recorder.stop()  # on completion/reset
+        recorder.stop()  # on completion/reset/idle timeout
     """
 
     DEFAULT_RECORDING_PATH: str = "storage/saved_recordings"
@@ -63,13 +62,32 @@ class VideoRecorderManager:
     # Public API
     # ------------------------------------------------------------------
 
+    def is_recording(self) -> bool:
+        """
+        Whether the background recording thread is currently running.
+
+        Args:
+            None
+
+        Returns:
+            bool: True if recording thread is alive.
+        """
+        return self._thread is not None and self._thread.is_alive()
+
     def start(self) -> None:
         """
         Start a background recording thread.
+        
+        Args:
+            None
+
+        Returns:
+            None
         """
-        if self._thread is not None and self._thread.is_alive():
+        if self.is_recording():
             return
 
+        self._drain_queue()
         self._stop_event.clear()
         self._thread = Thread(target=self._run, daemon=True)
         self._thread.start()
@@ -77,21 +95,33 @@ class VideoRecorderManager:
     def stop(self) -> None:
         """
         Stop recording and save the current file.
+        
+        Args:
+            None
+
+        Returns:
+            None
         """
         self._stop_event.set()
         if self._thread is not None:
             self._thread.join(timeout=5)
             self._thread = None
 
-        # Freeing up resources
+        self._drain_queue()
         self._release_writer()
 
     def push_frame(self, frame: np.ndarray) -> None:
         """
         Non-blocking sending of a frame to the queue.
         If the queue is full, the frame is quietly discarded so as not to slow down the counting.
+        
+        Args:
+            frame (np.ndarray): The frame to push.
+
+        Returns:
+            None
         """
-        if frame is None:
+        if frame is None or not self.is_recording():
             return
         try:
             self._queue.put_nowait(frame)
@@ -106,6 +136,12 @@ class VideoRecorderManager:
     def _run(self) -> None:
         """
         The main loop of the background write thread.
+        
+        Args:
+            None
+
+        Returns:
+            None
         """
         while not self._stop_event.is_set() or not self._queue.empty():
             try:
@@ -128,6 +164,12 @@ class VideoRecorderManager:
     def _prepare_frame(self, frame: np.ndarray) -> np.ndarray:
         """
         Preparing a frame for recording (changing the resolution by scale).
+        
+        Args:
+            frame (np.ndarray): The frame to prepare.
+
+        Returns:
+            np.ndarray: The prepared frame.
         """
         if frame is None:
             return frame
@@ -147,6 +189,12 @@ class VideoRecorderManager:
     def _ensure_writer(self, frame: np.ndarray) -> None:
         """
         Initialize VideoWriter on the first frame.
+        
+        Args:
+            frame (np.ndarray): The frame to initialize the writer on.
+
+        Returns:
+            None
         """
         if self._writer is not None:
             return
@@ -159,25 +207,61 @@ class VideoRecorderManager:
             self._fps = float(fps) if fps > 0 else self.DEFAULT_FPS
 
             directory = self._ensure_recording_dir()
-            timestamp = int(time.time())
-            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")[:23]
             safe_location = re.sub('[^A-Za-z0-9-_]+', '', self.location)
             filename = f"{safe_location}_{timestamp}.mp4"
             file_path = os.path.join(directory, filename)
 
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            writer = cv2.VideoWriter(file_path, fourcc, self._fps, self._frame_size)
+            fourcc = None
+            writer = None
+            # Prefer codecs browsers can play in <video>; fall back to mp4v.
+            for fourcc_str in ('avc1', 'H264', 'X264', 'mp4v'):
+                candidate = cv2.VideoWriter_fourcc(*fourcc_str)
+                trial = cv2.VideoWriter(file_path, candidate, self._fps, self._frame_size)
+                if trial.isOpened():
+                    fourcc = candidate
+                    writer = trial
+                    break
+                trial.release()
 
-            if not writer.isOpened():
+            if writer is None or not writer.isOpened():
                 self._logger.error(f"Failed to open VideoWriter for {file_path}")
                 return
 
             self._writer = writer
             self._file_path = file_path
+            self._logger.info(
+                f"VideoWriter opened ({file_path}) fourcc={fourcc}"
+            )
         except Exception as e:
             self._logger.error(f"Error creating VideoWriter: {e}")
 
+    def _drain_queue(self) -> None:
+        """
+        Discard all pending frames so the next recording session starts clean.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+        while True:
+            try:
+                self._queue.get_nowait()
+            except Empty:
+                break
+
     def _ensure_recording_dir(self) -> str:
+        """
+        Ensure the recording directory exists.
+        
+        Args:
+            None
+
+        Returns:
+            str: The recording directory
+        """
         base_dir = self.base_path or self.DEFAULT_RECORDING_PATH
         safe_location = re.sub('[^A-Za-z0-9-_]+', '', self.location)
         full_dir = os.path.join(base_dir, safe_location)
@@ -185,6 +269,15 @@ class VideoRecorderManager:
         return full_dir
 
     def _release_writer(self) -> None:
+        """
+        Release the VideoWriter.
+        
+        Args:
+            None
+
+        Returns:
+            None
+        """
         if self._writer is not None:
             try:
                 self._writer.release()

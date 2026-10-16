@@ -1,12 +1,11 @@
 /**
+ * Computer Vision Counter (CVCounter)
+ * Dashboard - counter cards, filters, and transport controls.
+ *
  * Developed by: Aleksandr Kireev
  * Created: 04.06.2026
  * Updated: 16.06.2026
  * Website: https://bespredel.name
- */
-
-/**
- * Dashboard - counter cards, filters, transport controls
  */
 const CounterDashboard = {
     /**
@@ -14,7 +13,7 @@ const CounterDashboard = {
      *
      * @type {array}
      */
-    STATUS_CLASSES: ["stopped", "running", "paused", "error"],
+    STATUS_CLASSES: ["stopped", "running", "paused", "error", "collection"],
 
     /**
      * Get the status label
@@ -26,6 +25,8 @@ const CounterDashboard = {
         switch (status) {
             case "running":
                 return window.trans("Counter running");
+            case "collection":
+                return window.trans("Data collection (no model)");
             case "paused":
                 return window.trans("Counter paused");
             case "error":
@@ -54,7 +55,7 @@ const CounterDashboard = {
      * @returns {string} The toggle URL
      */
     toggleUrl(card, status) {
-        if (status === "running") {
+        if (status === "running" || status === "collection") {
             return card.dataset.pauseUrl;
         }
 
@@ -128,6 +129,11 @@ const CounterDashboard = {
             dot.setAttribute("title", label);
         }
 
+        const previewTag = card.querySelector("[data-role=preview-mode-tag]");
+        if (previewTag) {
+            previewTag.classList.toggle("d-none", status !== "collection");
+        }
+
         const toggle = card.querySelector("[data-role=toggle]");
         const play = toggle?.querySelector(".icon-play");
         const pause = toggle?.querySelector(".icon-pause");
@@ -137,7 +143,7 @@ const CounterDashboard = {
             stopBtn.disabled = status === "stopped";
         }
 
-        if (status === "running") {
+        if (status === "running" || status === "collection") {
             play?.classList.add("d-none");
             pause?.classList.remove("d-none");
             toggle?.setAttribute("title", window.trans("Pause counting"));
@@ -167,7 +173,7 @@ const CounterDashboard = {
             return;
         }
 
-        const counts = {running: 0, paused: 0, stopped: 0, error: 0};
+        const counts = {running: 0, paused: 0, stopped: 0, error: 0, collection: 0};
         document.querySelectorAll(".counter-card").forEach((el) => {
             const status = el.getAttribute("data-status") || "stopped";
             if (counts[status] !== undefined) {
@@ -175,10 +181,11 @@ const CounterDashboard = {
             }
         });
 
-        const total = counts.running + counts.paused + counts.stopped + counts.error;
+        const activeRunning = counts.running + counts.collection;
+        const total = activeRunning + counts.paused + counts.stopped + counts.error;
         stats.textContent = window.trans("Counters stats", {
             total,
-            running: counts.running,
+            running: activeRunning,
             paused: counts.paused,
         });
     },
@@ -197,7 +204,9 @@ const CounterDashboard = {
             const status = card.getAttribute("data-status") || "stopped";
             const searchText = (card.dataset.searchText || "").toString();
             const matchesQuery = !query || searchText.indexOf(query) !== -1;
-            const matchesStatus = statusFilter === "all" || status === statusFilter;
+            const matchesStatus = statusFilter === "all"
+                || status === statusFilter
+                || (statusFilter === "running" && status === "collection");
             const show = matchesQuery && matchesStatus;
 
             card.classList.toggle("counter-card--hidden", !show);
@@ -222,6 +231,11 @@ const CounterDashboard = {
         const status = data?.status;
         if (status === "started") {
             this.applyStatus(location, "running");
+            if (data.preview_ts) {
+                this.refreshPreview(card, data.preview_ts);
+            }
+        } else if (status === "collection") {
+            this.applyStatus(location, "collection");
             if (data.preview_ts) {
                 this.refreshPreview(card, data.preview_ts);
             }
@@ -434,6 +448,9 @@ const CounterDashboard = {
                 case "started":
                     showToast(window.trans("Counting has started!"), "success");
                     break;
+                case "collection":
+                    showToast(window.trans("Data collection mode started"), "info");
+                    break;
                 case "stopped":
                     showToast(window.trans("Counting has stopped!"), "secondary");
                     break;
@@ -483,13 +500,16 @@ const CounterDashboard = {
                 const card = stopBtn.closest(".counter-card");
                 const name = card?.querySelector(".counter-card__name")?.textContent.trim() || "";
 
-                if (!window.confirm(`${window.trans("Stop counter")} «${name}»?`)) {
-                    return;
-                }
-
-                if (card) {
-                    self.runAction(card, card.dataset.stopUrl, stopBtn);
-                }
+                window.appConfirm({
+                    title: window.trans("Stop counter"),
+                    message: `${window.trans("Stop counter")} «${name}»?`,
+                    confirmText: window.trans("Stop"),
+                    tone: "danger",
+                }).then((ok) => {
+                    if (ok && card) {
+                        self.runAction(card, card.dataset.stopUrl, stopBtn);
+                    }
+                });
                 return;
             }
 
@@ -617,6 +637,42 @@ const CounterDashboard = {
     },
 
     /**
+     * Bind global keyboard shortcuts on the dashboard.
+     *
+     * @returns {void}
+     */
+    bindKeyboardShortcuts() {
+        document.addEventListener("keydown", (e) => {
+            const target = e.target;
+            const tag = target?.tagName?.toLowerCase();
+            const isEditing = tag === "input" || tag === "textarea" || tag === "select" || target?.isContentEditable;
+            if (isEditing || document.querySelector(".modal.show")) {
+                return;
+            }
+
+            // Space: Toggle Pause / Start on hovered, running, or first visible counter
+            if (e.code === "Space" || e.key === " " || e.key === "Spacebar") {
+                const visibleCards = Array.from(document.querySelectorAll(".counter-card:not(.counter-card--hidden)"));
+                if (!visibleCards.length) return;
+
+                const hoveredCard = visibleCards.find(c => c.matches(":hover") || c.contains(document.activeElement));
+                const runningCard = visibleCards.find(c => c.dataset.status === "running");
+                const pausedCard = visibleCards.find(c => c.dataset.status === "paused");
+                const card = hoveredCard || runningCard || pausedCard || visibleCards[0];
+
+                if (card) {
+                    const toggleBtn = card.querySelector("[data-role=toggle]");
+                    if (toggleBtn && !toggleBtn.disabled && !toggleBtn.classList.contains("is-loading")) {
+                        e.preventDefault();
+                        document.activeElement?.blur();
+                        toggleBtn.click();
+                    }
+                }
+            }
+        });
+    },
+
+    /**
      * Initialize the counter dashboard
      *
      * @returns {void}
@@ -630,6 +686,7 @@ const CounterDashboard = {
         this.bindCards();
         this.bindFilters();
         this.bindMultiCounter();
+        this.bindKeyboardShortcuts();
         this.updateStats();
 
         if (typeof CounterSettingsModal !== "undefined") {

@@ -36,6 +36,9 @@ class NotificationManager:
         Args:
             event (str): The event to emit.
             data (any): The data to emit with the event.
+            
+        Returns:
+            None
         """
 
         if not self.socketio:

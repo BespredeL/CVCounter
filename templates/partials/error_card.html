@@ -1,4 +1,4 @@
-{# 
+{#
     Error card
     Args:
         error_code: The error code
@@ -9,20 +9,27 @@
         tone: The tone of the error card (neutral, danger, warning)
 #}
 <!-- START: Error card -->
-<div class="error-page-wrap">
-    <div class="col-12 col-md-8 col-lg-6">
-        <div class="card error-page-card border-0 cv-card overflow-hidden">
-            <div class="card-header border-0 py-4 text-center error-card-header--{{ tone|default('neutral') }}">
-                <span class="display-4 fw-bold">{{ error_code }}</span>
-                <div class="small text-body-secondary mt-1">{{ error_title }}</div>
-            </div>
-            <div class="card-body p-4 text-center">
-                <p class="lead mb-2">{{ message }}</p>
-                {% if detail %}<p class="text-body-secondary mb-3">{{ detail }}</p>{% endif %}
-                {% if extra_html %}{{ extra_html|safe }}{% endif %}
-                <a href="{{ url_for('main.index') }}" class="btn btn-primary px-4 mt-3">{{ trans('Go to Home') }}</a>
-            </div>
+<div class="error-page">
+    <div class="error-page__panel cv-card error-page__panel--{{ tone|default('neutral') }}">
+        <div class="error-page__badge" aria-hidden="true">{{ error_code }}</div>
+        <h1 class="error-page__title">{{ error_title }}</h1>
+        <p class="error-page__message">{{ message }}</p>
+        {% if detail %}
+            <p class="error-page__detail">{{ detail }}</p>
+        {% endif %}
+        {% if extra_html %}
+            <div class="error-page__extra">{{ extra_html|safe }}</div>
+        {% endif %}
+        <div class="error-page__actions">
+            <a href="{{ url_for('main.index') }}" class="btn btn-primary">{{ trans('Go to Home') }}</a>
+            <button type="button" class="btn btn-outline-secondary" id="error-page-back">{{ trans('Go back') }}</button>
         </div>
     </div>
 </div>
+<script>
+    document.getElementById('error-page-back')?.addEventListener('click', () => {
+        if (window.history.length > 1) window.history.back();
+        else window.location.href = {{ url_for('main.index')|tojson }};
+    });
+</script>
 <!-- END: Error card -->

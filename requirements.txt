@@ -1,56 +1,55 @@
 #
-# To install requirements run:
+# To install core requirements (Permissive licenses: MIT / Apache-2.0, zero AGPL):
 #   pip install -r requirements.txt
+#
+# Optional plugins:
+#   - Ultralytics YOLO (.pt models & training, AGPL-3.0):
+#       pip install -r requirements-ultralytics.txt
+#   - OpenVINO acceleration (Apache-2.0):
+#       pip install -r requirements-openvino.txt
 #
 # To manually install requirements with CUDA run:
 #   pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu118
 #
-# To manually install requirements with TensorRT run:
-#   !!! Replace ${TENSORRT_PATH} with the path to TensorRT on your system,
-#       for example: C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT\v8.6.1.6
-#       or set the environment variable TENSORRT_PATH
-#   pip install "${TENSORRT_PATH}\graphsurgeon\graphsurgeon-0.4.6-py2.py3-none-any.whl"
-#   pip install "${TENSORRT_PATH}\uff\uff-0.6.9-py2.py3-none-any.whl"
-#   pip install "${TENSORRT_PATH}\onnx_graphsurgeon\onnx_graphsurgeon-0.3.12-py2.py3-none-any.whl"
-#   pip install "${TENSORRT_PATH}\python\tensorrt-8.6.1-cp311-none-win_amd64.whl"
-#
 
-# General -------------------------------------
+# Core Web & App -----------------------------
 filterpy==1.4.5
-Flask-HTTPAuth==4.8.*
 Flask-SocketIO==5.6.*
-simple-websocket>=1.1.*
+simple-websocket>=1.1.0
 Flask==3.1.*
 imutils==0.5.4
 MarkupSafe==2.1.5
-matplotlib==3.8.4
 numpy==1.26.3
 opencv-python==4.10.0.84
 pyodbc==5.1
 psutil==6.1.1
-scikit-image==0.22
+scipy>=1.10.0
 shapely==2.0.5
 SQLAlchemy==2.0.37
 mysql-connector-python==9.3
-ultralytics==8.4.*
 Werkzeug==3.1.*
+pyyaml==6.0.3
 
-# Export --------------------------------------
+# Core Inference (MIT License) ----------------
+# Standard CPU / DirectML:
+onnxruntime>=1.17.0
+# Or for NVIDIA CUDA GPU:
+# onnxruntime-gpu==1.20.1
+
+# Export & Optimization -----------------------
 # coremltools>=7.0  # CoreML export
 onnx==1.17  # ONNX export
 onnxsim==0.4.36  # ONNX simplifier
 onnxslim==0.1.57  # ONNX simplifier
-onnxruntime-gpu==1.20.1  # ONNX simplifier
-tensorrt==8.6.1 # TensorRT export
-nvidia-pyindex  # TensorRT export
+# tensorrt==8.6.1 # TensorRT export (requires TensorRT SDK / wheels)
+# nvidia-pyindex  # TensorRT export
 # nvidia-tensorrt  # TensorRT export
 # scikit-learn==0.19.2  # CoreML quantization
 # tensorflow>=2.4.1  # TF exports (-cpu, -aarch64, -macos)
 # tflite-support
 # tensorflowjs>=3.9.0  # TF.js export
-# openvino-dev>=2023.0  # OpenVINO export
 
-# PyTorch and related packages (uncomment or use manual installation)
+# PyTorch and related packages (optional for PyTorch backends)
 # --index-url https://download.pytorch.org/whl/cu118
 # torch==2.3.1
 # torchvision==0.18.1

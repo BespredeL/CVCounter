@@ -6,73 +6,675 @@
         prefix: The prefix of the field
         depth: The depth of the field
 #}
+
+{% macro get_field_hint(key) %}
+    {%- if key == 'debug' -%}{{ trans('Enable Flask debug mode with detailed exception reporting') }}
+        {%- elif key == 'system_check' -%}{{ trans('Check GPU availability and core libraries on system startup') }}
+        {%- elif key == 'log_path' -%}{{ trans('Path to application log file') }}
+        {%- elif key == 'log_level' -%}{{ trans('Minimum log message severity level to record') }}
+        {%- elif key == 'log_console' -%}{{ trans('Output log messages directly to the terminal stdout') }}
+        {%- elif key == 'default_language' -%}{{ trans('Default system interface language') }}
+        {%- elif key == 'allow_unsafe_werkzeug' -%}{{ trans('Allow running the Werkzeug development server in production') }}
+        {%- elif key == 'button_change_theme' -%}{{ trans('Display dark/light theme switch button in the interface') }}
+        {%- elif key == 'button_fullscreen' -%}{{ trans('Display fullscreen mode button') }}
+        {%- elif key == 'button_backward' -%}{{ trans('Display back navigation button in header bars') }}
+        {%- elif key == 'button_save_capture' -%}{{ trans('Display instant frame snapshot button on video streams') }}
+        {%- elif key == 'collapsed_keyboard' -%}{{ trans('Keep the on-screen numeric keypad collapsed by default') }}
+        {%- elif key == 'host' -%}{{ trans('Network address to listen on (0.0.0.0 for all)') }}
+        {%- elif key == 'port' -%}{{ trans('TCP port for the web application server') }}
+        {%- elif key == 'use_reloader' -%}{{ trans('Automatically reload server process when source code is modified') }}
+        {%- elif key == 'log_output' -%}{{ trans('Print incoming HTTP access requests in the server console') }}
+        {%- elif key == 'secret_key' -%}{{ trans('Cryptographic key used to sign session cookies and tokens') }}
+        {%- elif key == 'allowed_origins' -%}{{ trans('Allowed Cross-Origin Resource Sharing (CORS) domains (* for all)') }}
+        {%- elif key == 'socketio_async_mode' -%}{{ trans('Asynchronous worker engine for real-time WebSocket communication') }}
+        {%- elif key == 'socketio_transports' -%}{{ trans('Supported Socket.IO communication protocols') }}
+        {%- elif key == 'socketio_upgrade' -%}{{ trans('Allow connection upgrade from HTTP polling to WebSockets') }}
+        {%- elif key == 'allow_web_control' -%}{{ trans('Enable process management and server restarts via the web interface') }}
+        {%- elif key == 'max_upload_mb' -%}{{ trans('Maximum allowed file size for dataset uploads (in MB)') }}
+        {%- elif key == 'prefix' -%}{{ trans('Optional table name prefix for database tables') }}
+        {%- elif key == 'uri' -%}{{ trans('SQLAlchemy connection string') }}
+        {%- elif key == 'enabled' -%}{{ trans('Send anonymous diagnostic data and error telemetry') }}
+        {%- elif key == 'endpoint' -%}{{ trans('Remote API endpoint for telemetry ingest') }}
+        {%- elif key == 'send_errors' -%}{{ trans('Automatically send anonymized crash reports and traceback logs') }}
+        {%- elif key == 'send_usage' -%}{{ trans('Send anonymous feature usage and performance metrics') }}
+        {%- elif key == 'flush_interval_sec' -%}{{ trans('Time between automatic telemetry queue flushes in seconds') }}
+        {%- elif key == 'max_batch_size' -%}{{ trans('Maximum telemetry events per single HTTP request') }}
+        {%- elif key == 'max_queue_size' -%}{{ trans('Maximum telemetry queue size in memory') }}
+        {%- elif key == 'max_stack_chars' -%}{{ trans('Maximum error traceback characters to retain in reports') }}
+        {%- elif key == 'error_dedup_sec' -%}{{ trans('Window in seconds to deduplicate identical error reports') }}
+        {%- elif key == 'timeout_sec' -%}{{ trans('Network timeout in seconds for telemetry requests') }}
+        {%- elif key == 'hmac_secret' -%}{{ trans('Secret key used to calculate HMAC signature for telemetry requests') }}
+        {%- elif key == 'defect_show' -%}{{ trans('Show defect count input field in the counting session form') }}
+        {%- elif key == 'correct_show' -%}{{ trans('Show manual correction field in the counting session form') }}
+        {%- elif key == 'label' -%}{{ trans('Display name of this detection camera stream') }}
+        {%- elif key == 'start_total_count' -%}{{ trans('Initial counter offset number for this camera') }}
+        {%- elif key == 'video_path' -%}{{ trans('RTSP video stream URL or local video file path') }}
+        {%- elif key == 'video_show_scale' -%}{{ trans('Video stream resolution scaling for web preview') }}
+        {%- elif key == 'video_show_quality' -%}{{ trans('JPEG compression quality percentage for web broadcast') }}
+        {%- elif key == 'video_fps' -%}{{ trans('Target stream FPS limit (0 for native camera frame rate)') }}
+        {%- elif key == 'video_reconnect_attempts' -%}{{ trans('Number of reconnect retries if video feed disconnects') }}
+        {%- elif key == 'model_type' -%}{{ trans('Neural network architecture used for object detection') }}
+        {%- elif key == 'weights_path' -%}{{ trans('Path to trained model weights (.pt, .engine, .onnx). Leave empty to use camera in data collection mode.') }}
+        {%- elif key == 'confidence' -%}{{ trans('Minimum confidence score threshold (0.01 - 1.00) for detections') }}
+        {%- elif key == 'iou' -%}{{ trans('Intersection-Over-Union threshold for Non-Maximum Suppression (NMS)') }}
+        {%- elif key == 'device' -%}{{ trans('Inference compute device: 0 for first GPU, or "cpu" for processor') }}
+        {%- elif key == 'vid_stride' -%}{{ trans('Frame skip interval: 1 processes every frame, 2 processes every second frame') }}
+        {%- elif key == 'indicator_size' -%}{{ trans('Size in pixels of bounding boxes and tracking dots on frames') }}
+        {%- elif key == 'classes' -%}{{ trans('Dictionary of class IDs and object label names') }}
+        {%- elif key == 'enable' -%}{{ trans('Enable this module') }}
+        {%- elif key == 'probability' -%}{{ trans('Fraction of detected frames to save to training dataset (e.g. 0.1 = 10%)') }}
+        {%- elif key == 'path' -%}{{ trans('Storage directory path on server') }}
+        {%- elif key == 'scale' -%}{{ trans('Saved video resolution scale percentage') }}
+        {%- elif key == 'quality' -%}{{ trans('Saved video compression quality percentage') }}
+        {%- elif key == 'idle_timeout' -%}{{ trans('Seconds of inactivity without detections before stopping video recording') }}
+    {%- endif -%}
+{% endmacro %}
+
 {% macro generate_form_fields(key, value, prefix='', depth=0) %}
-<!-- START: Generate form fields -->
+    <!-- START: Generate form fields -->
     {% set field_id = prefix ~ key %}
     {% if value is mapping %}
-        <section class="cv-form-section{% if depth > 0 %} cv-form-section--nested{% endif %}">
-            <h3 class="cv-form-section__title">{{ trans(key.replace('_', ' ')|title) }}</h3>
-            <div class="cv-form-section__body">
-                {% for sub_key, sub_value in value.items() %}
-                    {{ generate_form_fields(sub_key, sub_value, field_id ~ '-', depth + 1) }}
-                {% endfor %}
+        {% if prefix == 'detections-' and depth == 0 %}
+            <!-- Collapsible Camera Module -->
+            <div class="cv-camera-card card border mb-3 shadow-sm" data-camera-id="{{ key }}">
+                <div class="card-header cv-camera-card__header d-flex align-items-center justify-content-between p-3 collapsed"
+                     data-bs-toggle="collapse" data-bs-target="#collapse-{{ field_id }}"
+                     role="button" aria-expanded="false" aria-controls="collapse-{{ field_id }}">
+                    <div class="d-flex align-items-center gap-3 min-w-0">
+                        <div class="cv-camera-card__icon bg-primary-subtle text-primary border border-primary-subtle rounded-3 d-flex align-items-center justify-content-center flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor"
+                                 class="bi bi-camera-video" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd"
+                                      d="M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2V5z"/>
+                            </svg>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="fw-bold text-body fs-6">{{ value.get('label', key) }}</span>
+                                <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace"
+                                      style="font-size: 0.72rem;">#{{ key }}</span>
+                                {% if value.get('model_type') %}
+                                    <span class="badge bg-info-subtle text-info-emphasis font-monospace"
+                                          style="font-size: 0.7rem;">{{ value.get('model_type') }}</span>
+                                {% endif %}
+                            </div>
+                            <span class="text-body-secondary small text-truncate d-block font-monospace mt-0.5"
+                                  style="font-size: 0.75rem; max-width: 32rem;">{{ value.get('video_path', '') }}</span>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                        <a class="btn btn-outline-primary btn-sm d-none d-sm-inline-flex align-items-center gap-1 shadow-xs"
+                           href="{{ url_for('counters.counting_area_edit', location=key) }}"
+                           target="_blank" rel="noopener" onclick="event.stopPropagation();"
+                           title="{{ trans('Configure counting polygon') }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
+                                 class="bi bi-bounding-box-circles" viewBox="0 0 16 16">
+                                <path d="M2 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2M0 2a2 2 0 0 1 3.937-.5h8.126A2 2 0 1 1 14.5 3.937v8.126a2 2 0 1 1-2.437 2.437H3.937A2 2 0 1 1 1.5 12.063V3.937A2 2 0 0 1 0 2m2.5 1.937v8.126c.703.18 1.256.734 1.437 1.437h8.126a2 2 0 0 1 1.437-1.437V3.937A2 2 0 0 1 12.063 2.5H3.937A2 2 0 0 1 2.5 3.937"/>
+                            </svg>
+                            <span>{{ trans('Counting zone') }}</span>
+                        </a>
+                        <button type="button"
+                                class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1 shadow-xs btn-delete-camera"
+                                data-camera-id="{{ key }}"
+                                data-camera-label="{{ value.get('label', key) }}"
+                                onclick="event.stopPropagation();"
+                                title="{{ trans('Delete camera') }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
+                                 class="bi bi-trash" viewBox="0 0 16 16">
+                                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+                                <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+                            </svg>
+                            <span class="d-none d-md-inline">{{ trans('Delete') }}</span>
+                        </button>
+                        <span class="cv-camera-card__chevron text-body-secondary p-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                 class="bi bi-chevron-down" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd"
+                                      d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/>
+                            </svg>
+                        </span>
+                    </div>
+                </div>
+                <div id="collapse-{{ field_id }}" class="collapse cv-camera-card__collapse">
+                    <div class="card-body p-3 cv-camera-card__body">
+                        <div class="cv-form-section__body">
+                            {% for sub_key, sub_value in value.items() %}
+                                {{ generate_form_fields(sub_key, sub_value, field_id ~ '-', depth + 1) }}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
             </div>
-        </section>
+        {% elif key == 'classes' %}
+            <!-- Classes Management Section with Toggles & Model Loader -->
+            <section class="cv-form-section cv-form-section--nested cv-classes-section"
+                     data-classes-prefix="{{ prefix }}">
+                <div class="cv-form-section__header">
+                    <div class="d-flex align-items-center gap-2">
+                        <h3 class="cv-form-section__title">{{ trans('Classes') }}</h3>
+                        <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace cv-classes-count"
+                              style="font-size: 0.72rem;">
+                            {{ value|length }}
+                        </span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <button type="button"
+                                class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 py-1 px-3 shadow-xs btn-load-model-classes"
+                                data-classes-prefix="{{ prefix }}"
+                                title="{{ trans('Load classes from model') }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
+                                 class="bi bi-box-arrow-in-down" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd"
+                                      d="M3.5 6a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5v-8a.5.5 0 0 0-.5-.5h-2a.5.5 0 0 1 0-1h2A1.5 1.5 0 0 1 14 6.5v8a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 14.5v-8A1.5 1.5 0 0 1 3.5 5h2a.5.5 0 0 1 0 1z"/>
+                                <path fill-rule="evenodd"
+                                      d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/>
+                            </svg>
+                            <span>{{ trans('Load classes from model') }}</span>
+                        </button>
+                        <button type="button"
+                                class="btn btn-sm btn-outline-secondary py-1 px-3 shadow-xs btn-enable-all-classes"
+                                data-classes-prefix="{{ prefix }}"
+                                title="{{ trans('Enable all') }}">
+                            <span>{{ trans('Enable all') }}</span>
+                        </button>
+                        <button type="button"
+                                class="btn btn-sm btn-outline-secondary py-1 px-3 shadow-xs btn-disable-all-classes"
+                                data-classes-prefix="{{ prefix }}"
+                                title="{{ trans('Disable all') }}">
+                            <span>{{ trans('Disable all') }}</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="cv-classes-filter-bar py-2 {% if not value %}d-none{% endif %}">
+                    <div class="input-group input-group-sm pe-2">
+                        <span class="input-group-text bg-transparent border-0 text-body-secondary py-1 pe-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor"
+                                 class="bi bi-search" viewBox="0 0 16 16">
+                                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+                            </svg>
+                        </span>
+                        <input type="text"
+                               class="form-control form-control-sm border-0 cv-classes-filter-input font-monospace"
+                               placeholder="{{ trans('Filter classes...') }}"
+                               aria-label="{{ trans('Filter classes...') }}">
+                    </div>
+                </div>
+                <div class="cv-form-section__body cv-classes-container" id="{{ field_id }}-container">
+                    {% if not value %}
+                        <div class="cv-classes-empty text-center text-body-secondary py-4 px-3 mx-auto">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor"
+                                 class="bi bi-tags opacity-50 mb-2" viewBox="0 0 16 16">
+                                <path d="M3 2v4.586l7 7L14.586 9l-7-7H3zM2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2z"/>
+                                <path d="M5.5 5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm0 1a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
+                            </svg>
+                            <div class="small fw-semibold text-body-secondary mb-1">{{ trans('No classes configured yet') }}</div>
+                            <div class="text-body-tertiary"
+                                 style="font-size: 0.75rem;">{{ trans('Click "Load classes from model" above to auto-extract classes') }}</div>
+                        </div>
+                    {% else %}
+                        {% for sub_key, sub_value in value.items() %}
+                            {% set is_dict = sub_value is mapping %}
+                            {% set class_name = sub_value.get('name', '') if is_dict else sub_value %}
+                            {% set is_enabled = sub_value.get('enabled', true) if is_dict else true %}
+                            <div class="cv-form-field cv-class-item {% if not is_enabled %}opacity-75{% endif %}"
+                                 data-class-id="{{ sub_key }}">
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <label for="{{ field_id }}-{{ sub_key }}-name"
+                                           class="cv-form-label d-flex align-items-center gap-2 mb-0">
+                                        <div class="form-check form-switch m-0 d-inline-flex align-items-center"
+                                             style="min-height: auto;">
+                                            <input class="form-check-input cv-class-enable-switch" type="checkbox"
+                                                   role="switch"
+                                                   name="{{ field_id }}-{{ sub_key }}-enabled"
+                                                   id="{{ field_id }}-{{ sub_key }}-enabled"
+                                                   value="on"
+                                                   {% if is_enabled %}checked{% endif %}>
+                                        </div>
+                                        <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace px-1.5 py-0.5"
+                                              style="font-size: 0.72rem;">ID {{ sub_key }}</span>
+                                        <span>{{ trans('Class name') }}</span>
+                                    </label>
+                                    <span class="cv-class-status-badge small fw-semibold ms-2 flex-shrink-0 {% if is_enabled %}text-success{% else %}text-body-secondary{% endif %}">
+                                        {% if is_enabled %}{{ trans('Active') }}{% else %}
+                                            {{ trans('Disabled') }}{% endif %}
+                                    </span>
+                                </div>
+                                <input type="text" id="{{ field_id }}-{{ sub_key }}-name"
+                                       name="{{ field_id }}-{{ sub_key }}-name"
+                                       value="{{ class_name }}"
+                                       class="form-control cv-form-control cv-class-name-input py-1 px-3"
+                                       style="font-size: 0.85rem;">
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </section>
+        {% elif key == 'custom_fields' %}
+            <!-- Custom Fields Section (Global or Detection-Specific) -->
+            {% set is_detection = prefix.startswith('detections-') %}
+            {% set current_loc = prefix.replace('detections-', '').rstrip('-') if is_detection else '' %}
+            <section
+                    class="cv-form-section{% if depth > 0 %} cv-form-section--nested{% endif %} cv-custom-fields-section"
+                    data-custom-fields-prefix="{{ prefix }}">
+                <div class="cv-form-section__header d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <h3 class="cv-form-section__title mb-0 fs-6">{{ trans('Custom Fields') }}</h3>
+                        <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace"
+                              style="font-size: 0.72rem;">
+                            {{ value|length }}
+                        </span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        {% if is_detection %}
+                            <span class="badge bg-info-subtle text-info-emphasis" style="font-size: 0.72rem;">
+                                {{ trans('Detection Specific') }}
+                            </span>
+                            <button type="button"
+                                    class="btn btn-outline-primary btn-sm py-1 px-2.5 d-inline-flex align-items-center gap-1 btn-add-custom-field"
+                                    data-scope="detection" data-location="{{ current_loc }}" style="font-size: 0.8rem;"
+                                    title="{{ trans('Add field') }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
+                                     class="bi bi-plus-lg" viewBox="0 0 16 16">
+                                    <path fill-rule="evenodd"
+                                          d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/>
+                                </svg>
+                                <span>{{ trans('Add field') }}</span>
+                            </button>
+                        {% else %}
+                            <span class="badge bg-primary-subtle text-primary-emphasis" style="font-size: 0.72rem;">
+                                {{ trans('Global for all counters') }}
+                            </span>
+                            <button type="button"
+                                    class="btn btn-outline-primary btn-sm py-1 px-2.5 d-inline-flex align-items-center gap-1 btn-add-custom-field"
+                                    data-scope="global" data-location="" style="font-size: 0.8rem;"
+                                    title="{{ trans('Add field') }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
+                                     class="bi bi-plus-lg" viewBox="0 0 16 16">
+                                    <path fill-rule="evenodd"
+                                          d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/>
+                                </svg>
+                                <span>{{ trans('Add field') }}</span>
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if not value %}
+                    <div class="text-body-secondary small py-2 px-3 border rounded-2 bg-body-tertiary mb-2">
+                        {% if is_detection %}
+                            {{ trans('No detection-specific fields configured. Global form fields will be used.') }}
+                        {% else %}
+                            {{ trans('No global custom fields configured.') }}
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="cv-form-section__body d-flex flex-column gap-3">
+                        {% for sub_key, sub_value in value.items() %}
+                            {{ generate_form_fields(sub_key, sub_value, field_id ~ '-', depth + 1) }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </section>
+        {% elif prefix.endswith('-custom_fields-') %}
+            <!-- Individual Custom Field Card -->
+            {% set is_detection = prefix.startswith('detections-') %}
+            {% set current_loc = prefix.replace('detections-', '').replace('-custom_fields-', '') if is_detection else '' %}
+            {% set field_label = value.get('label', key) if value is mapping else key %}
+            {% set field_type = value.get('type', 'text') if value is mapping else 'text' %}
+            <div class="cv-custom-field-card"
+                 data-field-name="{{ key }}"
+                 data-field-scope="{{ 'detection' if is_detection else 'global' }}"
+                 {% if is_detection %}data-field-location="{{ current_loc }}"{% endif %}>
+                <div class="cv-custom-field-card__header">
+                    <div class="d-flex align-items-center gap-2 min-w-0">
+                        <span class="cv-custom-field-card__icon-box">
+                            {% if field_type == 'number' %}
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
+                                     class="bi bi-123 text-success" viewBox="0 0 16 16"><path
+                                        d="M2.873 11.297V4.142H1.699L0 5.379v1.137l1.64-1.18h.06v5.961zm3.213-5.09v-.063c0-.618.44-1.169 1.196-1.169.676 0 1.174.44 1.174 1.106 0 .606-.439 1.132-.974 1.533-.45.34-1.01.737-1.353 1.05v.982h3.424v-1.045H7.39v-.064c.266-.237.603-.496.953-.76.77-.584 1.488-1.28 1.488-2.28 0-1.282-1.02-2.197-2.45-2.197-1.47 0-2.38 1.015-2.38 2.221v.72h1.085zm6.541 2.228h-.128c-.287 0-.584-.047-.845-.14v.05c0 .647.464 1.09 1.157 1.09.688 0 1.18-.456 1.18-1.115 0-.616-.479-1.094-1.127-1.094-.176 0-.361.026-.51.087v-1.05c.143.045.303.069.458.069.605 0 1.04-.415 1.04-.98 0-.549-.399-.95-1.022-.95-.623 0-1.04.417-1.04.996v.195H11.5v-.268c0-1.19.89-2.02 2.22-2.02 1.34 0 2.23.834 2.23 2.012 0 .67-.32 1.258-.87 1.637.675.367 1.04 1.01 1.04 1.765 0 1.255-.956 2.146-2.39 2.146-1.42 0-2.37-.91-2.37-2.187v-.337h1.085z"/></svg>
+                            {% elif field_type == 'textarea' %}
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
+                                     class="bi bi-text-paragraph text-info" viewBox="0 0 16 16"><path
+                                        fill-rule="evenodd"
+                                        d="M2 12.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5m0-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m0-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m4-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5"/></svg>
+                            {% elif field_type in ('date', 'datetime-local') %}
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
+                                     class="bi bi-calendar3 text-warning" viewBox="0 0 16 16"><path
+                                        d="M14 0H2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M1 3.857C1 3.384 1.448 3 2 3h12c.552 0 1 .384 1 .857v10.286c0 .473-.448.857-1 .857H2c-.552 0-1-.384-1-.857z"/><path
+                                        d="M6.5 7a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m-9 3a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m-9 3a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/></svg>
+                            {% elif field_type == 'select' %}
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
+                                     class="bi bi-menu-button-wide text-primary" viewBox="0 0 16 16"><path
+                                        d="M0 1.5A1.5 1.5 0 0 1 1.5 0h13A1.5 1.5 0 0 1 16 1.5v2A1.5 1.5 0 0 1 14.5 5h-13A1.5 1.5 0 0 1 0 3.5zM1.5 1a.5.5 0 0 0-.5.5v2a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-2a.5.5 0 0 0-.5-.5z"/><path
+                                        d="M2 2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5m10.823.323-.396-.396A.25.25 0 0 1 12.604 2h.792a.25.25 0 0 1 .177.427l-.396.396a.25.25 0 0 1-.354 0M0 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm1 3v2a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2zm14-1V8a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v2zM2 8.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0 4a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5"/></svg>
+                            {% else %}
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
+                                     class="bi bi-fonts text-primary" viewBox="0 0 16 16"><path
+                                        d="M12.258 3h-8.51l-.083 2.46h.479c.26-1.544.758-1.783 2.693-1.845l.424-.013v7.827c0 .663-.144.82-1.3.923v.52h4.082v-.52c-1.162-.103-1.306-.26-1.306-.923V3.602l.431.013c1.934.062 2.434.301 2.693 1.846h.479z"/></svg>
+                            {% endif %}
+                        </span>
+                        <span class="cv-custom-field-card__title text-truncate cv-custom-field-header-label">{{ field_label }}</span>
+                        <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace"
+                              style="font-size: 0.7rem;">#{{ key }}</span>
+                        <span class="badge bg-primary-subtle text-primary-emphasis font-monospace cv-custom-field-badge-type"
+                              style="font-size: 0.68rem;">{{ field_type }}</span>
+                    </div>
+                    <button type="button"
+                            class="btn btn-outline-danger btn-sm py-0.5 px-2 d-inline-flex align-items-center gap-1 btn-delete-custom-field flex-shrink-0"
+                            data-field-name="{{ key }}"
+                            data-field-label="{{ field_label }}"
+                            data-scope="{{ 'detection' if is_detection else 'global' }}"
+                            {% if is_detection %}data-location="{{ current_loc }}"{% endif %}
+                            title="{{ trans('Delete field') }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor"
+                             class="bi bi-trash3" viewBox="0 0 16 16">
+                            <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5M11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.058l-.5-8.5a.5.5 0 0 1 .47-.528M8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5m2.47.528a.5.5 0 0 1 .528-.47.5.5 0 0 1 .47.528l-.5 8.5a.5.5 0 0 1-.998-.058z"/>
+                        </svg>
+                        <span class="small d-none d-sm-inline">{{ trans('Delete') }}</span>
+                    </button>
+                </div>
+                {% set field_default = value.get('default_value', '') if value is mapping else '' %}
+                {% set field_name_val = value.get('name', key) if value is mapping else key %}
+                {% set field_options = value.get('options', []) if value is mapping else [] %}
+                <div class="cv-custom-field-card__grid">
+                    <div class="cv-custom-field-card__item">
+                        <label for="{{ field_id }}-label"
+                               class="cv-custom-field-card__label">{{ trans('Display label') }}</label>
+                        <input type="text" id="{{ field_id }}-label" name="{{ field_id }}-label"
+                               value="{{ field_label }}"
+                               class="form-control cv-custom-field-card__input cv-custom-field-input-label"
+                               placeholder="{{ trans('Display label') }}" required>
+                    </div>
+                    <div class="cv-custom-field-card__item">
+                        <label for="{{ field_id }}-name"
+                               class="cv-custom-field-card__label">{{ trans('Field ID') }}</label>
+                        <input type="text" id="{{ field_id }}-name" name="{{ field_id }}-name"
+                               value="{{ field_name_val }}"
+                               class="form-control font-monospace cv-custom-field-card__input"
+                               pattern="^[a-zA-Z0-9_]+$" placeholder="id_name" required>
+                    </div>
+                    <div class="cv-custom-field-card__item">
+                        <label for="{{ field_id }}-type"
+                               class="cv-custom-field-card__label">{{ trans('Field type') }}</label>
+                        {% set custom_field_types = [
+                            ('text', trans('Text') ~ ' (text)'),
+                            ('number', trans('Number') ~ ' (number)'),
+                            ('textarea', trans('Multiline text') ~ ' (textarea)'),
+                            ('date', trans('Date') ~ ' (date)'),
+                            ('datetime-local', trans('Date & Time') ~ ' (datetime-local)'),
+                            ('select', trans('Dropdown list') ~ ' (select)')
+                        ] %}
+                        <select id="{{ field_id }}-type" name="{{ field_id }}-type"
+                                class="form-select cv-custom-field-card__input cv-custom-field-type-select">
+                            {% for cft, cft_label in custom_field_types %}
+                                <option value="{{ cft }}"
+                                        {% if field_type == cft %}selected{% endif %}>{{ cft_label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="cv-custom-field-card__item">
+                        <label for="{{ field_id }}-default_value"
+                               class="cv-custom-field-card__label">{{ trans('Default value') }}</label>
+                        <input type="text" id="{{ field_id }}-default_value" name="{{ field_id }}-default_value"
+                               value="{{ field_default }}" class="form-control cv-custom-field-card__input"
+                               placeholder="{{ trans('Optional default value') }}">
+                    </div>
+                    <div class="cv-custom-field-card__options cv-custom-field-options-row {% if field_type != 'select' %}d-none{% endif %}">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <label for="{{ field_id }}-options"
+                                   class="cv-custom-field-card__label fw-semibold text-primary">
+                                {{ trans('Options (one per line)') }}
+                            </label>
+                            <span class="text-body-secondary"
+                                  style="font-size: 0.7rem;">{{ trans('List of selectable options (one per line)') }}</span>
+                        </div>
+                        {% set opt_text = field_options|join('\n') if (field_options is iterable and field_options is not string) else field_options %}
+                        <textarea id="{{ field_id }}-options" name="{{ field_id }}-options" rows="2"
+                                  class="form-control font-monospace cv-custom-field-options-input"
+                                  placeholder="{{ trans('One option per line') }}"
+                                  {% if field_type != 'select' %}disabled{% endif %}>{{ opt_text }}</textarea>
+                    </div>
+                    {% if value is mapping %}
+                        {% for sub_key, sub_value in value.items() %}
+                            {% if sub_key not in ('label', 'name', 'type', 'default_value', 'options') %}
+                                <div class="cv-custom-field-card__item">
+                                    {{ generate_form_fields(sub_key, sub_value, field_id ~ '-', depth + 1) }}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        {% else %}
+            <section class="cv-form-section{% if depth > 0 %} cv-form-section--nested{% endif %}">
+                <h3 class="cv-form-section__title">{{ trans(key.replace('_', ' ')|title) }}</h3>
+                <div class="cv-form-section__body">
+                    {% for sub_key, sub_value in value.items() %}
+                        {{ generate_form_fields(sub_key, sub_value, field_id ~ '-', depth + 1) }}
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
     {% else %}
         {% if key in ('counting_area_color', 'counting_areas') and prefix.startswith('detections-') %}
-        {# Zones are saved only via the visual zone editor #}
+            {# Zones are saved only via the visual zone editor #}
         {% elif key == 'counting_area' and prefix.startswith('detections-') %}
             {% set detection_location = prefix.replace('detections-', '').rstrip('-') %}
-            <div class="cv-form-field">
+            <div class="cv-form-field cv-form-field--zone">
                 <span class="cv-form-label">{{ trans('Counting zone') }}</span>
                 <p class="cv-form-hint mb-2">{{ trans('Configure the polygon on a live video frame') }}</p>
-                <a class="btn btn-outline-primary btn-sm"
+                <a class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2 w-100"
                    href="{{ url_for('counters.counting_area_edit', location=detection_location) }}"
                    target="_blank" rel="noopener">
-                    {{ trans('Open zone editor') }}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                         class="bi bi-bounding-box-circles" viewBox="0 0 16 16">
+                        <path d="M2 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2M0 2a2 2 0 0 1 3.937-.5h8.126A2 2 0 1 1 14.5 3.937v8.126a2 2 0 1 1-2.437 2.437H3.937A2 2 0 1 1 1.5 12.063V3.937A2 2 0 0 1 0 2m2.5 1.937v8.126c.703.18 1.256.734 1.437 1.437h8.126a2 2 0 0 1 1.437-1.437V3.937A2 2 0 0 1 12.063 2.5H3.937A2 2 0 0 1 2.5 3.937"/>
+                    </svg>
+                    <span>{{ trans('Open zone editor') }}</span>
                 </a>
             </div>
         {% else %}
-        <div class="cv-form-field">
-            <label for="{{ field_id }}" class="cv-form-label">{{ trans(key.replace('_', ' ')|title) }}</label>
-            {% if value is string %}
-                {% if key == 'password' or 'password' in key or 'secret' in key %}
-                    <input type="password" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
-                           class="form-control cv-form-control" autocomplete="new-password">
-                {% elif value|length > 80 or '\n' in value %}
+            <div class="cv-form-field" data-field-key="{{ key }}">
+                {% if prefix.endswith('classes-') or (key is string and key.isdigit()) %}
+                    <label for="{{ field_id }}" class="cv-form-label d-flex align-items-center gap-2">
+                        <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace px-1.5 py-0.5"
+                              style="font-size: 0.72rem;">ID {{ key }}</span>
+                        <span>{{ trans('Class name') }}</span>
+                    </label>
+                {% else %}
+                    <label for="{{ field_id }}" class="cv-form-label">{{ trans(key.replace('_', ' ')|title) }}</label>
+                {% endif %}
+
+                {# Semantic Field Controls #}
+                {% if key == 'default_language' %}
+                    <select id="{{ field_id }}" name="{{ field_id }}"
+                            class="form-select cv-form-control cv-form-select">
+                        <option value="ru" {% if value == 'ru' %}selected{% endif %}>{{ trans('Russian') }} (ru)
+                        </option>
+                        <option value="en" {% if value == 'en' %}selected{% endif %}>{{ trans('English') }} (en)
+                        </option>
+                    </select>
+                {% elif key == 'log_level' %}
+                    <select id="{{ field_id }}" name="{{ field_id }}"
+                            class="form-select cv-form-control cv-form-select font-monospace">
+                        {% for lvl in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'] %}
+                            <option value="{{ lvl }}" {% if value == lvl %}selected{% endif %}>{{ lvl }}</option>
+                        {% endfor %}
+                    </select>
+                {% elif key == 'model_type' %}
+                    {% set model_types = ['auto', 'yolo', 'ultralytics', 'onnx', 'onnxruntime', 'opencv', 'openvino'] %}
+                    <select id="{{ field_id }}" name="{{ field_id }}"
+                            class="form-select cv-form-control cv-form-select">
+                        {% for mt in model_types %}
+                            <option value="{{ mt }}" {% if value == mt %}selected{% endif %}>
+                                {% if mt == 'auto' %}{{ trans('Auto-detect') }} (auto)
+                                {% elif mt == 'yolo' %}YOLO (Engine / Weights)
+                                {% elif mt == 'ultralytics' %}Ultralytics PyTorch (.pt)
+                                {% elif mt == 'onnx' %}ONNX
+                                {% elif mt == 'onnxruntime' %}ONNX Runtime
+                                {% elif mt == 'opencv' %}OpenCV DNN
+                                {% elif mt == 'openvino' %}Intel OpenVINO
+                                {% else %}{{ mt }}{% endif %}
+                            </option>
+                        {% endfor %}
+                        {% if value not in model_types %}
+                            <option value="{{ value }}" selected>{{ value }} ({{ trans('Custom') }})</option>
+                        {% endif %}
+                    </select>
+                {% elif key == 'socketio_async_mode' %}
+                    <select id="{{ field_id }}" name="{{ field_id }}"
+                            class="form-select cv-form-control cv-form-select font-monospace">
+                        {% for mode in ['threading', 'eventlet', 'gevent'] %}
+                            <option value="{{ mode }}" {% if value == mode %}selected{% endif %}>{{ mode }}</option>
+                        {% endfor %}
+                    </select>
+                {% elif key == 'socketio_transports' %}
+                    {% set val_list = value if (value is iterable and value is not string) else [value|string] %}
+                    {% set has_ws = 'websocket' in val_list %}
+                    {% set has_polling = 'polling' in val_list %}
+                    {% set is_both = has_ws and has_polling %}
+                    {% set is_ws_only = has_ws and not has_polling %}
+                    {% set is_polling_only = has_polling and not has_ws %}
+                    {% set is_custom = not is_both and not is_ws_only and not is_polling_only %}
+                    <select id="{{ field_id }}" name="{{ field_id }}"
+                            class="form-select cv-form-control cv-form-select">
+                        <option value='["polling", "websocket"]' {% if is_both %}selected{% endif %}>
+                            {{ trans('WebSocket + Polling (recommended)') }}
+                        </option>
+                        <option value='["websocket"]' {% if is_ws_only %}selected{% endif %}>
+                            {{ trans('WebSocket only') }}
+                        </option>
+                        <option value='["polling"]' {% if is_polling_only %}selected{% endif %}>
+                            {{ trans('Polling only') }}
+                        </option>
+                        {% if is_custom %}
+                            <option value="{{ value }}" selected>{{ value }} ({{ trans('Custom') }})</option>
+                        {% endif %}
+                    </select>
+                {% elif key == 'type' and '-custom_fields-' in prefix %}
+                    {% set custom_field_types = ['text', 'number', 'textarea', 'date', 'datetime-local', 'select'] %}
+                    <select id="{{ field_id }}" name="{{ field_id }}"
+                            class="form-select cv-form-control cv-form-select">
+                        {% for cft in custom_field_types %}
+                            <option value="{{ cft }}" {% if value == cft %}selected{% endif %}>{{ cft }}</option>
+                        {% endfor %}
+                    </select>
+                {% elif key == 'password' or 'password' in key or 'secret' in key %}
+                    <div class="input-group cv-input-group">
+                        <input type="password" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                               class="form-control cv-form-control cv-password-input font-monospace"
+                               autocomplete="new-password">
+                        <button class="btn btn-outline-secondary cv-password-toggle px-3" type="button"
+                                aria-label="{{ trans('Toggle visibility') }}" title="{{ trans('Toggle visibility') }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor"
+                                 class="bi bi-eye" viewBox="0 0 16 16">
+                                <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-8.3 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z"/>
+                                <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0"/>
+                            </svg>
+                        </button>
+                    </div>
+                {% elif value is boolean %}
+                    <div class="cv-form-toggle" role="group" aria-label="{{ trans(key.replace('_', ' ')|title) }}">
+                        <input type="radio" class="cv-form-toggle__input" value="on" name="{{ field_id }}"
+                               id="{{ field_id }}_yes"
+                               autocomplete="off" {% if value == true %}checked{% endif %}>
+                        <label class="cv-form-toggle__option cv-form-toggle__option--on" for="{{ field_id }}_yes">
+                            <span class="cv-form-toggle__dot" aria-hidden="true"></span>
+                            {{ trans('On') }}
+                        </label>
+
+                        <input type="radio" class="cv-form-toggle__input" value="off" name="{{ field_id }}"
+                               id="{{ field_id }}_no"
+                               autocomplete="off" {% if value == false %}checked{% endif %}>
+                        <label class="cv-form-toggle__option cv-form-toggle__option--off" for="{{ field_id }}_no">
+                            <span class="cv-form-toggle__dot" aria-hidden="true"></span>
+                            {{ trans('Off') }}
+                        </label>
+                    </div>
+                {% elif value is number %}
+                    {% if key in ('confidence', 'iou', 'probability') %}
+                        <div class="input-group cv-input-group">
+                            <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                                   class="form-control cv-form-control cv-rate-input font-monospace" min="0" max="1"
+                                   step="0.01">
+                            <span class="input-group-text cv-input-addon text-body-secondary font-monospace cv-rate-badge">
+                            {{ (value * 100)|round|int }}%
+                        </span>
+                        </div>
+                    {% elif key in ('video_show_scale', 'video_show_quality', 'scale', 'quality') %}
+                        <div class="input-group cv-input-group">
+                            <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                                   class="form-control cv-form-control font-monospace" min="5" max="100" step="5">
+                            <span class="input-group-text cv-input-addon font-monospace">%</span>
+                        </div>
+                    {% elif key in ('idle_timeout', 'flush_interval_sec', 'timeout_sec', 'error_dedup_sec') %}
+                        <div class="input-group cv-input-group">
+                            <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                                   class="form-control cv-form-control font-monospace" min="0" step="1">
+                            <span class="input-group-text cv-input-addon font-monospace">{{ trans('sec') }}</span>
+                        </div>
+                    {% elif key == 'max_upload_mb' %}
+                        <div class="input-group cv-input-group">
+                            <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                                   class="form-control cv-form-control font-monospace" min="1" step="1">
+                            <span class="input-group-text cv-input-addon font-monospace">{{ trans('MB') }}</span>
+                        </div>
+                    {% elif key == 'indicator_size' %}
+                        <div class="input-group cv-input-group">
+                            <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                                   class="form-control cv-form-control font-monospace" min="1" step="1">
+                            <span class="input-group-text cv-input-addon font-monospace">px</span>
+                        </div>
+                    {% elif key == 'video_fps' %}
+                        <div class="input-group cv-input-group">
+                            <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                                   class="form-control cv-form-control font-monospace" min="0" step="1">
+                            <span class="input-group-text cv-input-addon font-monospace">FPS</span>
+                        </div>
+                    {% elif key == 'port' %}
+                        <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                               class="form-control cv-form-control font-monospace" min="1" max="65535" step="1">
+                    {% else %}
+                        <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                               class="form-control cv-form-control font-monospace" step="any">
+                    {% endif %}
+                {% elif key == 'options' and '-custom_fields-' in prefix %}
+                    {% set opt_text = value|join('\n') if (value is iterable and value is not string) else value %}
+                    <textarea id="{{ field_id }}" name="{{ field_id }}" rows="3"
+                              class="form-control cv-form-control cv-form-control--mono"
+                              placeholder="{{ trans('One option per line') }}">{{ opt_text }}</textarea>
+                    <span class="cv-form-hint">{{ trans('List of selectable options (one per line)') }}</span>
+                {% elif value is iterable and value is not string %}
+                    <textarea id="{{ field_id }}" name="{{ field_id }}" rows="3"
+                              class="form-control cv-form-control cv-form-control--mono">{{ value }}</textarea>
+                {% elif value is string and (value|length > 80 or '\n' in value) %}
                     <textarea id="{{ field_id }}" name="{{ field_id }}" rows="3"
                               class="form-control cv-form-control cv-form-control--textarea">{{ value }}</textarea>
+                {% elif key == 'weights_path' %}
+                    <div class="input-group cv-input-group">
+                        <input type="text" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                               class="form-control cv-form-control cv-weights-path-input font-monospace">
+                        <button class="btn btn-outline-primary btn-model-export-trigger px-3 gap-1 d-inline-flex align-items-center"
+                                type="button"
+                                title="{{ trans('Optimize & Export Model (ONNX / TensorRT)') }}"
+                                data-weights-input-id="{{ field_id }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                 class="bi bi-cpu me-1.5 flex-shrink-0" viewBox="0 0 16 16">
+                                <path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14a2.5 2.5 0 0 1-2.5 2.5v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0m-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3zM5 6.5A1.5 1.5 0 0 1 6.5 5h3A1.5 1.5 0 0 1 11 6.5v3A1.5 1.5 0 0 1 9.5 11h-3A1.5 1.5 0 0 1 5 9.5zM6.5 6a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5z"/>
+                            </svg>
+                            <span>{{ trans('Export') }}</span>
+                        </button>
+                    </div>
                 {% else %}
                     <input type="text" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
                            class="form-control cv-form-control">
                 {% endif %}
-            {% elif value is boolean %}
-                <div class="cv-form-toggle" role="group" aria-label="{{ trans(key.replace('_', ' ')|title) }}">
-                    <input type="radio" class="cv-form-toggle__input" value="on" name="{{ field_id }}" id="{{ field_id }}_yes"
-                           autocomplete="off" {% if value == true %}checked{% endif %}>
-                    <label class="cv-form-toggle__option cv-form-toggle__option--on" for="{{ field_id }}_yes">
-                        <span class="cv-form-toggle__dot" aria-hidden="true"></span>
-                        {{ trans('On') }}
-                    </label>
 
-                    <input type="radio" class="cv-form-toggle__input" value="off" name="{{ field_id }}" id="{{ field_id }}_no"
-                           autocomplete="off" {% if value == false %}checked{% endif %}>
-                    <label class="cv-form-toggle__option cv-form-toggle__option--off" for="{{ field_id }}_no">
-                        <span class="cv-form-toggle__dot" aria-hidden="true"></span>
-                        {{ trans('Off') }}
-                    </label>
-                </div>
-            {% elif value is number %}
-                <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
-                       class="form-control cv-form-control" step="any">
-            {% elif value is iterable and value is not string %}
-                <textarea id="{{ field_id }}" name="{{ field_id }}" rows="4"
-                          class="form-control cv-form-control cv-form-control--mono">{{ value }}</textarea>
-            {% else %}
-                <input type="text" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
-                       class="form-control cv-form-control">
-            {% endif %}
-        </div>
+                {# Localized field description hint #}
+                {% set hint_text = get_field_hint(key)|trim %}
+                {% if hint_text %}
+                    <span class="cv-form-hint">{{ hint_text }}</span>
+                {% endif %}
+            </div>
         {% endif %}
     {% endif %}
     <!-- END: Generate form fields -->
@@ -92,8 +694,23 @@
         {% if label or name %}
             <label for="{{ name }}" class="cv-form-label">{{ label or name }}</label>
         {% endif %}
-        <input type="{{ type }}" class="form-control cv-form-control" id="{{ name }}" name="{{ name }}"
-               value="{{ value|e }}" {% if type == 'password' %}autocomplete="new-password"{% endif %}>
+        {% if type == 'password' %}
+            <div class="input-group cv-input-group">
+                <input type="password" class="form-control cv-form-control cv-password-input font-monospace"
+                       id="{{ name }}" name="{{ name }}" value="{{ value|e }}" autocomplete="new-password">
+                <button class="btn btn-outline-secondary cv-password-toggle px-3" type="button"
+                        aria-label="{{ trans('Toggle visibility') }}" title="{{ trans('Toggle visibility') }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" class="bi bi-eye"
+                         viewBox="0 0 16 16">
+                        <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-8.3 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z"/>
+                        <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0"/>
+                    </svg>
+                </button>
+            </div>
+        {% else %}
+            <input type="{{ type }}" class="form-control cv-form-control" id="{{ name }}" name="{{ name }}"
+                   value="{{ value|e }}">
+        {% endif %}
     </div>
 {%- endmacro %}
 

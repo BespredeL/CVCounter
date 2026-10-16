@@ -44,17 +44,19 @@ def sanitize_text(text: Optional[str], max_chars: int = 8000) -> str:
     return cleaned
 
 
-def sanitize_props(props: Optional[dict[str, Any]]) -> dict[str, Any]:
+def sanitize_props(props: Optional[dict[str, Any]], depth: int = 0) -> dict[str, Any]:
     """
     Return a shallow-copied props dict with string values sanitized.
+    Supports nested dictionaries and lists up to recursion depth 3.
 
     Args:
         props: Optional event properties.
+        depth: Current recursion depth.
 
     Returns:
         Safe props dict.
     """
-    if not props:
+    if not props or not isinstance(props, dict) or depth > 3:
         return {}
     safe: dict[str, Any] = {}
     for key, value in props.items():
@@ -65,6 +67,15 @@ def sanitize_props(props: Optional[dict[str, Any]]) -> dict[str, Any]:
             safe[key] = sanitize_text(value, max_chars=500)
         elif isinstance(value, (int, float, bool)) or value is None:
             safe[key] = value
+        elif isinstance(value, dict):
+            safe[key] = sanitize_props(value, depth=depth + 1)
+        elif isinstance(value, (list, tuple)):
+            safe[key] = [
+                sanitize_text(item, max_chars=200) if isinstance(item, str)
+                else (item if isinstance(item, (int, float, bool)) or item is None else sanitize_text(str(item), max_chars=100))
+                for item in value[:25]
+            ]
         else:
             safe[key] = sanitize_text(str(value), max_chars=200)
     return safe
+

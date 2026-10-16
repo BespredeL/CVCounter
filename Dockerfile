@@ -15,7 +15,7 @@ WORKDIR /app
 COPY requirements.txt .
 
 RUN python -m pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu118 && \
+    pip install --no-cache-dir torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121 && \
     pip install --no-cache-dir -r requirements.txt
 
 COPY . .

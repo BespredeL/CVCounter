@@ -34,6 +34,15 @@ def _safe_location_slug(location: str) -> str:
 
 
 def _preview_dir() -> Path:
+    """
+    Get the preview directory path.
+
+    Args:
+        None
+
+    Returns:
+        Path: Preview directory path.
+    """
     return Path(resolve_project_path(PREVIEW_DIR_NAME))
 
 
@@ -51,7 +60,15 @@ def get_preview_path(location: str) -> Path:
 
 
 def preview_exists(location: str) -> bool:
-    """Return True if a saved preview exists for the location."""
+    """
+    Return True if a saved preview exists for the location.
+
+    Args:
+        location: Detection location identifier.
+
+    Returns:
+        bool: True if a saved preview exists for the location.
+    """
     return get_preview_path(location).is_file()
 
 

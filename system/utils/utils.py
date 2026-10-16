@@ -14,12 +14,28 @@ import platform
 from typing import Any, Dict
 
 import psutil
-import torch
 from flask import request
+
+from system.utils.paths import get_project_root
+
+try:
+    import colorama
+    colorama.init()
+except Exception:
+    if os.name == 'nt':
+        os.system('')
 
 
 def is_ajax() -> bool:
-    """Check if the request is an AJAX request."""
+    """
+    Check if the request is an AJAX request.
+
+    Args:
+        None
+
+    Returns:
+        bool: True if the request is an AJAX request.
+    """
     return str(request.headers.get('X-Requested-With')).lower() == 'XMLHttpRequest'.lower()
 
 
@@ -108,7 +124,15 @@ def format_bytes(size: int) -> str:
 
 
 def _nvidia_smi_query(field: str) -> str | None:
-    """Read one GPU field via the stable nvidia-smi CSV query interface."""
+    """
+    Read one GPU field via the stable nvidia-smi CSV query interface.
+
+    Args:
+        field: str - The field to read.
+
+    Returns:
+        str | None: The value of the field.
+    """
     try:
         result = subprocess.run(
             ['nvidia-smi', f'--query-gpu={field}', '--format=csv,noheader,nounits'],
@@ -136,8 +160,13 @@ def _nvidia_smi_query(field: str) -> str | None:
 def _parse_nvidia_smi_text(stdout: str) -> dict[str, str | None]:
     """
     Parse human-readable nvidia-smi output.
-
     Driver 6xx renamed header fields to KMD Version / CUDA UMD Version.
+
+    Args:
+        stdout: str - The output of the nvidia-smi command.
+
+    Returns:
+        dict[str, str | None]: The parsed information.
     """
     merged = stdout.replace('\n', ' ')
 
@@ -152,11 +181,31 @@ def _parse_nvidia_smi_text(stdout: str) -> dict[str, str | None]:
     }
 
 
+def _get_torch():
+    """Lazily import torch so the application doesn't crash when PyTorch is not installed."""
+    try:
+        import torch
+        return torch
+    except (ImportError, Exception):
+        return None
+
+
 def _cuda_runtime_ok() -> bool:
-    """True when PyTorch can see at least one CUDA device."""
-    if not torch.cuda.is_available():
+    """
+    True when PyTorch can see at least one CUDA device.
+
+    Args:
+        None
+
+    Returns:
+        bool: True when PyTorch can see at least one CUDA device.
+    """
+    torch = _get_torch()
+    if torch is None:
         return False
     try:
+        if not torch.cuda.is_available():
+            return False
         return torch.cuda.device_count() > 0
     except Exception:
         return False
@@ -195,9 +244,10 @@ def get_system_info() -> dict[str | Any, str | int | Any]:
     if not nvidia_info['gpu_name']:
         nvidia_info['gpu_name'] = _nvidia_smi_query('name')
 
+    torch = _get_torch()
     cuda_available = _cuda_runtime_ok()
     cuda_device_count = 0
-    if cuda_available:
+    if cuda_available and torch is not None:
         try:
             cuda_device_count = torch.cuda.device_count()
         except Exception:
@@ -206,7 +256,7 @@ def get_system_info() -> dict[str | Any, str | int | Any]:
     # Extract information from the output
     virtual_memory = psutil.virtual_memory()._asdict()
     swap_memory = psutil.swap_memory()._asdict()
-    disk_usages = disk_usage('/')._asdict()
+    disk_usages = disk_usage(get_project_root())._asdict()
 
     sys_info = {
         "python_version": platform.python_version(),
@@ -216,7 +266,7 @@ def get_system_info() -> dict[str | Any, str | int | Any]:
         "machine": platform.machine(),
         "processor": platform.processor(),
         "cpu_count": psutil.cpu_count(logical=False),
-        "cpu_percent": f"{psutil.cpu_percent(interval=1)} %",
+        "cpu_percent": f"{psutil.cpu_percent(interval=None)} %",
 
         "nvidia_smi_version": nvidia_info["nvidia_smi_version"],
         "driver_version": nvidia_info["driver_version"],
@@ -224,8 +274,9 @@ def get_system_info() -> dict[str | Any, str | int | Any]:
         "gpu_name": nvidia_info["gpu_name"],
         "cuda_device_count": cuda_device_count,
         "py_torch_cuda_available": "Yes" if cuda_available else None,
-        "py_torch_cuda_version": torch.version.cuda or None,
-        "py_torch_version": torch.__version__,
+        "py_torch_cuda_version": (getattr(torch.version, 'cuda', None) if torch and hasattr(torch, 'version') else None) or None,
+        "py_torch_version": getattr(torch, '__version__', None),
+
 
         "virtual_memory": {
             "total": format_bytes(virtual_memory['total']),
@@ -257,6 +308,12 @@ def should_run_startup_system_check() -> bool:
     Werkzeug's debug reloader imports the application twice: a file-watcher
     parent and the worker child (WERKZEUG_RUN_MAIN=true). Running GPU checks
     in both processes duplicates console output.
+
+    Args:
+        None
+
+    Returns:
+        bool: True when startup hooks should run in the current process.
     """
     run_main = os.environ.get("WERKZEUG_RUN_MAIN")
     if run_main == "true":
@@ -276,12 +333,24 @@ def system_check() -> None:
     """
     System check
 
+    Args:
+        None
+
     Returns:
         None
     """
     sys_info = get_system_info()
 
-    def colored_value(value):
+    def colored_value(value: str) -> str:
+        """
+        Colored value
+
+        Args:
+            value: str - The value to be colored.
+
+        Returns:
+            str: Colored value.
+        """
         if value == "N/A":
             return colored_text(value, 'red')
         else:

@@ -7,34 +7,75 @@
         query_params: The query parameters
 #}
 <!-- START: Pagination -->
+{% if total_pages and total_pages > 1 %}
 <nav class="p-3 border-top" aria-label="Page navigation">
     <ul class="pagination pagination-modern justify-content-center flex-wrap mb-0">
-        {% if current_page > 1 %}
-            <li class="page-item page-item__previous">
-                <a class="page-link"
-                   href="{{ url_for(endpoint, page=current_page - 1, location=query_params.location) }}"
-                   aria-label="Previous">
-                    <span aria-hidden="true">&laquo;</span>
-                </a>
-            </li>
+        <!-- Previous Page Button -->
+        <li class="page-item page-item__previous {% if current_page <= 1 %}disabled{% endif %}">
+            <a class="page-link"
+               href="{% if current_page > 1 %}{{ url_for(endpoint, page=current_page - 1, location=query_params.location) }}{% else %}#{% endif %}"
+               aria-label="{{ trans('Previous') }}"
+               title="{{ trans('Previous') }}"
+               {% if current_page <= 1 %}tabindex="-1" aria-disabled="true"{% endif %}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-chevron-left" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
+                </svg>
+            </a>
+        </li>
+
+        {% set p_start = [1, current_page - 2] | max %}
+        {% set p_end = [total_pages, current_page + 2] | min %}
+        {% if p_end - p_start < 4 %}
+            {% if p_start == 1 %}
+                {% set p_end = [total_pages, p_start + 4] | min %}
+            {% else %}
+                {% set p_start = [1, p_end - 4] | max %}
+            {% endif %}
         {% endif %}
 
-        {% for page in range(1, total_pages + 1) %}
+        {% if p_start > 1 %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for(endpoint, page=1, location=query_params.location) }}">1</a>
+            </li>
+            {% if p_start > 2 %}
+                <li class="page-item page-item__ellipsis disabled" aria-hidden="true">
+                    <span class="page-link">&hellip;</span>
+                </li>
+            {% endif %}
+        {% endif %}
+
+        {% for page in range(p_start, p_end + 1) %}
             <li class="page-item {% if page == current_page %}active{% endif %}">
                 <a class="page-link"
-                   href="{{ url_for(endpoint, page=page, location=query_params.location) }}">{{ page }}</a>
+                   href="{{ url_for(endpoint, page=page, location=query_params.location) }}"
+                   {% if page == current_page %}aria-current="page"{% endif %}>{{ page }}</a>
             </li>
         {% endfor %}
 
-        {% if current_page < total_pages %}
-            <li class="page-item page-item__next">
-                <a class="page-link"
-                   href="{{ url_for(endpoint, page=current_page + 1, location=query_params.location) }}"
-                   aria-label="Next">
-                    <span aria-hidden="true">&raquo;</span>
-                </a>
+        {% if p_end < total_pages %}
+            {% if p_end < total_pages - 1 %}
+                <li class="page-item page-item__ellipsis disabled" aria-hidden="true">
+                    <span class="page-link">&hellip;</span>
+                </li>
+            {% endif %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for(endpoint, page=total_pages, location=query_params.location) }}">{{ total_pages }}</a>
             </li>
         {% endif %}
+
+        <!-- Next Page Button -->
+        <li class="page-item page-item__next {% if current_page >= total_pages %}disabled{% endif %}">
+            <a class="page-link"
+               href="{% if current_page < total_pages %}{{ url_for(endpoint, page=current_page + 1, location=query_params.location) }}{% else %}#{% endif %}"
+               aria-label="{{ trans('Next') }}"
+               title="{{ trans('Next') }}"
+               {% if current_page >= total_pages %}tabindex="-1" aria-disabled="true"{% endif %}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-chevron-right" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
+                </svg>
+            </a>
+        </li>
     </ul>
 </nav>
+{% endif %}
 <!-- END: Pagination -->

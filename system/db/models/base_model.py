@@ -15,6 +15,15 @@ class TablePrefixBase:
 
     @declared_attr
     def __tablename__(cls) -> str:
+        """
+        Get the table name.
+        
+        Args:
+            None
+
+        Returns:
+            str: The table name
+        """
         return cls.__table_prefix__ + cls.__name__.lower()
 
     @classmethod
@@ -24,6 +33,9 @@ class TablePrefixBase:
         
         Args:
             prefix (str): Table prefix
+            
+        Returns:
+            None
         """
         cls.__table_prefix__ = prefix
 

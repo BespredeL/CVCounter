@@ -1,52 +1,43 @@
 {% extends "base.html" %}
 
-{% block title %}Configuration Error{% endblock %}
+{% block title %}{{ trans('Configuration Error') }}{% endblock %}
 
 {% block content %}
-    <div class="error-page-wrap">
-        <div class="col-12 col-lg-10">
-                <div class="card error-page-card border-0 cv-card overflow-hidden">
-                    <div class="card-header border-0 py-3 error-card-header--danger text-center">
-                        <h4 class="mb-0">{{ trans('Configuration Error') }}</h4>
-                    </div>
-                    <div class="card-body p-4">
-                        <h5 class="text-danger">{{ error_type }}</h5>
-                        <p class="lead">{{ error.message }}</p>
+    {% set extra %}
+        <div class="error-page__config text-start">
+            <div class="error-page__config-type">{{ error_type }}</div>
+            <p class="mb-3">{{ error.message }}</p>
 
-                        {% if error.details and error.details.validation_errors %}
-                            <div class="mt-3">
-                                <h6>{{ trans('Validation Errors') }}:</h6>
-                                <ul class="list-group">
-                                    {% for validation_error in error.details.validation_errors %}
-                                        <li class="list-group-item list-group-item-danger">{{ validation_error }}</li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                        {% endif %}
-
-                        {% if config.get('general.debug', False) and error.details %}
-                            <div class="mt-3">
-                                <details>
-                                    <summary class="btn btn-sm btn-outline-secondary">{{ trans('Show Details') }}</summary>
-                                    <pre class="mt-2 p-3 bg-dark text-light rounded"><code>{{ error.details | tojson(indent=2) }}</code></pre>
-                                </details>
-                            </div>
-                        {% endif %}
-
-                        <hr>
-                        <div class="alert alert-info">
-                            <strong>{{ trans('How to fix') }}:</strong>
-                            <ul class="mb-0 mt-2">
-                                <li>{{ trans('Check the configuration file for syntax errors') }}</li>
-                                <li>{{ trans('Verify all required fields are present') }}</li>
-                                <li>{{ trans('Ensure file paths are correct and accessible') }}</li>
-                                <li>{{ trans('Review the validation errors above') }}</li>
-                            </ul>
-                        </div>
-
-                        <a href="{{ url_for('main.index') }}" class="btn btn-primary">{{ trans('Go to Home') }}</a>
-                    </div>
+            {% if error.details and error.details.validation_errors %}
+                <div class="mb-3">
+                    <div class="fw-semibold mb-2">{{ trans('Validation Errors') }}</div>
+                    <ul class="error-page__list">
+                        {% for validation_error in error.details.validation_errors %}
+                            <li>{{ validation_error }}</li>
+                        {% endfor %}
+                    </ul>
                 </div>
+            {% endif %}
+
+            {% if config.get('general.debug', False) and error.details %}
+                <details class="error-page__details mb-3">
+                    <summary>{{ trans('Show Details') }}</summary>
+                    <pre class="error-page__pre"><code>{{ error.details | tojson(indent=2) }}</code></pre>
+                </details>
+            {% endif %}
+
+            <div class="error-page__howto">
+                <div class="fw-semibold mb-2">{{ trans('How to fix') }}</div>
+                <ul class="mb-0">
+                    <li>{{ trans('Check the configuration file for syntax errors') }}</li>
+                    <li>{{ trans('Verify all required fields are present') }}</li>
+                    <li>{{ trans('Ensure file paths are correct and accessible') }}</li>
+                    <li>{{ trans('Review the validation errors above') }}</li>
+                </ul>
+            </div>
         </div>
-    </div>
+    {% endset %}
+    {% with error_code='CFG', error_title=trans('Configuration Error'), tone='danger', message=trans('The application configuration could not be loaded.'), extra_html=extra %}
+        {% include 'partials/error_card.html' %}
+    {% endwith %}
 {% endblock %}

@@ -3,17 +3,21 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 26.07.2026
-# Updated: 26.07.2026
+# Updated: 08.10.2026
 # Website: https://bespredel.name
 
 from __future__ import annotations
 
+from collections import deque
 import hashlib
 import hmac
 import json
 import os
 import platform
 import queue
+import shutil
+import socket
+import sys
 import threading
 import time
 import traceback
@@ -21,6 +25,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Optional
 from urllib import error as urllib_error
+from urllib import parse as urllib_parse
 from urllib import request as urllib_request
 
 from system.__version__ import APP_VERSION
@@ -29,6 +34,7 @@ from system.utils.telemetry_sanitize import sanitize_props, sanitize_text
 
 SCHEMA_VERSION = 1
 DEFAULT_ENDPOINT = 'https://bespredel.name/api/cvcounter/telemetry'
+DEFAULT_LOG_PATH = 'storage/logs/cvcounter.log'
 TELEMETRY_DIR = 'storage/telemetry'
 INSTALL_ID_FILE = 'storage/telemetry/install_id'
 QUEUE_FILE = 'storage/telemetry/queue.jsonl'
@@ -84,7 +90,7 @@ def _message_hash(message: str) -> str:
 
 class TelemetryManager:
     """
-    Singleton fire-and-forget telemetry manager.
+    Singleton fire-and-forget telemetry and diagnostics manager.
     """
 
     _instance: Optional['TelemetryManager'] = None
@@ -120,6 +126,7 @@ class TelemetryManager:
         self._dedup: dict[str, float] = {}
         self._dropped = 0
         self._pending: list[dict[str, Any]] = []
+        self._recent_events: deque[dict[str, Any]] = deque(maxlen=100)
         self._system_cache: Optional[dict[str, Any]] = None
         self._system_cache_at = 0.0
         self._runtime_context: Optional[dict[str, Any]] = None
@@ -165,8 +172,6 @@ class TelemetryManager:
 
         if self._enabled:
             self._ensure_worker()
-        elif self._worker is not None and self._worker.is_alive():
-            pass
 
     def set_runtime_context(self, runtime_context: Optional[dict[str, Any]]) -> None:
         """
@@ -204,7 +209,7 @@ class TelemetryManager:
 
     def track(self, event: str, props: Optional[dict[str, Any]] = None) -> None:
         """
-        Enqueue a usage event (no-op when disabled or send_usage=false).
+        Enqueue a usage event. Always keeps a copy in local diagnostic buffer.
         
         Args:
             event: The event name.
@@ -213,16 +218,25 @@ class TelemetryManager:
         Returns:
             None
         """
-        if not self._enabled or not self._send_usage:
-            return
         name = str(event or '').strip()
         if not name:
             return
-        location = None
-        if props and 'location' in props:
-            location = str(props.get('location'))
-        if not self._allow_dedup(f'usage:{name}:{location or ""}'):
+
+        location = str(props.get('location') or '') if props else ''
+        reason = str(props.get('reason') or '') if props else ''
+
+        # Rate-limiting: high-frequency stream reconnect/loss uses a short 10s window;
+        # other usage events use a 1s debounce to avoid rapid duplicate submissions.
+        if name in ('stream_lost', 'stream_reconnected'):
+            dedup_key = f'stream:{name}:{location}:{reason}'
+            dedup_window = 10.0
+        else:
+            dedup_key = f'usage:{name}:{location}'
+            dedup_window = 1.0
+
+        if not self._allow_dedup(dedup_key, window_sec=dedup_window):
             return
+
         item = {
             '_cmd': _CMD_EVENT,
             'id': str(uuid.uuid4()),
@@ -231,6 +245,15 @@ class TelemetryManager:
             'name': name,
             'props': dict(props) if props else {},
         }
+
+        # Keep recent event in memory for manual diagnostics even if auto is disabled
+        normalized = self._normalize_event(item)
+        with self._lock:
+            self._recent_events.append(normalized)
+
+        if not self._enabled or not self._send_usage:
+            return
+
         self._enqueue_command(item)
 
     def capture_exception(
@@ -240,41 +263,60 @@ class TelemetryManager:
             exc_info: Any = None,
     ) -> None:
         """
-        Enqueue an error event (no-op when disabled or send_errors=false).
+        Enqueue an error event. Always keeps a copy in local diagnostic buffer.
         
         Args:
-            exc: The exception.
-            tags: The tags.
-            exc_info: The exception info.
+            exc: The exception instance.
+            tags: Additional metadata tags.
+            exc_info: Exception tuple (type, val, tb) or True.
 
         Returns:
             None
         """
-        if not self._enabled or not self._send_errors:
-            return
         if self._logging_telemetry_error:
             return
 
         exc_type = ''
         message = ''
         stack = ''
-        if exc_info is not None:
+
+        resolved_exc_info = None
+        if exc_info is True or (exc_info is None and exc is None):
+            cur_sys = sys.exc_info()
+            if cur_sys[0] is not None:
+                resolved_exc_info = cur_sys
+        elif isinstance(exc_info, tuple) and len(exc_info) == 3 and exc_info[0] is not None:
+            resolved_exc_info = exc_info
+
+        if resolved_exc_info is not None:
+            cur_type, cur_val, cur_tb = resolved_exc_info
+            exc_type = getattr(cur_type, '__name__', str(cur_type))
+            message = str(cur_val) if cur_val is not None else ''
             try:
-                stack = ''.join(traceback.format_exception(*exc_info))
-                exc_type = getattr(exc_info[0], '__name__', str(exc_info[0]))
-                message = str(exc_info[1]) if exc_info[1] is not None else ''
+                stack = ''.join(traceback.format_exception(cur_type, cur_val, cur_tb))
             except Exception:
                 stack = traceback.format_exc()
         elif exc is not None:
             exc_type = type(exc).__name__
             message = str(exc)
-            stack = ''.join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+            try:
+                stack = ''.join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+            except Exception:
+                stack = traceback.format_exc()
         else:
             stack = traceback.format_exc()
+            if 'NoneType: None' in stack:
+                stack = ''
+            exc_type = 'Error'
             message = 'Exception occurred'
 
+        if not exc_type:
+            exc_type = 'Error'
+        if not message:
+            message = exc_type
+
         dedup_key = f'error:{exc_type}:{_message_hash(message)}'
-        if not self._allow_dedup(dedup_key):
+        if not self._allow_dedup(dedup_key, window_sec=float(self._error_dedup_sec)):
             return
 
         item = {
@@ -290,7 +332,606 @@ class TelemetryManager:
                 'stack': stack,
             },
         }
+
+        normalized = self._normalize_event(item)
+        with self._lock:
+            self._recent_events.append(normalized)
+
+        if not self._enabled or not self._send_errors:
+            return
+
         self._enqueue_command(item)
+
+    def capture_error_message(
+            self,
+            message: str,
+            tags: Optional[dict[str, Any]] = None,
+    ) -> None:
+        """
+        Enqueue a non-exception error message (e.g. from logger.error).
+        
+        Args:
+            message: Error description.
+            tags: Optional metadata.
+            
+        Returns:
+            None
+        """
+        if self._logging_telemetry_error:
+            return
+        msg = str(message or '').strip()
+        if not msg:
+            return
+
+        dedup_key = f'error:logged_error:{_message_hash(msg)}'
+        if not self._allow_dedup(dedup_key, window_sec=float(self._error_dedup_sec)):
+            return
+
+        item = {
+            '_cmd': _CMD_EVENT,
+            'id': str(uuid.uuid4()),
+            'ts': _utc_now_iso(),
+            'type': 'error',
+            'name': 'logged_error',
+            'props': dict(tags) if tags else {},
+            'error': {
+                'type': 'LoggedError',
+                'message': msg,
+                'stack': '',
+            },
+        }
+
+        normalized = self._normalize_event(item)
+        with self._lock:
+            self._recent_events.append(normalized)
+
+        if not self._enabled or not self._send_errors:
+            return
+
+        self._enqueue_command(item)
+
+    def capture_client_error(
+            self,
+            message: str,
+            url: str = '',
+            line: int = 0,
+            col: int = 0,
+            stack: str = '',
+            breadcrumbs: Optional[list] = None,
+    ) -> None:
+        """
+        Capture a client-side JavaScript error reported by the browser.
+        
+        Args:
+            message: Error message.
+            url: Page or script URL where the error occurred.
+            line: Line number.
+            col: Column number.
+            stack: JavaScript call stack string.
+            breadcrumbs: Optional recent client-side action breadcrumbs.
+            
+        Returns:
+            None
+        """
+        msg = str(message or '').strip()
+        if not msg:
+            return
+
+        dedup_key = f'client_error:{_message_hash(msg)}:{url}:{line}'
+        if not self._allow_dedup(dedup_key, window_sec=float(self._error_dedup_sec)):
+            return
+
+        clean_breadcrumbs = []
+        if isinstance(breadcrumbs, list):
+            for b in breadcrumbs[-15:]:
+                if isinstance(b, dict):
+                    clean_breadcrumbs.append(sanitize_props(b))
+
+        item = {
+            '_cmd': _CMD_EVENT,
+            'id': str(uuid.uuid4()),
+            'ts': _utc_now_iso(),
+            'type': 'error',
+            'name': 'client_javascript_error',
+            'props': {
+                'url': sanitize_text(url, max_chars=300),
+                'line': int(line) if line else 0,
+                'col': int(col) if col else 0,
+                'breadcrumbs': clean_breadcrumbs,
+            },
+            'error': {
+                'type': 'JavaScriptError',
+                'message': sanitize_text(msg, max_chars=1000),
+                'stack': sanitize_text(stack, max_chars=self._max_stack_chars),
+            },
+        }
+
+        normalized = self._normalize_event(item)
+        with self._lock:
+            self._recent_events.append(normalized)
+
+        if not self._enabled or not self._send_errors:
+            return
+
+        self._enqueue_command(item)
+
+    def track_performance(self, props: dict[str, Any]) -> None:
+        """
+        Record a stream / detection performance metric event.
+        
+        Args:
+            props: Dictionary of performance stats (FPS, inference time, etc.).
+            
+        Returns:
+            None
+        """
+        self.track('stream_performance', props)
+
+    def submit_feedback(
+            self,
+            comment: str,
+            email: str = '',
+            include_logs: bool = True,
+    ) -> tuple[bool, str]:
+        """
+        Submit user feedback with optional logs and diagnostics.
+        Sends report immediately to the telemetry endpoint.
+        
+        Args:
+            comment: User feedback or bug description.
+            email: Optional user email for follow-up.
+            include_logs: Whether to attach recent server log lines.
+            
+        Returns:
+            tuple[bool, str]: Success flag and human-readable message.
+        """
+        clean_comment = str(comment or '').strip()
+        if not clean_comment:
+            return False, 'Feedback comment cannot be empty'
+
+        logs_content = ''
+        if include_logs:
+            log_path = resolve_project_path(DEFAULT_LOG_PATH) or DEFAULT_LOG_PATH
+            try:
+                if os.path.isfile(log_path):
+                    with open(log_path, 'r', encoding='utf-8', errors='replace') as f:
+                        lines = f.readlines()
+                    logs_content = ''.join(lines[-80:])
+            except Exception as e:
+                logs_content = f'Error reading logs: {e}'
+
+        item = {
+            '_cmd': _CMD_EVENT,
+            'id': str(uuid.uuid4()),
+            'ts': _utc_now_iso(),
+            'type': 'feedback',
+            'name': 'user_feedback',
+            'feedback': {
+                'comment': clean_comment,
+                'email': str(email or '').strip(),
+                'logs': logs_content,
+            },
+            'props': {
+                'recent_events_count': len(self._recent_events),
+            },
+        }
+
+        normalized = self._normalize_event(item)
+        with self._lock:
+            self._recent_events.append(normalized)
+
+        # Build an immediate single-batch report for user feedback
+        report = self._build_batch([normalized], mode='feedback')
+        ok, message, status_code = self._post_batch(report)
+        self._write_last_send(ok=ok, message=message, status_code=status_code, mode='feedback')
+        if not ok:
+            # Spill if endpoint is offline
+            self._spill_events([normalized])
+            return False, message
+        return True, 'Feedback submitted successfully'
+
+    def run_system_doctor(self, runtime_context: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+        """
+        Execute comprehensive local diagnostics and return report.
+        
+        Args:
+            runtime_context: Optional runtime context with config and counters.
+            
+        Returns:
+            dict: Structured checklist of subsystem health statuses.
+        """
+        checks: list[dict[str, Any]] = []
+
+        # 1. Storage write permissions
+        storage_dirs = ['storage/logs', 'storage/reports', 'storage/telemetry']
+        storage_ok = True
+        storage_details = []
+        for sdir in storage_dirs:
+            full_path = resolve_project_path(sdir) or sdir
+            test_file = os.path.join(full_path, f'.doctor_test_{uuid.uuid4().hex[:6]}.tmp')
+            try:
+                ensure_parent_dir(test_file)
+                with open(test_file, 'w', encoding='utf-8') as f:
+                    f.write('ok')
+                if os.path.exists(test_file):
+                    os.remove(test_file)
+                storage_details.append(f'{sdir}: OK')
+            except Exception as e:
+                storage_ok = False
+                storage_details.append(f'{sdir}: FAIL ({e})')
+
+        checks.append({
+            'id': 'storage',
+            'title': 'Storage write permissions',
+            'status': 'ok' if storage_ok else 'error',
+            'details': ', '.join(storage_details),
+        })
+
+        # 2. Disk space
+        disk_status = 'ok'
+        disk_details = 'Disk space available'
+        try:
+            storage_root = resolve_project_path('storage') or 'storage'
+            total_b, used_b, free_b = shutil.disk_usage(storage_root)
+            free_gb = round(free_b / (1024 ** 3), 1)
+            total_gb = round(total_b / (1024 ** 3), 1)
+            pct_free = round((free_b / total_b) * 100, 1) if total_b > 0 else 0
+            disk_details = f'{free_gb} GB free of {total_gb} GB ({pct_free}% free)'
+            if free_gb < 1.0:
+                disk_status = 'error'
+            elif free_gb < 3.0:
+                disk_status = 'warning'
+        except Exception as e:
+            disk_status = 'warning'
+            disk_details = f'Cannot determine disk space: {e}'
+
+        checks.append({
+            'id': 'disk_space',
+            'title': 'Disk space',
+            'status': disk_status,
+            'details': disk_details,
+        })
+
+        # 3. System RAM
+        ram_status = 'ok'
+        ram_details = 'RAM available'
+        try:
+            import psutil
+            mem = psutil.virtual_memory()
+            avail_gb = round(mem.available / (1024 ** 3), 1)
+            total_gb = round(mem.total / (1024 ** 3), 1)
+            used_pct = round(mem.percent, 1)
+            ram_details = f'{avail_gb} GB available of {total_gb} GB ({used_pct}% used)'
+            if avail_gb < 1.0:
+                ram_status = 'warning'
+        except Exception:
+            ram_status = 'info'
+            ram_details = 'RAM metrics unavailable'
+
+        checks.append({
+            'id': 'ram_memory',
+            'title': 'System RAM',
+            'status': ram_status,
+            'details': ram_details,
+        })
+
+        # 4. Database check
+        db_ok = True
+        db_detail = 'Database accessible'
+        try:
+            dbm = None
+            if runtime_context and 'db_manager' in runtime_context:
+                dbm = runtime_context['db_manager']
+            elif self._runtime_context and 'db_manager' in self._runtime_context:
+                dbm = self._runtime_context['db_manager']
+
+            if dbm is None:
+                config = (runtime_context or {}).get('config') or (self._runtime_context or {}).get('config')
+                if not config:
+                    from system.managers.config_manager import ConfigManager
+                    config = ConfigManager('config/config.json')
+                from system.managers.database_manager import DatabaseManager
+                from system.utils.paths import resolve_sqlite_uri
+                raw_uri = config.get('db.uri') or 'sqlite:///config/database.sqlite'
+                resolved_uri = resolve_sqlite_uri(raw_uri, getattr(config, 'project_root', None))
+                dbm = DatabaseManager(uri=resolved_uri, prefix=config.get('db.prefix', ''))
+
+            if dbm is not None:
+                session = dbm.create_session()
+                try:
+                    from system.db.models.cvcounter import CVCounter
+                    session.query(CVCounter).first()
+                    db_detail = 'Database connected and schema verified'
+                finally:
+                    session.close()
+            else:
+                db_ok = False
+                db_detail = 'Database manager instance could not be initialized'
+        except Exception as e:
+            db_ok = False
+            db_detail = f'Database error: {e}'
+
+        checks.append({
+            'id': 'database',
+            'title': 'Database integrity',
+            'status': 'ok' if db_ok else 'error',
+            'details': db_detail,
+        })
+
+        # 5. Model weights files check
+        cfg = (runtime_context or {}).get('config') or (self._runtime_context or {}).get('config')
+        if not cfg:
+            try:
+                from system.managers.config_manager import ConfigManager
+                cfg = ConfigManager('config/config.json')
+            except Exception:
+                cfg = None
+
+        weights_status = 'ok'
+        weights_details_list = []
+        if cfg:
+            detections = cfg.get('detections') or {}
+            if isinstance(detections, dict) and detections:
+                missing_count = 0
+                for loc_id, loc_cfg in detections.items():
+                    if isinstance(loc_cfg, dict):
+                        wpath = loc_cfg.get('weights_path')
+                        if wpath:
+                            resolved_w = resolve_project_path(wpath) or wpath
+                            if os.path.isfile(resolved_w) and os.path.getsize(resolved_w) > 0:
+                                sz_mb = round(os.path.getsize(resolved_w) / (1024 * 1024), 1)
+                                weights_details_list.append(f'{loc_id}: {os.path.basename(wpath)} ({sz_mb} MB)')
+                            else:
+                                missing_count += 1
+                                weights_details_list.append(f'{loc_id}: {wpath} (NOT FOUND)')
+                if missing_count > 0:
+                    weights_status = 'error'
+                elif not weights_details_list:
+                    weights_status = 'info'
+                    weights_details_list.append('No weights configured')
+            else:
+                weights_status = 'info'
+                weights_details_list.append('No detection cameras configured')
+        else:
+            weights_status = 'info'
+            weights_details_list.append('Config not accessible')
+
+        checks.append({
+            'id': 'model_weights',
+            'title': 'Model weights',
+            'status': weights_status,
+            'details': '; '.join(weights_details_list),
+        })
+
+        # 6. Hardware acceleration
+        accel_status = 'info'
+        accel_details = []
+        has_cuda = False
+        try:
+            import torch
+            has_cuda = torch.cuda.is_available()
+            if has_cuda:
+                gpu_name = torch.cuda.get_device_name(0)
+                vram_gb = round(torch.cuda.get_device_properties(0).total_memory / (1024 ** 3), 1)
+                accel_status = 'ok'
+                accel_details.append(f'CUDA available: {gpu_name} ({vram_gb} GB VRAM)')
+            else:
+                accel_status = 'warning'
+                accel_details.append('PyTorch CPU-only (CUDA not available)')
+        except Exception as e:
+            accel_details.append(f'PyTorch: {e}')
+
+        try:
+            import openvino
+            accel_details.append(f'OpenVINO {getattr(openvino, "__version__", "installed")}')
+        except Exception:
+            pass
+
+        checks.append({
+            'id': 'acceleration',
+            'title': 'Hardware acceleration',
+            'status': accel_status,
+            'details': '; '.join(accel_details) if accel_details else 'CPU only',
+        })
+
+        # 7. Model inference benchmark
+        benchmark_status = 'ok'
+        benchmark_detail = 'Inference ready'
+        try:
+            import numpy as np
+            object_counters = (runtime_context or {}).get('object_counters') or (self._runtime_context or {}).get('object_counters') or {}
+            active_counter = next((c for c in object_counters.values() if getattr(c, 'running', False) and hasattr(c, '_detect')), None)
+            if active_counter is not None:
+                t0 = time.monotonic()
+                dummy_frame = np.zeros((640, 640, 3), dtype=np.uint8)
+                active_counter._detect(dummy_frame)
+                elapsed_ms = round((time.monotonic() - t0) * 1000, 1)
+                benchmark_detail = f'Active counter dry-run: {elapsed_ms} ms'
+            else:
+                first_model = 'yolo26n.pt'
+                if cfg:
+                    dets = cfg.get('detections') or {}
+                    if isinstance(dets, dict) and dets:
+                        first_det = next(iter(dets.values()), {})
+                        if isinstance(first_det, dict) and first_det.get('weights_path'):
+                            first_model = first_det.get('weights_path')
+                first_model_resolved = resolve_project_path(first_model) or first_model
+                if os.path.exists(first_model_resolved):
+                    target_device = 'GPU' if has_cuda else 'CPU'
+                    benchmark_detail = f'Model {os.path.basename(first_model)} verified for {target_device} inference'
+                else:
+                    benchmark_status = 'info'
+                    benchmark_detail = 'Ready for stream inference'
+        except Exception as e:
+            benchmark_status = 'warning'
+            benchmark_detail = f'Benchmark error: {e}'
+
+        checks.append({
+            'id': 'benchmark',
+            'title': 'Model inference benchmark',
+            'status': benchmark_status,
+            'details': benchmark_detail,
+        })
+
+        # 8. Camera network reachability
+        cam_status = 'ok'
+        cam_details = []
+        if cfg:
+            detections = cfg.get('detections') or {}
+            if isinstance(detections, dict) and detections:
+                for loc_id, loc_cfg in detections.items():
+                    if isinstance(loc_cfg, dict):
+                        vpath = str(loc_cfg.get('video_path') or '').strip()
+                        if vpath.lower().startswith(('rtsp://', 'rtsps://', 'http://', 'https://')):
+                            try:
+                                parsed = urllib_parse.urlparse(vpath)
+                                host = parsed.hostname
+                                port = parsed.port or (443 if parsed.scheme == 'https' else (80 if parsed.scheme == 'http' else 554))
+                                if host:
+                                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                                    sock.settimeout(1.0)
+                                    code = sock.connect_ex((host, port))
+                                    sock.close()
+                                    if code == 0:
+                                        cam_details.append(f'{loc_id} ({host}:{port}): OK')
+                                    else:
+                                        cam_status = 'warning'
+                                        cam_details.append(f'{loc_id} ({host}:{port}): Unreachable')
+                            except Exception as ce:
+                                cam_status = 'warning'
+                                cam_details.append(f'{loc_id}: {ce}')
+                        elif vpath.isdigit():
+                            cam_details.append(f'{loc_id}: USB Camera #{vpath}')
+                        elif vpath:
+                            resolved_v = resolve_project_path(vpath) or vpath
+                            if os.path.exists(resolved_v):
+                                cam_details.append(f'{loc_id}: File OK')
+                            else:
+                                cam_status = 'warning'
+                                cam_details.append(f'{loc_id}: File missing')
+            if not cam_details:
+                cam_status = 'info'
+                cam_details.append('No cameras configured')
+        else:
+            cam_status = 'info'
+            cam_details.append('Config not accessible')
+
+        checks.append({
+            'id': 'cameras_network',
+            'title': 'Camera network connections',
+            'status': cam_status,
+            'details': '; '.join(cam_details),
+        })
+
+        # 9. Video recording codecs
+        codecs_status = 'ok'
+        codecs_detail = 'MP4V codec supported'
+        try:
+            import cv2
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            tmp_video = resolve_project_path('storage/.doctor_codec_test.mp4') or 'storage/.doctor_codec_test.mp4'
+            ensure_parent_dir(tmp_video)
+            writer = cv2.VideoWriter(tmp_video, fourcc, 25, (320, 240))
+            if writer.isOpened():
+                writer.release()
+                if os.path.exists(tmp_video):
+                    os.remove(tmp_video)
+                codecs_detail = 'OpenCV VideoWriter MP4V ready'
+            else:
+                codecs_status = 'warning'
+                codecs_detail = 'OpenCV VideoWriter MP4V failed to open'
+        except Exception as e:
+            codecs_status = 'warning'
+            codecs_detail = f'VideoWriter check error: {e}'
+
+        checks.append({
+            'id': 'video_codecs',
+            'title': 'Video recording codecs',
+            'status': codecs_status,
+            'details': codecs_detail,
+        })
+
+        # 10. System time sync & Telemetry connectivity
+        telemetry_status = 'ok'
+        telemetry_detail = 'Ready'
+        time_sync_status = 'ok'
+        time_sync_detail = 'System time verified'
+        if self._endpoint:
+            try:
+                import email.utils
+                req = urllib_request.Request(
+                    self._endpoint,
+                    headers={'User-Agent': f'CVCounter/{APP_VERSION}'},
+                    method='HEAD'
+                )
+                date_header = None
+                try:
+                    with urllib_request.urlopen(req, timeout=3) as resp:
+                        code = getattr(resp, 'status', None) or resp.getcode()
+                        date_header = resp.headers.get('date')
+                        telemetry_detail = f'Endpoint reachable (HTTP {code})'
+                except urllib_error.HTTPError as he:
+                    date_header = he.headers.get('date')
+                    telemetry_detail = f'Endpoint reached (HTTP {he.code})'
+
+                if date_header:
+                    remote_dt = email.utils.parsedate_to_datetime(date_header)
+                    now_dt = datetime.now(timezone.utc)
+                    delta_sec = round(abs((remote_dt - now_dt).total_seconds()), 1)
+                    if delta_sec < 180:
+                        time_sync_detail = f'Clock in sync (delta {delta_sec}s)'
+                    else:
+                        time_sync_status = 'warning'
+                        time_sync_detail = f'Clock out of sync: {delta_sec}s discrepancy'
+                else:
+                    time_sync_status = 'info'
+                    time_sync_detail = 'Remote time header unavailable'
+            except Exception as e:
+                telemetry_status = 'warning'
+                telemetry_detail = f'Endpoint unreachable: {e}'
+                time_sync_status = 'info'
+                time_sync_detail = 'Skipped (offline)'
+        else:
+            telemetry_status = 'warning'
+            telemetry_detail = 'No endpoint configured'
+            time_sync_status = 'info'
+            time_sync_detail = 'Skipped (no endpoint)'
+
+        checks.append({
+            'id': 'system_time',
+            'title': 'System time synchronization',
+            'status': time_sync_status,
+            'details': time_sync_detail,
+        })
+
+        checks.append({
+            'id': 'telemetry',
+            'title': 'Telemetry server connection',
+            'status': telemetry_status,
+            'details': telemetry_detail,
+        })
+
+        # 11. Video counters status
+        counters_count = 0
+        running_count = 0
+        if runtime_context:
+            object_counters = runtime_context.get('object_counters') or {}
+            counters_count = len(object_counters)
+            running_count = sum(1 for c in object_counters.values() if getattr(c, 'running', False))
+
+        checks.append({
+            'id': 'counters',
+            'title': 'Active video streams',
+            'status': 'ok' if counters_count > 0 else 'info',
+            'details': f'{running_count} running of {counters_count} configured counters',
+        })
+
+        all_ok = all(c['status'] in ('ok', 'info') for c in checks)
+        return {
+            'all_ok': all_ok,
+            'timestamp': _utc_now_iso(),
+            'checks': checks,
+        }
 
     def request_manual_send(self) -> tuple[bool, str]:
         """
@@ -330,6 +971,7 @@ class TelemetryManager:
     def build_diagnostic_report(self, mode: str = 'manual') -> dict[str, Any]:
         """
         Build a diagnostic payload for download / manual send.
+        Prefers pending events if available, falls back to in-memory recent event buffer.
         
         Args:
             mode: The mode of the diagnostic report.
@@ -337,7 +979,11 @@ class TelemetryManager:
         Returns:
             dict[str, Any]: The diagnostic report.
         """
-        events = list(self._pending)
+        with self._lock:
+            if self._pending:
+                events = list(self._pending)
+            else:
+                events = list(self._recent_events)
         report = self._build_batch(events, mode=mode)
         return report
 
@@ -372,6 +1018,38 @@ class TelemetryManager:
         except (OSError, ValueError, TypeError):
             return None
 
+    def get_queue_status(self) -> dict[str, Any]:
+        """
+        Return diagnostic status and queue statistics for UI.
+        
+        Returns:
+            dict[str, Any]: Metrics on in-memory and disk queues.
+        """
+        path = resolve_project_path(QUEUE_FILE) or QUEUE_FILE
+        disk_events_count = 0
+        disk_bytes = 0
+        try:
+            if os.path.isfile(path):
+                disk_bytes = os.path.getsize(path)
+                with open(path, 'r', encoding='utf-8') as handle:
+                    disk_events_count = sum(1 for line in handle if line.strip())
+        except OSError:
+            pass
+
+        with self._lock:
+            pending_count = len(self._pending)
+            recent_count = len(self._recent_events)
+
+        return {
+            'enabled': self._enabled,
+            'pending_count': pending_count,
+            'recent_count': recent_count,
+            'disk_events_count': disk_events_count,
+            'disk_bytes': disk_bytes,
+            'dropped_count': self._dropped,
+            'last_send': self.get_last_send_status(),
+        }
+
     @property
     def enabled(self) -> bool:
         """
@@ -402,25 +1080,27 @@ class TelemetryManager:
     # Internals
     # ------------------------------------------------------------------
 
-    def _allow_dedup(self, key: str) -> bool:
+    def _allow_dedup(self, key: str, window_sec: Optional[float] = None) -> bool:
         """
-        Check if a deduplication key is allowed.
+        Check if a deduplication key is allowed within the given time window.
         
         Args:
             key: The deduplication key.
+            window_sec: Deduplication window in seconds. Defaults to _error_dedup_sec.
             
         Returns:
-            bool: True if the deduplication key is allowed, False otherwise.
+            bool: True if allowed, False if throttled.
         """
         now = time.monotonic()
+        effective_window = float(self._error_dedup_sec) if window_sec is None else float(window_sec)
         with self._lock:
             last = self._dedup.get(key)
-            if last is not None and (now - last) < self._error_dedup_sec:
+            if last is not None and (now - last) < effective_window:
                 return False
             self._dedup[key] = now
 
             if len(self._dedup) > 500:
-                cutoff = now - self._error_dedup_sec
+                cutoff = now - max(effective_window, float(self._error_dedup_sec))
                 self._dedup = {k: v for k, v in self._dedup.items() if v >= cutoff}
 
             return True
@@ -478,7 +1158,7 @@ class TelemetryManager:
 
     def _run_manual_oneshot(self) -> None:
         """
-        Run a manual oneshot.
+        Run a manual oneshot send when worker is not running.
         
         Args:
             None
@@ -525,7 +1205,9 @@ class TelemetryManager:
                     self._flush_pending(mode='auto')
                     last_flush = time.monotonic()
                 elif cmd == _CMD_EVENT:
-                    self._pending.append(self._normalize_event(item))
+                    normalized = self._normalize_event(item)
+                    with self._lock:
+                        self._pending.append(normalized)
                     if len(self._pending) >= self._max_batch_size:
                         self._flush_pending(mode='auto')
                         last_flush = time.monotonic()
@@ -535,7 +1217,17 @@ class TelemetryManager:
                 last_flush = time.monotonic()
 
             if shutdown_requested:
-                self._flush_pending(mode='auto')
+                # Shorten timeout for final flush so shutdown does not block
+                old_timeout = self._timeout_sec
+                self._timeout_sec = min(2, self._timeout_sec)
+                try:
+                    self._flush_pending(mode='auto', max_batches=2)
+                finally:
+                    self._timeout_sec = old_timeout
+                with self._lock:
+                    if self._pending:
+                        self._spill_events(self._pending)
+                        self._pending.clear()
                 self._stop.set()
                 break
 
@@ -564,6 +1256,13 @@ class TelemetryManager:
                 'message': sanitize_text(str(error.get('message') or ''), max_chars=1000),
                 'stack': sanitize_text(str(error.get('stack') or ''), max_chars=max_stack),
             }
+        feedback = item.get('feedback')
+        if isinstance(feedback, dict):
+            event['feedback'] = {
+                'comment': sanitize_text(str(feedback.get('comment') or ''), max_chars=2000),
+                'email': sanitize_text(str(feedback.get('email') or ''), max_chars=120),
+                'logs': sanitize_text(str(feedback.get('logs') or ''), max_chars=12000),
+            }
         return event
 
     def _handle_manual_send(self) -> None:
@@ -576,33 +1275,100 @@ class TelemetryManager:
         Returns:
             None
         """
-        report = self._build_batch(list(self._pending), mode='manual')
-        self._pending.clear()
+        report = self.build_diagnostic_report(mode='manual')
+        with self._lock:
+            self._pending.clear()
         ok, message, status_code = self._post_batch(report)
         self._write_last_send(ok=ok, message=message, status_code=status_code, mode='manual')
 
-    def _flush_pending(self, mode: str = 'auto') -> None:
+    def _flush_pending(self, mode: str = 'auto', max_batches: int = 5) -> None:
         """
-        Flush pending events.
+        Flush pending events in batches.
         
         Args:
-            mode: The mode of the flush.
+            mode: The mode of the flush ('auto', 'manual').
+            max_batches: Maximum number of batches to send in one run.
             
         Returns:
             None
         """
-        if not self._pending:
+        with self._lock:
+            if not self._pending:
+                return
+            if mode == 'auto' and not self._enabled:
+                self._pending.clear()
+                return
+
+        batches_sent = 0
+        while batches_sent < max_batches:
+            with self._lock:
+                if not self._pending:
+                    break
+                batch_events = self._pending[: self._max_batch_size]
+                self._pending = self._pending[self._max_batch_size:]
+
+            report = self._build_batch(batch_events, mode=mode)
+            ok, message, status_code = self._post_batch(report)
+            self._write_last_send(ok=ok, message=message, status_code=status_code, mode=mode)
+            batches_sent += 1
+
+            if not ok:
+                self._spill_events(batch_events)
+                break
+            else:
+                # Connection is healthy, replay any previously spilled events
+                self._replay_spilled_events()
+
+    def _replay_spilled_events(self) -> None:
+        """
+        Replay events previously spilled to QUEUE_FILE when network was down.
+        """
+        path = resolve_project_path(QUEUE_FILE) or QUEUE_FILE
+        try:
+            if not os.path.isfile(path) or os.path.getsize(path) == 0:
+                return
+            with open(path, 'r', encoding='utf-8') as handle:
+                lines = handle.readlines()
+        except OSError:
             return
-        if mode == 'auto' and not self._enabled:
-            self._pending.clear()
+
+        if not lines:
             return
-        batch_events = self._pending[: self._max_batch_size]
-        self._pending = self._pending[self._max_batch_size:]
-        report = self._build_batch(batch_events, mode=mode)
+
+        replayed_events: list[dict[str, Any]] = []
+        remaining_lines: list[str] = []
+        for line in lines:
+            line_str = line.strip()
+            if not line_str:
+                continue
+            if len(replayed_events) < self._max_batch_size:
+                try:
+                    replayed_events.append(json.loads(line_str))
+                except Exception:
+                    continue
+            else:
+                remaining_lines.append(line)
+
+        if not replayed_events:
+            try:
+                with open(path, 'w', encoding='utf-8'):
+                    pass
+            except OSError:
+                pass
+            return
+
+        report = self._build_batch(replayed_events, mode='replay')
         ok, message, status_code = self._post_batch(report)
-        self._write_last_send(ok=ok, message=message, status_code=status_code, mode=mode)
-        if not ok:
-            self._spill_events(batch_events)
+        if ok:
+            try:
+                ensure_parent_dir(path)
+                tmp_path = f"{path}.tmp"
+                with open(tmp_path, 'w', encoding='utf-8') as handle:
+                    for rem in remaining_lines:
+                        handle.write(rem if rem.endswith('\n') else rem + '\n')
+                os.replace(tmp_path, path)
+            except OSError:
+                pass
 
     def _build_batch(self, events: list[dict[str, Any]], mode: str) -> dict[str, Any]:
         """
@@ -648,25 +1414,28 @@ class TelemetryManager:
                 self._system_cache = dict(fingerprint)
                 self._system_cache_at = now
             context = self._runtime_context
+
         counters_count = 0
         counters_running = 0
         backends: list[str] = []
         if context:
             config = context.get('config')
-            detections = {}
             if config is not None:
                 try:
                     detections = config.get('detections', {}) or {}
+                    counters_count = len(detections)
                 except Exception:
-                    detections = {}
-            try:
-                counters_count = len(detections)
-            except Exception:
-                counters_count = 0
+                    counters_count = 0
             object_counters = context.get('object_counters') or {}
+            object_counters_lock = context.get('object_counters_lock')
             try:
-                counters_running = len(object_counters)
-                for counter in object_counters.values():
+                if object_counters_lock:
+                    with object_counters_lock:
+                        counters_list = list(object_counters.values())
+                else:
+                    counters_list = list(object_counters.values())
+                counters_running = len(counters_list)
+                for counter in counters_list:
                     model_type = getattr(counter, 'model_type', None)
                     if model_type and model_type not in backends:
                         backends.append(str(model_type))
@@ -697,6 +1466,7 @@ class TelemetryManager:
             'cpu_count': os.cpu_count(),
             'app_version': APP_VERSION,
         }
+        # PyTorch / CUDA detection
         try:
             import torch
             info['py_torch_version'] = getattr(torch, '__version__', None)
@@ -711,6 +1481,23 @@ class TelemetryManager:
         except Exception:
             info['py_torch_version'] = None
             info['py_torch_cuda_available'] = False
+
+        # OpenVINO detection
+        try:
+            import openvino
+            info['openvino_version'] = getattr(openvino, '__version__', None)
+        except Exception:
+            info['openvino_version'] = None
+
+        # System memory via psutil if available
+        try:
+            import psutil
+            mem = psutil.virtual_memory()
+            info['ram_total_mb'] = int(mem.total / (1024 * 1024))
+            info['ram_available_mb'] = int(mem.available / (1024 * 1024))
+        except Exception:
+            pass
+
         return info
 
     def _post_batch(self, report: dict[str, Any]) -> tuple[bool, str, Optional[int]]:
@@ -786,7 +1573,7 @@ class TelemetryManager:
             mode: str,
     ) -> None:
         """
-        Write the last send status.
+        Write the last send status atomically.
         
         Args:
             ok: Whether the last send was successful.
@@ -807,10 +1594,16 @@ class TelemetryManager:
         }
         try:
             ensure_parent_dir(path)
-            with open(path, 'w', encoding='utf-8') as handle:
+            tmp_path = f"{path}.tmp"
+            with open(tmp_path, 'w', encoding='utf-8') as handle:
                 json.dump(payload, handle, ensure_ascii=False, indent=2)
+            os.replace(tmp_path, path)
         except OSError:
-            pass
+            try:
+                with open(path, 'w', encoding='utf-8') as handle:
+                    json.dump(payload, handle, ensure_ascii=False, indent=2)
+            except OSError:
+                pass
 
     def _load_or_create_install_id(self) -> str:
         """

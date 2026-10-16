@@ -3,7 +3,7 @@
 {% block title %}{{ trans('System info') }}{% endblock %}
 
 {% block header %}
-    {% with page_title=trans('System info') %}
+    {% with page_title=trans('System info'), page_subtitle=trans('Hardware status, runtime environment, diagnostics, and telemetry.') %}
         {% include 'partials/page_header.html' %}
     {% endwith %}
 {% endblock %}
@@ -22,42 +22,198 @@
 
     <div class="page-content">
         <div class="cv-card overflow-hidden mb-3">
-            <div class="p-3 border-bottom">
+            <div class="p-3 border-start border-warning border-3">
                 <h2 class="h5 mb-2">{{ trans('Diagnostics and telemetry') }}</h2>
                 <p class="text-body-secondary small mb-2">
                     {{ trans('Telemetry privacy note') }}
                 </p>
-                <p class="small mb-3">
+                <p class="small mb-2">
                     <span class="text-body-secondary">{{ trans('App version') }}:</span>
-                    {{ app_version }}
+                    <strong>{{ app_version }}</strong>
                     &middot;
                     <span class="text-body-secondary">{{ trans('Automatic telemetry') }}:</span>
-                    {% if telemetry_enabled %}{{ trans('On') }}{% else %}{{ trans('Off') }}{% endif %}
+                    {% if telemetry_enabled %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle">{{ trans('On') }}</span>
+                    {% else %}
+                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">{{ trans('Off') }}</span>
+                    {% endif %}
+                    {% if telemetry_status %}
+                        &middot;
+                        <span class="text-body-secondary">{{ trans('Queue in memory') }}:</span>
+                        <span class="badge bg-body-tertiary text-body border">{{ telemetry_status.pending_count }}</span>
+                        {% if telemetry_status.disk_events_count > 0 %}
+                            &middot;
+                            <span class="text-body-secondary">{{ trans('Offline queue (disk)') }}:</span>
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">{{ telemetry_status.disk_events_count }}</span>
+                        {% endif %}
+                        {% if telemetry_status.dropped_count > 0 %}
+                            &middot;
+                            <span class="text-body-secondary">{{ trans('Dropped events') }}:</span>
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">{{ telemetry_status.dropped_count }}</span>
+                        {% endif %}
+                    {% endif %}
                 </p>
                 {% if telemetry_last_send %}
                     <p class="small mb-3">
                         <span class="text-body-secondary">{{ trans('Last telemetry send') }}:</span>
-                        {{ telemetry_last_send.sent_at | default('—') }}
-                        —
-                        {% if telemetry_last_send.ok %}{{ trans('Success') }}{% else %}{{ trans('Failed') }}{% endif %}
-                        {% if telemetry_last_send.message %}
-                            ({{ telemetry_last_send.message }})
+                        {{ telemetry_last_send.sent_at | default('-') }}
+                        -
+                        {% if telemetry_last_send.ok %}
+                            <span class="text-success fw-semibold">{{ trans('Success') }}</span>
+                        {% else %}
+                            <span class="text-danger fw-semibold">{{ trans('Failed') }}</span>
+                        {% endif %}
+                        {% if telemetry_last_send.message and telemetry_last_send.message != 'ok' %}
+                            <span class="text-body-secondary">({{ telemetry_last_send.message }})</span>
                         {% endif %}
                     </p>
                 {% endif %}
-                <div class="d-flex flex-wrap gap-2">
-                    <form method="POST" action="{{ url_for('settings.telemetry_send') }}">
-                        <button type="submit" class="btn btn-outline-primary btn-sm">
-                            {{ trans('Send diagnostics now') }}
+                <div class="pt-3 mt-1 border-top d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <button type="button"
+                                class="btn btn-success btn-sm d-inline-flex align-items-center gap-1 shadow-sm"
+                                id="btn-run-doctor">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                 class="bi bi-heart-pulse" viewBox="0 0 16 16">
+                                <path d="m8 2.748-.717-.737C5.6.281 2.514.878 1.4 3.053.918 3.995.78 5.323 1.508 7H.43c-2.128-5.697 4.165-8.83 7.394-5.857q.09.083.176.171a3 3 0 0 1 .176-.17c3.23-2.974 9.522.159 7.394 5.856h-1.078c.728-1.677.59-3.005.108-3.947C13.486.878 10.4.28 8.717 2.01zM2.212 10h1.315C4.593 11.183 6.05 12.458 8 13.795c1.949-1.337 3.407-2.612 4.473-3.795h1.315c-1.265 1.566-3.14 3.25-5.788 5-2.648-1.75-4.523-3.434-5.788-5"/>
+                                <path d="M10.464 3.314a.5.5 0 0 0-.945.049L7.921 8.956 6.464 5.314a.5.5 0 0 0-.88-.091L3.732 8H.5a.5.5 0 0 0 0 1H4a.5.5 0 0 0 .416-.223l1.473-2.209 1.647 4.118a.5.5 0 0 0 .945-.049l1.598-5.593 1.457 3.642A.5.5 0 0 0 12 9h3.5a.5.5 0 0 0 0-1h-3.162z"/>
+                            </svg>
+                            <span>{{ trans('Run system doctor') }}</span>
                         </button>
-                    </form>
-                    <a class="btn btn-outline-secondary btn-sm"
-                       href="{{ url_for('settings.telemetry_download') }}">
-                        {{ trans('Download diagnostics JSON') }}
-                    </a>
+                        <button type="button"
+                                class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1"
+                                data-bs-toggle="modal" data-bs-target="#feedbackModal">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                 class="bi bi-chat-left-dots" viewBox="0 0 16 16">
+                                <path d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4.414A2 2 0 0 0 3 11.586l-2 2V2a1 1 0 0 1 1-1zM2 0a2 2 0 0 0-2 2v12.793a.5.5 0 0 0 .854.353l2.853-2.853A1 1 0 0 1 4.414 12H14a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2z"/>
+                                <path d="M5 6a1 1 0 1 1-2 0 1 1 0 0 1 2 0m4 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0m4 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/>
+                            </svg>
+                            <span>{{ trans('Report a problem') }}</span>
+                        </button>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-primary btn-sm dropdown-toggle d-inline-flex align-items-center gap-1"
+                                    type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                     class="bi bi-cloud-arrow-up" viewBox="0 0 16 16">
+                                    <path fill-rule="evenodd"
+                                          d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708z"/>
+                                    <path d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383m.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z"/>
+                                </svg>
+                                <span>{{ trans('Diagnostics data') }}</span>
+                            </button>
+                            <ul class="dropdown-menu shadow-sm">
+                                <li>
+                                    <form method="POST" action="{{ url_for('settings.telemetry_send') }}" class="m-0">
+                                        <button type="submit"
+                                                class="dropdown-item d-flex align-items-center gap-2 py-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                 fill="currentColor" class="bi bi-send" viewBox="0 0 16 16">
+                                                <path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576zm6.787-8.201L1.591 6.602l4.339 2.76z"/>
+                                            </svg>
+                                            <span>{{ trans('Send diagnostics now') }}</span>
+                                        </button>
+                                    </form>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2"
+                                       href="{{ url_for('settings.telemetry_download') }}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                             fill="currentColor" class="bi bi-download" viewBox="0 0 16 16">
+                                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
+                                            <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/>
+                                        </svg>
+                                        <span>{{ trans('Download diagnostics JSON') }}</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    {% if allow_web_control %}
+                        <div class="dropdown ms-auto">
+                            <button class="btn btn-outline-danger btn-sm dropdown-toggle d-inline-flex align-items-center gap-1"
+                                    type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                     class="bi bi-power" viewBox="0 0 16 16">
+                                    <path d="M7.5 1v7h1V1z"/>
+                                    <path d="M3 8.812a5 5 0 0 1 2.578-4.375l-.485-.874A6 6 0 1 0 11 3.616l-.501.865A5 5 0 1 1 3 8.812"/>
+                                </svg>
+                                <span>{{ trans('Server control') }}</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li>
+                                    <button type="button"
+                                            class="dropdown-item d-flex align-items-center gap-2 py-2 btn-restart-server-trigger">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                             fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
+                                            <path fill-rule="evenodd"
+                                                  d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+                                            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
+                                        </svg>
+                                        <span>{{ trans('Restart server') }}</span>
+                                    </button>
+                                </li>
+                                <li>
+                                    <hr class="dropdown-divider my-1">
+                                </li>
+                                <li>
+                                    <button type="button"
+                                            class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger btn-shutdown-server-trigger">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                             fill="currentColor" class="bi bi-power" viewBox="0 0 16 16">
+                                            <path d="M7.5 1v7h1V1z"/>
+                                            <path d="M3 8.812a5 5 0 0 1 2.578-4.375l-.485-.874A6 6 0 1 0 11 3.616l-.501.865A5 5 0 1 1 3 8.812"/>
+                                        </svg>
+                                        <span>{{ trans('Stop server') }}</span>
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
+
+        <div id="system-doctor-results" class="d-none cv-card p-3 mb-3"></div>
+
+        <!-- START: AI Runtimes & Hardware Acceleration Card -->
+        <div class="cv-card overflow-hidden mb-3" id="ai-runtimes-card">
+            <div class="p-3 border-start border-primary border-3">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                    <div>
+                        <h2 class="h5 mb-1 d-flex align-items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor"
+                                 class="text-primary flex-shrink-0" viewBox="0 0 16 16">
+                                <path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14A2.5 2.5 0 0 1 11.5 14v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0m-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3zM5 5h6v6H5z"/>
+                            </svg>
+                            <span>{{ trans('AI Runtimes & Hardware Acceleration') }}</span>
+                        </h2>
+                        <p class="text-body-secondary small mb-0">
+                            {{ trans('Status of inference backends (ONNX, TensorRT, PyTorch) and one-click package installation.') }}
+                        </p>
+                    </div>
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2"
+                            id="btn-refresh-runtimes">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                             viewBox="0 0 16 16">
+                            <path fill-rule="evenodd"
+                                  d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+                            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
+                        </svg>
+                        <span>{{ trans('Refresh') }}</span>
+                    </button>
+                </div>
+
+                <div class="row g-3" id="runtimes-container">
+                    <!-- Cards will be populated dynamically via JavaScript -->
+                    <div class="col-12 text-center py-3 text-body-secondary">
+                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                        <span>{{ trans('Loading runtime status...') }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- END: AI Runtimes & Hardware Acceleration Card -->
 
         <div class="cv-card overflow-hidden">
             <div class="table-responsive">
@@ -92,5 +248,242 @@
                 </table>
             </div>
         </div>
+
+        <!-- START: Application Logs Card -->
+        <div class="cv-card overflow-hidden mt-3 mb-3" id="system-logs-card">
+            <div class="p-3 border-start border-info border-3">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                    <div class="d-flex flex-column gap-1">
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            <h2 class="h5 mb-0 d-flex align-items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor"
+                                     class="text-info flex-shrink-0" viewBox="0 0 16 16">
+                                    <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5z"/>
+                                    <path d="M4.5 12.5A.5.5 0 0 1 5 12h3a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5m0-2A.5.5 0 0 1 5 10h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5m0-2A.5.5 0 0 1 5 8h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5"/>
+                                </svg>
+                                <span>{{ trans('Application Logs') }}</span>
+                            </h2>
+                            <span id="log-file-badge" class="badge bg-body-tertiary text-body-secondary border font-monospace fw-normal" style="font-size: 0.75rem; padding: 0.25rem 0.55rem;">cvcounter.log</span>
+                        </div>
+                        <div class="text-body-secondary small d-flex align-items-center gap-2 flex-wrap">
+                            <span>{{ trans('Live log stream from storage/logs/cvcounter.log with filtering and auto-refresh.') }}</span>
+                            <span id="log-meta-info" class="badge bg-body-tertiary text-body-secondary font-monospace border" style="font-size: 0.72rem; padding: 0.2rem 0.5rem;"></span>
+                        </div>
+                    </div>
+                    <!-- Right Actions -->
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 px-2.5 py-1" id="btn-refresh-logs" title="{{ trans('Refresh') }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+                                <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
+                            </svg>
+                            <span>{{ trans('Refresh') }}</span>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 px-2.5 py-1" id="btn-copy-logs" title="{{ trans('Copy logs') }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/>
+                                <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 1 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/>
+                            </svg>
+                            <span id="btn-copy-logs-text">{{ trans('Copy') }}</span>
+                        </button>
+                        <a href="{{ url_for('settings.api_download_logs') }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 px-2.5 py-1 text-decoration-none" id="btn-download-logs" title="{{ trans('Download log') }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
+                                <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/>
+                            </svg>
+                            <span>{{ trans('Download') }}</span>
+                        </a>
+                        <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1 px-2.5 py-1" id="btn-clear-logs" title="{{ trans('Clear logs') }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+                                <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+                            </svg>
+                            <span>{{ trans('Clear') }}</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filters toolbar -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2.5 pt-3 mb-3 border-top" style="border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
+                    <!-- Left: Filters & Search -->
+                    <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1" style="min-width: 0;">
+                        <div style="min-width: 125px;">
+                            <select class="form-select form-select-sm" id="log-level-filter">
+                                <option value="">{{ trans('All levels') }}</option>
+                                <option value="INFO">INFO</option>
+                                <option value="WARNING">WARNING</option>
+                                <option value="ERROR">ERROR</option>
+                                <option value="DEBUG">DEBUG</option>
+                            </select>
+                        </div>
+                        <div style="min-width: 120px;">
+                            <select class="form-select form-select-sm" id="log-lines-limit">
+                                <option value="50">50 {{ trans('lines') }}</option>
+                                <option value="100" selected>100 {{ trans('lines') }}</option>
+                                <option value="250">250 {{ trans('lines') }}</option>
+                                <option value="500">500 {{ trans('lines') }}</option>
+                                <option value="1000">1000 {{ trans('lines') }}</option>
+                            </select>
+                        </div>
+                        <div class="flex-grow-1" style="min-width: 200px; max-width: 380px;">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-body-tertiary border-end-0 text-body-secondary">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+                                    </svg>
+                                </span>
+                                <input type="text" class="form-control border-start-0" id="log-search-input" placeholder="{{ trans('Search logs...') }}">
+                                <button class="btn btn-outline-secondary d-none" type="button" id="log-search-clear" title="{{ trans('Clear') }}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Right: Auto-refresh and Scroll-to-bottom switches -->
+                    <div class="d-flex align-items-center gap-3 ms-sm-auto flex-shrink-0 pt-1 pt-sm-0">
+                        <div class="form-check form-switch m-0 d-flex align-items-center">
+                            <input class="form-check-input my-0" type="checkbox" role="switch" id="log-auto-refresh" checked style="cursor: pointer;">
+                            <label class="form-check-label small user-select-none text-body-secondary ms-2" for="log-auto-refresh" style="cursor: pointer;">{{ trans('Auto-refresh') }}</label>
+                        </div>
+                        <div class="form-check form-switch m-0 d-flex align-items-center">
+                            <input class="form-check-input my-0" type="checkbox" role="switch" id="log-auto-scroll" checked style="cursor: pointer;">
+                            <label class="form-check-label small user-select-none text-body-secondary ms-2" for="log-auto-scroll" style="cursor: pointer;">{{ trans('Scroll to bottom') }}</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Terminal Display -->
+                <div class="position-relative">
+                    <div id="log-terminal" class="cv-log-terminal font-monospace user-select-text" 
+                         style="background: #0d1117; color: #c9d1d9; border: 1px solid var(--cv-border, rgba(255,255,255,0.1)); border-radius: 8px; padding: 12px 14px; font-size: 0.8125rem; line-height: 1.5; max-height: 460px; min-height: 180px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">
+                        <div class="text-body-secondary text-center py-4">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            <span>{{ trans('Loading logs...') }}</span>
+                        </div>
+                    </div>
+                    <div id="log-scroll-bottom-btn" class="position-absolute bottom-0 end-0 m-3 d-none">
+                        <button type="button" class="btn btn-secondary btn-sm shadow-sm opacity-75 d-inline-flex align-items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M8 1a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L7.5 13.293V1.5A.5.5 0 0 1 8 1"/>
+                            </svg>
+                            <span>{{ trans('Bottom') }}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- END: Application Logs Card -->
     </div>
+
+    <!-- START: Feedback Modal -->
+    <div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form method="POST" action="{{ url_for('settings.feedback_send') }}">
+                    <div class="modal-header">
+                        <h5 class="modal-title d-flex align-items-center gap-2" id="feedbackModalLabel">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                 class="text-info flex-shrink-0" viewBox="0 0 16 16">
+                                <path d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4.414A2 2 0 0 0 3 11.586l-2 2V2a1 1 0 0 1 1-1zM2 0a2 2 0 0 0-2 2v12.793a.5.5 0 0 0 .854.353l2.853-2.853A1 1 0 0 1 4.414 12H14a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2z"/>
+                                <path d="M5 6a1 1 0 1 1-2 0 1 1 0 0 1 2 0m4 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0m4 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/>
+                            </svg>
+                            <span>{{ trans('Report a problem / Send feedback') }}</span>
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="feedbackComment" class="form-label fw-semibold">
+                                {{ trans('Description of the problem') }} <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control" id="feedbackComment" name="comment" rows="4"
+                                      placeholder="{{ trans('Describe what happened, what camera or detector model was used...') }}"
+                                      required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="feedbackEmail" class="form-label">
+                                {{ trans('Contact email (optional, for reply)') }}
+                            </label>
+                            <input type="email" class="form-control" id="feedbackEmail" name="email"
+                                   placeholder="name@example.com">
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="includeLogsCheck" name="include_logs"
+                                   value="1" checked>
+                            <label class="form-check-label text-body-secondary small" for="includeLogsCheck">
+                                {{ trans('Include anonymized diagnostics and recent logs') }}
+                            </label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm"
+                                data-bs-dismiss="modal">{{ trans('Cancel') }}</button>
+                        <button type="submit" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                                 viewBox="0 0 16 16">
+                                <path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576zm6.787-8.201L1.591 6.602l4.339 2.76z"/>
+                            </svg>
+                            <span>{{ trans('Send report') }}</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- END: Feedback Modal -->
+
+    <!-- START: Runtime Install Modal -->
+    <div class="modal fade" id="runtimeInstallModal" tabindex="-1" aria-labelledby="runtimeInstallModalLabel"
+         aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header">
+                    <h5 class="modal-title d-flex align-items-center gap-2" id="runtimeInstallModalLabel">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor"
+                             class="text-primary flex-shrink-0" viewBox="0 0 16 16">
+                            <path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5 8 5.961 14.154 3.5zm.564 1.426L14.5 4.67v6.66l-5.75 2.3V7.27l5.75-2.3-5.75-2.431zM7.25 7.27v6.36L1.5 11.33V4.67l5.75 2.6zm0-4.731L1.5 4.67 7.25 7.27V2.539z"/>
+                        </svg>
+                        <span id="installModalTitle">{{ trans('Package Installation') }}</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+                            id="btn-close-install-modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="spinner-border spinner-border-sm text-primary" id="installSpinner"
+                                  role="status"></span>
+                            <span class="fw-semibold"
+                                  id="installStatusText">{{ trans('Installation in progress...') }}</span>
+                        </div>
+                        <span class="badge bg-primary" id="installBundleBadge">bundle</span>
+                    </div>
+                    <pre class="bg-dark text-light p-3 rounded mb-0" id="installLogTerminal"
+                         style="max-height: 340px; overflow-y: auto; font-family: monospace; font-size: 0.82rem; white-space: pre-wrap; line-height: 1.4;"></pre>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"
+                            id="btn-cancel-install">{{ trans('Close') }}</button>
+                    <button type="button" class="btn btn-primary btn-sm d-none d-inline-flex align-items-center gap-2"
+                            id="btn-refresh-after-install">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                             viewBox="0 0 16 16">
+                            <path fill-rule="evenodd"
+                                  d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+                            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
+                        </svg>
+                        <span>{{ trans('Refresh page') }}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- END: Runtime Install Modal -->
 {% endblock %}
+
+{% block footer_assets %}
+    <script src="{{ url_for('static', filename='assets/js/system-info.js') }}"></script>
+{% endblock %}
+

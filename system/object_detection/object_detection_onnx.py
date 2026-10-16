@@ -35,9 +35,21 @@ class ObjectDetectionONNX(BaseObjectDetectionService):
         self.iou = 0.7
         self.input_size = (640, 640)
         self.classes_list = None
+        self.classes_map: dict[int, str] = {}
+        self.is_end2end: Optional[bool] = None
         self.providers: list[str] = []
 
     def detect(self, image: ndarray, **kwargs) -> DetectionResult:
+        """
+        Detect objects in an image.
+
+        Args:
+            image: ndarray - The image to detect objects in.
+            kwargs: dict - Additional keyword arguments.
+
+        Returns:
+            DetectionResult - The detection result.
+        """
         if self.session is None or self.input_name is None:
             raise ModelNotFoundError('Model is not loaded')
 
@@ -50,14 +62,26 @@ class ObjectDetectionONNX(BaseObjectDetectionService):
             input_size=self.input_size,
             image_shape=image.shape,
             classes_list=self.classes_list,
+            is_end2end=self.is_end2end,
         )
 
     def load_model(self, weights: str, **kwargs) -> None:
+        """
+        Load a model from a weights file.
+        
+        Args:
+            weights: str - The path to the model weights.
+            kwargs: dict - Additional keyword arguments.
+
+        Returns:
+            None
+        """
         if not weights:
             raise ModelNotFoundError('Model is not found')
 
         self.confidence = float(kwargs.get('confidence', 0.5))
         self.iou = float(kwargs.get('iou', 0.7))
+        has_custom_size = 'input_size' in kwargs
         self.input_size = normalize_input_size(kwargs.get('input_size', 640))
         self.classes_list = kwargs.get('classes_list', None)
         self.providers = self._resolve_providers(kwargs.get('providers'), kwargs.get('device'))
@@ -89,13 +113,52 @@ class ObjectDetectionONNX(BaseObjectDetectionService):
         self.input_name = inputs[0].name
         self.output_names = [output.name for output in outputs]
 
+        # Automatically adapt input size from static tensor shape if not explicitly overridden
+        if not has_custom_size and inputs[0].shape:
+            shape = inputs[0].shape
+            if len(shape) == 4 and isinstance(shape[2], int) and isinstance(shape[3], int):
+                self.input_size = (shape[3], shape[2])
+
+        # Check for end-to-end / NMS-free models (e.g. YOLOv10, RT-DETR)
+        try:
+            meta = self.session.get_modelmeta().custom_metadata_map
+            end2end_val = str(meta.get('end2end', '')).strip().lower()
+            if end2end_val in ('true', '1', 'yes'):
+                self.is_end2end = True
+        except Exception:
+            pass
+
+        # Load class names from model metadata or sidecar files
+        from system.object_detection.metadata import extract_model_classes
+        classes, _ = extract_model_classes(weights)
+        self.classes_map = classes or {}
+
     def cleanup(self) -> None:
+        """
+        Cleanup the model.
+        
+        Args:
+            None
+
+        Returns:
+            None
+        """
         self.session = None
         self.input_name = None
         self.output_names = []
 
     @staticmethod
     def _resolve_providers(providers: Optional[list], device) -> list[str]:
+        """
+        Resolve the providers for the model.
+
+        Args:
+            providers: Optional[list] - The providers to use.
+            device: str - The device to use.
+
+        Returns:
+            list[str] - The providers to use.
+        """
         if providers:
             return list(providers)
 

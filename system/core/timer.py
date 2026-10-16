@@ -10,7 +10,8 @@ import time
 
 
 class Timer:
-    """A class for measuring code execution time.
+    """
+    A class for measuring code execution time.
     
     This class implements a context manager for convenient measurement
     of code block execution time using the with statement.
@@ -26,7 +27,8 @@ class Timer:
         self._start = 0
 
     def __enter__(self):
-        """Start time measurement.
+        """
+        Start time measurement.
         
         Returns:
             Timer: Returns the timer instance for use in with block
@@ -35,7 +37,8 @@ class Timer:
         return self
 
     def __exit__(self, *args):
-        """End time measurement and save the result.
+        """
+        End time measurement and save the result.
         
         Args:
             *args: Ignored arguments for context manager protocol compatibility

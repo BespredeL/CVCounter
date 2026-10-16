@@ -1,0 +1,17 @@
+# Weights and models outside config
+*.pt
+*.onnx
+*.engine
+*.bin
+*.xml
+# Global pycache
+**/__pycache__/
+*.py[cod]
+
+.idea/
+config/config.json
+config/ultralytics/
+storage/
+*.sqlite*
+*.db
+venv/

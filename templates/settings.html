@@ -3,7 +3,7 @@
 {% block title %}{{ trans('Settings') }}{% endblock %}
 
 {% block header %}
-    {% with page_title=trans('Settings') %}
+    {% with page_title=trans('Settings'), page_subtitle=trans('Configure application parameters, hardware, detection modules, and security.') %}
         {% include 'partials/page_header.html' %}
     {% endwith %}
 {% endblock %}
@@ -19,35 +19,248 @@
 
 {% import 'partials/forms.html' as forms %}
 
+{% macro section_icon(key) %}
+    {% if key == 'general' %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+             class="bi bi-sliders flex-shrink-0" viewBox="0 0 16 16">
+            <path fill-rule="evenodd"
+                  d="M11.5 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M9.05 3a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0V3zM4.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M2.05 8a2.5 2.5 0 0 1 4.9 0H16v1H6.95a2.5 2.5 0 0 1-4.9 0H0V8zm9.45 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m-2.45 1a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0v-1z"/>
+        </svg>
+    {% elif key == 'server' %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+             class="bi bi-hdd-network flex-shrink-0" viewBox="0 0 16 16">
+            <path d="M4.5 5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1M3 4.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0"/>
+            <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2H8.5v3a1.5 1.5 0 0 1 1.5 1.5h5.5a.5.5 0 0 1 0 1H10A1.5 1.5 0 0 1 8.5 14h-1A1.5 1.5 0 0 1 6 12.5H.5a.5.5 0 0 1 0-1H6A1.5 1.5 0 0 1 7.5 10V7H2a2 2 0 0 1-2-2zm1 0v1a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1m6 7.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5"/>
+        </svg>
+    {% elif key == 'datasets' %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+             class="bi bi-collection flex-shrink-0" viewBox="0 0 16 16">
+            <path d="M2.5 3.5a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1zm2-2a.5.5 0 0 1 0-1h7a.5.5 0 0 1 0 1zM0 13a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 16 13V6a1.5 1.5 0 0 0-1.5-1.5h-13A1.5 1.5 0 0 0 0 6zm1.5.5A.5.5 0 0 1 1 13V6a.5.5 0 0 1 .5-.5h13a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5z"/>
+        </svg>
+    {% elif key == 'users' %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+             class="bi bi-people flex-shrink-0" viewBox="0 0 16 16">
+            <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1zm-7.978-1L7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002-.014.002zM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4m3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0M6.936 9.28a6 6 0 0 0-1.23-.247A7 7 0 0 0 5 9c-4 0-5 3-5 4q0 1 1 1h4.216A2.24 2.24 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816M4.92 10A5.5 5.5 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275ZM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0m3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4"/>
+        </svg>
+    {% elif key == 'db' %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+             class="bi bi-database flex-shrink-0" viewBox="0 0 16 16">
+            <path d="M4.318 2.687C5.234 2.271 6.536 2 8 2s2.766.27 3.682.687C12.644 3.125 13 3.627 13 4c0 .374-.356.875-1.318 1.313C10.766 5.729 9.464 6 8 6s-2.766-.27-3.682-.687C3.356 4.875 3 4.373 3 4c0-.374.356-.875 1.318-1.313M13 5.698V7c0 .374-.356.875-1.318 1.313C10.766 8.729 9.464 9 8 9s-2.766-.27-3.682-.687C3.356 7.875 3 7.373 3 7V5.698c.271.202.58.378.904.525C4.978 6.711 6.427 7 8 7s3.022-.289 4.096-.777A5 5 0 0 0 13 5.698M14 4c0-1.007-.875-1.755-1.904-2.223C11.022 1.289 9.573 1 8 1s-3.022.289-4.096.777C2.875 2.245 2 2.993 2 4v9c0 1.007.875 1.755 1.904 2.223C4.978 15.71 6.427 16 8 16s3.022-.289 4.096-.777C13.125 14.755 14 14.007 14 13zm-1 4.698V10c0 .374-.356.875-1.318 1.313C10.766 11.729 9.464 12 8 12s-2.766-.27-3.682-.687C3.356 10.875 3 10.373 3 10V8.698c.271.202.58.378.904.525C4.978 9.71 6.427 10 8 10s3.022-.289 4.096-.777A5 5 0 0 0 13 8.698m0 3V13c0 .374-.356.875-1.318 1.313C10.766 14.729 9.464 15 8 15s-2.766-.27-3.682-.687C3.356 13.875 3 13.373 3 13v-1.302c.271.202.58.378.904.525C4.978 12.71 6.427 13 8 13s3.022-.289 4.096-.777c.324-.147.633-.323.904-.525"/>
+        </svg>
+    {% elif key == 'telemetry' %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+             class="bi bi-activity flex-shrink-0" viewBox="0 0 16 16">
+            <path fill-rule="evenodd"
+                  d="M6 2a.5.5 0 0 1 .47.33L10 12.036l1.53-4.208A.5.5 0 0 1 12 7.5h3.5a.5.5 0 0 1 0 1h-3.15l-1.88 5.17a.5.5 0 0 1-.94 0L6 3.964 4.47 8.171A.5.5 0 0 1 4 8.5H.5a.5.5 0 0 1 0-1h3.15l1.88-5.17A.5.5 0 0 1 6 2"/>
+        </svg>
+    {% elif key == 'form' %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+             class="bi bi-ui-checks flex-shrink-0" viewBox="0 0 16 16">
+            <path d="M7 2.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5zM2 1a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm0 8a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2zm.854-3.646a.5.5 0 0 1-.708 0l-1-1a.5.5 0 1 1 .708-.708l.646.647 1.646-1.647a.5.5 0 1 1 .708.708zM7 10.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5z"/>
+        </svg>
+    {% elif key == 'detection_default' %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+             class="bi bi-crosshair flex-shrink-0" viewBox="0 0 16 16">
+            <path d="M8.5.5a.5.5 0 0 0-1 0v.518A7 7 0 0 0 1.018 7.5H.5a.5.5 0 0 0 0 1h.518A7 7 0 0 0 7.5 14.982v.518a.5.5 0 0 0 1 0v-.518A7 7 0 0 0 14.982 8.5h.518a.5.5 0 0 0 0-1h-.518A7 7 0 0 0 8.5 1.018zm-6.48 7A6 6 0 0 1 7.5 2.02v.48a.5.5 0 0 0 1 0v-.48a6 6 0 0 1 5.48 5.48h-.48a.5.5 0 0 0 0 1h.48a6 6 0 0 1-5.48 5.48v-.48a.5.5 0 0 0-1 0v.48A6 6 0 0 1 2.02 8.5h.48a.5.5 0 0 0 0-1zM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4"/>
+        </svg>
+    {% elif key == 'detections' %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+             class="bi bi-camera-video flex-shrink-0" viewBox="0 0 16 16">
+            <path fill-rule="evenodd"
+                  d="M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2zm11.5 5.175 3.5 1.556V4.269l-3.5 1.556zM2 4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h7.5a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z"/>
+        </svg>
+    {% else %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+             class="bi bi-gear flex-shrink-0" viewBox="0 0 16 16">
+            <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0"/>
+            <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z"/>
+        </svg>
+    {% endif %}
+{% endmacro %}
+
+{% macro section_description(key) %}
+    {% if key == 'general' %}
+        {{ trans('Main system preferences, language, UI and logging settings.') }}
+    {% elif key == 'server' %}
+        {{ trans('Host, network ports, CORS and web server options.') }}
+    {% elif key == 'datasets' %}
+        {{ trans('Dataset storage path, annotation options and model export directories.') }}
+    {% elif key == 'users' %}
+        {{ trans('User accounts and authentication credentials.') }}
+    {% elif key == 'db' %}
+        {{ trans('Database connection parameters and storage path.') }}
+    {% elif key == 'telemetry' %}
+        {{ trans('Anonymous diagnostics, crash reporting and health telemetry.') }}
+    {% elif key == 'form' %}
+        {{ trans('Custom secondary fields for count sessions and reports.') }}
+    {% elif key == 'detection_default' %}
+        {{ trans('Default parameters for YOLO detectors, tracking and thresholds.') }}
+    {% elif key == 'detections' %}
+        {{ trans('Configured camera locations, video sources and counting rules.') }}
+    {% else %}
+        {{ trans('Configure application parameters, hardware, detection modules, and security.') }}
+    {% endif %}
+{% endmacro %}
+
 {% block content %}
     {% include 'partials/inner_page_nav.html' %}
 
     <div class="page-content settings-layout">
+        <!-- Top Toolbar & Filter Card in unified design -->
+        <div class="cv-card p-3 mb-4 shadow-sm settings-intro-card">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-3 min-w-0">
+                    <div class="settings-intro__icon bg-primary-subtle text-primary border border-primary-subtle rounded-3 d-none d-sm-flex align-items-center justify-content-center flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
+                             class="bi bi-sliders" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd"
+                                  d="M11.5 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M9.05 3a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0V3zM4.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M2.05 8a2.5 2.5 0 0 1 4.9 0H16v1H6.95a2.5 2.5 0 0 1-4.9 0H0V8zm9.45 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m-2.45 1a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0v-1z"/>
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                            <span class="fw-semibold text-body fs-6">{{ trans('Configuration') }}</span>
+                            <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace"
+                                  title="{{ trans('Configuration sections') }}">
+                                {{ _config|length }} {{ trans('sections') }}
+                            </span>
+                        </div>
+                        <p class="text-body-secondary small mb-0">
+                            {{ trans('Changes take effect immediately or after restarting counter processes.') }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center gap-2 flex-wrap ms-auto">
+                    <div class="input-group input-group-sm" style="min-width: 14rem; max-width: 18rem;">
+                        <span class="input-group-text bg-body-tertiary border-end-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                                 class="bi bi-search text-body-secondary" viewBox="0 0 16 16">
+                                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+                            </svg>
+                        </span>
+                        <input type="search" class="form-control form-control-sm border-start-0"
+                               id="settings-search-input"
+                               placeholder="{{ trans('Search setting...') }}" aria-label="{{ trans('Search') }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="row g-3">
+            <!-- Left Navigation Sidebar -->
             <div class="col-md-4 col-lg-3">
                 <div class="list-group settings-layout__nav" id="pills-tab" role="tablist">
+                    <div class="d-none d-md-flex align-items-center justify-content-between px-2 pb-2 mb-2 border-bottom">
+                        <span class="small text-uppercase fw-bold text-body-secondary"
+                              style="font-size: 0.7rem; letter-spacing: 0.05em;">{{ trans('Sections') }}</span>
+                        <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill"
+                              style="font-size: 0.7rem;">{{ _config|length }}</span>
+                    </div>
                     {% for key, value in _config.items() %}
-                        <button class="list-group-item list-group-item-action border-0 {% if loop.first %}active{% endif %}"
-                                id="pills-{{ key }}-tab" data-bs-toggle="pill" data-bs-target="#pills-{{ key }}" role="tab"
+                        <button class="list-group-item list-group-item-action border-0 d-flex align-items-center justify-content-between gap-2 py-2 px-3 {% if loop.first %}active{% endif %}"
+                                id="pills-{{ key }}-tab" data-bs-toggle="pill" data-bs-target="#pills-{{ key }}"
+                                role="tab"
+                                data-section-key="{{ key }}"
                                 aria-controls="pills-{{ key }}" aria-selected="{{ 'true' if loop.first else 'false' }}">
-                            {{ trans(key.replace('_', ' ')|title) }}
+                            <div class="d-flex align-items-center gap-2 min-w-0">
+                                <span class="settings-nav-icon">{{ section_icon(key) }}</span>
+                                <span class="text-truncate fw-medium">{{ trans(key.replace('_', ' ')|title) }}</span>
+                            </div>
+                            {% if value is mapping %}
+                                <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill px-2 py-1 font-monospace"
+                                      style="font-size: 0.68rem;">{{ value|length }}</span>
+                            {% endif %}
                         </button>
                     {% endfor %}
                 </div>
             </div>
 
+            <!-- Right Content Panels -->
             <div class="col-md-8 col-lg-9 setting-content">
-                <form method="POST" action="{{ url_for('settings.settings_save') }}">
+                <form method="POST" action="{{ url_for('settings.settings_save') }}" id="settings-form">
+                    <input type="hidden" name="_active_tab" id="settings-active-tab" value="general">
                     <div class="settings-layout__form">
-                        <div class="settings-layout__toolbar d-flex justify-content-between align-items-center sticky-top">
-                            <span class="text-body-secondary small">{{ trans('Edit configuration sections on the left') }}</span>
-                            {{ forms.button(trans('Save')) }}
+                        <div class="settings-layout__toolbar d-flex flex-wrap justify-content-between align-items-center gap-2 sticky-top">
+                            <div class="d-flex align-items-center gap-2 min-w-0">
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-inline-flex align-items-center gap-1 px-3 py-2"
+                                      id="settings-toolbar-section-badge">
+                                    <span id="settings-toolbar-section-icon">{{ section_icon('general') }}</span>
+                                    <span id="settings-toolbar-section-title"
+                                          class="fw-semibold">{{ trans('General') }}</span>
+                                </span>
+                                <span class="text-body-secondary small d-none d-lg-inline">{{ trans('Edit configuration sections on the left') }}</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 ms-auto">
+                                <button type="submit"
+                                        class="btn btn-primary btn-sm px-3 d-inline-flex align-items-center gap-1 shadow-sm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                                         class="bi bi-check2" viewBox="0 0 16 16">
+                                        <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                                    </svg>
+                                    <span>{{ trans('Save') }}</span>
+                                </button>
+                            </div>
                         </div>
+
                         <div class="tab-content" id="pills-tabContent">
                             {% for key, value in _config.items() %}
-                                <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="pills-{{ key }}" role="tabpanel"
-                                     aria-labelledby="pills-{{ key }}-tab" tabindex="0">
-                                    <h2 class="page-section-title d-md-none">{{ trans(key.replace('_', ' ')|title) }}</h2>
+                                <div class="tab-pane fade {% if loop.first %}show active{% endif %}"
+                                     id="pills-{{ key }}" role="tabpanel"
+                                     aria-labelledby="pills-{{ key }}-tab" tabindex="0" data-section-key="{{ key }}">
+                                    <!-- Section Header inside Tab -->
+                                    <div class="settings-pane-header d-flex flex-wrap align-items-center justify-content-between gap-2 pb-2 mb-3">
+                                        <div class="d-flex align-items-center gap-2 min-w-0">
+                                            <span class="fs-5 text-primary">{{ section_icon(key) }}</span>
+                                            <div class="min-w-0">
+                                                <h4 class="fw-bold mb-0 fs-6">{{ trans(key.replace('_', ' ')|title) }}</h4>
+                                                <span class="text-body-secondary small">{{ section_description(key) }}</span>
+                                            </div>
+                                        </div>
+                                        {% if key == 'detections' %}
+                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1 py-1 px-3 shadow-xs"
+                                                        id="btn-add-camera"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#addCameraModal"
+                                                        title="{{ trans('Add camera') }}">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                                                         fill="currentColor" class="bi bi-plus-lg"
+                                                         viewBox="0 0 16 16">
+                                                        <path fill-rule="evenodd"
+                                                              d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/>
+                                                    </svg>
+                                                    <span>{{ trans('Add camera') }}</span>
+                                                </button>
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 py-1 px-3 shadow-xs"
+                                                        id="btn-collapse-all-cameras"
+                                                        title="{{ trans('Collapse all cameras') }}">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                                                         fill="currentColor" class="bi bi-arrows-collapse"
+                                                         viewBox="0 0 16 16">
+                                                        <path fill-rule="evenodd"
+                                                              d="M1 8a.5.5 0 0 1 .5-.5h13a.5.5 0 0 1 0 1h-13A.5.5 0 0 1 1 8m7-8a.5.5 0 0 1 .5.5v3.793l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 1 1 .708-.708L7.5 4.293V.5A.5.5 0 0 1 8 0m0 16a.5.5 0 0 1-.5-.5v-3.793l-1.146 1.147a.5.5 0 0 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 11.707V15.5a.5.5 0 0 1-.5.5"/>
+                                                    </svg>
+                                                    <span>{{ trans('Collapse all') }}</span>
+                                                </button>
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 py-1 px-3 shadow-xs"
+                                                        id="btn-expand-all-cameras"
+                                                        title="{{ trans('Expand all cameras') }}">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                                                         fill="currentColor" class="bi bi-arrows-expand"
+                                                         viewBox="0 0 16 16">
+                                                        <path fill-rule="evenodd"
+                                                              d="M1 8a.5.5 0 0 1 .5-.5h13a.5.5 0 0 1 0 1h-13A.5.5 0 0 1 1 8M7.646.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 1.707V5.5a.5.5 0 0 1-1 0V1.707L6.354 2.854a.5.5 0 1 1-.708-.708zM8 10a.5.5 0 0 1 .5.5v3.793l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 0 1 .708-.708L7.5 14.293V10.5A.5.5 0 0 1 8 10"/>
+                                                    </svg>
+                                                    <span>{{ trans('Expand all') }}</span>
+                                                </button>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+
                                     {% if key != 'users' %}
                                         <div class="cv-form-panel">
                                             {% for sub_key, sub_value in value.items() %}
@@ -60,9 +273,22 @@
                                             <div class="cv-form-section__body cv-form-grid cv-form-grid--users">
                                                 {% for username, password in value.items() %}
                                                     <div class="cv-form-section cv-form-section--nested">
-                                                        <h4 class="cv-form-section__subtitle">{{ trans(username.replace('_', ' ')|title) }}</h4>
+                                                        <div class="cv-form-section__subtitle d-flex align-items-center justify-content-between">
+                                                            <div class="d-flex align-items-center gap-2">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="14"
+                                                                     height="14" fill="currentColor"
+                                                                     class="bi bi-person text-secondary"
+                                                                     viewBox="0 0 16 16">
+                                                                    <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6m2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0m4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4m-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10s-3.516.68-4.168 1.332c-.678.678-.83 1.418-.832 1.664z"/>
+                                                                </svg>
+                                                                <span>{{ trans(username.replace('_', ' ')|title) }}</span>
+                                                            </div>
+                                                            <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace"
+                                                                  style="font-size: 0.65rem;">@{{ username }}</span>
+                                                        </div>
                                                         <div class="cv-form-section__body">
                                                             {{ forms.input('users-' + username, '', trans('New password'), type='password') }}
+                                                            <span class="cv-form-hint">{{ trans('Leave blank to keep current password') }}</span>
                                                         </div>
                                                     </div>
                                                 {% endfor %}
@@ -77,4 +303,353 @@
             </div>
         </div>
     </div>
+
+    <!-- START: Model Export & Optimization Modal -->
+    <div class="modal fade" id="modelExportModal" tabindex="-1" aria-labelledby="modelExportModalLabel"
+         aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content shadow-lg border-0" style="border-radius: var(--cv-radius, 12px);">
+                <div class="modal-header border-bottom">
+                    <div>
+                        <h5 class="modal-title d-flex align-items-center gap-2 mb-0" id="modelExportModalLabel">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor"
+                                 class="text-primary flex-shrink-0" viewBox="0 0 16 16">
+                                <path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14A2.5 2.5 0 0 1 11.5 14v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0m-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3zM5 5h6v6H5z"/>
+                            </svg>
+                            <span>{{ trans('Optimize & Export Model') }}</span>
+                        </h5>
+                        <p class="text-body-secondary small mb-0 mt-1" style="font-size: 0.8rem;">
+                            {{ trans('Export PyTorch (.pt) weights to high-performance inference formats') }}
+                        </p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+                            id="btn-close-export-modal"></button>
+                </div>
+                <div class="modal-body p-3 p-md-4">
+                    <!-- Source weights field -->
+                    <div class="mb-3">
+                        <label for="exportSourceWeights" class="form-label fw-semibold small text-body-secondary mb-1">
+                            {{ trans('Source Model Weights (.pt)') }} <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="text" class="form-control font-monospace" id="exportSourceWeights"
+                                   placeholder="config/ultralytics/models/yolo11m.pt" required>
+                            <button class="btn btn-outline-secondary dropdown-toggle d-inline-flex align-items-center gap-2"
+                                    type="button" data-bs-toggle="dropdown" aria-expanded="false"
+                                    id="btn-dropdown-models">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor"
+                                     class="flex-shrink-0" viewBox="0 0 16 16">
+                                    <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.648 8.48 4 9 4h4.5A1.5 1.5 0 0 1 15 5.5v.64c.57.265.94.876.856 1.546l-.64 5.124A2.5 2.5 0 0 1 12.733 15H3.266a2.5 2.5 0 0 1-2.481-2.19l-.64-5.124A1.5 1.5 0 0 1 1 6.14zM2 6h12v-.5a.5.5 0 0 0-.5-.5H9c-.964 0-1.71-.629-2.174-1.154C6.37 3.335 5.824 3 5.264 3H2.5a.5.5 0 0 0-.5.5zm-.367 1a.5.5 0 0 0-.496.562l.64 5.124A1.5 1.5 0 0 0 3.266 14h9.468a1.5 1.5 0 0 0 1.489-1.314l.64-5.124A.5.5 0 0 0 14.367 7z"/>
+                                </svg>
+                                <span>{{ trans('Choose Model') }}</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow" id="exportModelsDropdownList"
+                                style="max-height: 250px; overflow-y: auto;">
+                                <li>
+                                    <span class="dropdown-item-text text-body-secondary small">{{ trans('Loading models...') }}</span>
+                                </li>
+                            </ul>
+                        </div>
+                        <div id="exportWeightsHint" class="form-text small mt-1"></div>
+                    </div>
+
+                    <!-- Target format cards -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-body-secondary mb-2 d-flex align-items-center justify-content-between">
+                            <span>{{ trans('Target Format') }}</span>
+                            <span class="badge bg-body-secondary text-body-secondary fw-normal font-monospace"
+                                  style="font-size: 0.72rem;">YOLO export</span>
+                        </label>
+                        <div class="row g-2.5">
+                            <div class="col-md-6">
+                                <div class="cv-format-card p-3 h-100 cursor-pointer user-select-none position-relative active"
+                                     data-format="onnx" id="cardFormatOnnx">
+                                    <input class="d-none" type="radio" name="exportFormatRadio" id="exportFormatOnnx"
+                                           value="onnx" checked>
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="format-icon-badge format-icon-badge--onnx d-flex align-items-center justify-content-center">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17"
+                                                     fill="currentColor" class="bi bi-box" viewBox="0 0 16 16">
+                                                    <path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5 8 5.961 14.154 3.5zM15 4.239l-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464z"/>
+                                                </svg>
+                                            </span>
+                                            <span class="fw-bold fs-6 text-body">ONNX</span>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge font-monospace format-ext-badge format-ext-badge--onnx">.onnx</span>
+                                            <span class="format-radio-check d-flex align-items-center justify-content-center">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11"
+                                                     fill="currentColor" viewBox="0 0 16 16">
+                                                    <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                                                </svg>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <p class="small text-body-secondary mb-0"
+                                       style="font-size: 0.8125rem; line-height: 1.4;">
+                                        {{ trans('Cross-platform inference (CPU, DirectML, CUDA). Portable.') }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="cv-format-card p-3 h-100 cursor-pointer user-select-none position-relative"
+                                     data-format="engine" id="cardFormatEngine">
+                                    <input class="d-none" type="radio" name="exportFormatRadio" id="exportFormatEngine"
+                                           value="engine">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="format-icon-badge format-icon-badge--engine d-flex align-items-center justify-content-center">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17"
+                                                     fill="currentColor" class="bi bi-lightning-charge-fill"
+                                                     viewBox="0 0 16 16">
+                                                    <path d="M11.251.068a.5.5 0 0 1 .227.58L9.677 6.5H13a.5.5 0 0 1 .364.843l-8 8.5a.5.5 0 0 1-.842-.49L6.323 9.5H3a.5.5 0 0 1-.364-.843l8-8.5a.5.5 0 0 1 .615-.09z"/>
+                                                </svg>
+                                            </span>
+                                            <span class="fw-bold fs-6 text-body">TensorRT Engine</span>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge font-monospace format-ext-badge format-ext-badge--engine">.engine</span>
+                                            <span class="format-radio-check d-flex align-items-center justify-content-center">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11"
+                                                     fill="currentColor" viewBox="0 0 16 16">
+                                                    <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                                                </svg>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <p class="small text-body-secondary mb-0"
+                                       style="font-size: 0.8125rem; line-height: 1.4;">
+                                        {{ trans('Maximum speed on NVIDIA GPU. Hardware-specific compiled engine.') }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dependency warning / installation alert -->
+                    <div id="exportDependencyAlert"
+                         class="alert alert-warning py-3 px-3 small d-none align-items-center justify-content-between mb-3 rounded-3"
+                         role="alert">
+                        <div class="d-flex align-items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                 class="text-warning flex-shrink-0" viewBox="0 0 16 16">
+                                <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/>
+                            </svg>
+                            <span id="exportDependencyMsg"></span>
+                        </div>
+                        <a href="{{ url_for('settings.system_info') }}" target="_blank"
+                           class="btn btn-warning btn-sm py-1 px-3 fw-semibold d-inline-flex align-items-center gap-2 flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
+                                 viewBox="0 0 16 16">
+                                <path fill-rule="evenodd"
+                                      d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5"/>
+                                <path fill-rule="evenodd"
+                                      d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0z"/>
+                            </svg>
+                            <span>{{ trans('Go to System Info') }}</span>
+                        </a>
+                    </div>
+
+                    <!-- Optimization options card -->
+                    <div class="card border rounded-3 mb-3"
+                         style="background: var(--cv-surface-elevated, #1e2128); border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
+                        <div class="card-header py-2 px-3 border-0 bg-transparent">
+                            <button class="btn btn-link btn-sm text-decoration-none text-body p-0 d-flex align-items-center justify-content-between w-100"
+                                    type="button" data-bs-toggle="collapse" data-bs-target="#collapseExportOpts"
+                                    aria-expanded="false" aria-controls="collapseExportOpts">
+                                <span class="fw-semibold small d-flex align-items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor"
+                                         class="text-primary flex-shrink-0" viewBox="0 0 16 16">
+                                        <path fill-rule="evenodd"
+                                              d="M11.5 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M9.05 3a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0V3zM4.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M2.05 8a2.5 2.5 0 0 1 4.9 0H16v1H6.95a2.5 2.5 0 0 1-4.9 0H0V8zm9.45 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m-2.45 1a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0v-1z"/>
+                                    </svg>
+                                    <span>{{ trans('Advanced Export Options (FP16, Image Size)') }}</span>
+                                </span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                                     class="text-body-secondary flex-shrink-0" viewBox="0 0 16 16">
+                                    <path fill-rule="evenodd"
+                                          d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="collapseExportOpts" class="collapse">
+                            <div class="card-body pt-2 pb-3 px-3 border-top"
+                                 style="border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch pt-1">
+                                            <input class="form-check-input" type="checkbox" role="switch"
+                                                   id="exportHalfFp16" checked>
+                                            <label class="form-check-label small fw-semibold" for="exportHalfFp16">
+                                                {{ trans('FP16 Half Precision') }}
+                                            </label>
+                                            <div class="text-body-secondary small" style="font-size: 0.75rem;">
+                                                {{ trans('Significantly accelerates inference on modern GPUs') }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="exportImgSize"
+                                               class="form-label small fw-semibold mb-1">{{ trans('Image Size (px)') }}</label>
+                                        <input type="number" class="form-control form-control-sm font-monospace"
+                                               id="exportImgSize" value="640" min="128" max="1920" step="32">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Terminal log container -->
+                    <div id="exportProgressSection" class="d-none">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="spinner-border spinner-border-sm text-primary" id="exportSpinner"
+                                      role="status"></span>
+                                <span class="small fw-semibold"
+                                      id="exportStatusBadge">{{ trans('Exporting model...') }}</span>
+                            </div>
+                        </div>
+                        <pre class="bg-dark text-light p-3 rounded-3 mb-0" id="exportLogTerminal"
+                             style="max-height: 220px; overflow-y: auto; font-family: monospace; font-size: 0.8rem; white-space: pre-wrap; line-height: 1.35; border: 1px solid var(--cv-border, rgba(255,255,255,0.1));"></pre>
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal"
+                            id="btn-cancel-export">{{ trans('Close') }}</button>
+                    <button type="button" class="btn btn-primary btn-sm px-3 d-inline-flex align-items-center gap-2"
+                            id="btn-start-export">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
+                             viewBox="0 0 16 16">
+                            <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/>
+                        </svg>
+                        <span>{{ trans('Start Export') }}</span>
+                    </button>
+                    <button type="button"
+                            class="btn btn-success btn-sm px-3 d-none d-inline-flex align-items-center gap-2"
+                            id="btn-apply-exported-model">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor"
+                             viewBox="0 0 16 16">
+                            <path d="M15.354 2.646a.5.5 0 0 1 0 .708l-9 9a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L6 11.293l8.646-8.647a.5.5 0 0 1 .708 0z"/>
+                        </svg>
+                        <span>{{ trans('Use this exported model') }}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- END: Model Export & Optimization Modal -->
+
+    <!-- START: Add Camera Modal -->
+    <div class="modal fade" id="addCameraModal" tabindex="-1" aria-labelledby="addCameraModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content shadow-lg border-0" style="border-radius: var(--cv-radius, 12px);">
+                <div class="modal-header border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="bg-primary-subtle text-primary border border-primary-subtle rounded-3 p-2 d-flex align-items-center justify-content-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-camera-video" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2V5z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0" id="addCameraModalLabel">{{ trans('Add new camera') }}</h5>
+                            <span class="text-body-secondary small">{{ trans('Configure video stream and detection parameters.') }}</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ trans('Close') }}"></button>
+                </div>
+                <form id="form-add-camera" autocomplete="off">
+                    <div class="modal-body p-4">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="new_camera_label" class="form-label fw-semibold">
+                                    {{ trans('Camera name') }} <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="new_camera_label" name="label"
+                                       required placeholder="e.g. Main Entrance">
+                                <div class="form-text">{{ trans('Display label shown on the dashboard') }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="new_camera_location" class="form-label fw-semibold">
+                                    {{ trans('Camera ID') }} <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control font-monospace" id="new_camera_location" name="location"
+                                           required placeholder="e.g. cam_entrance or auto MD5" pattern="^[a-zA-Z0-9_\-]+$">
+                                    <button class="btn btn-outline-secondary" type="button" id="btn-regen-camera-id" title="{{ trans('Regenerate ID from name') }}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-arrow-repeat" viewBox="0 0 16 16">
+                                            <path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41zm-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9z"/>
+                                            <path fill-rule="evenodd" d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5.002 5.002 0 0 0 8 3M3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="form-text">{{ trans('Generated automatically from name (MD5), can be edited manually.') }}</div>
+                            </div>
+                            <div class="col-12">
+                                <label for="new_camera_video_path" class="form-label fw-semibold">
+                                    {{ trans('Video source') }} <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control font-monospace" id="new_camera_video_path" name="video_path"
+                                       required placeholder="rtsp://admin:pass@192.168.1.10:554/stream or storage/video.mp4 or 0">
+                                <div class="form-text">{{ trans('RTSP stream URL, video file path, or webcam index (e.g. 0)') }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="new_camera_model_type" class="form-label fw-semibold">
+                                    {{ trans('Model type') }}
+                                </label>
+                                <select class="form-select font-monospace" id="new_camera_model_type" name="model_type">
+                                    <option value="auto" selected>auto</option>
+                                    <option value="yolo">yolo / ultralytics</option>
+                                    <option value="onnx">onnx / onnxruntime</option>
+                                    <option value="openvino">openvino</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="new_camera_weights_path" class="form-label fw-semibold">
+                                    {{ trans('Path to weights') }}
+                                </label>
+                                <input type="text" class="form-control font-monospace" id="new_camera_weights_path" name="weights_path"
+                                       placeholder="config/ultralytics/models/yolov8n.pt">
+                                <div class="form-text">{{ trans('Leave blank to use default weights from detection settings') }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="new_camera_confidence" class="form-label fw-semibold">
+                                    {{ trans('Confidence threshold') }}
+                                </label>
+                                <input type="number" step="0.05" min="0.05" max="1.0" class="form-control" id="new_camera_confidence"
+                                       name="confidence" placeholder="0.5">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="new_camera_video_fps" class="form-label fw-semibold">
+                                    {{ trans('Video FPS') }}
+                                </label>
+                                <input type="number" min="0" max="120" class="form-control" id="new_camera_video_fps"
+                                       name="video_fps" placeholder="0">
+                                <div class="form-text">{{ trans('0 = use source stream FPS') }}</div>
+                            </div>
+                        </div>
+                        <div class="alert alert-danger d-none mt-3 mb-0" id="add-camera-error"></div>
+                    </div>
+                    <div class="modal-footer border-top">
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">{{ trans('Cancel') }}</button>
+                        <button type="submit" class="btn btn-primary btn-sm px-3 d-inline-flex align-items-center gap-2" id="btn-submit-add-camera">
+                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="spinner-add-camera"></span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/>
+                            </svg>
+                            <span>{{ trans('Add camera') }}</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- END: Add Camera Modal -->
+
+    {% include 'partials/add_custom_field_modal.html' %}
+{% endblock %}
+
+{% block footer_assets %}
+    <script src="{{ url_for('static', filename='assets/js/settings.js') }}"></script>
 {% endblock %}

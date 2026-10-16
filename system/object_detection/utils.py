@@ -66,12 +66,12 @@ def nms_boxes(
         iou_threshold: float,
 ) -> DetectionResult:
     """
-    Non-maximum suppression for boxes.
+    Fast Non-Maximum Suppression for boxes using OpenCV's vectorized C++ implementation.
 
     Args:
-        boxes_xyxy (ndarray): The boxes to suppress.
-        confidences (ndarray): The confidences to suppress.
-        classes (ndarray): The classes to suppress.
+        boxes_xyxy (ndarray): The boxes to suppress in [x1, y1, x2, y2] format.
+        confidences (ndarray): Confidence scores for each box.
+        classes (ndarray): Class IDs for each box.
         iou_threshold (float): The IoU threshold to suppress by.
 
     Returns:
@@ -80,24 +80,38 @@ def nms_boxes(
     if len(boxes_xyxy) == 0:
         return boxes_xyxy, confidences, classes
 
+    # Convert [x1, y1, x2, y2] to [x, y, w, h] for cv2.dnn.NMSBoxes
+    boxes_xywh = np.empty_like(boxes_xyxy)
+    boxes_xywh[:, 0] = boxes_xyxy[:, 0]
+    boxes_xywh[:, 1] = boxes_xyxy[:, 1]
+    boxes_xywh[:, 2] = np.maximum(0.0, boxes_xyxy[:, 2] - boxes_xyxy[:, 0])
+    boxes_xywh[:, 3] = np.maximum(0.0, boxes_xyxy[:, 3] - boxes_xyxy[:, 1])
+
     keep_indices = []
+    # Class-aware NMS
     for class_id in np.unique(classes):
-        class_mask = classes == class_id
-        class_boxes = boxes_xyxy[class_mask]
-        class_scores = confidences[class_mask]
+        class_mask = (classes == class_id)
         class_indices = np.where(class_mask)[0]
 
-        order = class_scores.argsort()[::-1]
-        while order.size > 0:
-            current = order[0]
-            keep_indices.append(class_indices[current])
-            if order.size == 1:
-                break
+        cls_boxes = boxes_xywh[class_mask].tolist()
+        cls_scores = confidences[class_mask].tolist()
 
-            current_box = class_boxes[current]
-            remaining_boxes = class_boxes[order[1:]]
-            ious = _box_iou(current_box, remaining_boxes)
-            order = order[1:][ious <= iou_threshold]
+        nms_indices = cv2.dnn.NMSBoxes(
+            bboxes=cls_boxes,
+            scores=cls_scores,
+            score_threshold=0.0,
+            nms_threshold=float(iou_threshold),
+        )
+        if len(nms_indices) > 0:
+            flat_indices = np.array(nms_indices).flatten()
+            keep_indices.extend(class_indices[flat_indices])
+
+    if not keep_indices:
+        return (
+            np.empty((0, 4), dtype=boxes_xyxy.dtype),
+            np.empty((0,), dtype=confidences.dtype),
+            np.empty((0,), dtype=classes.dtype),
+        )
 
     keep_indices = np.array(keep_indices, dtype=int)
     return boxes_xyxy[keep_indices], confidences[keep_indices], classes[keep_indices]
@@ -133,10 +147,11 @@ def parse_yolo_outputs(
         input_size: Tuple[int, int],
         image_shape: Tuple[int, int, int],
         classes_list: Optional[Iterable[int]] = None,
+        is_end2end: Optional[bool] = None,
 ) -> DetectionResult:
     """
-    Parse YOLO-style ONNX/OpenCV outputs into xyxy boxes, scores and class IDs.
-    Supports YOLOv5/v8 ONNX layouts.
+    Parse YOLO/RT-DETR-style ONNX/OpenCV outputs into xyxy boxes, scores and class IDs.
+    Supports YOLOv5/v8/v9/v10/v11 and RT-DETR layouts.
 
     Args:
         outputs (list[ndarray] | ndarray): The outputs to parse.
@@ -145,6 +160,7 @@ def parse_yolo_outputs(
         input_size (Tuple[int, int]): The input size to parse by.
         image_shape (Tuple[int, int, int]): The image shape to parse by.
         classes_list (Optional[Iterable[int]]): The classes list to parse by.
+        is_end2end (Optional[bool]): If True, skips NMS (for YOLOv10, RT-DETR).
 
     Returns:
         DetectionResult: The parsed boxes, confidences and classes.
@@ -164,10 +180,12 @@ def parse_yolo_outputs(
     if prediction.shape[0] in (4, 5, 84, 85) and prediction.shape[0] < prediction.shape[1]:
         prediction = prediction.transpose(1, 0)
 
+    inferred_end2end = False
     if prediction.shape[-1] >= 6 and prediction.shape[0] <= 1000:
         boxes_xyxy = prediction[:, :4].astype(np.float32)
         confidences = prediction[:, 4].astype(np.float32)
         classes = prediction[:, 5].astype(np.int32)
+        inferred_end2end = True
     else:
         boxes_xyxy, confidences, classes = _parse_yolo_matrix(prediction, confidence)
 
@@ -178,7 +196,10 @@ def parse_yolo_outputs(
     confidences = confidences[mask]
     classes = classes[mask]
 
-    boxes_xyxy, confidences, classes = nms_boxes(boxes_xyxy, confidences, classes, iou)
+    skip_nms = is_end2end if is_end2end is not None else inferred_end2end
+    if not skip_nms:
+        boxes_xyxy, confidences, classes = nms_boxes(boxes_xyxy, confidences, classes, iou)
+
     return filter_by_classes(boxes_xyxy, confidences, classes, classes_list)
 
 
@@ -251,14 +272,20 @@ def _scale_boxes_to_image(
         return boxes_xyxy
 
     image_height, image_width = image_shape[:2]
-    input_width, input_height = input_size
-    gain = min(input_width / image_width, input_height / image_height)
-    pad_x = (input_width - image_width * gain) / 2
-    pad_y = (input_height - image_height * gain) / 2
-
     boxes = boxes_xyxy.copy()
-    boxes[:, [0, 2]] = (boxes[:, [0, 2]] - pad_x) / gain
-    boxes[:, [1, 3]] = (boxes[:, [1, 3]] - pad_y) / gain
+
+    # Detect normalized [0..1] coordinates (common in RT-DETR / SSD)
+    if len(boxes) > 0 and float(np.max(boxes)) <= 1.05:
+        boxes[:, [0, 2]] *= image_width
+        boxes[:, [1, 3]] *= image_height
+    else:
+        input_width, input_height = input_size
+        gain = min(input_width / image_width, input_height / image_height)
+        pad_x = (input_width - image_width * gain) / 2
+        pad_y = (input_height - image_height * gain) / 2
+
+        boxes[:, [0, 2]] = (boxes[:, [0, 2]] - pad_x) / gain
+        boxes[:, [1, 3]] = (boxes[:, [1, 3]] - pad_y) / gain
 
     boxes[:, [0, 2]] = np.clip(boxes[:, [0, 2]], 0, image_width)
     boxes[:, [1, 3]] = np.clip(boxes[:, [1, 3]], 0, image_height)

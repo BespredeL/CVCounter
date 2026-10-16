@@ -3,14 +3,14 @@
 
 # Developed by: Aleksandr Kireev
 # Created: 01.11.2023
-# Updated: 22.01.2026
+# Updated: 28.07.2026
 # Website: https://bespredel.name
 
 import json
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import create_engine, inspect as sa_inspect, text
+from sqlalchemy import create_engine, func, inspect as sa_inspect, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 
@@ -31,9 +31,20 @@ class DatabaseManager:
         """
         self.__logger: Logger = Logger()
         try:
-            self.__engine: any = create_engine(uri)
+            connect_args = {}
+            if uri.startswith('sqlite'):
+                connect_args['timeout'] = 15
+
+            self.__engine: any = create_engine(uri, connect_args=connect_args)
             self.__prefix: str = prefix
-            self.__sessionmaker: any = sessionmaker(bind=self.__engine)
+            self.__sessionmaker: any = sessionmaker(bind=self.__engine, expire_on_commit=False)
+
+            if uri.startswith('sqlite'):
+                try:
+                    with self.__engine.connect() as conn:
+                        conn.execute(text("PRAGMA journal_mode=WAL;"))
+                except Exception as wal_err:
+                    self.__logger.warning(f"Could not enable WAL mode: {wal_err}")
 
             # Create tables if they don't exist yet
             Base.metadata.create_all(self.__engine)
@@ -45,14 +56,25 @@ class DatabaseManager:
         """
         Creates and returns a new session.
 
+        Args:
+            None
+
         Returns:
-            Session: A new session.
+            any: A new session.
         """
         return self.__sessionmaker()
 
     @staticmethod
     def _serialize_class_counts(class_counts: Optional[list | dict] = None) -> str | None:
-        """Serialize class counts for Text storage."""
+        """
+        Serialize class counts for Text storage.
+        
+        Args:
+            class_counts (Optional[list | dict], optional): The class counts. Defaults to None.
+
+        Returns:
+            str | None: The serialized class counts.
+        """
         if class_counts is None:
             return None
         return json.dumps(class_counts)
@@ -163,7 +185,7 @@ class DatabaseManager:
                 if by_class is not None:
                     part_entry['by_class'] = by_class
                 parts.append(part_entry)
-                parts = sorted(parts, key=lambda x: x['created_at'], reverse=True)
+                parts = sorted(parts, key=lambda x: x['created_at'], reverse=False)
                 result.parts = json.dumps(parts)
                 if class_counts is not None:
                     result.class_counts = self._serialize_class_counts(class_counts)
@@ -262,7 +284,7 @@ class DatabaseManager:
         """
         session = self.create_session()
         try:
-            query = session.query(CVCounter).filter_by(location=key)
+            query = session.query(CVCounter).filter_by(location=key).order_by(CVCounter.created_at.desc())
             total = query.count()  # Getting the total number of records
             results = query.offset((page - 1) * per_page).limit(per_page).all()  # Applying offset and limit
 
@@ -277,6 +299,54 @@ class DatabaseManager:
         except SQLAlchemyError as error:
             self.__logger.error(f"Error retrieving counters for key '{key}': {str(error)}")
             return None  # Return None on error
+        finally:
+            session.close()
+
+    def get_location_summary(self, key: str = '') -> dict:
+        """
+        Calculates aggregated all-time metrics for a given location.
+
+        Args:
+            key (str, optional): The location key. Defaults to ''.
+
+        Returns:
+            dict: Aggregated metrics (total_sessions, total_objects, total_defects, total_correct, total_source, defect_rate).
+        """
+        session = self.create_session()
+        try:
+            row = session.query(
+                func.count(CVCounter.id),
+                func.coalesce(func.sum(CVCounter.total_count), 0),
+                func.coalesce(func.sum(CVCounter.defects_count), 0),
+                func.coalesce(func.sum(CVCounter.correct_count), 0),
+                func.coalesce(func.sum(CVCounter.source_count), 0),
+            ).filter_by(location=key).one()
+
+            total_sessions = int(row[0] or 0)
+            total_objects = int(row[1] or 0)
+            total_defects = int(row[2] or 0)
+            total_correct = int(row[3] or 0)
+            total_source = int(row[4] or 0)
+            defect_rate = round((total_defects / total_objects * 100), 1) if total_objects > 0 else 0.0
+
+            return {
+                'total_sessions': total_sessions,
+                'total_objects': total_objects,
+                'total_defects': total_defects,
+                'total_correct': total_correct,
+                'total_source': total_source,
+                'defect_rate': defect_rate,
+            }
+        except SQLAlchemyError as error:
+            self.__logger.error(f"Error retrieving summary for key '{key}': {str(error)}")
+            return {
+                'total_sessions': 0,
+                'total_objects': 0,
+                'total_defects': 0,
+                'total_correct': 0,
+                'total_source': 0,
+                'defect_rate': 0.0,
+            }
         finally:
             session.close()
 
