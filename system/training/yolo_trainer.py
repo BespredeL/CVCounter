@@ -147,6 +147,399 @@ def list_configs() -> list[str]:
     return sorted(path.stem for path in CFG_DIR.glob('*.yaml'))
 
 
+OFFICIAL_BASE_MODELS: dict[str, dict] = {
+    'yolo11n.pt': {
+        'name': 'YOLO11 Nano',
+        'task': 'detect',
+        'size_mb': 5.6,
+        'speed': 'Ultra Fast',
+        'recommended': True,
+        'description': 'Наиболее быстрая и лёгкая модель. Идеально для реального времени и CPU/встраиваемых систем.',
+        'url': 'https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n.pt',
+    },
+    'yolo11s.pt': {
+        'name': 'YOLO11 Small',
+        'task': 'detect',
+        'size_mb': 19.3,
+        'speed': 'Fast',
+        'recommended': False,
+        'description': 'Оптимальный баланс между скоростью и точностью.',
+        'url': 'https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11s.pt',
+    },
+    'yolo11m.pt': {
+        'name': 'YOLO11 Medium',
+        'task': 'detect',
+        'size_mb': 40.7,
+        'speed': 'Balanced',
+        'recommended': False,
+        'description': 'Высокая точность для сложных объектов и детализированных сцен.',
+        'url': 'https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11m.pt',
+    },
+    'yolov8n.pt': {
+        'name': 'YOLOv8 Nano',
+        'task': 'detect',
+        'size_mb': 6.5,
+        'speed': 'Ultra Fast',
+        'recommended': False,
+        'description': 'Проверенная лёгкая архитектура предыдущего поколения.',
+        'url': 'https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8n.pt',
+    },
+    'yolov8s.pt': {
+        'name': 'YOLOv8 Small',
+        'task': 'detect',
+        'size_mb': 22.5,
+        'speed': 'Fast',
+        'recommended': False,
+        'description': 'Средняя модель YOLOv8 для видеокарт с умеренной производительностью.',
+        'url': 'https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8s.pt',
+    },
+    'yolov8m.pt': {
+        'name': 'YOLOv8 Medium',
+        'task': 'detect',
+        'size_mb': 52.0,
+        'speed': 'Medium',
+        'recommended': False,
+        'description': 'Точная модель YOLOv8 для серверов с производительными GPU.',
+        'url': 'https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8m.pt',
+    },
+}
+
+
+def get_base_model_download_candidates(clean_name: str) -> list[str]:
+    """Return an ordered list of candidate download URLs for a base model."""
+    urls = []
+    model_info = OFFICIAL_BASE_MODELS.get(clean_name, {})
+    custom_url = model_info.get('url')
+    if custom_url:
+        urls.append(custom_url)
+
+    tag = 'v8.3.0'
+    series = None
+    if clean_name.startswith('yolo11'):
+        series = 'YOLO11'
+        tag = 'v8.3.0'
+    elif clean_name.startswith('yolov8'):
+        series = 'YOLOv8'
+        tag = 'v8.2.0'
+    elif clean_name.startswith('yolov5'):
+        series = 'YOLOv5'
+        tag = 'v7.0'
+    elif clean_name.startswith('yolov9'):
+        series = 'YOLOv9'
+        tag = 'v8.2.0'
+    elif clean_name.startswith('yolov10'):
+        series = 'YOLOv10'
+        tag = 'v8.2.0'
+
+    gh_url = f'https://github.com/ultralytics/assets/releases/download/{tag}/{clean_name}'
+    if gh_url not in urls:
+        urls.append(gh_url)
+
+    if series:
+        hf_mirror = f'https://hf-mirror.com/Ultralytics/{series}/resolve/main/{clean_name}'
+        if hf_mirror not in urls:
+            urls.append(hf_mirror)
+        hf_direct = f'https://huggingface.co/Ultralytics/{series}/resolve/main/{clean_name}'
+        if hf_direct not in urls:
+            urls.append(hf_direct)
+
+    return urls
+
+
+def _download_file_requests(
+        url: str,
+        tmp_path: Path,
+        clean_name: str,
+        progress_callback: Optional[Callable[[dict], None]] = None,
+) -> bool:
+    import requests
+    import urllib3
+    urllib3.disable_warnings()
+
+    # Try with verify=True first, fall back to verify=False if certificate issue
+    for verify_ssl in (True, False):
+        try:
+            with requests.get(
+                url,
+                stream=True,
+                timeout=(10, 60),
+                verify=verify_ssl,
+                headers={'User-Agent': 'Mozilla/5.0 (CVCounterWEB Auto-Downloader)'}
+            ) as response:
+                if response.status_code != 200:
+                    return False
+                total_size = int(response.headers.get('Content-Length') or 0)
+                downloaded = 0
+                chunk_size = 128 * 1024
+                last_reported = 0
+
+                with open(tmp_path, 'wb') as out_f:
+                    for chunk in response.iter_content(chunk_size=chunk_size):
+                        if not chunk:
+                            continue
+                        out_f.write(chunk)
+                        downloaded += len(chunk)
+                        if total_size > 0:
+                            pct = int((downloaded / total_size) * 100)
+                            if pct >= last_reported + 5 or downloaded == total_size:
+                                last_reported = pct
+                                if progress_callback:
+                                    progress_callback({
+                                        'status': 'downloading',
+                                        'model': clean_name,
+                                        'model_name': clean_name,
+                                        'percent': pct,
+                                        'progress': pct,
+                                        'downloaded': downloaded,
+                                        'total': total_size,
+                                        'message': f'Downloading {clean_name}: {pct}%',
+                                    })
+                if total_size > 0 and downloaded < int(total_size * 0.95):
+                    raise IOError(f"Incomplete download: {downloaded}/{total_size} bytes")
+                return True
+        except requests.exceptions.SSLError:
+            if verify_ssl:
+                continue
+            raise
+        except Exception:
+            raise
+    return False
+
+
+def _download_file_urllib(
+        url: str,
+        tmp_path: Path,
+        clean_name: str,
+        progress_callback: Optional[Callable[[dict], None]] = None,
+) -> bool:
+    import urllib.request
+    req = urllib.request.Request(
+        url,
+        headers={'User-Agent': 'Mozilla/5.0 (CVCounterWEB Auto-Downloader)'}
+    )
+    with urllib.request.urlopen(req, timeout=30) as response:
+        total_size = int(response.headers.get('Content-Length') or 0)
+        downloaded = 0
+        chunk_size = 128 * 1024
+        last_reported = 0
+
+        with open(tmp_path, 'wb') as out_f:
+            while True:
+                chunk = response.read(chunk_size)
+                if not chunk:
+                    break
+                out_f.write(chunk)
+                downloaded += len(chunk)
+                if total_size > 0:
+                    pct = int((downloaded / total_size) * 100)
+                    if pct >= last_reported + 5 or downloaded == total_size:
+                        last_reported = pct
+                        if progress_callback:
+                            progress_callback({
+                                'status': 'downloading',
+                                'model': clean_name,
+                                'model_name': clean_name,
+                                'percent': pct,
+                                'progress': pct,
+                                'downloaded': downloaded,
+                                'total': total_size,
+                                'message': f'Downloading {clean_name}: {pct}%',
+                            })
+    return True
+
+
+def download_base_model(
+        model_name: str,
+        progress_callback: Optional[Callable[[dict], None]] = None,
+        project_root: Optional[Path | str] = None,
+) -> Path:
+    """
+    Download an official YOLO base model to MODELS_DIR with multi-mirror fallback.
+
+    Args:
+        model_name: Name of the model (e.g. 'yolo11n.pt').
+        progress_callback: Optional callback receiving progress dicts.
+        project_root: Optional project root override.
+
+    Returns:
+        Path to the downloaded model weights file.
+    """
+    import shutil
+    from system.utils.logger import Logger
+
+    logger = Logger()
+    setup_directories(project_root)
+    clean_name = Path(model_name).name
+    dest_path = MODELS_DIR / clean_name
+
+    # 1. Check local candidate paths (MODELS_DIR, root, config/models)
+    root = _PROJECT_ROOT or Path(get_project_root())
+    candidate_paths = [
+        dest_path,
+        root / clean_name,
+        root / 'config' / 'models' / clean_name,
+        root / 'config' / 'ultralytics' / 'models' / clean_name,
+    ]
+    for cand in candidate_paths:
+        if cand.is_file() and cand.stat().st_size > 1024 * 1024:
+            if cand.resolve() != dest_path.resolve():
+                try:
+                    ensure_dir(str(dest_path.parent))
+                    shutil.copy2(str(cand), str(dest_path))
+                except Exception as cp_err:
+                    logger.warning(f"Could not copy {cand} to {dest_path}: {cp_err}")
+            if dest_path.is_file() and dest_path.stat().st_size > 1024 * 1024:
+                if progress_callback:
+                    progress_callback({
+                        'status': 'done',
+                        'model': clean_name,
+                        'model_name': clean_name,
+                        'percent': 100,
+                        'progress': 100,
+                        'message': f'Model {clean_name} is already available',
+                    })
+                return dest_path
+
+    candidate_urls = get_base_model_download_candidates(clean_name)
+    logger.info(f"Downloading base model '{clean_name}' from candidates: {candidate_urls}")
+
+    if progress_callback:
+        progress_callback({
+            'status': 'starting',
+            'model': clean_name,
+            'model_name': clean_name,
+            'percent': 0,
+            'progress': 0,
+            'message': f'Starting download of {clean_name}...',
+        })
+
+    tmp_path = dest_path.with_suffix('.pt.tmp')
+    last_error: Optional[Exception] = None
+
+    # Try downloading via requests across candidate mirrors
+    for url in candidate_urls:
+        try:
+            logger.info(f"Attempting download of {clean_name} from: {url}")
+            success = _download_file_requests(url, tmp_path, clean_name, progress_callback)
+            if not success:
+                success = _download_file_urllib(url, tmp_path, clean_name, progress_callback)
+            if success and tmp_path.is_file() and tmp_path.stat().st_size > 1024 * 1024:
+                if dest_path.is_file():
+                    dest_path.unlink()
+                tmp_path.rename(dest_path)
+                logger.info(f"Successfully downloaded base model: {dest_path}")
+                if progress_callback:
+                    progress_callback({
+                        'status': 'done',
+                        'model': clean_name,
+                        'model_name': clean_name,
+                        'percent': 100,
+                        'progress': 100,
+                        'message': f'Successfully downloaded {clean_name}',
+                    })
+                return dest_path
+        except Exception as exc:
+            logger.warning(f"Download candidate {url} failed: {exc}")
+            last_error = exc
+            if tmp_path.is_file():
+                try:
+                    tmp_path.unlink()
+                except Exception:
+                    pass
+
+    # Fallback to Ultralytics built-in downloader
+    logger.info(f"Trying Ultralytics fallback for {clean_name}...")
+    try:
+        from ultralytics import YOLO
+        _ = YOLO(clean_name)
+        cwd_cand = Path(clean_name)
+        if cwd_cand.is_file() and cwd_cand.stat().st_size > 1024 * 1024:
+            if dest_path.is_file():
+                dest_path.unlink()
+            cwd_cand.rename(dest_path)
+            if progress_callback:
+                progress_callback({
+                    'status': 'done',
+                    'model': clean_name,
+                    'model_name': clean_name,
+                    'percent': 100,
+                    'progress': 100,
+                    'message': f'Successfully downloaded {clean_name}',
+                })
+            return dest_path
+    except Exception as fb_exc:
+        logger.error(f"Ultralytics fallback failed for {clean_name}: {fb_exc}")
+        if not last_error:
+            last_error = fb_exc
+
+    err_text = str(last_error or "Unknown error")
+    if 'getaddrinfo' in err_text or '11001' in err_text:
+        err_msg = (
+            f"Не удалось подключиться к серверам загрузки для '{clean_name}' (ошибка DNS: {err_text}). "
+            f"Проверьте доступ в интернет/DNS или поместите файл вручную в папку: config/ultralytics/models/{clean_name}"
+        )
+    else:
+        err_msg = (
+            f"Не удалось загрузить модель '{clean_name}': {err_text}. "
+            f"Вы можете вручную поместить файл модели в: config/ultralytics/models/{clean_name}"
+        )
+    raise RuntimeError(err_msg)
+
+
+def get_available_base_models() -> list[dict]:
+    """
+    Get base models with installation status, size, and metadata.
+
+    Returns:
+        List of model dictionaries.
+    """
+    _refresh_globals()
+    installed_files = {}
+    if MODELS_DIR.is_dir():
+        for path in sorted(MODELS_DIR.glob('*.pt')):
+            installed_files[path.name] = path
+
+    models = []
+    # Add official curated models first
+    for name, info in OFFICIAL_BASE_MODELS.items():
+        is_installed = name in installed_files
+        file_size_mb = (
+            round(installed_files[name].stat().st_size / (1024 * 1024), 1)
+            if is_installed else info.get('size_mb', 0.0)
+        )
+        models.append({
+            'name': name,
+            'display_name': info.get('name', name),
+            'task': info.get('task', 'detect'),
+            'task_type': info.get('task', 'detect'),
+            'size_mb': file_size_mb,
+            'speed': info.get('speed', 'Fast'),
+            'recommended': info.get('recommended', False),
+            'description': info.get('description', ''),
+            'installed': is_installed,
+            'path': str(installed_files[name]) if is_installed else None,
+        })
+
+    # Add any extra custom .pt models in MODELS_DIR
+    for name, path in installed_files.items():
+        if name not in OFFICIAL_BASE_MODELS:
+            size_mb = round(path.stat().st_size / (1024 * 1024), 1)
+            models.append({
+                'name': name,
+                'display_name': f'Custom: {name}',
+                'task': 'detect',
+                'task_type': 'detect',
+                'size_mb': size_mb,
+                'speed': 'Custom',
+                'recommended': False,
+                'description': 'Пользовательская модель в папке моделей.',
+                'installed': True,
+                'path': str(path),
+            })
+
+    return models
+
+
 def list_base_models() -> list[str]:
     """
     List the base models.
@@ -322,6 +715,23 @@ def train_model(
     base_model_path = Path(base_model)
     if not base_model_path.is_file():
         base_model_path = MODELS_DIR / base_model
+
+    if not base_model_path.is_file():
+        model_name = Path(base_model).name
+        if model_name in OFFICIAL_BASE_MODELS:
+            if progress_callback is not None:
+                progress_callback({
+                    'event': 'log',
+                    'message': f"Base model '{model_name}' not found locally. Auto-downloading...",
+                })
+            base_model_path = download_base_model(
+                model_name,
+                progress_callback=progress_callback,
+                project_root=project_root,
+            )
+        else:
+            raise FileNotFoundError(f'Model not found: {base_model_path}')
+
     model = load_model(base_model_path)
     run_name = config_name.removesuffix('.yaml')
 

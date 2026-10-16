@@ -151,7 +151,7 @@
             <!-- Left Navigation Sidebar -->
             <div class="col-md-4 col-lg-3">
                 <div class="list-group settings-layout__nav" id="pills-tab" role="tablist">
-                    <div class="d-flex align-items-center justify-content-between px-2 pb-2 mb-2 border-bottom">
+                    <div class="d-none d-md-flex align-items-center justify-content-between px-2 pb-2 mb-2 border-bottom">
                         <span class="small text-uppercase fw-bold text-body-secondary"
                               style="font-size: 0.7rem; letter-spacing: 0.05em;">{{ trans('Sections') }}</span>
                         <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill"
@@ -218,7 +218,21 @@
                                             </div>
                                         </div>
                                         {% if key == 'detections' %}
-                                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1 py-1 px-3 shadow-xs"
+                                                        id="btn-add-camera"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#addCameraModal"
+                                                        title="{{ trans('Add camera') }}">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                                                         fill="currentColor" class="bi bi-plus-lg"
+                                                         viewBox="0 0 16 16">
+                                                        <path fill-rule="evenodd"
+                                                              d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/>
+                                                    </svg>
+                                                    <span>{{ trans('Add camera') }}</span>
+                                                </button>
                                                 <button type="button"
                                                         class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 py-1 px-3 shadow-xs"
                                                         id="btn-collapse-all-cameras"
@@ -525,6 +539,115 @@
         </div>
     </div>
     <!-- END: Model Export & Optimization Modal -->
+
+    <!-- START: Add Camera Modal -->
+    <div class="modal fade" id="addCameraModal" tabindex="-1" aria-labelledby="addCameraModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content shadow-lg border-0" style="border-radius: var(--cv-radius, 12px);">
+                <div class="modal-header border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="bg-primary-subtle text-primary border border-primary-subtle rounded-3 p-2 d-flex align-items-center justify-content-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-camera-video" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2V5z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0" id="addCameraModalLabel">{{ trans('Add new camera') }}</h5>
+                            <span class="text-body-secondary small">{{ trans('Configure video stream and detection parameters.') }}</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ trans('Close') }}"></button>
+                </div>
+                <form id="form-add-camera" autocomplete="off">
+                    <div class="modal-body p-4">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="new_camera_label" class="form-label fw-semibold">
+                                    {{ trans('Camera name') }} <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="new_camera_label" name="label"
+                                       required placeholder="e.g. Main Entrance">
+                                <div class="form-text">{{ trans('Display label shown on the dashboard') }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="new_camera_location" class="form-label fw-semibold">
+                                    {{ trans('Camera ID') }} <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control font-monospace" id="new_camera_location" name="location"
+                                           required placeholder="e.g. cam_entrance or auto MD5" pattern="^[a-zA-Z0-9_\-]+$">
+                                    <button class="btn btn-outline-secondary" type="button" id="btn-regen-camera-id" title="{{ trans('Regenerate ID from name') }}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-arrow-repeat" viewBox="0 0 16 16">
+                                            <path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41zm-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9z"/>
+                                            <path fill-rule="evenodd" d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5.002 5.002 0 0 0 8 3M3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="form-text">{{ trans('Generated automatically from name (MD5), can be edited manually.') }}</div>
+                            </div>
+                            <div class="col-12">
+                                <label for="new_camera_video_path" class="form-label fw-semibold">
+                                    {{ trans('Video source') }} <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control font-monospace" id="new_camera_video_path" name="video_path"
+                                       required placeholder="rtsp://admin:pass@192.168.1.10:554/stream or storage/video.mp4 or 0">
+                                <div class="form-text">{{ trans('RTSP stream URL, video file path, or webcam index (e.g. 0)') }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="new_camera_model_type" class="form-label fw-semibold">
+                                    {{ trans('Model type') }}
+                                </label>
+                                <select class="form-select font-monospace" id="new_camera_model_type" name="model_type">
+                                    <option value="auto" selected>auto</option>
+                                    <option value="yolo">yolo / ultralytics</option>
+                                    <option value="onnx">onnx / onnxruntime</option>
+                                    <option value="openvino">openvino</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="new_camera_weights_path" class="form-label fw-semibold">
+                                    {{ trans('Path to weights') }}
+                                </label>
+                                <input type="text" class="form-control font-monospace" id="new_camera_weights_path" name="weights_path"
+                                       placeholder="config/ultralytics/models/yolov8n.pt">
+                                <div class="form-text">{{ trans('Leave blank to use default weights from detection settings') }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="new_camera_confidence" class="form-label fw-semibold">
+                                    {{ trans('Confidence threshold') }}
+                                </label>
+                                <input type="number" step="0.05" min="0.05" max="1.0" class="form-control" id="new_camera_confidence"
+                                       name="confidence" placeholder="0.5">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="new_camera_video_fps" class="form-label fw-semibold">
+                                    {{ trans('Video FPS') }}
+                                </label>
+                                <input type="number" min="0" max="120" class="form-control" id="new_camera_video_fps"
+                                       name="video_fps" placeholder="0">
+                                <div class="form-text">{{ trans('0 = use source stream FPS') }}</div>
+                            </div>
+                        </div>
+                        <div class="alert alert-danger d-none mt-3 mb-0" id="add-camera-error"></div>
+                    </div>
+                    <div class="modal-footer border-top">
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">{{ trans('Cancel') }}</button>
+                        <button type="submit" class="btn btn-primary btn-sm px-3 d-inline-flex align-items-center gap-2" id="btn-submit-add-camera">
+                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="spinner-add-camera"></span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/>
+                            </svg>
+                            <span>{{ trans('Add camera') }}</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- END: Add Camera Modal -->
+
+    {% include 'partials/add_custom_field_modal.html' %}
 {% endblock %}
 
 {% block footer_assets %}

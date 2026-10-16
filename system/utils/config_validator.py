@@ -158,6 +158,23 @@ class ConfigValidator:
             else:
                 self.errors.append("'server.allowed_origins' must be a string or a list of strings")
 
+        # Validate socketio_transports
+        if 'socketio_transports' in server:
+            transports = server['socketio_transports']
+            if isinstance(transports, str):
+                transports = [transports]
+            if not isinstance(transports, list):
+                self.errors.append("'server.socketio_transports' must be a list of strings")
+            elif not transports:
+                self.warnings.append("'server.socketio_transports' is empty; defaults to ['polling', 'websocket']")
+            else:
+                valid_transports = {'polling', 'websocket'}
+                for t in transports:
+                    if not isinstance(t, str):
+                        self.errors.append("'server.socketio_transports' items must be strings")
+                    elif t not in valid_transports:
+                        self.warnings.append(f"Unknown Socket.IO transport '{t}', expected 'polling' or 'websocket'")
+
     def _validate_users(self, users: Dict[str, Any]) -> None:
         """
         Validate users configuration section.
@@ -277,35 +294,47 @@ class ConfigValidator:
         """
 
         if 'custom_fields' in form:
-            custom_fields = form['custom_fields']
-            if not isinstance(custom_fields, dict):
-                self.errors.append("'form.custom_fields' must be a dictionary")
-            else:
-                for field_name, field_config in custom_fields.items():
-                    if not isinstance(field_config, dict):
-                        self.errors.append(f"'form.custom_fields.{field_name}' must be a dictionary")
-                        continue
+            self._validate_custom_fields(form['custom_fields'], 'form.custom_fields')
 
-                    # Validate required fields
-                    if 'name' not in field_config:
-                        self.errors.append(f"'form.custom_fields.{field_name}' missing 'name' field")
-                    if 'label' not in field_config:
-                        self.errors.append(f"'form.custom_fields.{field_name}' missing 'label' field")
-                    if 'type' not in field_config:
-                        self.errors.append(f"'form.custom_fields.{field_name}' missing 'type' field")
+    def _validate_custom_fields(self, custom_fields: Any, prefix: str) -> None:
+        """
+        Validate custom_fields dictionary structure.
 
-                    # Validate type
-                    if 'type' in field_config:
-                        valid_types = ['text', 'textarea', 'date', 'datetime-local', 'select', 'number']
-                        if field_config['type'] not in valid_types:
-                            self.warnings.append(f"Unknown field type '{field_config['type']}' in '{field_name}'")
+        Args:
+            custom_fields: Custom fields dictionary
+            prefix: Prefix for error messages
+        """
+        if custom_fields is None:
+            return
+        if not isinstance(custom_fields, dict):
+            self.errors.append(f"'{prefix}' must be a dictionary")
+            return
 
-                    # Validate options for select type
-                    if field_config.get('type') == 'select':
-                        if 'options' not in field_config:
-                            self.errors.append(f"'form.custom_fields.{field_name}' of type 'select' missing 'options'")
-                        elif not isinstance(field_config['options'], list):
-                            self.errors.append(f"'form.custom_fields.{field_name}.options' must be a list")
+        for field_name, field_config in custom_fields.items():
+            if not isinstance(field_config, dict):
+                self.errors.append(f"'{prefix}.{field_name}' must be a dictionary")
+                continue
+
+            # Validate required fields
+            if 'name' not in field_config:
+                self.errors.append(f"'{prefix}.{field_name}' missing 'name' field")
+            if 'label' not in field_config:
+                self.errors.append(f"'{prefix}.{field_name}' missing 'label' field")
+            if 'type' not in field_config:
+                self.errors.append(f"'{prefix}.{field_name}' missing 'type' field")
+
+            # Validate type
+            if 'type' in field_config:
+                valid_types = ['text', 'textarea', 'date', 'datetime-local', 'select', 'number']
+                if field_config['type'] not in valid_types:
+                    self.warnings.append(f"Unknown field type '{field_config['type']}' in '{prefix}.{field_name}'")
+
+            # Validate options for select type
+            if field_config.get('type') == 'select':
+                if 'options' not in field_config:
+                    self.errors.append(f"'{prefix}.{field_name}' of type 'select' missing 'options'")
+                elif not isinstance(field_config['options'], list):
+                    self.errors.append(f"'{prefix}.{field_name}.options' must be a list")
 
     def _validate_detection_default(self, detection_default: Dict[str, Any], config_path: Optional[str] = None) -> None:
         """
@@ -502,6 +531,10 @@ class ConfigValidator:
                         self.errors.append(f"'{prefix}.recording.idle_timeout' must be a number")
                     elif idle_timeout < 0:
                         self.errors.append(f"'{prefix}.recording.idle_timeout' must be >= 0")
+
+        # Validate custom_fields (detection-specific)
+        if 'custom_fields' in config:
+            self._validate_custom_fields(config['custom_fields'], f"{prefix}.custom_fields")
 
 
 def validate_config(config: Dict[str, Any], config_path: Optional[str] = None, raise_on_error: bool = True) -> tuple[

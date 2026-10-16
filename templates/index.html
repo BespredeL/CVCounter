@@ -9,12 +9,55 @@
 {% endblock %}
 
 {% block footer_assets %}
-    <script src="{{ url_for('static', filename='assets/js/counter-settings-modal.js') }}"></script>
+    {% if not auth_enabled or auth_user %}
+        <script src="{{ url_for('static', filename='assets/js/counter-settings-modal.js') }}"></script>
+    {% endif %}
     <script src="{{ url_for('static', filename='assets/js/dashboard-counters.js') }}"></script>
 {% endblock %}
 
 {% block content %}
     {% include 'partials/app_nav_cards.html' %}
+
+    {% if not has_detections %}
+        <div class="alert alert-info border-info-subtle shadow-sm my-3 p-3 rounded-3" id="first-run-banner" role="region" aria-label="{{ trans('Getting Started') }}">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fs-4">🚀</span>
+                    <h5 class="alert-heading mb-0 fw-bold">{{ trans('Getting Started: Train your first model') }}</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <p class="mb-3 text-body-secondary small">
+                {{ trans('No trained models detected yet. You can collect frames from your cameras, annotate them, and train a model directly through the web interface!') }}
+            </p>
+            <div class="row g-2 text-start small">
+                <div class="col-md-3">
+                    <div class="p-2 border rounded bg-body-tertiary h-100">
+                        <strong class="text-primary d-block mb-1">1. {{ trans('Connect Camera') }}</strong>
+                        <span>{{ trans('Configure camera in Settings. Models are not needed to start collecting frames.') }}</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-2 border rounded bg-body-tertiary h-100">
+                        <strong class="text-primary d-block mb-1">2. {{ trans('Create Dataset') }}</strong>
+                        <a href="{{ url_for('datasets.datasets_index') }}" class="text-decoration-none d-block">{{ trans('Go to Datasets') }} →</a>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-2 border rounded bg-body-tertiary h-100">
+                        <strong class="text-primary d-block mb-1">3. {{ trans('Collect & Annotate') }}</strong>
+                        <span>{{ trans('Capture frames directly to dataset Inbox, then label objects in the editor.') }}</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-2 border rounded bg-body-tertiary h-100">
+                        <strong class="text-primary d-block mb-1">4. {{ trans('Train & Apply') }}</strong>
+                        <span>{{ trans('Select a base model (auto-downloaded) and apply resulting weights in 1 click.') }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
 
     <section class="section-block section-block--compact counter-dashboard-section"
              data-multi-url="{{ url_for('counters.counter_multi_text') }}">
@@ -70,5 +113,7 @@
         {% endif %}
     </section>
 
-    {% include 'partials/counter_settings_modal.html' %}
+    {% if not auth_enabled or auth_user %}
+        {% include 'partials/counter_settings_modal.html' %}
+    {% endif %}
 {% endblock %}

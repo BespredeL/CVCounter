@@ -363,6 +363,23 @@ def report_show(location: str, report_id: int) -> str:
 
     is_counter_active = location in context.get('object_counters', {})
 
+    # Resolve all custom fields definitions for this location (global + detection specific)
+    config = context.get('config')
+    field_labels = {}
+    if config:
+        form_fields = config.get('form.custom_fields', {}) or {}
+        if isinstance(form_fields, dict):
+            for f in form_fields.values():
+                if isinstance(f, dict) and 'name' in f:
+                    field_labels[f['name']] = f.get('label', f['name'])
+        det_fields = config.get(f'detections.{location}.custom_fields', {}) or {}
+        if not det_fields and isinstance(config.get('detections'), dict):
+            det_fields = config.get('detections', {}).get(location, {}).get('custom_fields', {}) or {}
+        if isinstance(det_fields, dict):
+            for f in det_fields.values():
+                if isinstance(f, dict) and 'name' in f:
+                    field_labels[f['name']] = f.get('label', f['name'])
+
     return render_template(
         'reports/show.html',
         location=location,
@@ -370,5 +387,6 @@ def report_show(location: str, report_id: int) -> str:
         prev_report_id=prev_report_id,
         next_report_id=next_report_id,
         is_counter_active=is_counter_active,
+        field_labels=field_labels,
         json=json
     )

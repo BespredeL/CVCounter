@@ -45,7 +45,9 @@ CANONICAL_CAMERA_KEYS: List[str] = [
     "providers",
     # 5. Classes Management
     "classes",
-    # 6. Dataset Generation & Video Recording Subsystems
+    # 6. Custom Fields (Detection-Specific)
+    "custom_fields",
+    # 7. Dataset Generation & Video Recording Subsystems
     "dataset_create",
     "recording",
 ]
@@ -84,6 +86,7 @@ CANONICAL_DEFAULTS: Dict[str, Any] = {
         }
     ],
     "classes": {},
+    "custom_fields": {},
     "dataset_create": {
         "enable": False,
         "probability": 0.1,

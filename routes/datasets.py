@@ -21,8 +21,17 @@ from flask import (
 from system.auth import login_required
 from system.datasets.annotation_store import AnnotationStore
 from system.datasets.dataset_service import DatasetService, VALID_TASKS
+from system.object_detection.metadata import extract_class_name, sanitize_classes_list
 from system.managers.training_job_manager import training_job_manager
-from system.training.yolo_trainer import DEFAULT_BASE_MODEL, DEFAULT_EPOCHS, DEFAULT_IMG_SIZE, list_base_models
+from system.training.yolo_trainer import (
+    DEFAULT_BASE_MODEL,
+    DEFAULT_EPOCHS,
+    DEFAULT_IMG_SIZE,
+    OFFICIAL_BASE_MODELS,
+    download_base_model,
+    get_available_base_models,
+    list_base_models,
+)
 from system.utils.app_context import get_app_context, refresh_app_context
 from system.utils.i18n import trans as translate
 from system.utils.paths import get_project_root, resolve_project_path
@@ -144,7 +153,7 @@ def _ordered_class_names(classes_map) -> list[str]:
     if not classes_map:
         return []
     if isinstance(classes_map, list):
-        return [str(item).strip() for item in classes_map if str(item).strip()]
+        return sanitize_classes_list(classes_map)
     if isinstance(classes_map, dict):
         items: list[tuple[int, str]] = []
         for key, value in classes_map.items():
@@ -152,7 +161,7 @@ def _ordered_class_names(classes_map) -> list[str]:
                 idx = int(key)
             except (TypeError, ValueError):
                 continue
-            name = str(value).strip() if value is not None else ''
+            name = extract_class_name(value)
             if name:
                 items.append((idx, name))
         items.sort(key=lambda pair: pair[0])
@@ -173,7 +182,8 @@ def _class_id_map(classes_map) -> dict[int, str]:
     if not classes_map:
         return {}
     if isinstance(classes_map, list):
-        return {i: str(name).strip() for i, name in enumerate(classes_map) if str(name).strip()}
+        cleaned = sanitize_classes_list(classes_map)
+        return {i: name for i, name in enumerate(cleaned)}
     if isinstance(classes_map, dict):
         mapping: dict[int, str] = {}
         for key, value in classes_map.items():
@@ -181,7 +191,7 @@ def _class_id_map(classes_map) -> dict[int, str]:
                 idx = int(key)
             except (TypeError, ValueError):
                 continue
-            name = str(value).strip() if value is not None else ''
+            name = extract_class_name(value)
             if name:
                 mapping[idx] = name
         return mapping
@@ -403,7 +413,12 @@ def dataset_detail(name: str):
         return redirect(url_for('datasets.datasets_index'))
     images = svc.list_images(name)
     context = get_app_context()
-    locations = list((context.get('config').get('detections') or {}).keys())
+    detections = (context.get('config') or {}).get('detections') or {}
+    locations = list(detections.keys())
+    locations_dict = context.get('locations_dict') or {
+        loc: (detections.get(loc, {}) or {}).get('label', loc)
+        for loc in locations
+    }
     return render_template(
         'datasets/detail.html',
         dataset=summary,
@@ -411,7 +426,10 @@ def dataset_detail(name: str):
         saved_locations=svc.list_saved_image_locations(),
         recordings=svc.list_recordings(),
         base_models=list_base_models(),
+        available_base_models=get_available_base_models(),
+        official_base_models=OFFICIAL_BASE_MODELS,
         counter_locations=locations,
+        counter_cameras=locations_dict,
         detector_models=_list_detector_models(),
         training_status=training_job_manager.status(),
         default_epochs=DEFAULT_EPOCHS,
@@ -497,12 +515,7 @@ def api_create():
     data = request.get_json(silent=True) or request.form
     name = (data.get('name') or '').strip()
     classes_raw = data.get('classes') or 'object'
-    if isinstance(classes_raw, str):
-        parsed = [c.strip() for c in classes_raw.replace(';', ',').split(',') if c.strip()]
-    else:
-        parsed = [str(c).strip() for c in list(classes_raw) if str(c).strip()]
-    seen = set()
-    classes = [c for c in parsed if not (c in seen or seen.add(c))] or ['object']
+    classes = sanitize_classes_list(classes_raw) or ['object']
     task = (data.get('task') or 'detect').strip()
     try:
         summary = _service().create(name, classes=classes, task=task, display_name=data.get('display_name') or name)
@@ -547,9 +560,11 @@ def api_update_meta(name: str):
     """
     data = request.get_json(silent=True) or {}
     try:
+        raw_classes = data.get('classes')
+        clean_classes = sanitize_classes_list(raw_classes) if raw_classes is not None else None
         meta = _service().update_meta(
             name,
-            classes=data.get('classes'),
+            classes=clean_classes,
             task=data.get('task'),
             display_name=data.get('display_name'),
             attributes=data.get('attributes'),
@@ -622,6 +637,184 @@ def api_import_camera(name: str):
     if not result.get('imported') and not result.get('skipped'):
         return _json_error(translate('No images found to import'))
     return jsonify({'status': 'ok', **result})
+
+
+@datasets_bp.route('/datasets/api/cameras')
+@login_required
+def api_cameras():
+    """
+    List configured cameras with status and preview information.
+    """
+    context = get_app_context()
+    config = context.get('config')
+    detections = config.get('detections') or {}
+    object_counters = context.get('object_counters') or {}
+    thread_manager = context.get('thread_manager')
+
+    cameras = []
+    for location, item in detections.items():
+        weights = (item or {}).get('weights_path')
+        is_running = bool(thread_manager and thread_manager.has_thread(location) and location in object_counters)
+        counter = object_counters.get(location)
+        is_preview = bool(counter and getattr(counter, 'preview_mode', False))
+        cameras.append({
+            'location': location,
+            'label': (item or {}).get('label') or location,
+            'video_path': (item or {}).get('video_path') or '',
+            'running': is_running,
+            'preview_mode': is_preview,
+            'has_weights': bool(weights),
+            'weights_path': weights or '',
+        })
+    return jsonify({'status': 'ok', 'cameras': cameras})
+
+
+@datasets_bp.route('/datasets/api/<name>/capture-camera', methods=['POST'])
+@login_required
+def api_capture_camera(name: str):
+    """
+    Capture a single frame from a camera directly into dataset inbox.
+    """
+    import cv2
+    import re
+    import time
+    from routes.counters import _get_editor_snapshot_frame
+
+    data = request.get_json(silent=True) or request.form or {}
+    location = (data.get('location') or '').strip()
+    split = (data.get('split') or 'inbox').strip()
+    if not location:
+        return _json_error(translate('Camera location is required'))
+
+    svc = _service()
+    try:
+        svc.ensure_layout(name)
+    except Exception as exc:
+        return _json_error(str(exc))
+
+    context = get_app_context()
+    object_counters = context.get('object_counters') or {}
+
+    saved_path = None
+    if location in object_counters:
+        saved_path = object_counters[location].save_capture(target_dataset=name, split=split)
+    else:
+        frame = _get_editor_snapshot_frame(location)
+        if frame is not None:
+            dest_dir = svc.root(name) / 'images' / split
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            clean_loc = re.sub(r'[^A-Za-z0-9-_]+', '', location)
+            ts = int(time.time() * 1000)
+            target_file = dest_dir / f'{clean_loc}_{ts}.jpg'
+            cv2.imwrite(str(target_file), frame, [cv2.IMWRITE_JPEG_QUALITY, 90])
+            saved_path = str(target_file)
+
+    if not saved_path:
+        return _json_error(translate('Failed to capture frame from camera'))
+
+    return jsonify({
+        'status': 'ok',
+        'saved': True,
+        'location': location,
+        'dataset': name,
+        'split': split,
+        'filename': Path(saved_path).name,
+    })
+
+
+@datasets_bp.route('/datasets/api/<name>/interval-camera', methods=['POST'])
+@login_required
+def api_interval_camera(name: str):
+    """
+    Control periodic interval frame capturing from camera into dataset inbox.
+    """
+    from routes.counters import _ensure_counter_running
+
+    data = request.get_json(silent=True) or request.form or {}
+    location = (data.get('location') or '').strip()
+    action = (data.get('action') or 'start').strip().lower()
+    split = (data.get('split') or 'inbox').strip()
+    interval_sec = float(data.get('interval') or 2.0)
+    max_frames = int(data.get('max_frames') or 30)
+
+    if not location:
+        return _json_error(translate('Camera location is required'))
+
+    context = get_app_context()
+    object_counters = context.get('object_counters') or {}
+
+    if action == 'status':
+        counter = object_counters.get(location)
+        if counter:
+            st = counter.get_interval_capture_status()
+            return jsonify({
+                'ok': True,
+                'status': 'ok',
+                'action': 'status',
+                'running': bool(st.get('active')),
+                'captured': st.get('count', 0),
+                'max_frames': st.get('max_frames', 0),
+                **st,
+            })
+        return jsonify({
+            'ok': True,
+            'status': 'ok',
+            'action': 'status',
+            'running': False,
+            'captured': 0,
+            'max_frames': 0,
+            'active': False,
+        })
+
+    if action == 'stop':
+        counter = object_counters.get(location)
+        if counter:
+            st = counter.stop_interval_capture()
+            return jsonify({
+                'ok': True,
+                'status': 'ok',
+                'action': 'stopped',
+                'running': False,
+                'captured': st.get('count', 0),
+                'max_frames': st.get('max_frames', 0),
+                **st,
+            })
+        return jsonify({
+            'ok': True,
+            'status': 'ok',
+            'action': 'stopped',
+            'running': False,
+            'active': False,
+        })
+
+    # Start action: ensure counter is running
+    try:
+        _ensure_counter_running(location)
+    except Exception as exc:
+        return _json_error(f"Cannot start camera stream: {exc}")
+
+    counter = object_counters.get(location)
+    if not counter:
+        return _json_error("Counter could not be started")
+
+    svc = _service()
+    svc.ensure_layout(name)
+
+    st = counter.start_interval_capture(
+        interval_sec=interval_sec,
+        max_frames=max_frames,
+        target_dataset=name,
+        split=split,
+    )
+    return jsonify({
+        'ok': True,
+        'status': 'ok',
+        'action': 'started',
+        'running': True,
+        'captured': st.get('count', 0),
+        'max_frames': st.get('max_frames', max_frames),
+        **st,
+    })
 
 
 @datasets_bp.route('/datasets/api/<name>/import/upload', methods=['POST'])
@@ -1008,6 +1201,65 @@ def api_export_zip(name: str):
         )
     except Exception as exc:
         return _json_error(str(exc), 500)
+
+
+@datasets_bp.route('/datasets/api/models/base')
+@login_required
+def api_models_base():
+    """
+    Return all available base models (installed and available to download).
+    """
+    return jsonify({
+        'status': 'ok',
+        'models': get_available_base_models(),
+        'default': DEFAULT_BASE_MODEL,
+    })
+
+
+@datasets_bp.route('/datasets/api/models/base/download', methods=['POST'])
+@login_required
+def api_models_base_download():
+    """
+    Download a base model in a background thread with socket updates.
+    """
+    import threading
+
+    data = request.get_json(silent=True) or request.form or {}
+    model_name = (data.get('model_name') or data.get('model') or '').strip()
+    if not model_name:
+        return _json_error('Model name is required')
+
+    clean_name = Path(model_name).name
+    if clean_name not in OFFICIAL_BASE_MODELS and not clean_name.endswith('.pt'):
+        return _json_error(f'Unsupported model: {clean_name}')
+
+    context = get_app_context()
+    socketio = context.get('socketio')
+
+    def _emitter(payload: dict) -> None:
+        if socketio:
+            socketio.emit('base_model_download', payload)
+
+    def _worker():
+        try:
+            download_base_model(clean_name, progress_callback=_emitter)
+        except Exception as exc:
+            _emitter({
+                'status': 'error',
+                'model': clean_name,
+                'model_name': clean_name,
+                'message': str(exc),
+            })
+
+    th = threading.Thread(target=_worker, daemon=True, name=f'BaseModelDownload-{clean_name}')
+    th.start()
+
+    return jsonify({
+        'status': 'ok',
+        'message': f'Download started for {clean_name}',
+        'model': clean_name,
+        'model_name': clean_name,
+    })
 
 
 @datasets_bp.route('/datasets/api/training/status')

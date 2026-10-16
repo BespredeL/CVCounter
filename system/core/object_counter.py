@@ -8,6 +8,7 @@
 
 import json
 import os
+from pathlib import Path
 import random
 import re
 import time
@@ -155,34 +156,59 @@ class ObjectCounter:
         # Init recorder (async video writer) if enabled for this detection
         self._init_recorder()
 
-        # Init model: filter active classes if configured
-        active_classes = []
-        for cls_id, cls_entry in (self.classes or {}).items():
+        # Model and preview / data collection mode state
+        self.preview_mode: bool = False
+        self.interval_capture_active: bool = False
+        self.interval_capture_interval: float = 3.0
+        self.interval_capture_max: int = 50
+        self.interval_capture_count: int = 0
+        self.interval_capture_dataset: str | None = None
+        self.interval_capture_split: str = 'inbox'
+        self._last_interval_capture_time: float = 0.0
+
+        weights_exist = bool(self.weights and os.path.isfile(self.weights))
+        model_type_str = str(getattr(self, 'model_type', 'auto') or 'auto').lower()
+        if not weights_exist or model_type_str in ('none', 'preview'):
+            self.model = None
+            self.preview_mode = True
+            self.logger.info(
+                f"Location '{self.location}' running in Data Collection / Preview mode (weights: {self.weights or 'none'})."
+            )
+        else:
             try:
-                cid = int(cls_id)
-            except (ValueError, TypeError):
-                continue
-            if isinstance(cls_entry, dict):
-                if cls_entry.get('enabled', True):
-                    active_classes.append(cid)
-            else:
-                active_classes.append(cid)
-        classes_list = active_classes if (self.classes and active_classes) else None
-        self.model = load_detector(
-            model_type=self.model_type,
-            weights=self.weights,
-            confidence=self.confidence,
-            iou=self.iou,
-            device=self.device,
-            vid_stride=self.vid_stride,
-            classes_list=classes_list,
-            verbose=self.debug,
-            model_config_path=self.model_config_path,
-            input_size=self.input_size,
-            backend=self.backend,
-            target=self.target,
-            providers=self.providers,
-        )
+                active_classes = []
+                for cls_id, cls_entry in (self.classes or {}).items():
+                    try:
+                        cid = int(cls_id)
+                    except (ValueError, TypeError):
+                        continue
+                    if isinstance(cls_entry, dict):
+                        if cls_entry.get('enabled', True):
+                            active_classes.append(cid)
+                    else:
+                        active_classes.append(cid)
+                classes_list = active_classes if (self.classes and active_classes) else None
+                self.model = load_detector(
+                    model_type=self.model_type,
+                    weights=self.weights,
+                    confidence=self.confidence,
+                    iou=self.iou,
+                    device=self.device,
+                    vid_stride=self.vid_stride,
+                    classes_list=classes_list,
+                    verbose=self.debug,
+                    model_config_path=self.model_config_path,
+                    input_size=self.input_size,
+                    backend=self.backend,
+                    target=self.target,
+                    providers=self.providers,
+                )
+            except Exception as e:
+                self.logger.warning(
+                    f"Could not load detector for '{self.location}': {e}. Falling back to Data Collection mode."
+                )
+                self.model = None
+                self.preview_mode = True
 
         # Init tracker (ByteTrack)
         self.tracker: BYTETracker = BYTETracker(
@@ -206,7 +232,8 @@ class ObjectCounter:
         Returns:
             None
         """
-        self.notif_manager.event('counter_status', {'status': 'started', 'location': self.location})
+        status_evt = 'collection' if self.preview_mode else 'started'
+        self.notif_manager.event('counter_status', {'status': status_evt, 'location': self.location})
 
         while self.running:
             try:
@@ -597,7 +624,8 @@ class ObjectCounter:
         # self.running = True
         if self.paused:
             self.notif_manager.notify(trans('Counting has started!'), 'success')
-            self.notif_manager.event('counter_status', {'status': 'started', 'location': self.location})
+            status_evt = 'collection' if self.preview_mode else 'started'
+            self.notif_manager.event('counter_status', {'status': status_evt, 'location': self.location})
         self.paused = False
 
     def stop(self) -> None:
@@ -723,23 +751,63 @@ class ObjectCounter:
             'color': list(color),
         }])
 
-    def save_capture(self) -> None:
+    def save_capture(self, target_dataset: Optional[str] = None, split: str = 'inbox') -> Optional[str]:
         """
-        Save a captured image.
+        Save a captured image directly or to a dataset.
 
         Args:
-            None
+            target_dataset: Optional dataset name.
+            split: Dataset split ('inbox', 'train', 'val').
 
         Returns:
-            None
+            Optional[str]: Saved file path or None on failure.
         """
-
         try:
             frame = self.get_source_frame()
             if frame is not None:
-                self._save_dataset_image(frame)
+                return self._save_dataset_image(frame, target_dataset=target_dataset, split=split)
         except Exception as e:
             self.logger.error(f'Error saving captured image: {e}')
+        return None
+
+    def start_interval_capture(
+            self,
+            interval_sec: float = 2.0,
+            max_frames: int = 30,
+            target_dataset: Optional[str] = None,
+            split: str = 'inbox',
+    ) -> dict:
+        """
+        Start periodic background frame capturing.
+        """
+        self.interval_capture_interval = max(0.2, float(interval_sec))
+        self.interval_capture_max = max(1, int(max_frames))
+        self.interval_capture_dataset = target_dataset
+        self.interval_capture_split = split
+        self.interval_capture_count = 0
+        self._last_interval_capture_time = time.monotonic()
+        self.interval_capture_active = True
+        return self.get_interval_capture_status()
+
+    def stop_interval_capture(self) -> dict:
+        """
+        Stop periodic background frame capturing.
+        """
+        self.interval_capture_active = False
+        return self.get_interval_capture_status()
+
+    def get_interval_capture_status(self) -> dict:
+        """
+        Get status of periodic background frame capturing.
+        """
+        return {
+            'active': bool(self.interval_capture_active),
+            'count': int(self.interval_capture_count),
+            'max_frames': int(self.interval_capture_max),
+            'interval': float(self.interval_capture_interval),
+            'dataset': self.interval_capture_dataset,
+            'split': self.interval_capture_split,
+        }
 
     def cleanup(self) -> None:
         """
@@ -753,11 +821,11 @@ class ObjectCounter:
         """
         self.stop()
         self._stop_recording()
-        if hasattr(self, 'vsm'):
+        if hasattr(self, 'vsm') and self.vsm is not None:
             self.vsm.stop()
-        if hasattr(self, 'model'):
+        if hasattr(self, 'model') and self.model is not None:
             self.model.cleanup()
-        if hasattr(self, 'db_manager'):
+        if hasattr(self, 'db_manager') and self.db_manager is not None:
             self.db_manager.close()
 
     # ------------------------------------------------------------------
@@ -809,13 +877,18 @@ class ObjectCounter:
         """
 
         config_manager.reload_config()
-        detector_config = config_manager.get(f"detections.{location}")
-        detection_default = config_manager.get("detection_default", {})
+        detector_config = config_manager.get(f"detections.{location}") or {}
+        detection_default = config_manager.get("detection_default", {}) or {}
 
+        self.config_manager: ConfigManager = config_manager
         self.location: str = location
         self.debug: bool = kwargs.get('debug', config_manager.get('general.debug', False))
-        self.model_type = kwargs.get('model_type', detector_config.get('model_type', 'auto'))
-        self.weights: str = config_manager.resolve_path(kwargs.get('weights', detector_config.get('weights_path')))
+        self.model_type: str = str(kwargs.get(
+            'model_type',
+            detector_config.get('model_type', detection_default.get('model_type', 'auto'))
+        ) or 'auto')
+        raw_weights = kwargs.get('weights', detector_config.get('weights_path'))
+        self.weights: str = config_manager.resolve_path(raw_weights) if raw_weights else ""
         self.device: str = kwargs.get('device', detector_config.get('device', 'cpu'))
         self.confidence: float = kwargs.get('confidence', detector_config.get('confidence',
                                                                               detection_default.get('confidence',
@@ -836,7 +909,7 @@ class ObjectCounter:
         self.counting_areas: list[dict] = runtime_areas
         self.counting_area: List[Tuple[int, int]] = list(runtime_areas[0]['points'])
         self.counting_area_color: tuple = tuple(runtime_areas[0]['color'])
-        self.video_fps: int = detector_config.get('video_fps', detection_default.get("video_fps"))
+        self.video_fps: int = detector_config.get('video_fps', detection_default.get("video_fps", 0)) or 0
         self.video_reconnect_attempts: int = int(detector_config.get('video_reconnect_attempts',
                                                                      detection_default.get('video_reconnect_attempts',
                                                                                            self.DEFAULT_VIDEO_RECONNECT_ATTEMPTS), ))
@@ -861,7 +934,7 @@ class ObjectCounter:
         self.providers: list | None = detector_config.get('providers', detection_default.get('providers'))
 
         # Video
-        self.video_path: str = kwargs.get('video_path', detector_config['video_path'])
+        self.video_path: str = kwargs.get('video_path', detector_config.get('video_path', ''))
 
         # Recording
         recording_default = detection_default.get('recording', {})
@@ -884,6 +957,15 @@ class ObjectCounter:
             self.total_objects: set = set(range(-start_count, 0))
             config_manager.set(f"detections.{self.location}.start_total_count", 0)
             config_manager.save_config()
+
+        # Periodic interval frame capture attributes
+        self.interval_capture_active: bool = False
+        self.interval_capture_interval: float = 2.0
+        self.interval_capture_max: int = 30
+        self.interval_capture_dataset: Optional[str] = None
+        self.interval_capture_split: str = 'inbox'
+        self.interval_capture_count: int = 0
+        self._last_interval_capture_time: float = 0.0
 
     def _init_recorder(self) -> None:
         """
@@ -998,6 +1080,9 @@ class ObjectCounter:
                      Each row has the following structure:
                      [x1, y1, x2, y2, track_id, (optional) class_id]
         """
+        if self.model is None or self.preview_mode:
+            return self.tracker.update(np.empty((0, 6)))
+
         xyxy, conf, cls = self.model.detect(image=image)
 
         if xyxy is None or len(xyxy) == 0:
@@ -1215,8 +1300,23 @@ class ObjectCounter:
             display_frame = self._detect_count(display_frame, boxes)
 
             if dataset_enabled and last_total_count != self.total_count:
-                if random.random() < float(self.dataset['probability']):
+                if random.random() < float(self.dataset.get('probability', 0.1)):
                     self._save_dataset_image(work_frame, boxes, self.dataset.get('classes', None))
+
+            # Periodic interval capture
+            if self.interval_capture_active:
+                now_m = time.monotonic()
+                if now_m - self._last_interval_capture_time >= self.interval_capture_interval:
+                    self._last_interval_capture_time = now_m
+                    saved = self._save_dataset_image(
+                        work_frame,
+                        target_dataset=self.interval_capture_dataset,
+                        split=self.interval_capture_split,
+                    )
+                    if saved:
+                        self.interval_capture_count += 1
+                        if self.interval_capture_count >= self.interval_capture_max:
+                            self.interval_capture_active = False
 
             if self.debug and timer.elapsed > 0:
                 fps = int(round(1 / timer.elapsed))
@@ -1300,36 +1400,52 @@ class ObjectCounter:
             self.logger.error(f'Error encoding MJPEG chunk: {e}')
             return None
 
-    def _save_dataset_image(self, frame: np.ndarray, boxes: list | np.ndarray = None,
-                            classes_to_save: dict = None) -> None:
+    def _save_dataset_image(
+            self,
+            frame: np.ndarray,
+            boxes: list | np.ndarray = None,
+            classes_to_save: dict = None,
+            target_dataset: Optional[str] = None,
+            split: str = 'inbox',
+    ) -> Optional[str]:
         """
-        Saves a raw image frame to the dataset path (without overlays or detection marks).
+        Saves a raw image frame to the dataset or storage path (without overlays or detection marks).
 
         Args:
             frame (numpy.ndarray): Original BGR frame to be saved.
             boxes: Detected objects used only for optional class filtering.
             classes_to_save: Optional class filter from dataset config.
+            target_dataset: Optional dataset name to save into storage/datasets/<name>/images/<split>.
+            split: Dataset split ('inbox', 'train', 'val').
 
         Returns:
-            None
+            Optional[str]: Saved file path or None on failure.
         """
         if frame is None:
-            return
+            return None
 
         try:
-            dataset_path = self.dataset.get('path')
-            if not dataset_path:
-                self.logger.warning('Dataset path is not configured')
-                return
+            from system.utils.paths import get_project_root, resolve_project_path
+            if target_dataset:
+                root_path = Path(get_project_root())
+                dataset_path = str(root_path / 'storage' / 'datasets' / target_dataset / 'images' / split)
+            else:
+                raw_path = self.dataset.get('path') if hasattr(self, 'dataset') and isinstance(self.dataset, dict) else None
+                if not raw_path:
+                    raw_path = f'storage/saved_images/{self.location}'
+                if hasattr(self, 'config_manager') and self.config_manager and hasattr(self.config_manager, 'resolve_path'):
+                    dataset_path = self.config_manager.resolve_path(raw_path)
+                else:
+                    dataset_path = str(resolve_project_path(raw_path))
 
             if classes_to_save and boxes is not None and len(boxes) > 0:
                 detected_classes = [int(result[-1]) for result in boxes]
                 if not any(str(cls) in classes_to_save for cls in detected_classes):
-                    return
+                    return None
 
             os.makedirs(dataset_path, exist_ok=True)
 
-            location_clean = re.sub('[^A-Za-z0-9-_]+', '', self.location)
+            location_clean = re.sub(r'[^A-Za-z0-9-_]+', '', self.location)
             create_time = int(time.time() * 1000)
 
             image_path = f'{dataset_path}/{location_clean}_{create_time}.jpg'
@@ -1341,6 +1457,10 @@ class ObjectCounter:
 
             if not success:
                 self.logger.error(f'Failed to save image to {image_path}')
+                return None
+
+            return image_path
 
         except Exception as e:
             self.logger.error(f'Error saving dataset image: {e}')
+            return None

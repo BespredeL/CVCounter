@@ -84,6 +84,12 @@
                     "Option Two",
                     "Option Three"
                 ]
+            },
+            "field_six": {
+                "name": "field_six",
+                "label": "Field Six Number",
+                "type": "number",
+                "default_value": 0
             }
         }
     },
@@ -150,6 +156,7 @@
             255
         ],
         "classes": {},
+        "custom_fields": {},
         "dataset_create": {
             "enable": false,
             "probability": 0.1,
@@ -230,6 +237,14 @@
                 255
             ],
             "classes": {},
+            "custom_fields": {
+                "batch_number": {
+                    "name": "batch_number",
+                    "label": "Batch / Lot Number",
+                    "type": "text",
+                    "default_value": "LOT-01"
+                }
+            },
             "dataset_create": {
                 "enable": true,
                 "probability": 0.05,

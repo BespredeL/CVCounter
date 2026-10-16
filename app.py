@@ -256,7 +256,7 @@ def register_template_helpers(app: Flask, context: dict):
             key (str): Counter key
 
         Returns:
-            str: Counter status
+            str: Counter status ('stopped', 'collection', 'paused', 'running')
         """
         if key not in thread_manager.threads:
             return 'stopped'
@@ -264,6 +264,8 @@ def register_template_helpers(app: Flask, context: dict):
             return 'stopped'
         if object_counters[key].is_pause():
             return 'paused'
+        if getattr(object_counters[key], 'preview_mode', False):
+            return 'collection'
         return 'running'
 
     @app.template_global()
@@ -281,6 +283,8 @@ def register_template_helpers(app: Flask, context: dict):
             return 'secondary'
         if key not in object_counters:
             return 'secondary'
+        if getattr(object_counters[key], 'preview_mode', False):
+            return 'info'
         if object_counters[key].is_pause():
             return 'warning'
         return 'success'

@@ -12,6 +12,7 @@ import json
 import logging
 import os
 from pathlib import Path
+import re
 from typing import Any, Dict, Optional, Union
 
 from system.utils.config_validator import validate_config
@@ -237,6 +238,36 @@ class ConfigManager:
                         pass
                     if isinstance(value, str) and value.lower() in ['true', 'false', 'on', 'off']:
                         value = value.lower() in ['true', 'on']
+
+                if keys and keys[-1] == 'socketio_transports':
+                    if isinstance(value, str):
+                        if ',' in value:
+                            value = [x.strip().strip("'\"") for x in value.split(',') if x.strip()]
+                        elif value.strip():
+                            value = [value.strip().strip("'\"")]
+                    if isinstance(value, (list, tuple)):
+                        value = [str(x) for x in value if str(x).strip()]
+                    elif isinstance(value, str) and value:
+                        value = [value]
+                    elif not value:
+                        value = ['polling', 'websocket']
+
+                if keys and keys[-1] == 'options' and 'custom_fields' in keys:
+                    if isinstance(value, str):
+                        try:
+                            parsed_opts = json.loads(value)
+                            if isinstance(parsed_opts, list):
+                                value = [str(x).strip() for x in parsed_opts if str(x).strip()]
+                            else:
+                                raise ValueError()
+                        except Exception:
+                            lines = [x.strip() for x in value.replace('\r\n', '\n').split('\n') if x.strip()]
+                            if len(lines) == 1 and ',' in lines[0]:
+                                lines = [x.strip() for x in lines[0].split(',') if x.strip()]
+                            value = lines
+                    elif isinstance(value, (list, tuple)):
+                        value = [str(x).strip() for x in value if str(x).strip()]
+
                 current_level[keys[-1]] = value
 
             # Apply structured classes
@@ -245,6 +276,26 @@ class ConfigManager:
                 for part in prefix_path:
                     target = target.setdefault(part, {})
                 target['classes'] = classes_dict
+
+            # Clean up non-select options and sync renamed field keys in custom_fields
+            def _clean_and_sync_custom_fields(cf_dict):
+                if not isinstance(cf_dict, dict):
+                    return
+                for fname, fcfg in list(cf_dict.items()):
+                    if isinstance(fcfg, dict):
+                        ftype = fcfg.get('type')
+                        if ftype != 'select' and 'options' in fcfg:
+                            fcfg.pop('options', None)
+                        new_name = fcfg.get('name')
+                        if new_name and new_name != fname and isinstance(new_name, str) and re.match(r'^[a-zA-Z0-9_]+$', new_name):
+                            cf_dict[new_name] = cf_dict.pop(fname)
+
+            if 'form' in current_config and isinstance(current_config['form'], dict):
+                _clean_and_sync_custom_fields(current_config['form'].get('custom_fields'))
+            if 'detections' in current_config and isinstance(current_config['detections'], dict):
+                for cam in current_config['detections'].values():
+                    if isinstance(cam, dict):
+                        _clean_and_sync_custom_fields(cam.get('custom_fields'))
 
             from system.utils.camera_schema import align_full_config
             current_config, _ = align_full_config(current_config)

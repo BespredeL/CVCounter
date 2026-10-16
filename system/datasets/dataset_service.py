@@ -19,6 +19,7 @@ from typing import Any, Optional
 import yaml
 import cv2
 from system.datasets.annotation_store import AnnotationStore
+from system.object_detection.metadata import sanitize_classes_list
 from system.datasets.exporters import (
     IMAGE_EXTENSIONS,
     export_split_labels,
@@ -147,7 +148,17 @@ class DatasetService:
             self.save_meta(name, meta)
             return meta
         with open(path, encoding='utf-8') as fh:
-            return json.load(fh)
+            data = json.load(fh)
+        if 'classes' in data and isinstance(data['classes'], list):
+            cleaned = sanitize_classes_list(data['classes'])
+            if cleaned != data['classes']:
+                data['classes'] = cleaned
+                try:
+                    with open(path, 'w', encoding='utf-8') as fh_out:
+                        json.dump(data, fh_out, ensure_ascii=False, indent=2)
+                except Exception:
+                    pass
+        return data
 
     def save_meta(self, name: str, meta: dict[str, Any]) -> None:
         """
@@ -160,6 +171,8 @@ class DatasetService:
         root = self.root(name)
         root.mkdir(parents=True, exist_ok=True)
         meta = dict(meta)
+        if 'classes' in meta and isinstance(meta['classes'], list):
+            meta['classes'] = sanitize_classes_list(meta['classes'])
         meta['name'] = self._safe_name(name)
         meta['updated_at'] = datetime.now(timezone.utc).isoformat()
         with open(self._meta_path(name), 'w', encoding='utf-8') as fh:
@@ -269,7 +282,7 @@ class DatasetService:
             'name': safe,
             'display_name': display_name or name,
             'task': task,
-            'classes': classes or ['object'],
+            'classes': sanitize_classes_list(classes or ['object']),
             'attributes': attributes or [],
             'keypoints_schema': [],
             'autolabel_detector': '',
@@ -306,7 +319,7 @@ class DatasetService:
         """
         meta = self.load_meta(name)
         if 'classes' in fields and fields['classes'] is not None:
-            meta['classes'] = [str(c).strip() for c in fields['classes'] if str(c).strip()]
+            meta['classes'] = sanitize_classes_list(fields['classes'])
         if 'task' in fields and fields['task']:
             if fields['task'] not in VALID_TASKS:
                 raise ValueError(f'Unsupported task: {fields["task"]}')

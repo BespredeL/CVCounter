@@ -258,6 +258,318 @@
         }
     });
 
+    /* --- Direct Camera Capture & Live Preview --- */
+    const directCamSelect = document.getElementById('direct-cam-select');
+    const directCamSplit = document.getElementById('direct-cam-split');
+    const btnDirectSnapshot = document.getElementById('btn-direct-cam-snapshot');
+    const btnTogglePreview = document.getElementById('btn-toggle-cam-preview');
+    const camPreviewContainer = document.getElementById('cam-preview-container');
+    const camPreviewImg = document.getElementById('cam-preview-img');
+    const camPreviewBtnText = document.getElementById('cam-preview-btn-text');
+    const directCamStatusText = document.getElementById('direct-cam-status-text');
+    const camPreviewTitle = document.getElementById('cam-preview-title');
+    const camPreviewLoading = document.getElementById('cam-preview-loading');
+    const camPreviewError = document.getElementById('cam-preview-error');
+    const camPreviewErrorMsg = document.getElementById('cam-preview-error-msg');
+    const btnCamPreviewRetry = document.getElementById('btn-cam-preview-retry');
+    const btnCloseCamPreview = document.getElementById('btn-close-cam-preview');
+
+    let isPreviewActive = false;
+
+    async function updatePreviewStream() {
+        if (!isPreviewActive || !camPreviewImg) return;
+        const loc = directCamSelect?.value;
+        if (!loc) {
+            if (camPreviewError) {
+                camPreviewError.classList.remove('d-none');
+                if (camPreviewErrorMsg) camPreviewErrorMsg.textContent = t('Please select a camera');
+            }
+            if (camPreviewLoading) camPreviewLoading.classList.add('d-none');
+            return;
+        }
+
+        const selectedOpt = directCamSelect.options[directCamSelect.selectedIndex];
+        if (camPreviewTitle) {
+            camPreviewTitle.textContent = selectedOpt ? selectedOpt.textContent.trim() : loc;
+        }
+
+        if (camPreviewLoading) camPreviewLoading.classList.remove('d-none');
+        if (camPreviewError) camPreviewError.classList.add('d-none');
+        camPreviewImg.style.display = 'none';
+        camPreviewImg.style.opacity = '0';
+
+        try {
+            const bootRes = await fetch(`/counter/${encodeURIComponent(loc)}/bootstrap`);
+            if (!bootRes.ok) {
+                const errData = await bootRes.json().catch(() => ({}));
+                throw new Error(errData.message || t('Failed to load camera stream'));
+            }
+        } catch (err) {
+            if (!isPreviewActive) return;
+            if (camPreviewLoading) camPreviewLoading.classList.add('d-none');
+            if (camPreviewError) {
+                camPreviewError.classList.remove('d-none');
+                if (camPreviewErrorMsg) camPreviewErrorMsg.textContent = err.message || t('Failed to load camera stream');
+            }
+            return;
+        }
+
+        if (!isPreviewActive) return;
+        camPreviewImg.src = `/counter_get_frames/${encodeURIComponent(loc)}?t=${Date.now()}`;
+    }
+
+    function setPreviewActive(active) {
+        isPreviewActive = !!active;
+        if (camPreviewContainer) camPreviewContainer.classList.toggle('d-none', !isPreviewActive);
+        if (btnTogglePreview) {
+            btnTogglePreview.classList.toggle('btn-outline-secondary', !isPreviewActive);
+            btnTogglePreview.classList.toggle('btn-secondary', isPreviewActive);
+        }
+        if (camPreviewBtnText) {
+            camPreviewBtnText.textContent = isPreviewActive ? t('Hide Preview') : t('Show Preview');
+        }
+        if (isPreviewActive) {
+            updatePreviewStream();
+        } else {
+            if (camPreviewImg) {
+                camPreviewImg.src = '';
+                camPreviewImg.style.display = 'none';
+                camPreviewImg.style.opacity = '0';
+            }
+            if (camPreviewLoading) camPreviewLoading.classList.add('d-none');
+            if (camPreviewError) camPreviewError.classList.add('d-none');
+        }
+    }
+
+    camPreviewImg?.addEventListener('load', () => {
+        if (camPreviewLoading) camPreviewLoading.classList.add('d-none');
+        if (camPreviewError) camPreviewError.classList.add('d-none');
+        camPreviewImg.style.display = 'block';
+        camPreviewImg.style.opacity = '1';
+    });
+
+    camPreviewImg?.addEventListener('error', () => {
+        if (!isPreviewActive) return;
+        if (camPreviewLoading) camPreviewLoading.classList.add('d-none');
+        if (camPreviewError) {
+            camPreviewError.classList.remove('d-none');
+            if (camPreviewErrorMsg) camPreviewErrorMsg.textContent = t('Failed to load camera stream');
+        }
+        camPreviewImg.style.display = 'none';
+        camPreviewImg.style.opacity = '0';
+    });
+
+    btnTogglePreview?.addEventListener('click', () => setPreviewActive(!isPreviewActive));
+    btnCloseCamPreview?.addEventListener('click', () => setPreviewActive(false));
+    btnCamPreviewRetry?.addEventListener('click', () => updatePreviewStream());
+
+    directCamSelect?.addEventListener('change', () => {
+        if (isPreviewActive) updatePreviewStream();
+    });
+
+    btnDirectSnapshot?.addEventListener('click', withBusy(btnDirectSnapshot, async () => {
+        const loc = directCamSelect?.value;
+        if (!loc) {
+            toast(t('Please select a camera'), 'warning');
+            return;
+        }
+        const split = directCamSplit?.value || 'inbox';
+        const data = await api(`/datasets/api/${name}/capture-camera`, {
+            method: 'POST',
+            json: { location: loc, split },
+        });
+        toast(`${t('Saved frame')}:\n${data.filename} (${split})`, 'success');
+        if (directCamStatusText) {
+            directCamStatusText.textContent = `${t('Last captured')}: ${new Date().toLocaleTimeString()}`;
+        }
+    }));
+
+    /* Periodic / Interval Capture */
+    const btnStartInterval = document.getElementById('btn-start-interval-cam');
+    const btnStopInterval = document.getElementById('btn-stop-interval-cam');
+    const intervalBadge = document.getElementById('interval-cam-badge');
+    const intervalCountEl = document.getElementById('interval-cam-count');
+    const intervalMaxEl = document.getElementById('interval-cam-max');
+    let intervalPollTimer = null;
+    let isIntervalRunning = false;
+
+    async function pollIntervalStatus(loc) {
+        if (!loc) return;
+        try {
+            const data = await api(`/datasets/api/${name}/interval-camera`, {
+                method: 'POST',
+                json: { action: 'status', location: loc },
+            });
+            const isRunning = Boolean(data.running ?? data.active);
+            const count = Number(data.captured ?? data.count ?? 0);
+            const maxFrames = data.max_frames ?? '-';
+
+            if (intervalCountEl) intervalCountEl.textContent = String(count);
+            if (intervalMaxEl) intervalMaxEl.textContent = String(maxFrames);
+
+            if (isRunning) {
+                isIntervalRunning = true;
+                btnStartInterval?.classList.add('d-none');
+                btnStopInterval?.classList.remove('d-none');
+                intervalBadge?.classList.remove('d-none');
+                if (!intervalPollTimer) {
+                    intervalPollTimer = setInterval(() => pollIntervalStatus(loc), 1000);
+                }
+            } else {
+                if (intervalPollTimer) {
+                    clearInterval(intervalPollTimer);
+                    intervalPollTimer = null;
+                }
+                btnStartInterval?.classList.remove('d-none');
+                btnStopInterval?.classList.add('d-none');
+                intervalBadge?.classList.add('d-none');
+                if (isIntervalRunning && count > 0) {
+                    isIntervalRunning = false;
+                    toast(`${t('Periodic capture completed')}: ${count} ${t('frames')}`, 'success');
+                }
+                isIntervalRunning = false;
+            }
+        } catch (_) {
+            // Keep state intact on transient network hiccup
+        }
+    }
+
+    btnStartInterval?.addEventListener('click', async () => {
+        const loc = directCamSelect?.value;
+        if (!loc) {
+            toast(t('Please select a camera'), 'warning');
+            return;
+        }
+        const interval = parseFloat(document.getElementById('interval-sec')?.value) || 3.0;
+        const max_frames = parseInt(document.getElementById('interval-max-frames')?.value) || 30;
+        const split = directCamSplit?.value || 'inbox';
+
+        try {
+            const data = await api(`/datasets/api/${name}/interval-camera`, {
+                method: 'POST',
+                json: { action: 'start', location: loc, interval, max_frames, split },
+            });
+            isIntervalRunning = true;
+            btnStartInterval.classList.add('d-none');
+            btnStopInterval?.classList.remove('d-none');
+            intervalBadge?.classList.remove('d-none');
+            if (intervalMaxEl) intervalMaxEl.textContent = String(max_frames);
+            if (intervalCountEl) intervalCountEl.textContent = String(data.captured || 0);
+
+            toast(t('Periodic capture started'), 'info');
+            if (intervalPollTimer) clearInterval(intervalPollTimer);
+            intervalPollTimer = setInterval(() => pollIntervalStatus(loc), 1000);
+        } catch (err) {
+            toast(err.message, 'danger');
+        }
+    });
+
+    btnStopInterval?.addEventListener('click', async () => {
+        const loc = directCamSelect?.value;
+        try {
+            const data = await api(`/datasets/api/${name}/interval-camera`, {
+                method: 'POST',
+                json: { action: 'stop', location: loc },
+            });
+            isIntervalRunning = false;
+            if (intervalPollTimer) {
+                clearInterval(intervalPollTimer);
+                intervalPollTimer = null;
+            }
+            btnStartInterval?.classList.remove('d-none');
+            btnStopInterval?.classList.add('d-none');
+            intervalBadge?.classList.add('d-none');
+            const count = data.captured ?? data.count ?? 0;
+            toast(`${t('Periodic capture stopped')}: ${count} ${t('frames')}`, 'secondary');
+        } catch (err) {
+            toast(err.message, 'danger');
+        }
+    });
+
+    directCamSelect?.addEventListener('change', () => {
+        const loc = directCamSelect?.value;
+        if (loc) {
+            if (intervalPollTimer) {
+                clearInterval(intervalPollTimer);
+                intervalPollTimer = null;
+            }
+            pollIntervalStatus(loc);
+        }
+    });
+
+    // Initial check of interval status for current camera
+    const initialCamLoc = directCamSelect?.value;
+    if (initialCamLoc) {
+        pollIntervalStatus(initialCamLoc);
+    }
+
+    /* --- Base Model Download Handler --- */
+    function updateDownloadButtonState() {
+        const select = document.getElementById('train-base-model');
+        const btn = document.getElementById('btn-download-base-model');
+        const label = document.getElementById('btn-download-base-label');
+        if (!select || !btn) return;
+        const selectedOpt = select.selectedOptions ? select.selectedOptions[0] : null;
+        const isInstalled = selectedOpt?.dataset?.installed === 'true';
+        if (isInstalled) {
+            if (label) label.textContent = t('Downloaded ✓');
+            btn.classList.add('text-success');
+            btn.classList.remove('text-primary');
+            btn.title = t('Model is already downloaded and ready to use');
+        } else {
+            if (label) label.textContent = t('Download model');
+            btn.classList.remove('text-success');
+            btn.classList.add('text-primary');
+            btn.title = t('Download model to server');
+        }
+    }
+
+    const selectBaseModel = document.getElementById('train-base-model');
+    selectBaseModel?.addEventListener('change', updateDownloadButtonState);
+    updateDownloadButtonState();
+
+    const btnDownloadBase = document.getElementById('btn-download-base-model');
+    btnDownloadBase?.addEventListener('click', async () => {
+        const select = document.getElementById('train-base-model');
+        const modelName = select?.value;
+        if (!modelName) {
+            toast(t('Please select a base model'), 'warning');
+            return;
+        }
+        const box = document.getElementById('base-model-download-box');
+        const bar = document.getElementById('base-model-download-bar');
+        const pctEl = document.getElementById('base-model-download-pct');
+        const statusEl = document.getElementById('base-model-download-status');
+
+        box?.classList.remove('d-none');
+        if (bar) {
+            bar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-info';
+            bar.style.width = '0%';
+        }
+        if (pctEl) pctEl.textContent = '0%';
+        if (statusEl) statusEl.textContent = `${t('Requesting')} ${modelName}...`;
+        setBusy(btnDownloadBase, true);
+
+        try {
+            const data = await api('/datasets/api/models/base/download', {
+                method: 'POST',
+                json: { model_name: modelName },
+            });
+            if (data.status === 'ok') {
+                if (statusEl) statusEl.textContent = data.message || `${t('Downloading')} ${modelName}...`;
+            }
+        } catch (err) {
+            if (statusEl) statusEl.textContent = err.message;
+            if (bar) {
+                bar.classList.remove('progress-bar-animated', 'bg-info');
+                bar.classList.add('bg-danger');
+            }
+            toast(err.message, 'danger');
+            setBusy(btnDownloadBase, false);
+        }
+    });
+
+
     async function moveSelected(split) {
         const images = selectedImages();
         if (!images.length) {
@@ -323,7 +635,22 @@
         if (detector) params.set('detector', detector);
         const qs = params.toString();
         const data = await api(`/datasets/api/detector-classes${qs ? `?${qs}` : ''}`);
-        const next = (data.classes || []).join(', ');
+        const rawList = Array.isArray(data.classes) ? data.classes : [];
+        const cleanClasses = rawList.map((c) => {
+            if (typeof c === 'object' && c !== null) {
+                return (c.name || c.label || c.title || '').trim();
+            }
+            const s = String(c || '').trim();
+            if (s.startsWith('{') && (s.includes('name') || s.includes('label'))) {
+                try {
+                    const jsonStr = s.replace(/'/g, '"').replace(/\bTrue\b/g, 'true').replace(/\bFalse\b/g, 'false').replace(/\bNone\b/g, 'null');
+                    const obj = JSON.parse(jsonStr);
+                    if (obj && (obj.name || obj.label)) return String(obj.name || obj.label).trim();
+                } catch (_) {}
+            }
+            return s;
+        }).filter(Boolean);
+        const next = cleanClasses.join(', ');
         if (!next) {
             throw new Error(t('No classes found for this model'));
         }
@@ -369,10 +696,28 @@
             } catch (_) {
                 throw new Error('Invalid keypoints JSON');
             }
-            const classes = document.getElementById('meta-classes').value
-                .split(',')
-                .map((s) => s.trim())
-                .filter(Boolean);
+            const rawClassesStr = (document.getElementById('meta-classes')?.value || '').trim();
+            let classes = [];
+            if (rawClassesStr.includes('{') && (rawClassesStr.includes('name') || rawClassesStr.includes('label'))) {
+                try {
+                    const jsonStr = '[' + rawClassesStr.replace(/'/g, '"').replace(/\bTrue\b/g, 'true').replace(/\bFalse\b/g, 'false').replace(/\bNone\b/g, 'null') + ']';
+                    const parsed = JSON.parse(jsonStr);
+                    if (Array.isArray(parsed)) {
+                        classes = parsed.map((item) => {
+                            if (typeof item === 'object' && item !== null) {
+                                return String(item.name || item.label || item.title || '').trim();
+                            }
+                            return String(item || '').trim();
+                        }).filter(Boolean);
+                    }
+                } catch (_) {}
+            }
+            if (!classes.length) {
+                classes = rawClassesStr
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+            }
             await api(`/datasets/api/${name}/meta`, {
                 method: 'POST',
                 json: {
@@ -613,8 +958,8 @@
         },
     ));
 
-    if (window.io && window.SOCKETIO_OPTIONS) {
-        const socket = window.io(window.SOCKETIO_OPTIONS);
+    const socket = window.socket || (window.io && window.SOCKETIO_OPTIONS ? window.io(window.SOCKETIO_OPTIONS) : null);
+    if (socket) {
         socket.on('training_progress', (payload) => {
             if (typeof payload === 'string') {
                 appendLog(payload);
@@ -641,6 +986,75 @@
             if (payload.event === 'epoch_end') {
                 updateTrainProgress(payload.epoch, payload.epochs);
                 setTrainStatus(`epoch ${payload.epoch}/${payload.epochs}`, 'running');
+            }
+        });
+
+        socket.on('base_model_download', (payload) => {
+            const box = document.getElementById('base-model-download-box');
+            const statusEl = document.getElementById('base-model-download-status');
+            const pctEl = document.getElementById('base-model-download-pct');
+            const bar = document.getElementById('base-model-download-bar');
+            const btn = document.getElementById('btn-download-base-model');
+            const modelName = payload.model_name || payload.model;
+
+            if (!box) return;
+            box.classList.remove('d-none');
+
+            const status = (payload.status || '').toLowerCase();
+            const rawProgress = payload.progress !== undefined ? payload.progress : (payload.percent || 0);
+
+            if (status === 'starting') {
+                setBusy(btn, true);
+                if (pctEl) pctEl.textContent = '0%';
+                if (bar) {
+                    bar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-info';
+                    bar.style.width = '0%';
+                }
+                if (statusEl) statusEl.textContent = payload.message || `${t('Starting download of')} ${modelName}...`;
+            } else if (status === 'downloading') {
+                setBusy(btn, true);
+                const pct = Math.min(100, Math.max(0, Math.round(rawProgress)));
+                if (pctEl) pctEl.textContent = `${pct}%`;
+                if (bar) {
+                    bar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-info';
+                    bar.style.width = `${pct}%`;
+                }
+                if (statusEl) statusEl.textContent = payload.message || `${t('Downloading')} ${modelName}... (${pct}%)`;
+            } else if (status === 'done' || status === 'completed' || status === 'ready') {
+                if (pctEl) pctEl.textContent = '100%';
+                if (bar) {
+                    bar.style.width = '100%';
+                    bar.classList.remove('progress-bar-animated', 'bg-info');
+                    bar.classList.add('bg-success');
+                }
+                if (statusEl) statusEl.textContent = payload.message || t('Download complete');
+                setBusy(btn, false);
+                toast(payload.message || t('Model downloaded successfully!'), 'success');
+
+                const select = document.getElementById('train-base-model');
+                if (select && modelName) {
+                    const opt = select.querySelector(`option[value="${modelName}"]`);
+                    if (opt) {
+                        opt.dataset.installed = 'true';
+                        if (!opt.textContent.includes('✓')) {
+                            opt.textContent = opt.textContent.replace(/\[⬇.*?\]/, '').trim() + ' ✓';
+                        }
+                    }
+                    if (typeof updateDownloadButtonState === 'function') {
+                        updateDownloadButtonState();
+                    }
+                }
+                setTimeout(() => {
+                    box.classList.add('d-none');
+                }, 4000);
+            } else if (status === 'error') {
+                if (statusEl) statusEl.textContent = payload.message || t('Download failed');
+                if (bar) {
+                    bar.classList.remove('bg-info', 'progress-bar-animated');
+                    bar.classList.add('bg-danger');
+                }
+                setBusy(btn, false);
+                toast(payload.message || t('Failed to download model'), 'danger');
             }
         });
     }

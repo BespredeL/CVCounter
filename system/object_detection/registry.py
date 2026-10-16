@@ -223,9 +223,10 @@ def create_detector(model_type: str) -> BaseObjectDetectionService:
     return factory()
 
 
-def load_detector(model_type: str, weights: str, **kwargs) -> BaseObjectDetectionService:
+def load_detector(model_type: str, weights: str | None, **kwargs) -> BaseObjectDetectionService | None:
     """
     Load a detector instance, automatically resolving 'auto' model_type if needed.
+    Returns None if weights is empty or model_type is 'none' / 'preview'.
 
     Args:
         model_type (str): The model type to load (or 'auto').
@@ -233,8 +234,11 @@ def load_detector(model_type: str, weights: str, **kwargs) -> BaseObjectDetectio
         **kwargs: Additional keyword arguments.
 
     Returns:
-        BaseObjectDetectionService: The loaded detector instance.
+        BaseObjectDetectionService | None: The loaded detector instance or None.
     """
+    if not weights or str(model_type).lower() in ('none', 'preview', 'passthrough'):
+        return None
+
     from system.utils.utils import pr_color
 
     ext = Path(weights).suffix.lower() if weights else ''

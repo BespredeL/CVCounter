@@ -6,9 +6,12 @@
 # Updated: 28.07.2026
 # Website: https://bespredel.name
 
+from __future__ import annotations
+
 import time
 from functools import wraps
 from threading import Thread
+from typing import Any
 
 from flask import Blueprint, Response, abort, current_app, jsonify, redirect, render_template, request, send_file, \
     stream_with_context, url_for
@@ -95,7 +98,7 @@ def object_detector_init(location: str):
             socketio=socketio,
             video_path=detector_config['video_path'],
             db_manager=db_manager,
-            weights=detector_config['weights_path'],
+            weights=detector_config.get('weights_path'),
             counting_areas=detector_config.get('counting_areas'),
             counting_area=detector_config.get('counting_area'),
             counting_area_color=tuple(
@@ -265,27 +268,49 @@ def _init_counter_for_location(location: str) -> ObjectCounter:
     return counters[location]
 
 
-def process_custom_fields(form_config: dict, current_count: dict) -> list:
+def process_custom_fields(form_config: dict, current_count: dict, detection_config: dict = None) -> list:
     """
-    Process custom fields for a specific location.
+    Process custom fields for a specific location, combining global fields
+    from form_config with detection-specific fields.
     
     Args:
-        form_config (dict): The form configuration
+        form_config (dict): The global form configuration
         current_count (dict): The current count data
+        detection_config (dict, optional): The detection configuration for this specific camera
     
     Returns:
         list: List of processed custom fields
     """
-    custom_fields = []
-    for field in form_config.get('custom_fields', {}).values():
-        field_copy = field.copy()
-        field_copy['value'] = (
-            current_count.get('custom_fields', {}).get(field['name'], "")
-            if current_count and current_count.get('custom_fields')
-            else field.get('default_value', form_config.get('default_value', ""))
-        )
-        custom_fields.append(field_copy)
-    return custom_fields
+    merged_fields: dict[str, dict] = {}
+
+    # 1. Global fields from form.custom_fields
+    for field in (form_config.get('custom_fields') or {}).values():
+        if isinstance(field, dict) and field.get('name'):
+            field_copy = field.copy()
+            field_copy['is_global'] = True
+            merged_fields[field['name']] = field_copy
+
+    # 2. Detection-specific fields from detections.<location>.custom_fields
+    if detection_config and isinstance(detection_config.get('custom_fields'), dict):
+        for field in detection_config['custom_fields'].values():
+            if isinstance(field, dict) and field.get('name'):
+                field_copy = field.copy()
+                field_copy['is_detection_specific'] = True
+                merged_fields[field['name']] = field_copy
+
+    # 3. Populate current session values or defaults
+    result = []
+    current_values = current_count.get('custom_fields', {}) if (current_count and isinstance(current_count.get('custom_fields'), dict)) else {}
+
+    for field in merged_fields.values():
+        field_name = field['name']
+        if field_name in current_values:
+            field['value'] = current_values[field_name]
+        else:
+            field['value'] = field.get('default_value', form_config.get('default_value', ""))
+        result.append(field)
+
+    return result
 
 
 def _live_counter_counts(location: str) -> dict:
@@ -360,11 +385,16 @@ def counter_video(location: str = None):
 
     _ensure_counter_running(location)
 
-    # Get form config
+    # Get form and detection config
     form_config = config.get('form', {})
+    detection_config = config.get(f'detections.{location}') or config.get('detections', {}).get(location, {})
 
-    # Process custom fields
-    custom_fields = process_custom_fields(form_config, object_counters[location].get_current_count())
+    # Process custom fields (merged global and detection-specific)
+    custom_fields = process_custom_fields(
+        form_config,
+        object_counters[location].get_current_count(),
+        detection_config=detection_config
+    )
 
     return render_template(
         'counters/show_video.html',
@@ -379,6 +409,7 @@ def counter_video(location: str = None):
 
 
 @counters_bp.route('/counter/<string:location>/counting_area')
+@login_required
 def counting_area_edit(location: str = None) -> str:
     """
     Visual editor for the counting zone polygon.
@@ -403,6 +434,7 @@ def counting_area_edit(location: str = None) -> str:
 
 
 @counters_bp.route('/counter/<string:location>/counting_area/data')
+@login_required
 def counting_area_data(location: str = None):
     """
     Return current counting area configuration as JSON.
@@ -447,6 +479,7 @@ def counter_preview_image(location: str = None) -> Response:
 
 
 @counters_bp.route('/counter/<string:location>/settings/form')
+@login_required
 def counter_settings_form(location: str = None) -> str:
     """
     Return HTML form fields for one detection (dashboard settings modal).
@@ -523,6 +556,7 @@ def counter_settings_save(location: str = None):
 
 
 @counters_bp.route('/counter/<string:location>/counting_area/snapshot')
+@login_required
 def counting_area_snapshot(location: str = None) -> Response:
     """
     Return a single raw JPEG frame for the zone editor background.
@@ -654,11 +688,16 @@ def counter_text(location: str = None) -> str:
 
     _ensure_counter_running(location)
 
-    # Get form config
+    # Get form and detection config
     form_config = config.get('form', {})
+    detection_config = config.get(f'detections.{location}') or config.get('detections', {}).get(location, {})
 
-    # Process custom fields
-    custom_fields = process_custom_fields(form_config, object_counters[location].get_current_count())
+    # Process custom fields (merged global and detection-specific)
+    custom_fields = process_custom_fields(
+        form_config,
+        object_counters[location].get_current_count(),
+        detection_config=detection_config
+    )
 
     return render_template(
         'counters/show_text.html',
@@ -880,25 +919,119 @@ def reset_count_current(location: str = None) -> dict:
 
 
 @counters_bp.route('/save_capture/<string:location>', methods=['GET', 'POST'])
-@require_location
-def save_capture(location: str = None) -> dict[str, str] | Response:
+def save_capture(location: str = None) -> dict[str, Any] | Response:
     """
-    Save a capture from the current video frame.
+    Save a capture from the current video frame (optionally directly to a dataset).
     
     Args:
         location (str): The identifier for the detection location
     
     Returns:
-        dict[str, str] | Response: Status response or redirect
+        dict[str, Any] | Response: Status response with saved path or redirect
     """
+    import cv2
+    from pathlib import Path
+    import re
+    from system.utils.paths import get_project_root
+
+    location = str(location).strip() if location else ""
+    _require_detection_location(location)
+
+    data = (request.get_json(silent=True) or request.values) if request else {}
+    target_dataset = (data.get('dataset') or '').strip() or None
+    split = (data.get('split') or 'inbox').strip()
+
     context = get_app_context()
     object_counters = context['object_counters']
 
-    object_counters[location].save_capture()
+    saved_path = None
+    if location in object_counters:
+        saved_path = object_counters[location].save_capture(target_dataset=target_dataset, split=split)
+    else:
+        # Fallback to direct snapshot if counter is not running
+        frame = _get_editor_snapshot_frame(location)
+        if frame is not None:
+            root = Path(get_project_root())
+            if target_dataset:
+                dest_dir = root / 'storage' / 'datasets' / target_dataset / 'images' / split
+            else:
+                dest_dir = root / 'storage' / 'saved_images' / location
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            clean_loc = re.sub(r'[^A-Za-z0-9-_]+', '', location)
+            ts = int(time.time() * 1000)
+            target_file = dest_dir / f'{clean_loc}_{ts}.jpg'
+            cv2.imwrite(str(target_file), frame, [cv2.IMWRITE_JPEG_QUALITY, 90])
+            saved_path = str(target_file)
 
-    if is_ajax():
-        return {'status': 'saved'}
+    if not saved_path:
+        if is_ajax() or request.is_json:
+            return jsonify({'status': 'error', 'message': translate('Failed to capture frame')}), 500
+        abort(500, translate('Failed to capture frame'))
+
+    if is_ajax() or request.is_json:
+        return jsonify({
+            'status': 'saved',
+            'location': location,
+            'dataset': target_dataset,
+            'split': split,
+            'path': saved_path,
+            'filename': Path(saved_path).name,
+        })
     return redirect(url_for('main.index'))
+
+
+@counters_bp.route('/counter/<string:location>/capture/interval', methods=['GET', 'POST'])
+def counter_interval_capture(location: str = None):
+    """
+    Control or check periodic frame capture for a camera.
+    """
+    location = str(location).strip() if location else ""
+    _require_detection_location(location)
+
+    context = get_app_context()
+    object_counters = context['object_counters']
+
+    if request.method == 'POST':
+        data = request.get_json(silent=True) or request.values or {}
+        action = (data.get('action') or 'start').strip().lower()
+
+        _ensure_counter_running(location)
+        counter = object_counters.get(location)
+        if not counter:
+            return jsonify({'status': 'error', 'message': 'Counter could not be started'}), 500
+
+        if action == 'stop':
+            st = counter.stop_interval_capture()
+            return jsonify({'status': 'ok', 'action': 'stopped', 'running': False, **st})
+        elif action == 'status':
+            st = counter.get_interval_capture_status()
+            return jsonify({'status': 'ok', 'action': 'status', 'running': bool(st.get('active')), **st})
+        else:
+            interval_sec = float(data.get('interval') or 2.0)
+            max_frames = int(data.get('max_frames') or 30)
+            target_dataset = (data.get('dataset') or '').strip() or None
+            split = (data.get('split') or 'inbox').strip()
+            st = counter.start_interval_capture(
+                interval_sec=interval_sec,
+                max_frames=max_frames,
+                target_dataset=target_dataset,
+                split=split,
+            )
+            return jsonify({'status': 'ok', 'action': 'started', **st})
+
+    # GET request
+    counter = object_counters.get(location)
+    if not counter:
+        return jsonify({
+            'status': 'ok',
+            'active': False,
+            'count': 0,
+            'max_frames': 0,
+            'interval': 0,
+            'dataset': None,
+            'split': 'inbox',
+        })
+    return jsonify({'status': 'ok', **counter.get_interval_capture_status()})
 
 
 @counters_bp.route('/counter/<string:location>/bootstrap')
@@ -926,8 +1059,12 @@ def counter_bootstrap(location: str = None):
             'message': translate('Lost connection to camera!'),
         }), 500
 
+    context = get_app_context()
+    object_counters = context.get('object_counters', {})
+    counter = object_counters.get(location)
+    is_coll = getattr(counter, 'preview_mode', False) if counter else False
     return jsonify({
-        'status': 'started',
+        'status': 'collection' if is_coll else 'started',
         'location': location,
         'preview_ts': result['preview_ts'],
     })
@@ -952,7 +1089,8 @@ def start_count(location: str = None) -> dict[str, str] | Response:
     get_telemetry().track('counter_started', {'location': location})
 
     if is_ajax():
-        return jsonify({'status': 'started'})
+        is_coll = getattr(object_counters[location], 'preview_mode', False)
+        return jsonify({'status': 'collection' if is_coll else 'started'})
     return redirect(url_for('main.index'))
 
 

@@ -13,7 +13,7 @@ const CounterDashboard = {
      *
      * @type {array}
      */
-    STATUS_CLASSES: ["stopped", "running", "paused", "error"],
+    STATUS_CLASSES: ["stopped", "running", "paused", "error", "collection"],
 
     /**
      * Get the status label
@@ -25,6 +25,8 @@ const CounterDashboard = {
         switch (status) {
             case "running":
                 return window.trans("Counter running");
+            case "collection":
+                return window.trans("Data collection (no model)");
             case "paused":
                 return window.trans("Counter paused");
             case "error":
@@ -53,7 +55,7 @@ const CounterDashboard = {
      * @returns {string} The toggle URL
      */
     toggleUrl(card, status) {
-        if (status === "running") {
+        if (status === "running" || status === "collection") {
             return card.dataset.pauseUrl;
         }
 
@@ -127,6 +129,11 @@ const CounterDashboard = {
             dot.setAttribute("title", label);
         }
 
+        const previewTag = card.querySelector("[data-role=preview-mode-tag]");
+        if (previewTag) {
+            previewTag.classList.toggle("d-none", status !== "collection");
+        }
+
         const toggle = card.querySelector("[data-role=toggle]");
         const play = toggle?.querySelector(".icon-play");
         const pause = toggle?.querySelector(".icon-pause");
@@ -136,7 +143,7 @@ const CounterDashboard = {
             stopBtn.disabled = status === "stopped";
         }
 
-        if (status === "running") {
+        if (status === "running" || status === "collection") {
             play?.classList.add("d-none");
             pause?.classList.remove("d-none");
             toggle?.setAttribute("title", window.trans("Pause counting"));
@@ -166,7 +173,7 @@ const CounterDashboard = {
             return;
         }
 
-        const counts = {running: 0, paused: 0, stopped: 0, error: 0};
+        const counts = {running: 0, paused: 0, stopped: 0, error: 0, collection: 0};
         document.querySelectorAll(".counter-card").forEach((el) => {
             const status = el.getAttribute("data-status") || "stopped";
             if (counts[status] !== undefined) {
@@ -174,10 +181,11 @@ const CounterDashboard = {
             }
         });
 
-        const total = counts.running + counts.paused + counts.stopped + counts.error;
+        const activeRunning = counts.running + counts.collection;
+        const total = activeRunning + counts.paused + counts.stopped + counts.error;
         stats.textContent = window.trans("Counters stats", {
             total,
-            running: counts.running,
+            running: activeRunning,
             paused: counts.paused,
         });
     },
@@ -196,7 +204,9 @@ const CounterDashboard = {
             const status = card.getAttribute("data-status") || "stopped";
             const searchText = (card.dataset.searchText || "").toString();
             const matchesQuery = !query || searchText.indexOf(query) !== -1;
-            const matchesStatus = statusFilter === "all" || status === statusFilter;
+            const matchesStatus = statusFilter === "all"
+                || status === statusFilter
+                || (statusFilter === "running" && status === "collection");
             const show = matchesQuery && matchesStatus;
 
             card.classList.toggle("counter-card--hidden", !show);
@@ -221,6 +231,11 @@ const CounterDashboard = {
         const status = data?.status;
         if (status === "started") {
             this.applyStatus(location, "running");
+            if (data.preview_ts) {
+                this.refreshPreview(card, data.preview_ts);
+            }
+        } else if (status === "collection") {
+            this.applyStatus(location, "collection");
             if (data.preview_ts) {
                 this.refreshPreview(card, data.preview_ts);
             }
@@ -432,6 +447,9 @@ const CounterDashboard = {
             switch (status) {
                 case "started":
                     showToast(window.trans("Counting has started!"), "success");
+                    break;
+                case "collection":
+                    showToast(window.trans("Data collection mode started"), "info");
                     break;
                 case "stopped":
                     showToast(window.trans("Counting has stopped!"), "secondary");

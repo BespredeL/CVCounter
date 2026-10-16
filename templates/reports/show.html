@@ -400,11 +400,11 @@
                                 <span>{{ trans('Secondary information') }}</span>
                             </h5>
                             <div class="detail-list">
-                                {% for field in config.get('form.custom_fields', {}).values() %}
-                                    {% if custom_fields.get(field.name) is not none %}
+                                {% for key, val in custom_fields.items() %}
+                                    {% if val is not none %}
                                         <div class="detail-list__row">
-                                            <div class="detail-list__label">{{ trans(field.label) }}</div>
-                                            <div class="detail-list__value">{{ custom_fields[field.name] | striptags }}</div>
+                                            <div class="detail-list__label">{{ trans(field_labels.get(key, key)|string) }}</div>
+                                            <div class="detail-list__value">{{ val | striptags }}</div>
                                         </div>
                                     {% endif %}
                                 {% endfor %}

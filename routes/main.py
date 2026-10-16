@@ -36,12 +36,21 @@ def index() -> str:
     context = get_app_context()
     locations_dict = context['locations_dict']
     thread_manager = context['thread_manager']
+    detections_cfg = (context.get('config') or {}).get('detections') or {}
+    has_detections = bool(detections_cfg)
+    has_valid_weights = any(
+        (cfg.get('detector') or {}).get('weights_path')
+        and os.path.isfile(cfg.get('detector', {}).get('weights_path'))
+        for cfg in detections_cfg.values()
+    )
 
     return render_template(
         'index.html',
         object_counters=locations_dict,
         running_counters=thread_manager.threads,
         counter_previews={loc: preview_exists(loc) for loc in locations_dict},
+        has_detections=has_detections,
+        has_valid_weights=has_valid_weights,
     )
 
 

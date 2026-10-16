@@ -25,6 +25,7 @@ It is perfectly suited for **counting products, people, vehicle tracking, retail
 - 📚 Datasets: import, annotate, train YOLO, and apply weights to a counter
 - ⚡ Optimized for real-time performance
 - 📊 Analytics-ready reports with per-class totals, saved media playback, and A4 print layout
+- 📝 Custom Form Fields Management: Create and delete form fields with 1 click in web Settings without manual JSON editing, both globally and per-detector (types: text, number, multiline textarea, date, date & time, dropdown select)
 - 🖨️ Clean A4 print and PDF export with metadata header and signature block
 - 📖 Interactive help center with live search
 - 🚀 Automatic 1-click installer with hardware GPU detection (NVIDIA CUDA, AMD DirectML, Intel OpenVINO)
@@ -404,15 +405,23 @@ class ObjectDetectionMy(BaseObjectDetectionService):
         defect_show: true,
         // show correction form
         correct_show: true,
-        // custom fields configuration
+        // custom fields configuration (global for all counters)
+        // can be added and deleted with 1 click in Settings UI
+        // supported types: text, number, textarea, date, datetime-local, select
         custom_fields: {
             field_one: {
                 // field name
                 name: "field_one",
-                // field signature
+                // field label
                 label: "Field One",
-                // field type
+                // field type: text | number | textarea | date | datetime-local | select
                 type: "text",
+            },
+            field_two: {
+                name: "field_two",
+                label: "Field Two",
+                type: "select",
+                options: ["Option 1", "Option 2"],
             },
         },
     },
@@ -603,6 +612,14 @@ class ObjectDetectionMy(BaseObjectDetectionService):
             ],
             // classes to detect and labels for the per-class breakdown
             classes: {},
+            // camera-specific custom fields (extend or override global form custom fields)
+            custom_fields: {
+                batch_number: {
+                    name: "batch_number",
+                    label: "Batch Number",
+                    type: "number",
+                },
+            },
             dataset_create: {
                 // automatic dataset creation
                 enable: true,

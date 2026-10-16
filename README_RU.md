@@ -23,6 +23,7 @@ CVCounter - это гибкая и масштабируемая система �
 - 📚 Датасеты: импорт, разметка, обучение YOLO и применение весов к счётчику
 - ⚡ Оптимизация под real-time
 - 📊 Подготовка данных для аналитики и отчётов с разбивкой по классам, сохранёнными медиа и версией для печати A4
+- 📝 Управление пользовательскими полями форм: создание и удаление полей в 1 клик на странице настроек (глобально и индивидуально для камер; типы: text, number, textarea, date, datetime-local, select)
 - 🖨️ Экспорт и печать отчётов (A4 Print Layout) с официальной шапкой и блоком подписей
 - 📖 Интерактивный центр справки с живым поиском
 - 🚀 Автоматическая установка в 1 клик с автоопределением GPU (NVIDIA CUDA, AMD DirectML, Intel OpenVINO)
@@ -400,15 +401,23 @@ class ObjectDetectionMy(BaseObjectDetectionService):
         defect_show: true,
         // показать форму коррекции
         correct_show: true,
-        // конфигурация пользовательских полей
+        // конфигурация пользовательских полей (общие для всех счётчиков)
+        // можно добавлять и удалять в 1 клик на странице Настроек
+        // поддерживаемые типы: text, number, textarea, date, datetime-local, select
         custom_fields: {
             field_one: {
                 // название поля
                 name: "field_one",
                 // подпись поля
                 label: "Field One",
-                // тип поля
+                // тип поля: text | number | textarea | date | datetime-local | select
                 type: "text",
+            },
+            field_two: {
+                name: "field_two",
+                label: "Field Two",
+                type: "select",
+                options: ["Option 1", "Option 2"],
             },
         },
     },
@@ -599,6 +608,14 @@ class ObjectDetectionMy(BaseObjectDetectionService):
             ],
             // классы (объекты) для обнаружения и подписи в разбивке
             classes: {},
+            // пользовательские поля формы, специфичные для этой камеры (дополняют или переопределяют общие)
+            custom_fields: {
+                batch_number: {
+                    name: "batch_number",
+                    label: "Batch Number",
+                    type: "number",
+                },
+            },
             // автоматическое создание набора данных
             dataset_create: {
                 // включить создание набора данных

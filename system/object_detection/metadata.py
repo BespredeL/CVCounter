@@ -17,12 +17,90 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 
+def extract_class_name(item: Any) -> str:
+    """
+    Extract a single class name string from various representations:
+    - dict: {'name': 'car', 'enabled': True} -> 'car'
+    - stringified dict: "{'name': 'car', 'enabled': True}" -> 'car'
+    - plain string or primitive: 'car' -> 'car'
+    """
+    if item is None:
+        return ''
+    if isinstance(item, dict):
+        return str(item.get('name') or item.get('label') or item.get('title') or '').strip()
+    s = str(item).strip()
+    if s.startswith('{') and ('name' in s or 'label' in s):
+        try:
+            parsed = ast.literal_eval(s)
+            if isinstance(parsed, dict):
+                return str(parsed.get('name') or parsed.get('label') or parsed.get('title') or '').strip()
+        except Exception:
+            pass
+        try:
+            parsed = json.loads(s)
+            if isinstance(parsed, dict):
+                return str(parsed.get('name') or parsed.get('label') or parsed.get('title') or '').strip()
+        except Exception:
+            pass
+    return s
+
+
+def sanitize_classes_list(raw_list: Any) -> list[str]:
+    """
+    Clean and deduplicate a list of class names, recovering from accidental stringified
+    dictionaries or comma-split fragments like ["{'name': 'car'", "'enabled': True}"].
+    """
+    if not raw_list:
+        return []
+    if isinstance(raw_list, str):
+        raw_list = [c.strip() for c in raw_list.replace(';', ',').split(',') if c.strip()]
+    if not isinstance(raw_list, (list, tuple)):
+        return []
+
+    # Check if fragments of stringified dicts exist (e.g. from comma-splitting "{'name': 'car', 'enabled': True}")
+    has_fragments = any(
+        isinstance(item, str) and (('name' in item and ':' in item) or ('enabled' in item and ':' in item))
+        for item in raw_list
+    )
+    if has_fragments:
+        joined = ', '.join(str(x) for x in raw_list)
+        try:
+            parsed = ast.literal_eval(f"[{joined}]")
+            if isinstance(parsed, list):
+                extracted = [extract_class_name(x) for x in parsed]
+                extracted = [c for c in extracted if c]
+                if extracted:
+                    seen: set[str] = set()
+                    return [c for c in extracted if not (c in seen or seen.add(c))]
+        except Exception:
+            pass
+        try:
+            parsed = json.loads(f"[{joined}]")
+            if isinstance(parsed, list):
+                extracted = [extract_class_name(x) for x in parsed]
+                extracted = [c for c in extracted if c]
+                if extracted:
+                    seen = set()
+                    return [c for c in extracted if not (c in seen or seen.add(c))]
+        except Exception:
+            pass
+
+    result: list[str] = []
+    seen_set: set[str] = set()
+    for item in raw_list:
+        name = extract_class_name(item)
+        if name and name not in seen_set:
+            seen_set.add(name)
+            result.append(name)
+    return result
+
+
 def parse_names_dict(raw: Any) -> Dict[int, str]:
     """
     Parse model class names from various representations into {class_id: name}.
     Supports:
-        - dict: {0: 'person'} or {'0': 'person'}
-        - list: ['person', 'car']
+        - dict: {0: 'person'} or {'0': {'name': 'person', 'enabled': True}}
+        - list: ['person', 'car'] or [{'name': 'person'}, ...]
         - string: JSON, Python literal dict, or newline-separated text.
     """
     if raw is None:
@@ -32,13 +110,20 @@ def parse_names_dict(raw: Any) -> Dict[int, str]:
         result = {}
         for k, v in raw.items():
             try:
-                result[int(k)] = str(v)
+                name = extract_class_name(v)
+                if name:
+                    result[int(k)] = name
             except (ValueError, TypeError):
                 continue
         return result
 
     if isinstance(raw, (list, tuple)):
-        return {i: str(v) for i, v in enumerate(raw)}
+        result = {}
+        for i, v in enumerate(raw):
+            name = extract_class_name(v)
+            if name:
+                result[i] = name
+        return result
 
     if isinstance(raw, str):
         text = raw.strip()

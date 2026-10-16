@@ -12,7 +12,6 @@
 config/config.json
 config/ultralytics/
 storage/
-system/database.sqlite*
 *.sqlite*
 *.db
 venv/

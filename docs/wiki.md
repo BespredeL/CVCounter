@@ -527,6 +527,7 @@ The Settings page (`/settings`) features:
 - **Live unit badges:** Dynamic unit badges (%, ms, px, attempts, sec) displayed directly in numeric fields;
 - **Semantic form controls:** Clear dropdowns for selecting model type (`model_type`), log level (`log_level`), default language (`default_language`), etc.;
 - **Live settings search:** Instant keyword search that auto-expands matching cards and setting sections;
+- **Custom Form Fields Management:** Create and delete form fields with 1 click directly in the web settings UI, both globally across all counters (`form.custom_fields`) and individually per camera (`detections.<camera>.custom_fields`); support for `text`, `number`, `textarea`, `date`, `datetime-local`, and `select` (with dropdown options); automatically rendered in counting forms and reports;
 - **Model Optimization & Export (ONNX / TensorRT):** Built-in wizard for exporting YOLO models (.pt) to ONNX and TensorRT Engine (.engine) formats with FP16 support, parameter validation, and 1-click application to cameras;
 - **1-Click Server Restart & Shutdown:** Safe management of the web server process from the web interface (when `server.allow_web_control: true`) with clean resource teardown and auto-reconnect;
 - Detailed bilingual descriptions and hints for every configuration parameter.
@@ -542,6 +543,8 @@ On System Info (`/system_info`) you can access:
 ```
 http://127.0.0.1:8080/settings
 http://127.0.0.1:8080/system_info
+http://127.0.0.1:8080/settings/api/custom_fields/add   (POST)
+http://127.0.0.1:8080/settings/api/custom_fields/delete(POST)
 http://127.0.0.1:8080/settings/api/restart        (POST)
 http://127.0.0.1:8080/settings/api/shutdown       (POST)
 http://127.0.0.1:8080/settings/api/logs           (GET)
@@ -591,6 +594,8 @@ Counter control and data endpoints (no auth required unless noted):
 | GET    | `/counter/{location}/counting_area/snapshot` | Single JPEG frame for editor                                  |
 | POST   | `/counter/{location}/counting_area`          | Save zones (`counting_areas` JSON body; legacy fields synced) |
 | POST   | `/settings_save`                             | Save global config (**auth required**)                        |
+| POST   | `/settings/api/custom_fields/add`            | Add custom form field (global or per-camera) (**auth required**) |
+| POST   | `/settings/api/custom_fields/delete`         | Delete custom form field (**auth required**)                  |
 
 ---
 

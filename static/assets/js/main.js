@@ -143,23 +143,28 @@ function showToast(message, type = "primary") {
     if (!toastContainer) return;
 
     const toast = document.createElement("div");
-    toast.className = `toast align-items-center text-bg-${type} border-0`;
+    const isDarkBg = ["success", "danger", "dark", "primary", "info"].includes(type);
+    toast.className = `toast align-items-center text-bg-${type} border-0 shadow-lg`;
     toast.setAttribute("role", "alert");
     toast.setAttribute("aria-live", "assertive");
     toast.setAttribute("aria-atomic", "true");
 
     const body = document.createElement("div");
-    body.className = "toast-body user-select-none";
+    body.className = "toast-body user-select-none flex-grow-1";
+    body.style.minWidth = "0";
+    body.style.wordBreak = "break-all";
+    body.style.overflowWrap = "anywhere";
+    body.style.whiteSpace = "pre-line";
     body.textContent = String(message ?? "");
 
     const closeBtn = document.createElement("button");
     closeBtn.type = "button";
-    closeBtn.className = "btn-close me-2 m-auto";
+    closeBtn.className = `btn-close ${isDarkBg ? "btn-close-white" : ""} me-2 m-auto flex-shrink-0`;
     closeBtn.setAttribute("data-bs-dismiss", "toast");
     closeBtn.setAttribute("aria-label", "Close");
 
     const row = document.createElement("div");
-    row.className = "d-flex";
+    row.className = "d-flex align-items-center w-100 overflow-hidden";
     row.appendChild(body);
     row.appendChild(closeBtn);
     toast.appendChild(row);
