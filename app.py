@@ -552,10 +552,33 @@ if __name__ == '__main__':
     Starts the Flask server with configured settings.
     """
     try:
+        server_host = config.get('server.host', '0.0.0.0')
+        server_port = int(config.get('server.port', 8080))
+        local_host = '127.0.0.1' if server_host in ('0.0.0.0', '', '::') else server_host
+        port_suffix = f":{server_port}" if server_port != 80 else ""
+
+        print("\n" + "=" * 68)
+        print("                 CVCounter Server Running")
+        print("=" * 68)
+        print(f"  * Web interface: http://{local_host}{port_suffix}")
+        if server_host in ('0.0.0.0', ''):
+            try:
+                import socket
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                s.connect(('8.8.8.8', 80))
+                lan_ip = s.getsockname()[0]
+                s.close()
+                if lan_ip and lan_ip != local_host:
+                    print(f"  * Network access: http://{lan_ip}{port_suffix}")
+            except Exception:
+                pass
+        print("  * Press Ctrl+C to stop the server")
+        print("=" * 68 + "\n", flush=True)
+
         socketio.run(
             app,
-            host=config.get('server.host'),
-            port=config.get('server.port', 8080),
+            host=server_host,
+            port=server_port,
             debug=config.get('general.debug', False),
             log_output=config.get('server.log_output', True),
             use_reloader=config.get('server.use_reloader', False),

@@ -1,5 +1,5 @@
 @echo off
-chcp 65001 >nul
+chcp 65001
 setlocal enabledelayedexpansion
 title CVCounter - Installer
 
@@ -106,7 +106,10 @@ echo   INSTALLATION COMPLETED SUCCESSFULLY!
 echo ====================================================================
 echo.
 echo   To launch the application, run: start.bat
-echo   Web interface will be available at: http://127.0.0.1:80  [or http://localhost]
+set "APP_URL="
+for /f "delims=" %%U in ('venv\Scripts\python.exe -c "import json, os; c=json.load(open('config/config.json', encoding='utf-8')).get('server', {}) if os.path.exists('config/config.json') else {}; p=c.get('port', 8080); h=c.get('host', '127.0.0.1'); t='127.0.0.1' if h in ('0.0.0.0', '', '::') else h; s='' if str(p)=='80' else f':{p}'; print(f'http://{t}{s}')" 2^>nul') do set "APP_URL=%%U"
+if not defined APP_URL set "APP_URL=http://127.0.0.1:8080"
+echo   Web interface URL: !APP_URL!
 echo.
 popd
 pause
