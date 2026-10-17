@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ====================================================================
-# CVCounter - Универсальный установщик для Linux / macOS
+# CVCounter - Universal Installer for Linux / macOS
 # ====================================================================
 
 set -e
@@ -9,11 +9,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 echo "===================================================================="
-echo "              CVCounter - Установка системы (Linux / macOS)      "
+echo "              CVCounter - Setup / Installer (Linux / macOS)         "
 echo "===================================================================="
 echo ""
 
-# Функция поиска Python
+# Python detection function
 find_python() {
     PYTHON_BIN=""
     for cmd in python3.11 python3.12 python3.10 python3 python; do
@@ -29,24 +29,24 @@ find_python() {
     done
 }
 
-# 1. Поиск Python 3.10 .. 3.12
+# 1. Search for Python 3.10 .. 3.12
 find_python
 
 if [ -z "$PYTHON_BIN" ]; then
-    echo "[!] Совместимый Python (3.10 - 3.12) не обнаружен в системе."
-    echo "[*] Попытка автоматической установки через пакетный менеджер..."
+    echo "[!] Compatible Python (3.10 - 3.12) was not found on the system."
+    echo "[*] Attempting automatic installation via package manager..."
 
     if command -v apt-get >/dev/null 2>&1; then
-        echo "[*] Обнаружен apt (Debian/Ubuntu). Установка Python 3.11 и python3-venv..."
+        echo "[*] Detected apt (Debian/Ubuntu). Installing Python 3.11 and python3-venv..."
         sudo apt-get update && sudo apt-get install -y python3.11 python3.11-venv python3-pip || sudo apt-get install -y python3 python3-venv python3-pip
     elif command -v dnf >/dev/null 2>&1; then
-        echo "[*] Обнаружен dnf (Fedora/RHEL). Установка Python 3.11..."
+        echo "[*] Detected dnf (Fedora/RHEL). Installing Python 3.11..."
         sudo dnf install -y python3.11 python3.11-pip || sudo dnf install -y python3 python3-pip
     elif command -v pacman >/dev/null 2>&1; then
-        echo "[*] Обнаружен pacman (Arch Linux). Установка Python..."
+        echo "[*] Detected pacman (Arch Linux). Installing Python..."
         sudo pacman -Sy --noconfirm python python-pip
     elif command -v brew >/dev/null 2>&1; then
-        echo "[*] Обнаружен Homebrew (macOS). Установка Python 3.11..."
+        echo "[*] Detected Homebrew (macOS). Installing Python 3.11..."
         brew install python@3.11
     fi
 
@@ -55,8 +55,8 @@ fi
 
 if [ -z "$PYTHON_BIN" ]; then
     echo ""
-    echo "[ОШИБКА] Не удалось найти или установить Python!"
-    echo "Пожалуйста, установите python3 и модуль venv вручную:"
+    echo "[ERROR] Failed to find or install Python!"
+    echo "Please install python3 and venv module manually:"
     echo "  Ubuntu/Debian: sudo apt update && sudo apt install -y python3.11 python3.11-venv"
     echo "  Fedora/RHEL:   sudo dnf install -y python3.11"
     echo "  macOS:         brew install python@3.11"
@@ -64,39 +64,39 @@ if [ -z "$PYTHON_BIN" ]; then
     exit 1
 fi
 
-echo "[1/4] Используется Python: $($PYTHON_BIN --version) ($PYTHON_BIN)"
+echo "[1/4] Using Python: $($PYTHON_BIN --version) ($PYTHON_BIN)"
 
-# 2. Создание venv
+# 2. Virtual environment creation
 if [ ! -f "venv/bin/python" ]; then
     if [ -d "venv" ]; then
-        echo "[*] Очистка повреждённого каталога venv..."
+        echo "[*] Cleaning incomplete venv directory..."
         rm -rf "venv"
     fi
-    echo "[2/4] Создание виртуального окружения venv..."
+    echo "[2/4] Creating virtual environment 'venv'..."
     if ! $PYTHON_BIN -m venv venv 2>/dev/null; then
-        echo "[!] Ошибка создания venv. Возможно, не установлен пакет python3-venv."
+        echo "[!] Error creating venv. The python3-venv package might be missing."
         if command -v apt-get >/dev/null 2>&1; then
-            echo "[*] Установка пакета python3-venv..."
+            echo "[*] Installing python3-venv package..."
             sudo apt-get install -y python3-venv python3.11-venv || true
             $PYTHON_BIN -m venv venv
         else
-            echo "[ОШИБКА] Не удалось создать виртуальное окружение. Установите python3-venv."
+            echo "[ERROR] Failed to create virtual environment. Please install python3-venv."
             exit 1
         fi
     fi
 else
-    echo "[2/4] Виртуальное окружение venv уже существует."
+    echo "[2/4] Virtual environment 'venv' already exists."
 fi
 
-# 3. Подготовка pip
-echo "[3/4] Обновление базовых инструментов pip..."
+# 3. Prepare pip
+echo "[3/4] Updating base pip tools..."
 venv/bin/python -m pip install --upgrade pip setuptools wheel >/dev/null 2>&1 || true
 
-# 4. Запуск установщика оборудования
-echo "[4/4] Запуск автоопределения оборудования и установки зависимостей..."
+# 4. Launch hardware auto-detection and dependency installation
+echo "[4/4] Launching hardware auto-detection and dependencies installer..."
 venv/bin/python install.py "$@"
 
 echo ""
 echo "===================================================================="
-echo "  Установка завершена! Запуск: ./start.sh или venv/bin/python app.py"
+echo "  INSTALLATION COMPLETED! Run: ./start.sh or venv/bin/python app.py "
 echo "===================================================================="

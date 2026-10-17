@@ -6,4 +6,4 @@
 # Updated: 13.10.2026
 # Website: https://bespredel.name
 
-APP_VERSION = '5.9.0'
+APP_VERSION = '5.9.1'
