@@ -308,6 +308,43 @@
             });
         }
 
+        // Camera card header click to expand/collapse (ignoring action buttons/links)
+        document.addEventListener('click', function (e) {
+            var header = e.target.closest('.cv-camera-card__header');
+            if (!header) return;
+            // Ignore clicks on buttons, links, inputs, badges with actions
+            if (e.target.closest('button, a, input, select, textarea, label')) return;
+
+            var targetSelector = header.getAttribute('data-bs-target');
+            var collapseEl = targetSelector ? document.querySelector(targetSelector) : null;
+            if (collapseEl && window.bootstrap && window.bootstrap.Collapse) {
+                var bsCollapse = window.bootstrap.Collapse.getOrCreateInstance(collapseEl);
+                bsCollapse.toggle();
+            }
+        });
+
+        // Sync aria-expanded and .collapsed state on camera card header
+        document.addEventListener('show.bs.collapse', function (e) {
+            if (e.target.classList.contains('cv-camera-card__collapse')) {
+                var card = e.target.closest('.cv-camera-card');
+                var header = card ? card.querySelector('.cv-camera-card__header') : null;
+                if (header) {
+                    header.setAttribute('aria-expanded', 'true');
+                    header.classList.remove('collapsed');
+                }
+            }
+        });
+        document.addEventListener('hide.bs.collapse', function (e) {
+            if (e.target.classList.contains('cv-camera-card__collapse')) {
+                var card = e.target.closest('.cv-camera-card');
+                var header = card ? card.querySelector('.cv-camera-card__header') : null;
+                if (header) {
+                    header.setAttribute('aria-expanded', 'false');
+                    header.classList.add('collapsed');
+                }
+            }
+        });
+
         // Add new camera handler
         var formAddCamera = document.getElementById('form-add-camera');
         var modalAddCameraEl = document.getElementById('addCameraModal');
@@ -593,11 +630,11 @@
             if (iconBox) {
                 var ftype = typeSelect.value;
                 if (ftype === 'number') {
-                    iconBox.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-123 text-success" viewBox="0 0 16 16"><path d="M2.873 11.297V4.142H1.699L0 5.379v1.137l1.64-1.18h.06v5.961zm3.213-5.09v-.063c0-.618.44-1.169 1.196-1.169.676 0 1.174.44 1.174 1.106 0 .606-.439 1.132-.974 1.533-.45.34-1.01.737-1.353 1.05v.982h3.424v-1.045H7.39v-.064c.266-.237.603-.496.953-.76.77-.584 1.488-1.28 1.488-2.28 0-1.282-1.02-2.197-2.45-2.197-1.47 0-2.38 1.015-2.38 2.221v.72h1.085zm6.541 2.228h-.128c-.287 0-.584-.047-.845-.14v.05c0 .647.464 1.09 1.157 1.09.688 0 1.18-.456 1.18-1.115 0-.616-.479-1.094-1.127-1.094-.176 0-.361.026-.51.087v-1.05c.143.045.303.069.458.069.605 0 1.04-.415 1.04-.98 0-.549-.399-.95-1.022-.95-.623 0-1.04.417-1.04.996v.195H11.5v-.268c0-1.19.89-2.02 2.22-2.02 1.34 0 2.23.834 2.23 2.012 0 .67-.32 1.258-.87 1.637.675.367 1.04 1.01 1.04 1.765 0 1.255-.956 2.146-2.39 2.146-1.42 0-2.37-.91-2.37-2.187v-.337h1.085z"/></svg>';
+                    iconBox.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-123 text-success" viewBox="0 0 16 16"><path d="M2.873 11.297V4.142H1.699L0 5.379v1.137l1.64-1.18h.06v5.961zm3.213-5.09v-.063c0-.618.44-1.169 1.196-1.169.676 0 1.174.44 1.174 1.106 0 .624-.42 1.101-.807 1.526L4.99 10.553v.744h4.78v-.99H6.643v-.069L8.41 8.252c.65-.724 1.237-1.332 1.237-2.27C9.646 4.849 8.723 4 7.308 4c-1.573 0-2.36 1.064-2.36 2.15v.057zm6.559 1.883h.786c.823 0 1.374.481 1.379 1.179.01.707-.55 1.216-1.421 1.21-.77-.005-1.326-.419-1.379-.953h-1.095c.042 1.053.938 1.918 2.464 1.918 1.478 0 2.642-.839 2.62-2.144-.02-1.143-.922-1.651-1.551-1.714v-.063c.535-.09 1.347-.66 1.326-1.678-.026-1.053-.933-1.855-2.359-1.845-1.5.005-2.317.88-2.348 1.898h1.116c.032-.498.498-.944 1.206-.944.703 0 1.206.435 1.206 1.07.005.64-.504 1.106-1.2 1.106h-.75z"/></svg>';
                 } else if (ftype === 'textarea') {
                     iconBox.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-text-paragraph text-info" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2 12.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5m0-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m0-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m4-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5"/></svg>';
                 } else if (ftype === 'date' || ftype === 'datetime-local') {
-                    iconBox.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-calendar3 text-warning" viewBox="0 0 16 16"><path d="M14 0H2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M1 3.857C1 3.384 1.448 3 2 3h12c.552 0 1 .384 1 .857v10.286c0 .473-.448.857-1 .857H2c-.552 0-1-.384-1-.857z"/></svg>';
+                    iconBox.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-calendar3 text-warning" viewBox="0 0 16 16"><path d="M14 0H2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2M1 3.857C1 3.384 1.448 3 2 3h12c.552 0 1 .384 1 .857v10.286c0 .473-.448.857-1 .857H2c-.552 0-1-.384-1-.857z"/><path d="M6.5 7a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m-9 3a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m-9 3a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2m3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/></svg>';
                 } else if (ftype === 'select') {
                     iconBox.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-menu-button-wide text-primary" viewBox="0 0 16 16"><path d="M0 1.5A1.5 1.5 0 0 1 1.5 0h13A1.5 1.5 0 0 1 16 1.5v2A1.5 1.5 0 0 1 14.5 5h-13A1.5 1.5 0 0 1 0 3.5zM1.5 1a.5.5 0 0 0-.5.5v2a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-2a.5.5 0 0 0-.5-.5z"/><path d="M2 2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5m10.823.323-.396-.396A.25.25 0 0 1 12.604 2h.792a.25.25 0 0 1 .177.427l-.396.396a.25.25 0 0 1-.354 0M0 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm1 3v2a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2zm14-1V8a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v2zM2 8.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0 4a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5"/></svg>';
                 } else {
@@ -1298,7 +1335,7 @@
                 if (exportWeightsHint) {
                     if (wasCompiled) {
                         exportWeightsHint.innerHTML = '<span class="text-info d-flex align-items-center gap-1">'
-                            + '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="flex-shrink-0" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2"/></svg>'
+                            + '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-info-circle-fill flex-shrink-0" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2"/></svg>'
                             + '<span>' + escapeHtml(t('Source .pt model suggested for export')) + '</span></span>';
                     } else {
                         exportWeightsHint.textContent = '';
@@ -1402,7 +1439,7 @@
                             clearInterval(exportPollInterval);
                             exportPollInterval = null;
                             exportSpinner.classList.add('d-none');
-                            exportStatusBadge.innerHTML = '<span class="text-success fw-bold d-inline-flex align-items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg><span>' + escapeHtml(t('Export completed!')) + '</span></span>';
+                            exportStatusBadge.innerHTML = '<span class="text-success fw-bold d-inline-flex align-items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16" class="bi bi-check-circle-fill"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg><span>' + escapeHtml(t('Export completed!')) + '</span></span>';
                             btnCancelExport.disabled = false;
                             btnCloseExportModal.disabled = false;
                             btnStartExport.classList.add('d-none');
@@ -1415,7 +1452,7 @@
                             clearInterval(exportPollInterval);
                             exportPollInterval = null;
                             exportSpinner.classList.add('d-none');
-                            exportStatusBadge.innerHTML = '<span class="text-danger fw-bold d-inline-flex align-items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg><span>' + escapeHtml(t('Export failed')) + ': ' + escapeHtml(exp.error || '') + '</span></span>';
+                            exportStatusBadge.innerHTML = '<span class="text-danger fw-bold d-inline-flex align-items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16" class="bi bi-exclamation-triangle-fill"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg><span>' + escapeHtml(t('Export failed')) + ': ' + escapeHtml(exp.error || '') + '</span></span>';
                             btnStartExport.disabled = false;
                             btnCancelExport.disabled = false;
                             btnCloseExportModal.disabled = false;

@@ -2,6 +2,11 @@
 
 {% block title %}CVCounter{% endblock %}
 
+{% block head_assets %}
+    <link href="{{ url_for('static', filename='assets/css/modules/dashboard.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='assets/css/modules/settings.css') }}" rel="stylesheet">
+{% endblock %}
+
 {% block header %}
     {% with page_title='CVCounter', page_subtitle=trans('See. Count. In real time.'), home_variant=true %}
         {% include 'partials/page_header.html' %}

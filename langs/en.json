@@ -1361,5 +1361,10 @@
   "Number": "Number",
   "Option": "Option",
   "Options": "Options",
-  "The": "The"
+  "The": "The",
+  "Delete report": "Delete report",
+  "Are you sure you want to delete report #{id}?": "Are you sure you want to delete report #{id}?",
+  "Report deleted successfully": "Report deleted successfully",
+  "Failed to delete report": "Failed to delete report",
+  "Report not found": "Report not found"
 }

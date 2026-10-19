@@ -1361,5 +1361,10 @@
   "Number": "Число",
   "Option": "Опция",
   "Options": "Опции",
-  "The": "Данный"
+  "The": "Данный",
+  "Delete report": "Удалить отчёт",
+  "Are you sure you want to delete report #{id}?": "Вы уверены, что хотите удалить отчёт #{id}?",
+  "Report deleted successfully": "Отчёт успешно удалён",
+  "Failed to delete report": "Не удалось удалить отчёт",
+  "Report not found": "Отчёт не найден"
 }

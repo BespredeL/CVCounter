@@ -270,6 +270,31 @@ class DatabaseManager:
         finally:
             session.close()
 
+    def delete_count(self, rec_id: int) -> bool:
+        """
+        Deletes the counter record for the given id.
+
+        Args:
+            rec_id (int): The record id.
+
+        Returns:
+            bool: True if deleted successfully, False otherwise.
+        """
+        session = self.create_session()
+        try:
+            record = session.query(CVCounter).filter_by(id=rec_id).first()
+            if not record:
+                return False
+            session.delete(record)
+            session.commit()
+            return True
+        except SQLAlchemyError as error:
+            session.rollback()
+            self.__logger.error(f"Error deleting counter #{rec_id}: {str(error)}")
+            return False
+        finally:
+            session.close()
+
     def get_paginated(self, key: str = '', page: int = 1, per_page: int = 10) -> dict | None:
         """
         Returns all counters for the given key.

@@ -5,6 +5,10 @@
 
 {% block title %}{{ title.title() }}{% endblock %}
 
+{% block head_assets %}
+    <link href="{{ url_for('static', filename='assets/css/modules/counter.css') }}" rel="stylesheet">
+{% endblock %}
+
 {% block content %}
     <div class="row counter-layout g-0 h-100 flex-lg-nowrap">
         <div class="col-12 col-lg-8 col-xl-9 counter-layout__main position-relative">

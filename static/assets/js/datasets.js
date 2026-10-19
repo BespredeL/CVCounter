@@ -100,9 +100,9 @@
                 else stepSubtitle.textContent = t('Step 3 of 3: Initial Frames');
             }
 
-            if (prevBtn) prevBtn.style.display = step > 1 ? 'inline-block' : 'none';
-            if (nextBtn) nextBtn.style.display = step < 3 ? 'inline-block' : 'none';
-            if (submitBtn) submitBtn.style.display = step === 3 ? 'inline-block' : 'none';
+            if (prevBtn) prevBtn.classList.toggle('d-none', step <= 1);
+            if (nextBtn) nextBtn.classList.toggle('d-none', step >= 3);
+            if (submitBtn) submitBtn.classList.toggle('d-none', step !== 3);
 
             if (step === 3) {
                 const summaryName = document.getElementById('wizard-summary-name');
@@ -288,6 +288,48 @@
             }
             if (countBadge) {
                 countBadge.textContent = query ? `${visibleCount} / ${totalDatasets}` : `${totalDatasets}`;
+            }
+        });
+
+        // Dataset card delete handler on list page
+        document.addEventListener('click', async (e) => {
+            const btn = e.target.closest('.btn-delete-dataset-card');
+            if (!btn) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const dsName = btn.dataset.datasetName;
+            const dsTitle = btn.dataset.datasetTitle || dsName;
+            if (!dsName) return;
+            const ok = typeof window.appConfirm === 'function'
+                ? await window.appConfirm({
+                    title: t('Delete dataset'),
+                    message: t('Are you sure you want to delete dataset "{name}"?').replace('{name}', dsTitle),
+                    confirmText: t('Delete'),
+                    tone: 'danger',
+                })
+                : confirm(t('Are you sure you want to delete dataset "{name}"?').replace('{name}', dsTitle));
+            if (!ok) return;
+            try {
+                await api(`/datasets/api/${encodeURIComponent(dsName)}`, { method: 'DELETE' });
+                toast(t('Dataset deleted'), 'success');
+                const cardCol = btn.closest('.dataset-col');
+                if (cardCol) {
+                    cardCol.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+                    cardCol.style.opacity = '0';
+                    cardCol.style.transform = 'scale(0.9)';
+                    setTimeout(() => {
+                        cardCol.remove();
+                        const countBadge = document.getElementById('datasets-count-badge');
+                        if (countBadge) {
+                            const remaining = document.querySelectorAll('.dataset-col').length;
+                            countBadge.textContent = remaining;
+                        }
+                    }, 250);
+                } else {
+                    window.location.reload();
+                }
+            } catch (err) {
+                toast(err.message, 'danger');
             }
         });
     }
@@ -853,45 +895,6 @@
         }
     });
 
-    // Dataset card delete handler on list page
-    document.addEventListener('click', async (e) => {
-        const btn = e.target.closest('.btn-delete-dataset-card');
-        if (!btn) return;
-        e.preventDefault();
-        e.stopPropagation();
-        const dsName = btn.dataset.datasetName;
-        const dsTitle = btn.dataset.datasetTitle || dsName;
-        if (!dsName) return;
-        const ok = await window.appConfirm({
-            title: t('Delete dataset'),
-            message: t('Are you sure you want to delete dataset "{name}"?').replace('{name}', dsTitle),
-            confirmText: t('Delete'),
-            tone: 'danger',
-        });
-        if (!ok) return;
-        try {
-            await api(`/datasets/api/${encodeURIComponent(dsName)}`, { method: 'DELETE' });
-            toast(t('Dataset deleted'), 'success');
-            const cardCol = btn.closest('.dataset-col');
-            if (cardCol) {
-                cardCol.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
-                cardCol.style.opacity = '0';
-                cardCol.style.transform = 'scale(0.9)';
-                setTimeout(() => {
-                    cardCol.remove();
-                    const countBadge = document.getElementById('datasets-count-badge');
-                    if (countBadge) {
-                        const remaining = document.querySelectorAll('.dataset-col').length;
-                        countBadge.textContent = remaining;
-                    }
-                }, 250);
-            } else {
-                window.location.reload();
-            }
-        } catch (err) {
-            toast(err.message, 'danger');
-        }
-    });
 
     async function loadClassesFromDetector(detector) {
         const input = document.getElementById('meta-classes');

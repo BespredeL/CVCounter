@@ -2,6 +2,10 @@
 
 {% block title %}{{ dataset.display_name or dataset.name }} - {{ trans('Datasets') }}{% endblock %}
 
+{% block head_assets %}
+    <link href="{{ url_for('static', filename='assets/css/modules/datasets.css') }}" rel="stylesheet">
+{% endblock %}
+
 {% block header %}
     {% with page_title=dataset.display_name or dataset.name, page_subtitle=dataset.name %}
         {% include 'partials/page_header.html' %}
@@ -36,42 +40,44 @@
                         <h4 class="fw-bold mb-0 text-truncate" title="{{ dataset.display_name or dataset.name }}">
                             {{ dataset.display_name or dataset.name }}
                         </h4>
-                        <code class="text-body-secondary small bg-body-tertiary px-2 py-1 rounded border">{{ dataset.name }}</code>
+                        {% if dataset.display_name and dataset.display_name != dataset.name %}
+                            <code class="text-body-secondary small bg-body-tertiary px-2 py-1 rounded border">{{ dataset.name }}</code>
+                        {% endif %}
                         {% if dataset.task == 'segment' %}
-                            <span class="badge text-bg-primary d-inline-flex align-items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-bounding-box-circles me-1" viewBox="0 0 16 16"><path d="M2 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2M0 2a2 2 0 0 1 3.937-.5h8.126A2 2 0 1 1 14.5 3.937v8.126a2 2 0 1 1-2.437 2.437H3.937A2 2 0 1 1 1.5 12.063V3.937A2 2 0 0 1 0 2m2.5 1.937v8.126c.703.18 1.257.734 1.437 1.437h8.126a2 2 0 0 1 1.437-1.437V3.937A2 2 0 0 1 12.063 2.5H3.937A2 2 0 0 1 2.5 3.937M14 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2M2 13a1 1 0 1 0 0 2 1 1 0 0 0 0-2m12 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2"/></svg>
+                            <span class="badge-task badge-task--segment">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-bounding-box-circles" viewBox="0 0 16 16"><path d="M2 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2M0 2a2 2 0 0 1 3.937-.5h8.126A2 2 0 1 1 14.5 3.937v8.126a2 2 0 1 1-2.437 2.437H3.937A2 2 0 1 1 1.5 12.063V3.937A2 2 0 0 1 0 2m2.5 1.937v8.126c.703.18 1.257.734 1.437 1.437h8.126a2 2 0 0 1 1.437-1.437V3.937A2 2 0 0 1 12.063 2.5H3.937A2 2 0 0 1 2.5 3.937M14 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2M2 13a1 1 0 1 0 0 2 1 1 0 0 0 0-2m12 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2"/></svg>
                                 segment
                             </span>
                         {% elif dataset.task == 'classify' %}
-                            <span class="badge text-bg-success d-inline-flex align-items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-tags me-1" viewBox="0 0 16 16"><path d="M3 2v4.586l7 7L14.586 9l-7-7zM2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"/><path d="M1.293 7.707A1 1 0 0 1 1 7.086V2h5.086a1 1 0 0 1 .707.293l.353.354-.707.707-.354-.354H2v4.086l.354.353-.707.708z"/></svg>
+                            <span class="badge-task badge-task--classify">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-tags" viewBox="0 0 16 16"><path d="M3 2v4.586l7 7L14.586 9l-7-7zM2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586z"/><path d="M5.5 5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1m0 1a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M1 7.086a1 1 0 0 0 .293.707L8.75 15.25l-.043.043a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 0 7.586V3a1 1 0 0 1 1-1z"/></svg>
                                 classify
                             </span>
                         {% elif dataset.task == 'pose' %}
-                            <span class="badge text-bg-warning d-inline-flex align-items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-person-standing me-1" viewBox="0 0 16 16"><path d="M8 3a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M6 6.75v8.5a.75.75 0 0 0 1.5 0V10.5a.5.5 0 0 1 1 0v4.75a.75.75 0 0 0 1.5 0v-8.5a.25.25 0 0 0-.25-.25h-3.5a.25.25 0 0 0-.25.25"/> <path d="M5.5 4A1.5 1.5 0 0 0 4 5.5v2a.75.75 0 0 0 1.5 0V5.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v2a.75.75 0 0 0 1.5 0v-2A1.5 1.5 0 0 0 10.5 4z"/></svg>
+                            <span class="badge-task badge-task--pose">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-person-standing" viewBox="0 0 16 16"><path d="M8 3a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M6 6.75v8.5a.75.75 0 0 0 1.5 0V10.5a.5.5 0 0 1 1 0v4.75a.75.75 0 0 0 1.5 0v-8.5a.25.25 0 1 1 .5 0v2.5a.75.75 0 0 0 1.5 0V6.5a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v2.75a.75.75 0 0 0 1.5 0v-2.5a.25.25 0 0 1 .5 0"/></svg>
                                 pose
                             </span>
                         {% else %}
-                            <span class="badge text-bg-info d-inline-flex align-items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-bounding-box me-1" viewBox="0 0 16 16"><path d="M5 2V0H0v5h2v6H0v5h5v-2h6v2h5v-5h-2V5h2V0h-5v2zm6 1v2h2v6h-2v2H5v-2H3V5h2V3zm1-2h3v3h-3zm3 11v3h-3v-3zM4 15H1v-3h3zM1 4V1h3v3z"/></svg>
+                            <span class="badge-task badge-task--detect">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-bounding-box" viewBox="0 0 16 16"><path d="M5 2V0H0v5h2v6H0v5h5v-2h6v2h5v-5h-2V5h2V0h-5v2zm6 1v2h2v6h-2v2H5v-2H3V5h2V3zm1-2h3v3h-3zm3 11v3h-3v-3zM4 15H1v-3h3zM1 4V1h3v3z"/></svg>
                                 detect
                             </span>
                         {% endif %}
-                        <span class="badge {% if dataset.labeled_pct >= 80 %}bg-success{% elif dataset.labeled_pct >= 30 %}bg-primary{% else %}bg-secondary{% endif %} rounded-pill">
+                        <span class="badge-pct {% if dataset.labeled_pct >= 80 %}badge-pct--success{% elif dataset.labeled_pct >= 30 %}badge-pct--primary{% else %}badge-pct--muted{% endif %}">
                             {{ dataset.labeled_pct }}% {{ trans('labeled') }}
                         </span>
                     </div>
 
-                    <div class="d-flex align-items-center gap-3 text-body-secondary small">
-                        <span><strong>{{ dataset.total }}</strong> {{ trans('images') }}</span>
-                        <span>·</span>
-                        <span><strong class="text-success">{{ dataset.labeled }}</strong> {{ trans('labeled') }}</span>
-                        <span>·</span>
-                        <span><strong>{{ dataset.unlabeled }}</strong> {{ trans('unlabeled') }}</span>
+                    <div class="d-flex align-items-center gap-2 text-body-secondary small flex-wrap">
+                        <span><strong class="text-body">{{ dataset.total }}</strong> {{ trans('images') }}</span>
+                        <span class="opacity-50">·</span>
+                        <span><strong class="{% if dataset.labeled and dataset.labeled > 0 %}text-success{% else %}text-body{% endif %}">{{ dataset.labeled }}</strong> {{ trans('labeled') }}</span>
+                        <span class="opacity-50">·</span>
+                        <span><strong class="text-body">{{ dataset.unlabeled }}</strong> {{ trans('unlabeled') }}</span>
                         {% if dataset.by_split.inbox and dataset.by_split.inbox > 0 %}
-                            <span>·</span>
-                            <span class="text-warning fw-semibold"><strong>{{ dataset.by_split.inbox }}</strong> {{ trans('inbox') }}</span>
+                            <span class="opacity-50">·</span>
+                            <span><strong class="text-warning">{{ dataset.by_split.inbox }}</strong> {{ trans('inbox') }}</span>
                         {% endif %}
                     </div>
                 </div>
@@ -80,7 +86,7 @@
                     <a class="btn btn-outline-secondary d-flex align-items-center gap-1 shadow-sm"
                        href="{{ url_for('datasets.api_export_zip', name=dataset.name) }}"
                        title="{{ trans('Download YOLO ZIP archive') }}">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-file-earmark-zip" viewBox="0 0 16 16"><path d="M5 10.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5m0-2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5m.5-2.5A.5.5 0 0 0 5 6.5v.01a.5.5 0 0 0 .5.49h2a.5.5 0 0 0 0-1zm0-2a.5.5 0 0 0-.5.5v.01a.5.5 0 0 0 .5.49h2a.5.5 0 0 0 0-1z"/><path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-file-earmark-zip" viewBox="0 0 16 16"><path d="M5 7.5a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v.938l.4 1.599a1 1 0 0 1-.416 1.074l-.93.62a1 1 0 0 1-1.11 0l-.929-.62a1 1 0 0 1-.415-1.074L5 8.438zm2 0H6v.938a1 1 0 0 1-.03.243l-.4 1.598.93.62.929-.62-.4-1.598A1 1 0 0 1 7 8.438z"/><path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1h-2v1h-1v1h1v1h-1v1h1v1H6V5H5V4h1V3H5V2h1V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5z"/></svg>
                         <span>{{ trans('Export ZIP') }}</span>
                     </a>
                     <a class="btn btn-primary d-flex align-items-center gap-1 shadow-sm"
@@ -91,7 +97,7 @@
                 </div>
             </div>
 
-            <div class="progress dataset-detail__progress mt-3" style="height: 6px;" role="progressbar"
+            <div class="progress dataset-detail__progress progress--thin mt-3" role="progressbar"
                  aria-valuenow="{{ dataset.labeled_pct }}" aria-valuemin="0" aria-valuemax="100">
                 <div class="progress-bar {% if dataset.labeled_pct >= 80 %}bg-success{% else %}bg-primary{% endif %}"
                      style="width: {{ dataset.labeled_pct }}%"></div>
@@ -99,27 +105,25 @@
         </div>
 
         <!-- Smart Guide Banner (Recommendation Card) -->
-        <div class="card border-primary-subtle shadow-sm mb-3 position-relative overflow-hidden" id="smart-guide-banner"
-             style="background: linear-gradient(135deg, rgba(var(--bs-primary-rgb), 0.08) 0%, rgba(var(--bs-success-rgb), 0.05) 100%);">
+        <div class="card border-primary-subtle smart-guide-card shadow-sm mb-3 position-relative overflow-hidden" id="smart-guide-banner">
             <div class="card-body p-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
                 <div class="d-flex align-items-center gap-3 min-w-0">
-                    <div class="rounded-3 p-2 d-flex align-items-center justify-content-center flex-shrink-0"
-                         style="width: 42px; height: 42px; background: rgba(var(--bs-primary-rgb), 0.15); color: var(--bs-primary);">
+                    <div class="rounded-3 p-2 d-flex align-items-center justify-content-center flex-shrink-0 smart-guide-icon">
                         {% if dataset.total == 0 %}
                             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-camera" viewBox="0 0 16 16"><path d="M15 12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h1.172a3 3 0 0 0 2.12-.879l.83-.828A1 1 0 0 1 7.827 3h2.344a1 1 0 0 1 .707.293l.828.828A3 3 0 0 0 13.828 5H15a1 1 0 0 1 1 1zM2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 9.172 2H6.828a2 2 0 0 0-1.414.586l-.828.828A2 2 0 0 1 3.172 4z"/><path d="M8 11a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5m0 1a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M3 6.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0"/></svg>
                         {% elif dataset.by_split.inbox and dataset.by_split.inbox > 0 %}
-                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-shuffle text-warning" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 3.5A.5.5 0 0 1 .5 3H1c2.202 0 3.827 1.24 4.874 2.418.49.552.865 1.102 1.126 1.532.26-.43.636-.98 1.126-1.532C9.173 4.24 10.798 3 13 3v1c-1.798 0-3.173 1.01-4.126 2.082A9.6 9.6 0 0 0 7.556 8a9.6 9.6 0 0 0 1.318 1.918C9.827 10.99 11.202 12 13 12v1c-2.202 0-3.827-1.24-4.874-2.418A10.6 10.6 0 0 1 7 9.05c-.26.43-.636.98-1.126 1.532C4.827 11.76 3.202 13 1 13H.5a.5.5 0 0 1-.5-.5"/><path d="M13 5.466V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192m0 9v-3.932a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-shuffle text-warning" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 3.5A.5.5 0 0 1 .5 3H1c2.202 0 3.827 1.24 4.874 2.418.49.552.865 1.102 1.126 1.532.26-.43.636-.98 1.126-1.532C9.173 4.24 10.798 3 13 3v1c-1.798 0-3.173 1.01-4.126 2.082A9.6 9.6 0 0 0 7.556 8a9.6 9.6 0 0 0 1.317 1.918C9.828 10.99 11.204 12 13 12v1c-2.202 0-3.827-1.24-4.874-2.418A10.6 10.6 0 0 1 7 9.05c-.26.43-.636.98-1.126 1.532C4.827 11.76 3.202 13 1 13H.5a.5.5 0 0 1 0-1H1c1.798 0 3.173-1.01 4.126-2.082A9.6 9.6 0 0 0 6.444 8a9.6 9.6 0 0 0-1.317-1.918C4.172 5.01 2.796 4 1 4H.5a.5.5 0 0 1-.5-.5"/><path d="M13 5.466V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192m0 9v-3.932a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192"/></svg>
                         {% elif dataset.unlabeled and dataset.unlabeled > 0 and dataset.labeled < 10 %}
                             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16"><path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.8-6.8z"/><path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/></svg>
                         {% elif dataset.labeled and dataset.labeled >= 10 %}
-                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-rocket-takeoff text-success" viewBox="0 0 16 16"><path d="M9.752 6.193c.599.6 1.73.437 2.528-.362s.96-1.932.362-2.531c-.599-.6-1.73-.438-2.528.361-.798.8-.96 1.932-.362 2.532"/><path d="M15.811 3.312c-.363 1.534-1.334 3.626-3.64 5.932-2.257 2.256-4.301 3.224-5.82 3.587L7.84 14.34a.75.75 0 0 1-.854.855l-1.5-.375a.75.75 0 0 1-.41-.295l-1.22-1.626a.75.75 0 0 1-.137-.42l-.128-1.535a.75.75 0 0 1 .19-.526l1.512-1.512C5.59 9.38 6.558 7.336 8.814 5.08c2.306-2.306 4.398-3.277 5.931-3.64a.75.75 0 0 1 .866.866v1.006z"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-rocket-takeoff text-success" viewBox="0 0 16 16"><path d="M9.752 6.193c.599.6 1.73.437 2.528-.362s.96-1.932.362-2.531c-.599-.6-1.73-.438-2.528.361-.798.8-.96 1.933-.362 2.532"/><path d="M15.811 3.312c-.363 1.534-1.334 3.626-3.64 6.218l-.24 2.408a2.56 2.56 0 0 1-.732 1.526L8.817 15.85a.51.51 0 0 1-.867-.434l.27-1.899c.04-.28-.013-.593-.131-.956a9 9 0 0 0-.249-.657l-.082-.202c-.815-.197-1.578-.662-2.191-1.277-.614-.615-1.079-1.379-1.275-2.195l-.203-.083a10 10 0 0 0-.655-.248c-.363-.119-.675-.172-.955-.132l-1.896.27A.51.51 0 0 1 .15 7.17l2.382-2.386c.41-.41.947-.67 1.524-.734h.006l2.4-.238C9.005 1.55 11.087.582 12.623.208c.89-.217 1.59-.232 2.08-.188.244.023.435.06.57.093q.1.026.16.045c.184.06.279.13.351.295l.029.073a3.5 3.5 0 0 1 .157.721c.055.485.051 1.178-.159 2.065m-4.828 7.475.04-.04-.107 1.081a1.54 1.54 0 0 1-.44.913l-1.298 1.3.054-.38c.072-.506-.034-.993-.172-1.418a9 9 0 0 0-.164-.45c.738-.065 1.462-.38 2.087-1.006M5.205 5c-.625.626-.94 1.351-1.004 2.09a9 9 0 0 0-.45-.164c-.424-.138-.91-.244-1.416-.172l-.38.054 1.3-1.3c.245-.246.566-.401.91-.44l1.08-.107zm9.406-3.961c-.38-.034-.967-.027-1.746.163-1.558.38-3.917 1.496-6.937 4.521-.62.62-.799 1.34-.687 2.051.107.676.483 1.362 1.048 1.928.564.565 1.25.941 1.924 1.049.71.112 1.429-.067 2.048-.688 3.079-3.083 4.192-5.444 4.556-6.987.183-.771.18-1.345.138-1.713a3 3 0 0 0-.045-.283 3 3 0 0 0-.3-.041Z"/><path d="M7.009 12.139a7.6 7.6 0 0 1-1.804-1.352A7.6 7.6 0 0 1 3.794 8.86c-1.102.992-1.965 5.054-1.839 5.18.125.126 3.936-.896 5.054-1.902Z"/></svg>
                         {% else %}
-                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-lightbulb text-primary" viewBox="0 0 16 16"><path d="M2 6a6 6 0 1 1 10.174 4.31c-.203.196-.359.4-.453.619l-.762 1.769A.5.5 0 0 1 10.5 13a.5.5 0 0 1 0 1 .5.5 0 0 1 0 1l-.224.447a1 1 0 0 1-.894.553H6.618a1 1 0 0 1-.894-.553L5.5 15a.5.5 0 0 1 0-1 .5.5 0 0 1 0-1 .5.5 0 0 1-.46-.302l-.761-1.77a2 2 0 0 0-.453-.618A5.98 5.98 0 0 1 2 6"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-lightbulb text-primary" viewBox="0 0 16 16"><path d="M2 6a6 6 0 1 1 10.174 4.31c-.203.196-.359.4-.453.619l-.762 1.769A.5.5 0 0 1 10.5 13a.5.5 0 0 1 0 1 .5.5 0 0 1 0 1l-.224.447a1 1 0 0 1-.894.553H6.618a1 1 0 0 1-.894-.553L5.5 15a.5.5 0 0 1 0-1 .5.5 0 0 1 0-1 .5.5 0 0 1-.46-.302l-.761-1.77a2 2 0 0 0-.453-.618A5.98 5.98 0 0 1 2 6m6-5a5 5 0 0 0-3.479 8.592c.263.254.514.564.676.941L5.83 12h4.342l.632-1.467c.162-.377.413-.687.676-.941A5 5 0 0 0 8 1"/></svg>
                         {% endif %}
                     </div>
                     <div class="min-w-0">
                         <div class="d-flex align-items-center gap-2 mb-1">
-                            <span class="badge text-bg-primary text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.05em;">{{ trans('Master Guide') }}</span>
+                            <span class="badge text-bg-primary text-uppercase fs-2xs badge-letter-spacing">{{ trans('Master Guide') }}</span>
                             <span class="fw-bold text-body fs-6">
                                 {% if dataset.total == 0 %}
                                     {{ trans('Step 1: Collect first frames') }}
@@ -158,7 +162,7 @@
                         </button>
                     {% elif dataset.by_split.inbox and dataset.by_split.inbox > 0 %}
                         <button type="button" class="btn btn-warning d-inline-flex align-items-center gap-1 shadow-sm" id="btn-guide-split">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-shuffle" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 3.5A.5.5 0 0 1 .5 3H1c2.202 0 3.827 1.24 4.874 2.418.49.552.865 1.102 1.126 1.532.26-.43.636-.98 1.126-1.532C9.173 4.24 10.798 3 13 3v1c-1.798 0-3.173 1.01-4.126 2.082A9.6 9.6 0 0 0 7.556 8a9.6 9.6 0 0 0 1.318 1.918C9.827 10.99 11.202 12 13 12v1c-2.202 0-3.827-1.24-4.874-2.418A10.6 10.6 0 0 1 7 9.05c-.26.43-.636.98-1.126 1.532C4.827 11.76 3.202 13 1 13H.5a.5.5 0 0 1-.5-.5"/><path d="M13 5.466V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192m0 9v-3.932a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-shuffle" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 3.5A.5.5 0 0 1 .5 3H1c2.202 0 3.827 1.24 4.874 2.418.49.552.865 1.102 1.126 1.532.26-.43.636-.98 1.126-1.532C9.173 4.24 10.798 3 13 3v1c-1.798 0-3.173 1.01-4.126 2.082A9.6 9.6 0 0 0 7.556 8a9.6 9.6 0 0 0 1.317 1.918C9.828 10.99 11.204 12 13 12v1c-2.202 0-3.827-1.24-4.874-2.418A10.6 10.6 0 0 1 7 9.05c-.26.43-.636.98-1.126 1.532C4.827 11.76 3.202 13 1 13H.5a.5.5 0 0 1 0-1H1c1.798 0 3.173-1.01 4.126-2.082A9.6 9.6 0 0 0 6.444 8a9.6 9.6 0 0 0-1.317-1.918C4.172 5.01 2.796 4 1 4H.5a.5.5 0 0 1-.5-.5"/><path d="M13 5.466V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192m0 9v-3.932a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192"/></svg>
                             <span>{{ trans('Auto split now') }}</span>
                         </button>
                     {% elif dataset.unlabeled and dataset.unlabeled > 0 and dataset.labeled < 10 %}
@@ -182,7 +186,7 @@
                 <div class="cv-card dataset-stat border-start border-4 border-primary">
                     <div class="dataset-stat__label d-flex justify-content-between align-items-center">
                         <span>{{ trans('Train split') }}</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-cpu text-primary opacity-50" viewBox="0 0 16 16"><path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14a2.5 2.5 0 0 1-2.5 2.5v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0m-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3zM5 6.5A1.5 1.5 0 0 1 6.5 5h3A1.5 1.5 0 0 1 11 6.5v3A1.5 1.5 0 0 1 9.5 11h-3A1.5 1.5 0 0 1 5 9.5zM6.5 6a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-cpu text-primary opacity-50" viewBox="0 0 16 16"><path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14a2.5 2.5 0 0 1-2.5 2.5v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0m-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3zM5 6.5A1.5 1.5 0 0 1 6.5 5h3A1.5 1.5 0 0 1 11 6.5v3A1.5 1.5 0 0 1 9.5 11h-3A1.5 1.5 0 0 1 5 9.5zM6.5 6a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5z"/></svg>
                     </div>
                     <div class="dataset-stat__value text-primary">{{ dataset.by_split.train or 0 }}</div>
                 </div>
@@ -223,7 +227,7 @@
             <li class="nav-item">
                 <button class="nav-link active d-flex align-items-center gap-2" id="tab-btn-frames"
                         data-bs-toggle="tab" data-bs-target="#tab-frames" type="button">
-                    <span class="badge rounded-circle bg-body-secondary text-body" style="width: 20px; height: 20px; font-size: 0.72rem; padding: 2px;">1</span>
+                    <span class="badge rounded-circle bg-body-secondary text-body step-badge-num">1</span>
                     <span>{{ trans('1. Collect frames') }}</span>
                     {% if dataset.by_split.inbox and dataset.by_split.inbox > 0 %}
                         <span class="badge text-bg-warning">{{ dataset.by_split.inbox }}</span>
@@ -233,7 +237,7 @@
             <li class="nav-item">
                 <button class="nav-link d-flex align-items-center gap-2" id="tab-btn-annotations"
                         data-bs-toggle="tab" data-bs-target="#tab-annotations" type="button">
-                    <span class="badge rounded-circle bg-body-secondary text-body" style="width: 20px; height: 20px; font-size: 0.72rem; padding: 2px;">2</span>
+                    <span class="badge rounded-circle bg-body-secondary text-body step-badge-num">2</span>
                     <span>{{ trans('2. Annotate & Gallery') }}</span>
                     <span class="badge text-bg-secondary">{{ dataset.total }}</span>
                 </button>
@@ -241,14 +245,14 @@
             <li class="nav-item">
                 <button class="nav-link d-flex align-items-center gap-2" id="tab-btn-train"
                         data-bs-toggle="tab" data-bs-target="#tab-train" type="button">
-                    <span class="badge rounded-circle bg-body-secondary text-body" style="width: 20px; height: 20px; font-size: 0.72rem; padding: 2px;">3</span>
+                    <span class="badge rounded-circle bg-body-secondary text-body step-badge-num">3</span>
                     <span>{{ trans('3. YOLO Training') }}</span>
                 </button>
             </li>
             <li class="nav-item">
                 <button class="nav-link d-flex align-items-center gap-2" id="tab-btn-deploy"
                         data-bs-toggle="tab" data-bs-target="#tab-deploy" type="button">
-                    <span class="badge rounded-circle bg-body-secondary text-body" style="width: 20px; height: 20px; font-size: 0.72rem; padding: 2px;">4</span>
+                    <span class="badge rounded-circle bg-body-secondary text-body step-badge-num">4</span>
                     <span>{{ trans('4. Apply to counter') }}</span>
                 </button>
             </li>
@@ -318,7 +322,7 @@
                         <div class="mt-3 pt-3 border-top">
                             <button class="btn btn-sm btn-link text-decoration-none p-0 d-inline-flex align-items-center gap-1 text-body-secondary fw-semibold"
                                     type="button" data-bs-toggle="collapse" data-bs-target="#collapse-interval-cam" aria-expanded="false" aria-controls="collapse-interval-cam">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-clock-history text-primary" viewBox="0 0 16 16"><path d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022zm2.004.45a7 7 0 0 0-.985-.299l.219-.976q.576.129 1.126.342zm1.37.71a7 7 0 0 0-.439-.27l.493-.87a8 8 0 0 1 .979.654l-.615.789a7 7 0 0 0-.418-.293"/><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-clock-history text-primary" viewBox="0 0 16 16"><path d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022zm2.004.45a7 7 0 0 0-.985-.299l.219-.976q.576.129 1.126.342zm1.37.71a7 7 0 0 0-.439-.27l.493-.87a8 8 0 0 1 .979.654l-.615.789a7 7 0 0 0-.418-.302zm1.834 1.79a7 7 0 0 0-.653-.796l.724-.69q.406.429.747.91zm.744 1.352a7 7 0 0 0-.214-.468l.893-.45a8 8 0 0 1 .45 1.088l-.95.313a7 7 0 0 0-.179-.483m.53 2.507a7 7 0 0 0-.1-1.025l.985-.17q.1.58.116 1.17zm-.131 1.538q.05-.254.081-.51l.993.123a8 8 0 0 1-.23 1.155l-.964-.267q.069-.247.12-.501m-.952 2.379q.276-.436.486-.908l.914.405q-.24.54-.555 1.038zm-.964 1.205q.183-.183.35-.378l.758.653a8 8 0 0 1-.401.432z"/><path d="M8 1a7 7 0 1 0 4.95 11.95l.707.707A8.001 8.001 0 1 1 8 0z"/><path d="M7.5 3a.5.5 0 0 1 .5.5v5.21l3.248 1.856a.5.5 0 0 1-.496.868l-3.5-2A.5.5 0 0 1 7 9V3.5a.5.5 0 0 1 .5-.5"/></svg>
                                 <span>{{ trans('Automatic Periodic Capture (Interval shooting)') }}</span>
                                 <span class="badge text-bg-primary d-none ms-2" id="interval-cam-badge">
                                     {{ trans('Capturing') }}: <span id="interval-cam-count">0</span> / <span id="interval-cam-max">-</span>
@@ -359,20 +363,20 @@
 
                         <!-- Live preview collapse -->
                         <div id="cam-preview-container" class="mt-3 d-none">
-                            <div class="card bg-dark text-white border-0 overflow-hidden shadow-lg position-relative" style="border-radius: 0.75rem;">
+                            <div class="card bg-dark text-white border-0 overflow-hidden shadow-lg position-relative rounded-3">
                                 <div class="card-header bg-black bg-opacity-75 border-0 d-flex align-items-center justify-content-between py-2 px-3">
                                     <div class="d-flex align-items-center gap-2">
-                                        <span class="badge bg-danger text-uppercase px-2 py-1 d-inline-flex align-items-center gap-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">
-                                            <span class="spinner-grow spinner-grow-sm" style="width: 0.45rem; height: 0.45rem;" role="status"></span>
+                                        <span class="badge bg-danger text-uppercase px-2 py-1 d-inline-flex align-items-center gap-1 fs-2xs badge-letter-spacing">
+                                            <span class="spinner-grow spinner-grow-sm spinner-grow-xs" role="status"></span>
                                             <span>{{ trans('Live') }}</span>
                                         </span>
-                                        <span class="small fw-semibold text-light text-truncate" id="cam-preview-title" style="max-width: 320px;">-</span>
+                                        <span class="small fw-semibold text-light text-truncate cam-title-truncate" id="cam-preview-title">-</span>
                                     </div>
                                     <button type="button" class="btn btn-sm btn-outline-light border-0 py-0 px-2" id="btn-close-cam-preview" title="{{ trans('Hide Preview') }}">
                                         ✕
                                     </button>
                                 </div>
-                                <div class="position-relative d-flex align-items-center justify-content-center bg-black" style="min-height: 280px; max-height: 480px;">
+                                <div class="position-relative d-flex align-items-center justify-content-center bg-black cam-preview-viewport">
                                     <div id="cam-preview-loading" class="position-absolute top-50 start-50 translate-middle text-center text-light z-2">
                                         <div class="spinner-border text-primary mb-2" role="status"></div>
                                         <div class="small text-secondary">{{ trans('Loading preview...') }}</div>
@@ -382,7 +386,7 @@
                                         <div class="small text-light mb-2" id="cam-preview-error-msg">{{ trans('Failed to load camera stream') }}</div>
                                         <button type="button" class="btn btn-sm btn-outline-warning" id="btn-cam-preview-retry">{{ trans('Retry') }}</button>
                                     </div>
-                                    <img id="cam-preview-img" src="" alt="" class="w-100 h-100" style="max-height: 480px; object-fit: contain; display: none;">
+                                    <img id="cam-preview-img" src="" alt="" class="w-100 h-100 cam-preview-img">
                                 </div>
                             </div>
                         </div>
@@ -499,7 +503,7 @@
                         <div class="cv-card h-100 shadow-sm d-flex flex-column">
                             <div class="card-header d-flex align-items-center justify-content-between py-2">
                                 <div class="d-flex align-items-center gap-2 fw-semibold">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-inbox text-warning" viewBox="0 0 16 16"><path d="M4.98 4a.5.5 0 0 0-.39.188L1.54 8H6a.5.5 0 0 1 .5.5 1.5 1.5 0 1 0 3 0A.5.5 0 0 1 10 8h4.46l-3.05-3.812A.5.5 0 0 0 11.02 4zm9.954 5H10.45a2.5 2.5 0 0 1-4.9 0H1.066l.32 2.562a.5.5 0 0 0 .497.438h12.234a.5.5 0 0 0 .496-.438zM3.804 3.5a1.5 1.5 0 0 1 1.17-.5h6.052a1.5 1.5 0 0 1 1.17.5l3.5 4.375A1 1 0 0 1 16 8.5v6a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-6a1 1 0 0 1 .326-.723zM2 9v5a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V9z"/></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-inbox text-warning" viewBox="0 0 16 16"><path d="M4.98 4a.5.5 0 0 0-.39.188L1.54 8H6a.5.5 0 0 1 .5.5 1.5 1.5 0 1 0 3 0A.5.5 0 0 1 10 8h4.46l-3.05-3.812A.5.5 0 0 0 11.02 4zm9.954 5H10.45a2.5 2.5 0 0 1-4.9 0H1.066l.32 2.562a.5.5 0 0 0 .497.438h12.234a.5.5 0 0 0 .496-.438zM3.809 3.563A1.5 1.5 0 0 1 4.981 3h6.038a1.5 1.5 0 0 1 1.172.563l3.7 4.625a.5.5 0 0 1 .105.374l-.39 3.124A1.5 1.5 0 0 1 14.117 13H1.883a1.5 1.5 0 0 1-1.489-1.314l-.39-3.124a.5.5 0 0 1 .106-.374z"/></svg>
                                     <span>{{ trans('Manage Inbox & Split') }}</span>
                                 </div>
                                 <span class="badge {% if dataset.by_split.inbox and dataset.by_split.inbox > 0 %}text-bg-warning{% else %}text-bg-secondary{% endif %}">
@@ -512,7 +516,7 @@
                                         <span class="fw-semibold small text-body">{{ trans('Auto train/val split') }}</span>
                                     </div>
                                     <div class="d-flex gap-2 align-items-center mb-2">
-                                        <div class="input-group input-group-sm" style="max-width: 130px;">
+                                        <div class="input-group input-group-sm input-val-ratio">
                                             <span class="input-group-text">val</span>
                                             <input type="number" class="form-control" id="val-ratio" value="0.2" min="0.05"
                                                    max="0.5" step="0.05"
@@ -522,27 +526,27 @@
                                         <button type="button" class="btn btn-sm btn-primary flex-grow-1 shadow-sm d-flex align-items-center justify-content-center gap-1" id="btn-auto-split"
                                                 data-bs-toggle="tooltip" data-bs-placement="top"
                                                 data-bs-title="{{ trans('Move inbox/train images into train and val by the ratio below.') }}">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-shuffle" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 3.5A.5.5 0 0 1 .5 3H1c2.202 0 3.827 1.24 4.874 2.418.49.552.865 1.102 1.126 1.532.26-.43.636-.98 1.126-1.532C9.173 4.24 10.798 3 13 3v1c-1.798 0-3.173 1.01-4.126 2.082A9.6 9.6 0 0 0 7.556 8a9.6 9.6 0 0 0 1.318 1.918C9.827 10.99 11.202 12 13 12v1c-2.202 0-3.827-1.24-4.874-2.418A10.6 10.6 0 0 1 7 9.05c-.26.43-.636.98-1.126 1.532C4.827 11.76 3.202 13 1 13H.5a.5.5 0 0 1-.5-.5"/><path d="M13 5.466V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192m0 9v-3.932a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192"/></svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-shuffle" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 3.5A.5.5 0 0 1 .5 3H1c2.202 0 3.827 1.24 4.874 2.418.49.552.865 1.102 1.126 1.532.26-.43.636-.98 1.126-1.532C9.173 4.24 10.798 3 13 3v1c-1.798 0-3.173 1.01-4.126 2.082A9.6 9.6 0 0 0 7.556 8a9.6 9.6 0 0 0 1.317 1.918C9.828 10.99 11.204 12 13 12v1c-2.202 0-3.827-1.24-4.874-2.418A10.6 10.6 0 0 1 7 9.05c-.26.43-.636.98-1.126 1.532C4.827 11.76 3.202 13 1 13H.5a.5.5 0 0 1 0-1H1c1.798 0 3.173-1.01 4.126-2.082A9.6 9.6 0 0 0 6.444 8a9.6 9.6 0 0 0-1.317-1.918C4.172 5.01 2.796 4 1 4H.5a.5.5 0 0 1-.5-.5"/><path d="M13 5.466V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192m0 9v-3.932a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192"/></svg>
                                             <span>{{ trans('Auto split now') }}</span>
                                         </button>
                                         <button type="button" class="btn btn-warning d-none" id="btn-quick-split">
                                             {{ trans('Auto split inbox') }}
                                         </button>
                                     </div>
-                                    <div class="text-body-secondary" style="font-size: 0.74rem;">
+                                    <div class="text-body-secondary fs-xs">
                                         {{ trans('Recommended before training: keep most images in train, a smaller share in val.') }}
                                     </div>
                                 </div>
 
                                 <div class="dataset-inbox-path mt-auto pt-2 border-top">
-                                    <div class="small text-body-secondary mb-1 fw-semibold" style="font-size: 0.75rem;">{{ trans('Inbox folder on disk') }}</div>
+                                    <div class="small text-body-secondary mb-1 fw-semibold fs-xs">{{ trans('Inbox folder on disk') }}</div>
                                     <div class="input-group input-group-sm">
-                                        <code class="form-control font-monospace text-truncate" id="inbox-path-text" title="{{ dataset.inbox_path }}" style="font-size: 0.72rem;">{{ dataset.inbox_path }}</code>
+                                        <code class="form-control font-monospace text-truncate fs-2xs" id="inbox-path-text" title="{{ dataset.inbox_path }}">{{ dataset.inbox_path }}</code>
                                         <button type="button" class="btn btn-outline-secondary" id="btn-copy-inbox"
                                                 data-bs-toggle="tooltip" data-bs-placement="top"
                                                 data-bs-title="{{ trans('Copy path to clipboard') }}">{{ trans('Copy') }}</button>
                                     </div>
-                                    <div class="form-text" style="font-size: 0.72rem;">{{ trans('You can also drop images into this folder manually, then refresh the page.') }}</div>
+                                    <div class="form-text fs-2xs">{{ trans('You can also drop images into this folder manually, then refresh the page.') }}</div>
                                 </div>
                             </div>
                         </div>
@@ -556,24 +560,24 @@
             <div class="tab-pane fade" id="tab-annotations">
                 <div class="cv-card overflow-hidden shadow-sm">
                     <div class="card-header dataset-images-toolbar d-flex flex-wrap gap-2 align-items-center bg-body-tertiary py-3">
-                        <div class="input-group input-group-sm" style="width:auto; max-width: 14rem;">
+                        <div class="input-group input-group-sm dataset-filter-search">
                             <span class="input-group-text">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/></svg>
                             </span>
                             <input type="text" class="form-control" id="images-search-input" placeholder="{{ trans('Search') }}…" aria-label="{{ trans('Search') }}">
                         </div>
-                        <select class="form-select form-select-sm" style="width:auto" id="filter-split" aria-label="{{ trans('Split') }}">
+                        <select class="form-select form-select-sm dataset-filter-select" id="filter-split" aria-label="{{ trans('Split') }}">
                             <option value="">{{ trans('All splits') }}</option>
                             <option value="inbox">inbox</option>
                             <option value="train">train</option>
                             <option value="val">val</option>
                         </select>
-                        <select class="form-select form-select-sm" style="width:auto" id="filter-labeled" aria-label="{{ trans('Status') }}">
+                        <select class="form-select form-select-sm dataset-filter-select" id="filter-labeled" aria-label="{{ trans('Status') }}">
                             <option value="">{{ trans('All status') }}</option>
                             <option value="0">{{ trans('Unlabeled') }}</option>
                             <option value="1">{{ trans('Labeled') }}</option>
                         </select>
-                        <select class="form-select form-select-sm" style="width:auto" id="filter-class" aria-label="{{ trans('Class') }}">
+                        <select class="form-select form-select-sm dataset-filter-select" id="filter-class" aria-label="{{ trans('Class') }}">
                             <option value="">{{ trans('All classes') }}</option>
                             {% for c in dataset.classes %}
                                 <option value="{{ c }}">{{ c }}</option>
@@ -609,7 +613,7 @@
                         </button>
                         <div class="ms-md-auto d-flex gap-2">
                             <button type="button" class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-1" id="btn-autolabel" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{ trans('Run Auto-label model on selected (or unlabeled) images.') }}">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-magic" viewBox="0 0 16 16"><path d="M9.5 2.672a.5.5 0 1 0 1 0V.843a.5.5 0 0 0-1 0zm4.5.035A.5.5 0 0 0 13.293 2L12 3.293a.5.5 0 1 0 .707.707zM7.293 4A.5.5 0 1 0 8 3.293L6.707 2a.5.5 0 0 0-.707.707zm-.621 2.5a.5.5 0 1 0 0-1H4.843a.5.5 0 1 0 0 1zm8.485 0a.5.5 0 1 0 0-1h-1.829a.5.5 0 0 0 0 1zM13.293 10a.5.5 0 1 0 .707-.707L12.707 8a.5.5 0 1 0-.707.707zM9.5 11.157a.5.5 0 0 0 1 0V9.328a.5.5 0 0 0-1 0zm1.854-5.097a.5.5 0 0 0 0-.706l-.708-.708a.5.5 0 0 0-.707 0L.854 13.793a.5.5 0 0 0 0 .707l.707.707a.5.5 0 0 0 .707 0zm-1.414 1.414 1.414-1.414.708.707-1.414 1.414z"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-magic" viewBox="0 0 16 16"><path d="M9.5 2.672a.5.5 0 1 0 1 0V.843a.5.5 0 0 0-1 0zm4.5.035A.5.5 0 0 0 13.293 2L12 3.293a.5.5 0 1 0 .707.707zM7.293 4A.5.5 0 1 0 8 3.293L6.707 2A.5.5 0 0 0 6 2.707zm-.621 2.5a.5.5 0 1 0 0-1H4.843a.5.5 0 1 0 0 1zm8.485 0a.5.5 0 1 0 0-1h-1.829a.5.5 0 0 0 0 1zM13.293 10A.5.5 0 1 0 14 9.293L12.707 8a.5.5 0 1 0-.707.707zM9.5 11.157a.5.5 0 0 0 1 0V9.328a.5.5 0 0 0-1 0zm1.854-5.097a.5.5 0 0 0 0-.706l-.708-.708a.5.5 0 0 0-.707 0L8.646 5.94a.5.5 0 0 0 0 .707l.708.708a.5.5 0 0 0 .707 0l1.293-1.293Zm-3 3a.5.5 0 0 0 0-.706l-.708-.708a.5.5 0 0 0-.707 0L.646 13.94a.5.5 0 0 0 0 .707l.708.708a.5.5 0 0 0 .707 0z"/></svg>
                                 <span id="btn-autolabel-text">{{ trans('Auto-label') }}</span>
                             </button>
                             <a class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1 shadow-sm" href="{{ url_for('datasets.dataset_annotate', name=dataset.name) }}">
@@ -624,13 +628,13 @@
                         <table class="table table-modern table-sm table-hover mb-0 align-middle">
                             <thead>
                             <tr>
-                                <th style="width:2.25rem"><input type="checkbox" id="check-all-images" class="form-check-input" aria-label="{{ trans('All') }}"></th>
-                                <th style="width:4.5rem">{{ trans('Preview') }}</th>
+                                <th class="table-col-check"><input type="checkbox" id="check-all-images" class="form-check-input" aria-label="{{ trans('All') }}"></th>
+                                <th class="table-col-thumb">{{ trans('Preview') }}</th>
                                 <th>{{ trans('Image') }}</th>
-                                <th style="width:5rem">{{ trans('Split') }}</th>
-                                <th style="width:7rem">{{ trans('Status') }}</th>
+                                <th class="table-col-split">{{ trans('Split') }}</th>
+                                <th class="table-col-status">{{ trans('Status') }}</th>
                                 <th>{{ trans('Labels') }}</th>
-                                <th style="width:5rem"></th>
+                                <th class="table-col-actions"></th>
                             </tr>
                             </thead>
                             <tbody id="images-tbody">
@@ -641,10 +645,9 @@
                                     <td><input type="checkbox" class="form-check-input img-check" value="{{ img.name }}"></td>
                                     <td>
                                         <img src="{{ url_for('datasets.api_image_file', name=dataset.name, image_name=img.name) }}"
-                                             alt="" loading="lazy" class="rounded border"
-                                             style="width: 44px; height: 32px; object-fit: cover; background: #000;">
+                                             alt="" loading="lazy" class="rounded border dataset-thumb-table">
                                     </td>
-                                    <td class="text-truncate dataset-images-name" style="max-width: 16rem;" title="{{ img.name }}">{{ img.name }}</td>
+                                    <td class="text-truncate dataset-images-name table-max-w-16rem" title="{{ img.name }}">{{ img.name }}</td>
                                     <td><span class="badge bg-body-secondary text-body font-monospace">{{ img.split }}</span></td>
                                     <td>
                                         {% if img.labeled %}
@@ -655,7 +658,7 @@
                                     </td>
                                     <td>
                                         {% for l in img.labels or [] %}
-                                            <span class="badge bg-body-tertiary text-body border" style="font-size: 0.72rem;">{{ l }}</span>
+                                            <span class="badge bg-body-tertiary text-body border fs-2xs">{{ l }}</span>
                                         {% else %}
                                             <span class="text-body-secondary small">-</span>
                                         {% endfor %}
@@ -693,24 +696,24 @@
                                      data-labels="{{ (img.labels or [])|join(',') }}">
                                     <div class="card h-100 overflow-hidden shadow-sm position-relative border">
                                         <input type="checkbox" class="form-check-input img-check position-absolute top-0 start-0 m-2 z-2" value="{{ img.name }}">
-                                        <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 z-2 p-1 py-0 shadow-sm opacity-75 hover-opacity-100 btn-delete-single-image"
-                                                data-name="{{ img.name }}" title="{{ trans('Delete image') }}" style="line-height: 1;">
+                                        <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 z-2 p-1 py-0 shadow-sm opacity-75 hover-opacity-100 btn-delete-single-image lh-1"
+                                                data-name="{{ img.name }}" title="{{ trans('Delete image') }}">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16" aria-hidden="true">
                                                 <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
                                                 <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
                                             </svg>
                                         </button>
-                                        <a href="{{ url_for('datasets.dataset_annotate', name=dataset.name) }}?image={{ img.name }}" class="d-block bg-dark" style="height: 120px;">
-                                            <img src="{{ url_for('datasets.api_image_file', name=dataset.name, image_name=img.name) }}" alt="" loading="lazy" class="w-100 h-100" style="object-fit: cover;">
+                                        <a href="{{ url_for('datasets.dataset_annotate', name=dataset.name) }}?image={{ img.name }}" class="d-block bg-dark dataset-thumb-card">
+                                            <img src="{{ url_for('datasets.api_image_file', name=dataset.name, image_name=img.name) }}" alt="" loading="lazy" class="w-100 h-100 dataset-thumb-card-img">
                                         </a>
                                         <div class="card-body p-2 d-flex flex-column gap-1">
                                             <div class="small text-truncate" title="{{ img.name }}">{{ img.name }}</div>
                                             <div class="d-flex justify-content-between align-items-center">
-                                                <span class="badge bg-body-secondary text-body font-monospace" style="font-size: 0.65rem;">{{ img.split }}</span>
+                                                <span class="badge bg-body-secondary text-body font-monospace fs-3xs">{{ img.split }}</span>
                                                 {% if img.labeled %}
-                                                    <span class="badge text-bg-success" style="font-size: 0.65rem;">{{ trans('Labeled') }}</span>
+                                                    <span class="badge text-bg-success fs-3xs">{{ trans('Labeled') }}</span>
                                                 {% else %}
-                                                    <span class="badge text-bg-secondary" style="font-size: 0.65rem;">{{ trans('Unlabeled') }}</span>
+                                                    <span class="badge text-bg-secondary fs-3xs">{{ trans('Unlabeled') }}</span>
                                                 {% endif %}
                                             </div>
                                         </div>
@@ -791,7 +794,7 @@
                                             <span id="base-model-download-status">{{ trans('Downloading...') }}</span>
                                             <span id="base-model-download-pct">0%</span>
                                         </div>
-                                        <div class="progress" style="height: 6px;">
+                                        <div class="progress progress--thin">
                                             <div class="progress-bar progress-bar-striped progress-bar-animated bg-info" id="base-model-download-bar" style="width: 0%"></div>
                                         </div>
                                     </div>
@@ -801,26 +804,26 @@
                                 <div class="mb-3">
                                     <label class="form-label fw-semibold mb-2">{{ trans('Training preset') }}</label>
                                     <div class="d-flex flex-column gap-2" id="training-presets-container">
-                                        <div class="card border p-2 cursor-pointer transition-card train-preset-card" data-epochs="30" data-imgsz="640" style="cursor: pointer;">
+                                        <div class="card border p-2 cursor-pointer transition-card train-preset-card" data-epochs="30" data-imgsz="640">
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <div class="fw-bold small text-body">⚡ {{ trans('Quick test') }}</div>
                                                 <span class="badge text-bg-secondary">30 {{ trans('epochs') }}</span>
                                             </div>
-                                            <div class="text-body-secondary" style="font-size: 0.75rem;">{{ trans('Fast check in 2-5 minutes to verify annotation quality.') }}</div>
+                                            <div class="text-body-secondary fs-xs">{{ trans('Fast check in 2-5 minutes to verify annotation quality.') }}</div>
                                         </div>
-                                        <div class="card border border-primary bg-primary-subtle bg-opacity-25 p-2 cursor-pointer transition-card train-preset-card" data-epochs="100" data-imgsz="640" style="cursor: pointer;">
+                                        <div class="card border border-primary bg-primary-subtle bg-opacity-25 p-2 cursor-pointer transition-card train-preset-card" data-epochs="100" data-imgsz="640">
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <div class="fw-bold small text-body">⚖️ {{ trans('Balanced (Recommended)') }}</div>
                                                 <span class="badge text-bg-primary">100 {{ trans('epochs') }}</span>
                                             </div>
-                                            <div class="text-body-secondary" style="font-size: 0.75rem;">{{ trans('Optimal trade-off between training time and detection accuracy.') }}</div>
+                                            <div class="text-body-secondary fs-xs">{{ trans('Optimal trade-off between training time and detection accuracy.') }}</div>
                                         </div>
-                                        <div class="card border p-2 cursor-pointer transition-card train-preset-card" data-epochs="300" data-imgsz="640" style="cursor: pointer;">
+                                        <div class="card border p-2 cursor-pointer transition-card train-preset-card" data-epochs="300" data-imgsz="640">
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <div class="fw-bold small text-body">🎯 {{ trans('Maximum Accuracy') }}</div>
                                                 <span class="badge text-bg-success">300 {{ trans('epochs') }}</span>
                                             </div>
-                                            <div class="text-body-secondary" style="font-size: 0.75rem;">{{ trans('Thorough training for production deployments and small objects.') }}</div>
+                                            <div class="text-body-secondary fs-xs">{{ trans('Thorough training for production deployments and small objects.') }}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -892,11 +895,11 @@
                                 </div>
                                 <span class="badge text-bg-secondary" id="train-status-badge">{{ trans('idle') }}</span>
                             </div>
-                            <div class="progress d-none" id="train-progress-bar" style="height: 4px; border-radius: 0;">
+                            <div class="progress progress--hairline d-none" id="train-progress-bar">
                                 <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" style="width: 0%"></div>
                             </div>
                             <div class="card-body p-0">
-                                <pre class="training-log mb-0" id="training-log" style="min-height: 380px;"></pre>
+                                <pre class="training-log cv-training-log mb-0" id="training-log"></pre>
                             </div>
                         </div>
                     </div>
@@ -912,7 +915,7 @@
                         <div class="cv-card shadow-sm border-0">
                             <div class="card-header bg-body-tertiary d-flex align-items-center gap-2 py-3">
                                 <div class="p-2 rounded bg-success-subtle text-success">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-cpu" viewBox="0 0 16 16"><path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14a2.5 2.5 0 0 1-2.5 2.5v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0m-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3zM5 6.5A1.5 1.5 0 0 1 6.5 5h3A1.5 1.5 0 0 1 11 6.5v3A1.5 1.5 0 0 1 9.5 11h-3A1.5 1.5 0 0 1 5 9.5zM6.5 6a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5z"/></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-cpu" viewBox="0 0 16 16"><path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14a2.5 2.5 0 0 1-2.5 2.5v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0m-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3zM5 6.5A1.5 1.5 0 0 1 6.5 5h3A1.5 1.5 0 0 1 11 6.5v3A1.5 1.5 0 0 1 9.5 11h-3A1.5 1.5 0 0 1 5 9.5zM6.5 6a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5z"/></svg>
                                 </div>
                                 <div>
                                     <h5 class="fw-bold mb-0">{{ trans('Apply weights to counter detector') }}</h5>
@@ -937,7 +940,7 @@
                                     <div class="d-flex justify-content-between align-items-center mb-1">
                                         <label class="form-label fw-semibold mb-0" for="select-available-weights">{{ trans('Model weights') }}</label>
                                         <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none d-none" id="btn-fill-best-weights">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-magic me-1" viewBox="0 0 16 16"><path d="M9.5 2.672a.5.5 0 1 0 1 0V.843a.5.5 0 0 0-1 0zm4.5.035A.5.5 0 0 0 13.293 2L12 3.293a.5.5 0 1 0 .707.707zM7.293 4A.5.5 0 1 0 8 3.293L6.707 2a.5.5 0 0 0-.707.707zm-.621 2.5a.5.5 0 1 0 0-1H4.843a.5.5 0 1 0 0 1zm8.485 0a.5.5 0 1 0 0-1h-1.829a.5.5 0 0 0 0 1zM13.293 10a.5.5 0 1 0 .707-.707L12.707 8a.5.5 0 1 0-.707.707zM9.5 11.157a.5.5 0 0 0 1 0V9.328a.5.5 0 0 0-1 0zm1.854-5.097a.5.5 0 0 0 0-.706l-.708-.708a.5.5 0 0 0-.707 0L.854 13.793a.5.5 0 0 0 0 .707l.707.707a.5.5 0 0 0 .707 0zm-1.414 1.414 1.414-1.414.708.707-1.414 1.414z"/></svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-magic me-1" viewBox="0 0 16 16"><path d="M9.5 2.672a.5.5 0 1 0 1 0V.843a.5.5 0 0 0-1 0zm4.5.035A.5.5 0 0 0 13.293 2L12 3.293a.5.5 0 1 0 .707.707zM7.293 4A.5.5 0 1 0 8 3.293L6.707 2A.5.5 0 0 0 6 2.707zm-.621 2.5a.5.5 0 1 0 0-1H4.843a.5.5 0 1 0 0 1zm8.485 0a.5.5 0 1 0 0-1h-1.829a.5.5 0 0 0 0 1zM13.293 10A.5.5 0 1 0 14 9.293L12.707 8a.5.5 0 1 0-.707.707zM9.5 11.157a.5.5 0 0 0 1 0V9.328a.5.5 0 0 0-1 0zm1.854-5.097a.5.5 0 0 0 0-.706l-.708-.708a.5.5 0 0 0-.707 0L8.646 5.94a.5.5 0 0 0 0 .707l.708.708a.5.5 0 0 0 .707 0l1.293-1.293Zm-3 3a.5.5 0 0 0 0-.706l-.708-.708a.5.5 0 0 0-.707 0L.646 13.94a.5.5 0 0 0 0 .707l.708.708a.5.5 0 0 0 .707 0z"/></svg>
                                             <span>{{ trans('Use trained weights') }}</span>
                                         </button>
                                     </div>
@@ -1100,7 +1103,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <pre class="qa-output mb-0 rounded p-2 bg-body-tertiary border small font-monospace" id="qa-output" style="max-height: 200px; overflow-y: auto;">{{ trans('No report yet') }}</pre>
+                                <pre class="qa-output cv-qa-output mb-0 rounded p-2 bg-body-tertiary border small font-monospace" id="qa-output">{{ trans('No report yet') }}</pre>
                             </div>
                         </div>
 

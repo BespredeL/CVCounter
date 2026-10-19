@@ -2,6 +2,10 @@
 
 {% block title %}{{ trans('Annotate') }} - {{ dataset.display_name }}{% endblock %}
 
+{% block head_assets %}
+    <link href="{{ url_for('static', filename='assets/css/modules/datasets.css') }}" rel="stylesheet">
+{% endblock %}
+
 {% block body_class %}annotator-body{% endblock %}
 {% block shell_class %}annotator-shell{% endblock %}
 
@@ -97,9 +101,7 @@
                     </button>
                     <button type="button" class="btn btn-sm btn-outline-success d-inline-flex align-items-center" id="ann-autolabel"
                             title="Ctrl+A · {{ trans('Run Auto-label on this image only (uses model from dataset settings).') }}">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-magic me-1" viewBox="0 0 16 16" aria-hidden="true">
-                            <path d="M9.5 2.672a.5.5 0 1 0 1 0V.843a.5.5 0 0 0-1 0zm4.5.035A.5.5 0 0 0 13.293 2L12 3.293a.5.5 0 1 0 .707.707zM7.293 4A.5.5 0 1 0 8 3.293L6.707 2a.5.5 0 0 0-.707.707zm-.621 2.5a.5.5 0 1 0 0-1H4.843a.5.5 0 1 0 0 1zm8.485 0a.5.5 0 1 0 0-1h-1.829a.5.5 0 0 0 0 1zM13.293 10a.5.5 0 1 0 .707-.707L12.707 8a.5.5 0 1 0-.707.707zM9.5 11.157a.5.5 0 0 0 1 0V9.328a.5.5 0 0 0-1 0zm1.854-5.097a.5.5 0 0 0 0-.706l-.708-.708a.5.5 0 0 0-.707 0L.854 13.793a.5.5 0 0 0 0 .707l.707.707a.5.5 0 0 0 .707 0zm-1.414 1.414 1.414-1.414.708.707-1.414 1.414z"/>
-                        </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-magic" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 2.672a.5.5 0 1 0 1 0V.843a.5.5 0 0 0-1 0zm4.5.035A.5.5 0 0 0 13.293 2L12 3.293a.5.5 0 1 0 .707.707zM7.293 4A.5.5 0 1 0 8 3.293L6.707 2A.5.5 0 0 0 6 2.707zm-.621 2.5a.5.5 0 1 0 0-1H4.843a.5.5 0 1 0 0 1zm8.485 0a.5.5 0 1 0 0-1h-1.829a.5.5 0 0 0 0 1zM13.293 10A.5.5 0 1 0 14 9.293L12.707 8a.5.5 0 1 0-.707.707zM9.5 11.157a.5.5 0 0 0 1 0V9.328a.5.5 0 0 0-1 0zm1.854-5.097a.5.5 0 0 0 0-.706l-.708-.708a.5.5 0 0 0-.707 0L8.646 5.94a.5.5 0 0 0 0 .707l.708.708a.5.5 0 0 0 .707 0l1.293-1.293Zm-3 3a.5.5 0 0 0 0-.706l-.708-.708a.5.5 0 0 0-.707 0L.646 13.94a.5.5 0 0 0 0 .707l.708.708a.5.5 0 0 0 .707 0z"/></svg>
                         <span>{{ trans('Auto-label') }}</span>
                     </button>
                     <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center" data-bs-toggle="modal" data-bs-target="#shortcutsModal"
@@ -132,7 +134,7 @@
                 <div class="cv-card annotator__queue-card h-100">
                     <div class="card-header d-flex justify-content-between align-items-center gap-2">
                         <span>{{ trans('Images') }}</span>
-                        <select class="form-select form-select-sm" style="width:auto;max-width:7.5rem" id="ann-filter"
+                        <select class="form-select form-select-sm dataset-filter-select--compact" id="ann-filter"
                                 aria-label="{{ trans('Filter') }}"
                                 title="{{ trans('Filter the queue by annotation status.') }}">
                             <option value="all">{{ trans('All') }}</option>

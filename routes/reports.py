@@ -10,9 +10,10 @@ import json
 import mimetypes
 from threading import Thread
 
-from flask import Blueprint, abort, render_template, request, send_file
+from flask import Blueprint, abort, jsonify, render_template, request, send_file
 from markupsafe import escape
 
+from system.auth import login_required
 from system.utils.app_context import get_app_context
 from system.utils.i18n import trans as translate
 from system.utils.saved_media import (
@@ -390,3 +391,30 @@ def report_show(location: str, report_id: int) -> str:
         field_labels=field_labels,
         json=json
     )
+
+
+@reports_bp.route('/reports/api/<int:report_id>/delete', methods=['POST', 'DELETE'])
+@login_required
+def api_delete_report(report_id: int):
+    """
+    Delete a specific count session report by ID.
+    """
+    context = get_app_context()
+    db_manager = context['db_manager']
+
+    counter = db_manager.get_count(report_id)
+    if counter is None:
+        return jsonify({'ok': False, 'error': translate('Report not found')}), 404
+
+    location = counter.location
+    success = db_manager.delete_count(report_id)
+    if not success:
+        return jsonify({'ok': False, 'error': translate('Failed to delete report')}), 500
+
+    return jsonify({
+        'ok': True,
+        'message': translate('Report deleted successfully'),
+        'report_id': report_id,
+        'location': location
+    })
+
