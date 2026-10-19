@@ -328,7 +328,8 @@ def detect_hardware_profile(force_profile: str = None) -> dict:
             "driver_version": "NVIDIA Windows Driver",
             "cuda_version": "12.x",
             "cuda_major": 12.0,
-            "all_gpus": all_gpus
+            "all_gpus": all_gpus,
+            "driver_missing": True,
         }
 
     # Check AMD Radeon
@@ -355,6 +356,28 @@ def detect_hardware_profile(force_profile: str = None) -> dict:
         "name": "Processor (CPU Inference)",
         "all_gpus": all_gpus
     }
+
+
+def prompt_nvidia_driver_guidance(hw: dict):
+    """Guide the user when an NVIDIA GPU is detected but official driver or CUDA is missing."""
+    print()
+    pr_warn("NVIDIA GPU detected, but NVIDIA Display Driver / CUDA runtime was not found!")
+    pr_info("PyTorch requires an official NVIDIA graphics driver to enable GPU hardware acceleration.")
+    pr_info("NOTE: Installing the full CUDA Toolkit (3+ GB) is NOT required.")
+    pr_info("Only the standard NVIDIA graphics driver (Game Ready or Studio) is needed.")
+    pr_info("-> Download official drivers: https://www.nvidia.com/Download/index.aspx")
+    if sys.platform == "win32" and shutil.which("winget"):
+        pr_info("-> Quick install command: winget install --id Nvidia.GraphicsDriver")
+
+    if sys.stdin and sys.stdin.isatty():
+        try:
+            choice = input("\n  Open NVIDIA driver download page in your browser now? [Y/n]: ").strip().lower()
+            if choice in ("", "y", "yes"):
+                import webbrowser
+                webbrowser.open("https://www.nvidia.com/Download/index.aspx")
+        except Exception:
+            pass
+    print()
 
 
 # --------------------------------------------------------------------------------
@@ -672,8 +695,20 @@ def verify_installation(hw: dict) -> bool:
                 else:
                     pr(f"  [OK] PyTorch: {torch_ver} | CUDA Active: YES ({device_name})", Colors.GREEN)
             else:
-                pr(f"  [!] PyTorch: {torch_ver} | CUDA: No access to GPU", Colors.YELLOW)
-                pr("      (You may need to update your NVIDIA driver or restart your PC)", Colors.YELLOW)
+                pr(f"  [!] PyTorch: {torch_ver} | CUDA: No access to GPU", Colors.YELLOW, bold=True)
+                pr("      Reason: Official NVIDIA driver is missing, outdated, or system restart required.", Colors.YELLOW)
+                pr("      NOTE: CUDA Toolkit (3+ GB) is NOT required. Only the official graphics driver is needed.", Colors.YELLOW)
+                pr("      Download driver: https://www.nvidia.com/Download/index.aspx", Colors.CYAN)
+                if sys.platform == "win32" and shutil.which("winget"):
+                    pr("      Quick install command: winget install --id Nvidia.GraphicsDriver", Colors.CYAN)
+                if sys.stdin and sys.stdin.isatty():
+                    try:
+                        choice = input("      Open NVIDIA driver download page in browser? [y/N]: ").strip().lower()
+                        if choice in ("y", "yes"):
+                            import webbrowser
+                            webbrowser.open("https://www.nvidia.com/Download/index.aspx")
+                    except Exception:
+                        pass
                 all_ok = False
         else:
             pr(f"  [OK] PyTorch: {torch_ver} (Mode: {device_name})", Colors.GREEN)
@@ -826,6 +861,9 @@ def main():
         pr(f"  Supported CUDA version: {hw['cuda_version']}")
     if hw.get("all_gpus"):
         pr(f"  All video controllers on system: {', '.join(hw['all_gpus'])}")
+
+    if hw.get("driver_missing"):
+        prompt_nvidia_driver_guidance(hw)
 
     # Step 3: Upgrade pip and build tools
     pr_step(3, 6, "Upgrading pip, setuptools, and wheel")

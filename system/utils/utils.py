@@ -9,7 +9,7 @@
 import os
 import re
 import subprocess
-from shutil import disk_usage
+from shutil import disk_usage, which
 import platform
 from typing import Any, Dict
 
@@ -123,6 +123,40 @@ def format_bytes(size: int) -> str:
     return f"{size:.2f} PB"
 
 
+def _find_nvidia_smi() -> str | None:
+    """
+    Search for nvidia-smi in system PATH, System32, NVSMI, and DriverStore (Windows DCH).
+
+    Returns:
+        str | None: Absolute path to nvidia-smi executable or None if not found.
+    """
+    cmd = which("nvidia-smi")
+    if cmd:
+        return cmd
+
+    if os.name == "nt":
+        candidates = [
+            r"C:\Windows\System32\nvidia-smi.exe",
+            r"C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe",
+            r"C:\Windows\SysWOW64\nvidia-smi.exe",
+        ]
+        ds_root = r"C:\Windows\System32\DriverStore\FileRepository"
+        if os.path.isdir(ds_root):
+            try:
+                for entry in os.scandir(ds_root):
+                    if entry.is_dir() and entry.name.lower().startswith("nv"):
+                        cand = os.path.join(entry.path, "nvidia-smi.exe")
+                        if os.path.isfile(cand):
+                            candidates.append(cand)
+            except Exception:
+                pass
+
+        for possible_path in candidates:
+            if os.path.isfile(possible_path):
+                return possible_path
+    return None
+
+
 def _nvidia_smi_query(field: str) -> str | None:
     """
     Read one GPU field via the stable nvidia-smi CSV query interface.
@@ -133,9 +167,13 @@ def _nvidia_smi_query(field: str) -> str | None:
     Returns:
         str | None: The value of the field.
     """
+    smi_cmd = _find_nvidia_smi()
+    if not smi_cmd:
+        return None
+
     try:
         result = subprocess.run(
-            ['nvidia-smi', f'--query-gpu={field}', '--format=csv,noheader,nounits'],
+            [smi_cmd, f'--query-gpu={field}', '--format=csv,noheader,nounits'],
             capture_output=True,
             text=True,
             timeout=10,
@@ -225,18 +263,20 @@ def get_system_info() -> dict[str | Any, str | int | Any]:
         'gpu_name': None,
     }
 
-    try:
-        result = subprocess.run(
-            ['nvidia-smi'],
-            capture_output=True,
-            text=True,
-            timeout=10,
-            check=False,
-        )
-        if result.returncode == 0 and result.stdout:
-            nvidia_info.update(_parse_nvidia_smi_text(result.stdout))
-    except (OSError, subprocess.TimeoutExpired):
-        pass
+    smi_cmd = _find_nvidia_smi()
+    if smi_cmd:
+        try:
+            result = subprocess.run(
+                [smi_cmd],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+            if result.returncode == 0 and result.stdout:
+                nvidia_info.update(_parse_nvidia_smi_text(result.stdout))
+        except (OSError, subprocess.TimeoutExpired):
+            pass
 
     if not nvidia_info['driver_version']:
         nvidia_info['driver_version'] = _nvidia_smi_query('driver_version')
@@ -250,6 +290,8 @@ def get_system_info() -> dict[str | Any, str | int | Any]:
     if cuda_available and torch is not None:
         try:
             cuda_device_count = torch.cuda.device_count()
+            if not nvidia_info['gpu_name'] and cuda_device_count > 0:
+                nvidia_info['gpu_name'] = torch.cuda.get_device_name(0)
         except Exception:
             cuda_device_count = 0
 
@@ -381,8 +423,12 @@ def system_check() -> None:
     driver_reported = bool(sys_info["driver_version"] or sys_info["nvidia_smi_version"])
     cuda_reported = bool(sys_info["cuda_version"] or sys_info["py_torch_cuda_version"])
 
-    # Functional CUDA test wins; parsing tolerates driver 6xx header renames.
-    if cuda_ready and driver_reported and cuda_reported and sys_info["py_torch_version"]:
+    # If PyTorch has active CUDA device(s), hardware acceleration is functional!
+    # Parsing tolerates driver 6xx header renames and environments without nvidia-smi in PATH.
+    if cuda_ready or (driver_reported and cuda_reported and sys_info["py_torch_version"]):
         print(f'{colored_text(" * System Check Result:", "yellow")} {colored_text("PASSED", "green")}')
     else:
         print(f'{colored_text(" * System Check Result:", "yellow")} {colored_text("FAILED", "red")}')
+        if not cuda_ready:
+            print(f'{colored_text(" * TIP:", "cyan")} To enable GPU acceleration, install the official NVIDIA driver:')
+            print(f'{colored_text("   ->", "cyan")} https://www.nvidia.com/Download/index.aspx')
