@@ -419,11 +419,19 @@ class DatasetService:
         total = sum(by_split.values())
 
         if fast:
+            store = self.store(name)
+            task = meta.get('task', 'detect')
             ann_dir = root / 'annotations'
-            ann_count = 0
-            if ann_dir.is_dir():
-                ann_count = sum(1 for p in ann_dir.glob('*.json') if p.is_file())
-            labeled = min(total, ann_count)
+            ann_stems = {p.stem for p in ann_dir.glob('*.json')} if ann_dir.is_dir() else set()
+            labeled = 0
+            for sp in SPLITS:
+                images_dir = root / 'images' / sp
+                if not images_dir.is_dir():
+                    continue
+                for p in images_dir.iterdir():
+                    if p.suffix.lower() in IMAGE_EXTENSIONS:
+                        if p.stem in ann_stems and store.is_labeled(p.name, task):
+                            labeled += 1
             unlabeled = max(0, total - labeled)
             labeled_pct = round(100.0 * labeled / total, 1) if total else 0.0
             per_class: dict[str, int] = {c: 0 for c in meta.get('classes') or []}
@@ -945,6 +953,14 @@ class DatasetService:
         store = self.store(name)
         self.image_path(name, image_name)
         path = store.save(image_name, doc)
+        if not doc.get('shapes') and not doc.get('keypoints') and not doc.get('image_label'):
+            try:
+                split = self.find_image_split(name, image_name)
+                txt_path = self.root(name) / 'labels' / split / f'{Path(image_name).stem}.txt'
+                if txt_path.is_file():
+                    txt_path.unlink()
+            except Exception:
+                pass
         return {'ok': True, 'path': str(path)}
 
     def copy_shapes_from_previous(self, name: str, image_name: str) -> dict[str, Any]:
