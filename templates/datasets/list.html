@@ -223,47 +223,224 @@
                 <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
             </svg>
             <div>{{ trans('No data') }}</div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="createDatasetModal" tabindex="-1" aria-labelledby="createDatasetModalLabel"
+        </di    <div class="modal fade" id="createDatasetModal" tabindex="-1" aria-labelledby="createDatasetModalLabel"
          aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <form class="modal-content" id="create-dataset-form">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="createDatasetModalLabel">{{ trans('New dataset') }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"
-                            aria-label="{{ trans('Cancel') }}"></button>
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <form class="modal-content border-0 shadow-lg" id="create-dataset-form">
+                <div class="modal-header bg-body-tertiary border-bottom py-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-magic" viewBox="0 0 16 16">
+                                <path d="M9.5 2.672a.5.5 0 1 0 1 0V.843a.5.5 0 0 0-1 0zm4.5.035A.5.5 0 0 0 13.293 2L12 3.293a.5.5 0 1 0 .707.707zM7.293 4A.5.5 0 1 0 8 3.293L6.707 2a.5.5 0 0 0-.707.707zm-.621 2.5a.5.5 0 1 0 0-1H4.843a.5.5 0 1 0 0 1zm8.485 0a.5.5 0 1 0 0-1h-1.829a.5.5 0 0 0 0 1zM13.293 10a.5.5 0 1 0 .707-.707L12.707 8a.5.5 0 1 0-.707.707zM9.5 11.157a.5.5 0 0 0 1 0V9.328a.5.5 0 0 0-1 0zm1.854-5.097a.5.5 0 0 0 0-.706l-.708-.708a.5.5 0 0 0-.707 0L.854 13.793a.5.5 0 0 0 0 .707l.707.707a.5.5 0 0 0 .707 0zm-1.414 1.414 1.414-1.414.708.707-1.414 1.414z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0" id="createDatasetModalLabel">{{ trans('New dataset wizard') }}</h5>
+                            <span class="text-body-secondary small" id="wizard-step-subtitle">{{ trans('Step 1 of 3: Name & Task') }}</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ trans('Cancel') }}"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label" for="ds-name">{{ trans('Name') }}</label>
-                        <input class="form-control" id="ds-name" name="name" required maxlength="64"
-                               autocomplete="off" placeholder="road-cam">
-                        <div class="form-text">{{ trans('Short folder id: letters, digits, dash. Used in paths and URLs.') }}</div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label" for="ds-classes">{{ trans('Classes') }}</label>
-                        <input class="form-control" id="ds-classes" name="classes" value="object"
-                               placeholder="car, truck, person">
-                        <div class="form-text">{{ trans('Comma-separated names. You can load them later from an Auto-label model.') }}</div>
-                    </div>
-                    <div class="mb-0">
-                        <label class="form-label" for="ds-task">{{ trans('Task') }}</label>
-                        <select class="form-select" id="ds-task" name="task">
-                            {% for t in tasks %}
-                                <option value="{{ t }}" {% if t == 'detect' %}selected{% endif %}>{{ t }}</option>
-                            {% endfor %}
-                        </select>
-                        <div class="form-text">{{ trans('detect = boxes, segment = polygons, classify = whole image, pose = keypoints.') }}</div>
-                    </div>
-                    <div class="text-danger small mt-2 d-none" id="create-dataset-error" role="alert"></div>
+
+                <!-- Wizard Progress Bar -->
+                <div class="progress" style="height: 4px; border-radius: 0;">
+                    <div class="progress-bar bg-primary transition-all" id="wizard-progress-bar" style="width: 33.33%;"></div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary"
-                            data-bs-dismiss="modal">{{ trans('Cancel') }}</button>
-                    <button type="submit" class="btn btn-primary"
-                            id="create-dataset-submit">{{ trans('Create') }}</button>
+
+                <div class="modal-body p-4">
+                    <!-- STEP 1: Name and Task Type -->
+                    <div class="wizard-step" id="wizard-step-1">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="ds-display-name">{{ trans('Dataset title') }}</label>
+                            <input class="form-control form-control-lg fs-6" id="ds-display-name" name="display_name"
+                                   required autocomplete="off" placeholder="{{ trans('e.g. Road Traffic or Person Detector') }}">
+                            <div class="form-text">{{ trans('Clear, human-readable name shown in the interface.') }}</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold" for="ds-name">{{ trans('Folder identifier (ID)') }}</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-body-tertiary text-body-secondary font-monospace small">storage/datasets/</span>
+                                <input class="form-control font-monospace" id="ds-name" name="name" required maxlength="64"
+                                       autocomplete="off" placeholder="road-traffic">
+                            </div>
+                            <div class="form-text">{{ trans('Lowercase letters, digits, dashes. Auto-generated from title.') }}</div>
+                        </div>
+
+                        <div>
+                            <label class="form-label fw-semibold mb-2">{{ trans('What will this model detect?') }}</label>
+                            <input type="hidden" id="ds-task" name="task" value="detect">
+                            <div class="row g-2">
+                                <div class="col-sm-6">
+                                    <div class="card h-100 wizard-task-card border-primary bg-primary-subtle bg-opacity-25 cursor-pointer p-3 transition-card"
+                                         data-task="detect" style="cursor: pointer;">
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-bounding-box text-primary" viewBox="0 0 16 16">
+                                                <path d="M5 2V0H0v5h2v6H0v5h5v-2h6v2h5v-5h-2V5h2V0h-5v2zm6 1v2h2v6h-2v2H5v-2H3V5h2V3zm1-2h3v3h-3zm3 11v3h-3v-3zM4 15H1v-3h3zM1 4V1h3v3z"/>
+                                            </svg>
+                                            <span class="fw-bold text-body">{{ trans('Object Detection') }}</span>
+                                            <span class="badge text-bg-primary ms-auto">{{ trans('Recommended') }}</span>
+                                        </div>
+                                        <p class="small text-body-secondary mb-0">{{ trans('Bounding boxes around objects (cars, people, items). Fast and robust.') }}</p>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="card h-100 wizard-task-card border cursor-pointer p-3 transition-card"
+                                         data-task="segment" style="cursor: pointer;">
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-bounding-box-circles text-info" viewBox="0 0 16 16">
+                                                <path d="M2 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2M0 2a2 2 0 0 1 3.937-.5h8.126A2 2 0 1 1 14.5 3.937v8.126a2 2 0 1 1-2.437 2.437H3.937A2 2 0 1 1 1.5 12.063V3.937A2 2 0 0 1 0 2m2.5 1.937v8.126c.703.18 1.257.734 1.437 1.437h8.126a2 2 0 0 1 1.437-1.437V3.937A2 2 0 0 1 12.063 2.5H3.937A2 2 0 0 1 2.5 3.937M14 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2M2 13a1 1 0 1 0 0 2 1 1 0 0 0 0-2m12 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2"/>
+                                            </svg>
+                                            <span class="fw-bold text-body">{{ trans('Segmentation') }}</span>
+                                        </div>
+                                        <p class="small text-body-secondary mb-0">{{ trans('Precise contours and masks. Ideal for complex shapes and areas.') }}</p>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="card h-100 wizard-task-card border cursor-pointer p-3 transition-card"
+                                         data-task="classify" style="cursor: pointer;">
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-tags text-success" viewBox="0 0 16 16">
+                                                <path d="M3 2v4.586l7 7L14.586 9l-7-7zM2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"/>
+                                                <path d="M1.293 7.707A1 1 0 0 1 1 7.086V2h5.086a1 1 0 0 1 .707.293l.353.354-.707.707-.354-.354H2v4.086l.354.353-.707.708z"/>
+                                            </svg>
+                                            <span class="fw-bold text-body">{{ trans('Classification') }}</span>
+                                        </div>
+                                        <p class="small text-body-secondary mb-0">{{ trans('Assign a category to the entire frame (day/night, empty/occupied).') }}</p>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="card h-100 wizard-task-card border cursor-pointer p-3 transition-card"
+                                         data-task="pose" style="cursor: pointer;">
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-person-standing text-warning" viewBox="0 0 16 16">
+                                                <path d="M8 3a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M6 6.75v8.5a.75.75 0 0 0 1.5 0V10.5a.5.5 0 0 1 1 0v4.75a.75.75 0 0 0 1.5 0v-8.5a.25.25 0 0 0-.25-.25h-3.5a.25.25 0 0 0-.25.25"/>
+                                                <path d="M5.5 4A1.5 1.5 0 0 0 4 5.5v2a.75.75 0 0 0 1.5 0V5.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v2a.75.75 0 0 0 1.5 0v-2A1.5 1.5 0 0 0 10.5 4z"/>
+                                            </svg>
+                                            <span class="fw-bold text-body">{{ trans('Pose / Keypoints') }}</span>
+                                        </div>
+                                        <p class="small text-body-secondary mb-0">{{ trans('Skeleton tracking and key joint coordinates.') }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 2: Classes -->
+                    <div class="wizard-step d-none" id="wizard-step-2">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="ds-classes">{{ trans('Object classes') }}</label>
+                            <input class="form-control form-control-lg fs-6" id="ds-classes" name="classes" value="object"
+                                   placeholder="person, car, truck">
+                            <div class="form-text">{{ trans('Comma-separated list of target classes to detect and count.') }}</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="small fw-semibold text-body-secondary mb-2">{{ trans('Quick presets (click to add/remove):') }}</div>
+                            <div class="d-flex flex-wrap gap-2" id="wizard-preset-chips">
+                                <button type="button" class="btn btn-sm btn-outline-secondary wizard-class-chip" data-class="person">👤 {{ trans('person') }}</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary wizard-class-chip" data-class="car">🚗 {{ trans('car') }}</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary wizard-class-chip" data-class="truck">🚚 {{ trans('truck') }}</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary wizard-class-chip" data-class="bus">🚌 {{ trans('bus') }}</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary wizard-class-chip" data-class="bicycle">🚲 {{ trans('bicycle') }}</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary wizard-class-chip" data-class="license-plate">🔢 {{ trans('license-plate') }}</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary wizard-class-chip" data-class="bag">🎒 {{ trans('bag') }}</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary wizard-class-chip" data-class="face">😊 {{ trans('face') }}</button>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info py-2 px-3 small d-flex align-items-center gap-2 mb-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle flex-shrink-0" viewBox="0 0 16 16">
+                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+                                <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/>
+                            </svg>
+                            <span>{{ trans('You can easily add, rename or merge classes later in dataset settings.') }}</span>
+                        </div>
+                    </div>
+
+                    <!-- STEP 3: Initial Data Source Preference -->
+                    <div class="wizard-step d-none" id="wizard-step-3">
+                        <label class="form-label fw-semibold mb-2">{{ trans('Choose how you want to collect initial frames:') }}</label>
+                        <input type="hidden" id="wizard-initial-action" value="none">
+                        <div class="d-flex flex-column gap-2 mb-3">
+                            <div class="card wizard-source-card border cursor-pointer p-3 transition-card" data-action="camera" style="cursor: pointer;">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="p-2 rounded bg-primary-subtle text-primary">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-camera-video" viewBox="0 0 16 16">
+                                            <path fill-rule="evenodd" d="M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2zm11.5 5.175 3.5 1.556V4.269l-3.5 1.556zM2 4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h7.5a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-body">{{ trans('Capture live frames from camera') }}</div>
+                                        <div class="small text-body-secondary">{{ trans('Directly grab snapshots from connected RTSP/USB cameras.') }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card wizard-source-card border cursor-pointer p-3 transition-card" data-action="upload" style="cursor: pointer;">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="p-2 rounded bg-success-subtle text-success">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-cloud-arrow-up" viewBox="0 0 16 16">
+                                            <path fill-rule="evenodd" d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708z"/>
+                                            <path d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579A3.99 3.99 0 0 1 16 10a4 4 0 0 1-4 4H4a4 4 0 0 1-4-4 4 4 0 0 1 3.56-3.988A4.5 4.5 0 0 1 4.406 3.342"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-body">{{ trans('Upload images or ZIP archive') }}</div>
+                                        <div class="small text-body-secondary">{{ trans('Import your existing photos or prepared YOLO dataset archive.') }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card wizard-source-card border border-primary bg-primary-subtle bg-opacity-25 cursor-pointer p-3 transition-card" data-action="none" style="cursor: pointer;">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="p-2 rounded bg-secondary-subtle text-secondary">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-folder-plus" viewBox="0 0 16 16">
+                                            <path d="m.5 3 .04.87a2 2 0 0 0-.342 1.311l.637 7A2 2 0 0 0 2.826 14H9v-1H2.826a1 1 0 0 1-.995-.91l-.637-7A1 1 0 0 1 2.19 4h11.62a1 1 0 0 1 .996 1.09L14.54 8h1.005l.256-2.819A2 2 0 0 0 13.81 3H9.828a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 6.172 1H2.5a2 2 0 0 0-2 2m5.672-1a1 1 0 0 1 .707.293L7.586 3H2.19q-.362.002-.683.12L1.5 2.98a1 1 0 0 1 1-.98z"/>
+                                            <path d="M13.5 9a.5.5 0 0 1 .5.5V11h1.5a.5.5 0 0 1 0 1H14v1.5a.5.5 0 0 1-1 0V12h-1.5a.5.5 0 0 1 0-1H13V9.5a.5.5 0 0 1 .5-.5"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-body">{{ trans('Create empty dataset') }}</div>
+                                        <div class="small text-body-secondary">{{ trans('Configure dataset now and collect frames whenever needed.') }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Summary preview -->
+                        <div class="p-3 rounded bg-body-tertiary border small">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-body-secondary">{{ trans('Dataset') }}:</span>
+                                <span class="fw-bold" id="wizard-summary-name">-</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-body-secondary">{{ trans('Task') }}:</span>
+                                <span class="badge text-bg-primary" id="wizard-summary-task">detect</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-body-secondary">{{ trans('Classes') }}:</span>
+                                <span class="font-monospace text-truncate ms-2" id="wizard-summary-classes">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-danger small mt-3 d-none" id="create-dataset-error" role="alert"></div>
+                </div>
+
+                <div class="modal-footer bg-body-tertiary border-top d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary" id="btn-wizard-prev" style="display: none;">
+                        ← {{ trans('Back') }}
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" id="btn-wizard-cancel">
+                        {{ trans('Cancel') }}
+                    </button>
+                    <div class="ms-auto d-flex gap-2">
+                        <button type="button" class="btn btn-primary" id="btn-wizard-next">
+                            {{ trans('Next') }} →
+                        </button>
+                        <button type="submit" class="btn btn-success" id="create-dataset-submit" style="display: none;">
+                            ✓ {{ trans('Create dataset') }}
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>

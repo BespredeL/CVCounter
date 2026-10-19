@@ -45,12 +45,193 @@
         return data;
     }
 
-    /* --- List page --- */
+    /* --- List page & Wizard --- */
     const listPage = document.getElementById('datasets-page');
     if (listPage) {
         const form = document.getElementById('create-dataset-form');
         const errEl = document.getElementById('create-dataset-error');
         const submitBtn = document.getElementById('create-dataset-submit');
+        const prevBtn = document.getElementById('btn-wizard-prev');
+        const nextBtn = document.getElementById('btn-wizard-next');
+        const progressBar = document.getElementById('wizard-progress-bar');
+        const stepSubtitle = document.getElementById('wizard-step-subtitle');
+        const displayNameInput = document.getElementById('ds-display-name');
+        const nameInput = document.getElementById('ds-name');
+        const classesInput = document.getElementById('ds-classes');
+        const taskInput = document.getElementById('ds-task');
+        const initialActionInput = document.getElementById('wizard-initial-action');
+        const taskCards = document.querySelectorAll('.wizard-task-card');
+        const presetChips = document.querySelectorAll('.wizard-class-chip');
+        const sourceCards = document.querySelectorAll('.wizard-source-card');
+
+        let currentStep = 1;
+        let isSlugManuallyEdited = false;
+
+        function slugify(text) {
+            const ruMap = {
+                'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
+                'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+                'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+                'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch', 'ъ': '',
+                'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
+            };
+            return (text || '').toLowerCase()
+                .split('')
+                .map(char => ruMap[char] !== undefined ? ruMap[char] : char)
+                .join('')
+                .replace(/[^a-z0-9_-]+/g, '-')
+                .replace(/^-+|-+$/g, '')
+                .substring(0, 64);
+        }
+
+        function updateStepUI(step) {
+            currentStep = step;
+            document.querySelectorAll('.wizard-step').forEach((el, idx) => {
+                el.classList.toggle('d-none', (idx + 1) !== step);
+            });
+
+            if (progressBar) {
+                progressBar.style.width = step === 1 ? '33.33%' : (step === 2 ? '66.66%' : '100%');
+            }
+
+            if (stepSubtitle) {
+                if (step === 1) stepSubtitle.textContent = t('Step 1 of 3: Name & Task');
+                else if (step === 2) stepSubtitle.textContent = t('Step 2 of 3: Object Classes');
+                else stepSubtitle.textContent = t('Step 3 of 3: Initial Frames');
+            }
+
+            if (prevBtn) prevBtn.style.display = step > 1 ? 'inline-block' : 'none';
+            if (nextBtn) nextBtn.style.display = step < 3 ? 'inline-block' : 'none';
+            if (submitBtn) submitBtn.style.display = step === 3 ? 'inline-block' : 'none';
+
+            if (step === 3) {
+                const summaryName = document.getElementById('wizard-summary-name');
+                const summaryTask = document.getElementById('wizard-summary-task');
+                const summaryClasses = document.getElementById('wizard-summary-classes');
+                if (summaryName) summaryName.textContent = `${displayNameInput?.value || nameInput?.value} (${nameInput?.value || '-'})`;
+                if (summaryTask) summaryTask.textContent = taskInput?.value || 'detect';
+                if (summaryClasses) summaryClasses.textContent = classesInput?.value || '-';
+            }
+        }
+
+        displayNameInput?.addEventListener('input', () => {
+            if (!isSlugManuallyEdited && nameInput) {
+                nameInput.value = slugify(displayNameInput.value);
+            }
+        });
+
+        nameInput?.addEventListener('input', () => {
+            isSlugManuallyEdited = (nameInput.value.trim().length > 0);
+        });
+
+        taskCards.forEach((card) => {
+            card.addEventListener('click', () => {
+                taskCards.forEach((c) => {
+                    c.classList.remove('border-primary', 'bg-primary-subtle', 'bg-opacity-25');
+                    c.classList.add('border');
+                });
+                card.classList.remove('border');
+                card.classList.add('border-primary', 'bg-primary-subtle', 'bg-opacity-25');
+                if (taskInput) taskInput.value = card.dataset.task || 'detect';
+            });
+        });
+
+        function syncChipStates() {
+            const currentList = (classesInput?.value || '')
+                .split(',')
+                .map(s => s.trim().toLowerCase())
+                .filter(Boolean);
+            presetChips.forEach((chip) => {
+                const cls = (chip.dataset.class || '').toLowerCase();
+                const active = currentList.includes(cls);
+                chip.classList.toggle('btn-primary', active);
+                chip.classList.toggle('text-white', active);
+                chip.classList.toggle('btn-outline-secondary', !active);
+            });
+        }
+
+        presetChips.forEach((chip) => {
+            chip.addEventListener('click', () => {
+                const cls = (chip.dataset.class || '').trim();
+                let current = (classesInput?.value || '')
+                    .split(',')
+                    .map(s => s.trim())
+                    .filter(Boolean);
+                const idx = current.map(c => c.toLowerCase()).indexOf(cls.toLowerCase());
+                if (idx >= 0) {
+                    current.splice(idx, 1);
+                } else {
+                    current.push(cls);
+                }
+                if (classesInput) classesInput.value = current.join(', ');
+                syncChipStates();
+            });
+        });
+
+        classesInput?.addEventListener('input', syncChipStates);
+
+        sourceCards.forEach((card) => {
+            card.addEventListener('click', () => {
+                sourceCards.forEach((c) => {
+                    c.classList.remove('border-primary', 'bg-primary-subtle', 'bg-opacity-25');
+                    c.classList.add('border');
+                });
+                card.classList.remove('border');
+                card.classList.add('border-primary', 'bg-primary-subtle', 'bg-opacity-25');
+                if (initialActionInput) initialActionInput.value = card.dataset.action || 'none';
+            });
+        });
+
+        nextBtn?.addEventListener('click', () => {
+            if (errEl) errEl.classList.add('d-none');
+            if (currentStep === 1) {
+                const titleVal = displayNameInput?.value.trim();
+                const slugVal = nameInput?.value.trim();
+                if (!titleVal) {
+                    if (errEl) {
+                        errEl.textContent = t('Please enter a dataset title');
+                        errEl.classList.remove('d-none');
+                    }
+                    displayNameInput?.focus();
+                    return;
+                }
+                if (!slugVal) {
+                    if (errEl) {
+                        errEl.textContent = t('Please enter a valid folder identifier');
+                        errEl.classList.remove('d-none');
+                    }
+                    nameInput?.focus();
+                    return;
+                }
+                updateStepUI(2);
+                syncChipStates();
+            } else if (currentStep === 2) {
+                const clsVal = classesInput?.value.trim();
+                if (!clsVal) {
+                    if (errEl) {
+                        errEl.textContent = t('Please specify at least one class (e.g. object, person, car)');
+                        errEl.classList.remove('d-none');
+                    }
+                    classesInput?.focus();
+                    return;
+                }
+                updateStepUI(3);
+            }
+        });
+
+        prevBtn?.addEventListener('click', () => {
+            if (errEl) errEl.classList.add('d-none');
+            if (currentStep > 1) {
+                updateStepUI(currentStep - 1);
+            }
+        });
+
+        document.getElementById('createDatasetModal')?.addEventListener('hidden.bs.modal', () => {
+            updateStepUI(1);
+            isSlugManuallyEdited = false;
+            if (errEl) errEl.classList.add('d-none');
+        });
+
         form?.addEventListener('submit', async (e) => {
             e.preventDefault();
             if (errEl) {
@@ -62,12 +243,20 @@
                 const data = await api(listPage.dataset.createUrl, {
                     method: 'POST',
                     json: {
-                        name: document.getElementById('ds-name').value,
-                        classes: document.getElementById('ds-classes').value,
-                        task: document.getElementById('ds-task').value,
+                        name: document.getElementById('ds-name').value.trim(),
+                        display_name: document.getElementById('ds-display-name')?.value.trim() || document.getElementById('ds-name').value.trim(),
+                        classes: document.getElementById('ds-classes').value.trim(),
+                        task: document.getElementById('ds-task').value.trim(),
                     },
                 });
-                window.location.href = `/datasets/${encodeURIComponent(data.dataset.name)}`;
+                const action = initialActionInput?.value || 'none';
+                let redirectUrl = `/datasets/${encodeURIComponent(data.dataset.name)}`;
+                if (action === 'camera') {
+                    redirectUrl += '?tab=frames&action=camera';
+                } else if (action === 'upload') {
+                    redirectUrl += '?tab=frames&action=upload';
+                }
+                window.location.href = redirectUrl;
             } catch (err) {
                 if (errEl) {
                     errEl.textContent = err.message;
