@@ -33,7 +33,7 @@
   "System RAM": "Оперативная память",
   "Database integrity": "Целостность базы данных",
   "Database connected and schema verified": "Подключение к базе данных успешно, схема проверена",
-  "Model weights": "Файлы весов моделей",
+  "Model weights": "Веса модели",
   "Hardware acceleration": "Аппаратное ускорение",
   "Model inference benchmark": "Тестовый инференс нейросети",
   "Camera network connections": "Сетевая доступность камер",
@@ -1325,5 +1325,11 @@
   "inbox": "входящие",
   "license-plate": "номерной знак",
   "person": "человек",
-  "truck": "грузовик"
+  "truck": "грузовик",
+  "-- Select existing model weights or enter path manually below --": "-- Выберите готовую модель из списка или укажите путь вручную ниже --",
+  "Trained weights (runs)": "Обученные веса (сессии обучения)",
+  "Current counter models": "Текущие модели счётчиков",
+  "Or specify / edit path manually:": "Или укажите / отредактируйте путь вручную:",
+  "Latest training result": "Свежий результат обучения",
+  "Weights selected": "Веса выбраны"
 }

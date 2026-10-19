@@ -919,16 +919,39 @@
 
                                 <div class="mb-4">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <label class="form-label fw-semibold mb-0" for="apply-weights">{{ trans('Model weights path') }}</label>
+                                        <label class="form-label fw-semibold mb-0" for="select-available-weights">{{ trans('Model weights') }}</label>
                                         <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none d-none" id="btn-fill-best-weights">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-magic me-1" viewBox="0 0 16 16"><path d="M9.5 2.672a.5.5 0 1 0 1 0V.843a.5.5 0 0 0-1 0zm4.5.035A.5.5 0 0 0 13.293 2L12 3.293a.5.5 0 1 0 .707.707zM7.293 4A.5.5 0 1 0 8 3.293L6.707 2a.5.5 0 0 0-.707.707zm-.621 2.5a.5.5 0 1 0 0-1H4.843a.5.5 0 1 0 0 1zm8.485 0a.5.5 0 1 0 0-1h-1.829a.5.5 0 0 0 0 1zM13.293 10a.5.5 0 1 0 .707-.707L12.707 8a.5.5 0 1 0-.707.707zM9.5 11.157a.5.5 0 0 0 1 0V9.328a.5.5 0 0 0-1 0zm1.854-5.097a.5.5 0 0 0 0-.706l-.708-.708a.5.5 0 0 0-.707 0L.854 13.793a.5.5 0 0 0 0 .707l.707.707a.5.5 0 0 0 .707 0zm-1.414 1.414 1.414-1.414.708.707-1.414 1.414z"/></svg>
                                             <span>{{ trans('Use trained weights') }}</span>
                                         </button>
                                     </div>
-                                    <div class="input-group">
-                                        <input class="form-control font-monospace" id="apply-weights" placeholder="{{ trans('path to best.pt (e.g. storage/runs/train/.../weights/best.pt)') }}">
+                                    <div class="mb-2">
+                                        <select class="form-select shadow-sm" id="select-available-weights">
+                                            <option value="" selected>{{ trans('-- Select existing model weights or enter path manually below --') }}</option>
+                                            {% if available_weights %}
+                                                <optgroup label="🏆 {{ trans('Trained weights (runs)') }}">
+                                                    {% for w in available_weights if w.category == 'trained_runs' %}
+                                                        <option value="{{ w.path }}">{{ w.label }}</option>
+                                                    {% endfor %}
+                                                </optgroup>
+                                                {% set active_detectors = available_weights|selectattr('category', 'equalto', 'active_detectors')|list %}
+                                                {% if active_detectors %}
+                                                    <optgroup label="🎯 {{ trans('Current counter models') }}">
+                                                        {% for w in active_detectors %}
+                                                            <option value="{{ w.path }}">{{ w.label }}</option>
+                                                        {% endfor %}
+                                                    </optgroup>
+                                                {% endif %}
+                                            {% endif %}
+                                        </select>
                                     </div>
-                                    <div class="form-text">{{ trans('Relative path from training run or absolute file path under the project.') }}</div>
+                                    <div class="mt-2">
+                                        <label class="form-label small text-body-secondary mb-1" for="apply-weights">{{ trans('Or specify / edit path manually:') }}</label>
+                                        <div class="input-group">
+                                            <input class="form-control font-monospace" id="apply-weights" placeholder="{{ trans('path to best.pt (e.g. storage/runs/train/.../weights/best.pt)') }}">
+                                        </div>
+                                        <div class="form-text">{{ trans('Relative path from training run or absolute file path under the project.') }}</div>
+                                    </div>
                                 </div>
 
                                 <div class="alert alert-info py-3 px-3 small d-flex align-items-center gap-3 mb-4 rounded-3">

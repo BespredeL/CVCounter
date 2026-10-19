@@ -7,6 +7,7 @@
 # Website: https://bespredel.name
 
 from __future__ import annotations
+import time
 from pathlib import Path
 from flask import (
     Blueprint,
@@ -138,6 +139,92 @@ def _list_detector_models() -> list[dict]:
         pass
 
     return items
+
+
+def _list_available_weights_for_deploy() -> list[dict]:
+    """
+    List trained runs (best.pt, last.pt, exports) and current counter detector weights
+    for selection in the deploy step.
+    """
+    root = Path(get_project_root()).resolve()
+    seen_paths = set()
+    trained_items = []
+
+    try:
+        from system.training.yolo_trainer import resolve_training_paths
+        _, _, runs_dir, _ = resolve_training_paths(root)
+        search_dirs = [runs_dir, root / 'storage' / 'runs']
+
+        for sdir in search_dirs:
+            if not sdir or not sdir.is_dir():
+                continue
+            for ext in ('*.pt', '*.onnx', '*.engine'):
+                for p in sdir.rglob(ext):
+                    if not p.is_file():
+                        continue
+                    abs_p = str(p.resolve())
+                    if abs_p in seen_paths:
+                        continue
+                    seen_paths.add(abs_p)
+
+                    try:
+                        rel = p.relative_to(root).as_posix()
+                    except ValueError:
+                        rel = str(p)
+
+                    try:
+                        stat = p.stat()
+                        mtime = stat.st_mtime
+                        size_mb = round(stat.st_size / (1024 * 1024), 1)
+                        date_str = time.strftime('%d.%m.%Y %H:%M', time.localtime(mtime))
+                    except OSError:
+                        mtime = 0
+                        size_mb = 0
+                        date_str = ''
+
+                    run_name = p.parent.parent.name if p.parent.name == 'weights' else p.parent.name
+                    label = f"{run_name} / {p.name} ({size_mb} MB, {date_str})" if date_str else f"{run_name} / {p.name}"
+
+                    trained_items.append({
+                        'path': rel,
+                        'name': p.name,
+                        'run_name': run_name,
+                        'label': label,
+                        'category': 'trained_runs',
+                        'mtime': mtime,
+                        'is_best': p.name == 'best.pt',
+                    })
+    except Exception:
+        pass
+
+    trained_items.sort(key=lambda x: (x.get('is_best', False), x.get('mtime', 0)), reverse=True)
+
+    detector_items = []
+    try:
+        context = get_app_context()
+        for location, cfg in (context.get('config', {}).get('detections') or {}).items():
+            weights = (cfg or {}).get('weights_path')
+            if not weights:
+                continue
+            resolved = resolve_project_path(weights)
+            abs_p = str(Path(resolved).resolve()) if resolved else ''
+            if abs_p and abs_p in seen_paths:
+                continue
+            if abs_p:
+                seen_paths.add(abs_p)
+            detector_items.append({
+                'path': str(weights),
+                'name': Path(str(weights)).name,
+                'run_name': location,
+                'label': f"{location}: {Path(str(weights)).name}",
+                'category': 'active_detectors',
+                'mtime': 0,
+                'is_best': False,
+            })
+    except Exception:
+        pass
+
+    return trained_items + detector_items
 
 
 def _ordered_class_names(classes_map) -> list[str]:
@@ -431,11 +518,21 @@ def dataset_detail(name: str):
         counter_locations=locations,
         counter_cameras=locations_dict,
         detector_models=_list_detector_models(),
+        available_weights=_list_available_weights_for_deploy(),
         training_status=training_job_manager.status(),
         default_epochs=DEFAULT_EPOCHS,
         default_imgsz=DEFAULT_IMG_SIZE,
         default_base_model=DEFAULT_BASE_MODEL,
     )
+
+
+@datasets_bp.route('/datasets/api/available-weights')
+@login_required
+def api_available_weights():
+    """
+    List available trained runs and detector model weights for deployment.
+    """
+    return jsonify({'status': 'ok', 'weights': _list_available_weights_for_deploy()})
 
 
 @datasets_bp.route('/datasets/<name>/annotate')

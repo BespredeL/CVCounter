@@ -1325,5 +1325,11 @@
   "inbox": "inbox",
   "license-plate": "license-plate",
   "person": "person",
-  "truck": "truck"
+  "truck": "truck",
+  "-- Select existing model weights or enter path manually below --": "-- Select existing model weights or enter path manually below --",
+  "Trained weights (runs)": "Trained weights (runs)",
+  "Current counter models": "Current counter models",
+  "Or specify / edit path manually:": "Or specify / edit path manually:",
+  "Latest training result": "Latest training result",
+  "Weights selected": "Weights selected"
 }

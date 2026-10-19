@@ -1043,11 +1043,41 @@
     });
 
     const fillBestWeightsBtn = document.getElementById('btn-fill-best-weights');
+    const selectAvailableWeights = document.getElementById('select-available-weights');
+    const applyWeightsInput = document.getElementById('apply-weights');
+
+    if (selectAvailableWeights && applyWeightsInput) {
+        selectAvailableWeights.addEventListener('change', () => {
+            const val = selectAvailableWeights.value;
+            if (val) {
+                applyWeightsInput.value = val;
+                toast(t('Weights selected'), 'info');
+            }
+        });
+
+        applyWeightsInput.addEventListener('input', () => {
+            const val = applyWeightsInput.value.trim();
+            let matched = false;
+            for (const opt of selectAvailableWeights.options) {
+                if (opt.value && opt.value === val) {
+                    selectAvailableWeights.value = val;
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) {
+                selectAvailableWeights.value = '';
+            }
+        });
+    }
+
     fillBestWeightsBtn?.addEventListener('click', () => {
         const w = detail.dataset.bestWeights;
         if (w) {
-            const applyInput = document.getElementById('apply-weights');
-            if (applyInput) applyInput.value = w;
+            if (applyWeightsInput) {
+                applyWeightsInput.value = w;
+                applyWeightsInput.dispatchEvent(new Event('input'));
+            }
             toast(t('Weights applied'), 'info');
         }
     });
@@ -1056,6 +1086,19 @@
         if (!weights) return;
         detail.dataset.bestWeights = weights;
         if (fillBestWeightsBtn) fillBestWeightsBtn.classList.remove('d-none');
+        if (applyWeightsInput && !applyWeightsInput.value) {
+            applyWeightsInput.value = weights;
+        }
+        if (selectAvailableWeights) {
+            let opt = Array.from(selectAvailableWeights.options).find(o => o.value === weights);
+            if (!opt) {
+                opt = new Option(`🔥 ${t('Latest training result')}: ${weights}`, weights);
+                selectAvailableWeights.add(opt, 1);
+            }
+            if (applyWeightsInput && applyWeightsInput.value === weights) {
+                selectAvailableWeights.value = weights;
+            }
+        }
     }
 
     /* --- Training & log streaming --- */
@@ -1199,8 +1242,12 @@
             }
             if (payload.event === 'job_complete') {
                 if (payload.job?.weights) {
+                    setKnownBestWeights(payload.job.weights);
                     const applyInput = document.getElementById('apply-weights');
-                    if (applyInput) applyInput.value = payload.job.weights;
+                    if (applyInput) {
+                        applyInput.value = payload.job.weights;
+                        applyInput.dispatchEvent(new Event('input'));
+                    }
                 }
                 if (progressBar) {
                     progressBar.style.width = '100%';
