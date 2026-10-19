@@ -440,7 +440,7 @@
         }
 
         // Delete camera handler
-        document.addEventListener('click', function (e) {
+        document.addEventListener('click', async function (e) {
             var btnDelete = e.target.closest('.btn-delete-camera');
             if (!btnDelete) return;
 
@@ -452,7 +452,16 @@
             var confirmMsg = (window.trans ? window.trans('Are you sure you want to delete camera "{name}"?', {name: camLabel}) : null)
                 || ('Are you sure you want to delete camera "' + camLabel + '"?');
 
-            if (!confirm(confirmMsg)) {
+            var confirmed = typeof window.appConfirm === 'function'
+                ? await window.appConfirm({
+                    title: window.trans ? window.trans('Delete camera') : 'Delete camera',
+                    message: confirmMsg,
+                    confirmText: window.trans ? window.trans('Delete') : 'Delete',
+                    tone: 'danger',
+                })
+                : confirm(confirmMsg);
+
+            if (!confirmed) {
                 return;
             }
 
@@ -774,7 +783,7 @@
         }
 
         // Delete Custom Field Handler
-        document.addEventListener('click', function (e) {
+        document.addEventListener('click', async function (e) {
             var btnDelete = e.target.closest('.btn-delete-custom-field');
             if (!btnDelete) return;
 
@@ -789,7 +798,16 @@
             var confirmMsg = (window.trans ? window.trans('Are you sure you want to delete field "{name}"?', {name: fieldLabel}) : null)
                 || ('Are you sure you want to delete field "' + fieldLabel + '"?');
 
-            if (!confirm(confirmMsg)) {
+            var confirmed = typeof window.appConfirm === 'function'
+                ? await window.appConfirm({
+                    title: window.trans ? window.trans('Delete field') : 'Delete field',
+                    message: confirmMsg,
+                    confirmText: window.trans ? window.trans('Delete') : 'Delete',
+                    tone: 'danger',
+                })
+                : confirm(confirmMsg);
+
+            if (!confirmed) {
                 return;
             }
 

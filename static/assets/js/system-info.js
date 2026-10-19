@@ -482,7 +482,14 @@
             // Clear logs
             if (clearLogsBtn) {
                 clearLogsBtn.addEventListener('click', async function () {
-                    const confirmed = window.confirm(t('Are you sure you want to clear the application log file?'));
+                    const confirmed = typeof window.appConfirm === 'function'
+                        ? await window.appConfirm({
+                            title: t('Clear log file'),
+                            message: t('Are you sure you want to clear the application log file?'),
+                            confirmText: t('Clear'),
+                            tone: 'danger',
+                        })
+                        : window.confirm(t('Are you sure you want to clear the application log file?'));
                     if (!confirmed) return;
 
                     clearLogsBtn.disabled = true;

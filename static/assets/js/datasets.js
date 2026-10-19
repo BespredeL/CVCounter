@@ -785,9 +785,12 @@
             toast(t('No images'), 'warning');
             return;
         }
+        const msg = images.length === 1
+            ? (t('Are you sure you want to delete image "{name}"?').replace('{name}', images[0]))
+            : (t('Are you sure you want to delete {count} selected image(s)?').replace('{count}', images.length));
         const ok = await window.appConfirm({
-            title: t('Delete'),
-            message: t('Delete selected images?'),
+            title: t('Delete selected images'),
+            message: msg,
             confirmText: t('Delete'),
             tone: 'danger',
         });
@@ -801,16 +804,90 @@
     });
 
     document.getElementById('btn-delete-dataset')?.addEventListener('click', async () => {
+        const dsTitle = (detail && (detail.dataset.displayName || detail.dataset.name)) || name;
         const ok = await window.appConfirm({
-            title: t('Delete'),
-            message: t('Delete this dataset permanently?'),
+            title: t('Delete dataset'),
+            message: t('Are you sure you want to delete dataset "{name}"?').replace('{name}', dsTitle),
             confirmText: t('Delete'),
             tone: 'danger',
         });
         if (!ok) return;
         try {
             await api(`/datasets/api/${name}`, { method: 'DELETE' });
+            toast(t('Dataset deleted'), 'success');
             window.location.href = '/datasets';
+        } catch (err) {
+            toast(err.message, 'danger');
+        }
+    });
+
+    // Single image delete handler (table row & grid item)
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.btn-delete-single-image');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const imageName = btn.dataset.name;
+        if (!imageName) return;
+        const ok = await window.appConfirm({
+            title: t('Delete image'),
+            message: t('Are you sure you want to delete image "{name}"?').replace('{name}', imageName),
+            confirmText: t('Delete'),
+            tone: 'danger',
+        });
+        if (!ok) return;
+        try {
+            await api(`/datasets/api/${name}/images/delete`, { method: 'POST', json: { images: [imageName] } });
+            toast(t('Image deleted'), 'success');
+            const row = btn.closest('tr, .img-grid-item');
+            if (row) {
+                row.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+                row.style.opacity = '0';
+                row.style.transform = 'scale(0.9)';
+                setTimeout(() => row.remove(), 250);
+            } else {
+                window.location.reload();
+            }
+        } catch (err) {
+            toast(err.message, 'danger');
+        }
+    });
+
+    // Dataset card delete handler on list page
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.btn-delete-dataset-card');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const dsName = btn.dataset.datasetName;
+        const dsTitle = btn.dataset.datasetTitle || dsName;
+        if (!dsName) return;
+        const ok = await window.appConfirm({
+            title: t('Delete dataset'),
+            message: t('Are you sure you want to delete dataset "{name}"?').replace('{name}', dsTitle),
+            confirmText: t('Delete'),
+            tone: 'danger',
+        });
+        if (!ok) return;
+        try {
+            await api(`/datasets/api/${encodeURIComponent(dsName)}`, { method: 'DELETE' });
+            toast(t('Dataset deleted'), 'success');
+            const cardCol = btn.closest('.dataset-col');
+            if (cardCol) {
+                cardCol.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+                cardCol.style.opacity = '0';
+                cardCol.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    cardCol.remove();
+                    const countBadge = document.getElementById('datasets-count-badge');
+                    if (countBadge) {
+                        const remaining = document.querySelectorAll('.dataset-col').length;
+                        countBadge.textContent = remaining;
+                    }
+                }, 250);
+            } else {
+                window.location.reload();
+            }
         } catch (err) {
             toast(err.message, 'danger');
         }
@@ -1200,6 +1277,14 @@
     ));
 
     document.getElementById('btn-cancel-train')?.addEventListener('click', async () => {
+        const ok = await window.appConfirm({
+            title: t('Cancel training'),
+            message: t('Are you sure you want to cancel the current training session?'),
+            confirmText: t('Cancel training'),
+            cancelText: t('Keep running'),
+            tone: 'danger',
+        });
+        if (!ok) return;
         try {
             await api('/datasets/api/training/cancel', { method: 'POST', json: {} });
             toast(t('Cancel requested'), 'warning');

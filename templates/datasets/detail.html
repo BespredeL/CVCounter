@@ -661,8 +661,17 @@
                                         {% endfor %}
                                     </td>
                                     <td>
-                                        <a class="btn btn-sm btn-outline-primary"
-                                           href="{{ url_for('datasets.dataset_annotate', name=dataset.name) }}?image={{ img.name }}">{{ trans('Edit') }}</a>
+                                        <div class="d-flex align-items-center justify-content-end gap-1">
+                                            <a class="btn btn-sm btn-outline-primary"
+                                               href="{{ url_for('datasets.dataset_annotate', name=dataset.name) }}?image={{ img.name }}">{{ trans('Edit') }}</a>
+                                            <button type="button" class="btn btn-sm btn-outline-danger btn-delete-single-image"
+                                                    data-name="{{ img.name }}" title="{{ trans('Delete image') }}">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16" aria-hidden="true">
+                                                    <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+                                                    <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+                                                </svg>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             {% else %}
@@ -684,6 +693,13 @@
                                      data-labels="{{ (img.labels or [])|join(',') }}">
                                     <div class="card h-100 overflow-hidden shadow-sm position-relative border">
                                         <input type="checkbox" class="form-check-input img-check position-absolute top-0 start-0 m-2 z-2" value="{{ img.name }}">
+                                        <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 z-2 p-1 py-0 shadow-sm opacity-75 hover-opacity-100 btn-delete-single-image"
+                                                data-name="{{ img.name }}" title="{{ trans('Delete image') }}" style="line-height: 1;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16" aria-hidden="true">
+                                                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+                                                <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+                                            </svg>
+                                        </button>
                                         <a href="{{ url_for('datasets.dataset_annotate', name=dataset.name) }}?image={{ img.name }}" class="d-block bg-dark" style="height: 120px;">
                                             <img src="{{ url_for('datasets.api_image_file', name=dataset.name, image_name=img.name) }}" alt="" loading="lazy" class="w-100 h-100" style="object-fit: cover;">
                                         </a>

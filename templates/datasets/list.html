@@ -73,7 +73,7 @@
 
         <div class="row g-3" id="datasets-grid">
             {% for ds in datasets %}
-                <div class="col-12 col-md-6 col-xl-4 dataset-item-col"
+                <div class="col-12 col-md-6 col-xl-4 dataset-item-col dataset-col"
                      data-search="{{ (ds.display_name or ds.name)|lower }} {{ ds.name|lower }} {{ (ds.classes or [])|join(' ')|lower }}">
                     <article class="cv-card dataset-card h-100 shadow-sm transition-card">
                         <div class="card-body d-flex flex-column">
@@ -179,6 +179,15 @@
                                         <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5z"/>
                                     </svg>
                                 </a>
+                                <button type="button" class="btn btn-outline-danger btn-delete-dataset-card"
+                                        data-dataset-name="{{ ds.name }}"
+                                        data-dataset-title="{{ ds.display_name or ds.name }}"
+                                        title="{{ trans('Delete dataset') }}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16" aria-hidden="true">
+                                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+                                        <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+                                    </svg>
+                                </button>
                             </div>
                             <a class="btn btn-sm btn-primary d-flex align-items-center gap-1"
                                href="{{ url_for('datasets.dataset_annotate', name=ds.name) }}">

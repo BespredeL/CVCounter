@@ -490,7 +490,7 @@ const CounterSettingsModal = {
         }
 
         // Delete Custom Field
-        document.addEventListener("click", (e) => {
+        document.addEventListener("click", async (e) => {
             const btnDelete = e.target.closest(".btn-delete-custom-field");
             if (!btnDelete) return;
             const inCounterModal = btnDelete.closest("#counterSettingsModal");
@@ -507,7 +507,16 @@ const CounterSettingsModal = {
             const confirmMsg = (window.trans ? window.trans("Are you sure you want to delete field \"{name}\"?", {name: fieldLabel}) : null)
                 || `Are you sure you want to delete field "${fieldLabel}"?`;
 
-            if (!confirm(confirmMsg)) {
+            const confirmed = typeof window.appConfirm === "function"
+                ? await window.appConfirm({
+                    title: window.trans ? window.trans("Delete field") : "Delete field",
+                    message: confirmMsg,
+                    confirmText: window.trans ? window.trans("Delete") : "Delete",
+                    tone: "danger",
+                })
+                : confirm(confirmMsg);
+
+            if (!confirmed) {
                 return;
             }
 
