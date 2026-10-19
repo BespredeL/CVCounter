@@ -993,13 +993,53 @@
     ));
 
     document.getElementById('btn-quick-split')?.addEventListener('click', () => {
-        document.querySelector('[data-bs-target="#tab-import"]')?.click();
+        document.getElementById('tab-btn-frames')?.click();
         const splitBtn = document.getElementById('btn-auto-split');
         if (splitBtn) {
             splitBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
             splitBtn.classList.add('btn-warning');
             setTimeout(() => splitBtn.classList.remove('btn-warning'), 1500);
         }
+    });
+
+    /* --- Smart Guide Banner Actions --- */
+    document.getElementById('btn-guide-collect')?.addEventListener('click', () => {
+        document.getElementById('tab-btn-frames')?.click();
+        const camCard = document.querySelector('#tab-frames .cv-card.border-primary');
+        if (camCard) camCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    document.getElementById('btn-guide-train')?.addEventListener('click', () => {
+        document.getElementById('tab-btn-train')?.click();
+        const trainBtn = document.getElementById('btn-start-train');
+        if (trainBtn) trainBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    document.getElementById('btn-guide-split')?.addEventListener('click', () => {
+        document.getElementById('tab-btn-frames')?.click();
+        const splitBtn = document.getElementById('btn-auto-split');
+        if (splitBtn) {
+            splitBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            splitBtn.classList.add('btn-warning');
+            setTimeout(() => splitBtn.classList.remove('btn-warning'), 1500);
+        }
+    });
+
+    /* --- Training Speed/Quality Presets --- */
+    const presetCards = document.querySelectorAll('.train-preset-card');
+    presetCards.forEach((card) => {
+        card.addEventListener('click', () => {
+            presetCards.forEach((c) => {
+                c.classList.remove('border-primary', 'bg-primary-subtle', 'bg-opacity-25');
+            });
+            card.classList.add('border-primary', 'bg-primary-subtle', 'bg-opacity-25');
+            const epochs = card.dataset.epochs;
+            const imgsz = card.dataset.imgsz;
+            const epochsInput = document.getElementById('train-epochs');
+            const imgszInput = document.getElementById('train-imgsz');
+            if (epochsInput && epochs) epochsInput.value = epochs;
+            if (imgszInput && imgsz) imgszInput.value = imgsz;
+        });
     });
 
     const fillBestWeightsBtn = document.getElementById('btn-fill-best-weights');
@@ -1251,9 +1291,43 @@
     refreshTrainStatus();
     setInterval(refreshTrainStatus, 5000);
 
-    if (window.location.hash === '#train') {
-        document.getElementById('train-tab-btn')?.click();
+    /* --- Tab Routing & Deep Linking --- */
+    function handleInitialRoute() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab');
+        const actionParam = urlParams.get('action');
+        const hash = window.location.hash;
+
+        if (tabParam === 'frames' || hash === '#frames' || hash === '#tab-frames') {
+            document.getElementById('tab-btn-frames')?.click();
+        } else if (tabParam === 'annotations' || hash === '#annotations' || hash === '#tab-annotations') {
+            document.getElementById('tab-btn-annotations')?.click();
+        } else if (tabParam === 'train' || hash === '#train' || hash === '#tab-train') {
+            document.getElementById('tab-btn-train')?.click();
+        } else if (tabParam === 'deploy' || hash === '#deploy' || hash === '#tab-deploy') {
+            document.getElementById('tab-btn-deploy')?.click();
+        } else if (tabParam === 'settings' || hash === '#settings' || hash === '#tab-settings-qa') {
+            document.getElementById('tab-btn-settings')?.click();
+        }
+
+        if (actionParam === 'camera') {
+            document.getElementById('tab-btn-frames')?.click();
+            const camCard = document.querySelector('#tab-frames .cv-card.border-primary');
+            if (camCard) {
+                camCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                camCard.classList.add('border-primary', 'border-3');
+                setTimeout(() => camCard.classList.remove('border-3'), 2500);
+            }
+        } else if (actionParam === 'upload') {
+            document.getElementById('tab-btn-frames')?.click();
+            const uploadBtn = document.getElementById('btn-import-upload');
+            if (uploadBtn) {
+                uploadBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                setTimeout(() => uploadBtn.click(), 400);
+            }
+        }
     }
+    handleInitialRoute();
 
     /* --- View mode (table vs grid) --- */
     const btnViewTable = document.getElementById('btn-view-table');

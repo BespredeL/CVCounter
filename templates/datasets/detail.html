@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ dataset.display_name }} - {{ trans('Datasets') }}{% endblock %}
+{% block title %}{{ dataset.display_name or dataset.name }} - {{ trans('Datasets') }}{% endblock %}
 
 {% block header %}
     {% with page_title=dataset.display_name or dataset.name, page_subtitle=dataset.name %}
@@ -12,9 +12,8 @@
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">{{ trans('Home') }}</a></li>
-            <li class="breadcrumb-item"><a href="{{ url_for('datasets.datasets_index') }}">{{ trans('Datasets') }}</a>
-            </li>
-            <li class="breadcrumb-item active" aria-current="page">{{ dataset.name }}</li>
+            <li class="breadcrumb-item"><a href="{{ url_for('datasets.datasets_index') }}">{{ trans('Datasets') }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ dataset.display_name or dataset.name }}</li>
         </ol>
     </nav>
 {% endblock %}
@@ -29,96 +28,161 @@
          data-classes='{{ dataset.classes|tojson }}'
          data-inbox-path="{{ dataset.inbox_path }}">
 
-        <div class="dataset-detail__hero d-flex flex-wrap gap-3 justify-content-between align-items-center p-3 cv-card mb-3">
-            <div class="min-w-0">
-                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                    {% if dataset.task == 'segment' %}
-                        <span class="badge text-bg-primary d-inline-flex align-items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor"
-                                 class="bi bi-bounding-box-circles me-1" viewBox="0 0 16 16" aria-hidden="true">
-                                <path d="M2 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2M0 2a2 2 0 0 1 3.937-.5h8.126A2 2 0 1 1 14.5 3.937v8.126a2 2 0 1 1-2.437 2.437H3.937A2 2 0 1 1 1.5 12.063V3.937A2 2 0 0 1 0 2m2.5 1.937v8.126c.703.18 1.257.734 1.437 1.437h8.126a2 2 0 0 1 1.437-1.437V3.937A2 2 0 0 1 12.063 2.5H3.937A2 2 0 0 1 2.5 3.937M14 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2M2 13a1 1 0 1 0 0 2 1 1 0 0 0 0-2m12 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2"/>
-                            </svg>
-                            segment
+        <!-- Top Hero Card with Dataset Overview -->
+        <div class="dataset-detail__hero cv-card p-3 mb-3 shadow-sm border-0">
+            <div class="d-flex flex-wrap gap-3 justify-content-between align-items-center">
+                <div class="min-w-0">
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                        <h4 class="fw-bold mb-0 text-truncate" title="{{ dataset.display_name or dataset.name }}">
+                            {{ dataset.display_name or dataset.name }}
+                        </h4>
+                        <code class="text-body-secondary small bg-body-tertiary px-2 py-1 rounded border">{{ dataset.name }}</code>
+                        {% if dataset.task == 'segment' %}
+                            <span class="badge text-bg-primary d-inline-flex align-items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-bounding-box-circles me-1" viewBox="0 0 16 16"><path d="M2 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2M0 2a2 2 0 0 1 3.937-.5h8.126A2 2 0 1 1 14.5 3.937v8.126a2 2 0 1 1-2.437 2.437H3.937A2 2 0 1 1 1.5 12.063V3.937A2 2 0 0 1 0 2m2.5 1.937v8.126c.703.18 1.257.734 1.437 1.437h8.126a2 2 0 0 1 1.437-1.437V3.937A2 2 0 0 1 12.063 2.5H3.937A2 2 0 0 1 2.5 3.937M14 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2M2 13a1 1 0 1 0 0 2 1 1 0 0 0 0-2m12 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2"/></svg>
+                                segment
+                            </span>
+                        {% elif dataset.task == 'classify' %}
+                            <span class="badge text-bg-success d-inline-flex align-items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-tags me-1" viewBox="0 0 16 16"><path d="M3 2v4.586l7 7L14.586 9l-7-7zM2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"/><path d="M1.293 7.707A1 1 0 0 1 1 7.086V2h5.086a1 1 0 0 1 .707.293l.353.354-.707.707-.354-.354H2v4.086l.354.353-.707.708z"/></svg>
+                                classify
+                            </span>
+                        {% elif dataset.task == 'pose' %}
+                            <span class="badge text-bg-warning d-inline-flex align-items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-person-standing me-1" viewBox="0 0 16 16"><path d="M8 3a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M6 6.75v8.5a.75.75 0 0 0 1.5 0V10.5a.5.5 0 0 1 1 0v4.75a.75.75 0 0 0 1.5 0v-8.5a.25.25 0 0 0-.25-.25h-3.5a.25.25 0 0 0-.25.25"/> <path d="M5.5 4A1.5 1.5 0 0 0 4 5.5v2a.75.75 0 0 0 1.5 0V5.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v2a.75.75 0 0 0 1.5 0v-2A1.5 1.5 0 0 0 10.5 4z"/></svg>
+                                pose
+                            </span>
+                        {% else %}
+                            <span class="badge text-bg-info d-inline-flex align-items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-bounding-box me-1" viewBox="0 0 16 16"><path d="M5 2V0H0v5h2v6H0v5h5v-2h6v2h5v-5h-2V5h2V0h-5v2zm6 1v2h2v6h-2v2H5v-2H3V5h2V3zm1-2h3v3h-3zm3 11v3h-3v-3zM4 15H1v-3h3zM1 4V1h3v3z"/></svg>
+                                detect
+                            </span>
+                        {% endif %}
+                        <span class="badge {% if dataset.labeled_pct >= 80 %}bg-success{% elif dataset.labeled_pct >= 30 %}bg-primary{% else %}bg-secondary{% endif %} rounded-pill">
+                            {{ dataset.labeled_pct }}% {{ trans('labeled') }}
                         </span>
-                    {% elif dataset.task == 'classify' %}
-                        <span class="badge text-bg-success d-inline-flex align-items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor"
-                                 class="bi bi-tags me-1" viewBox="0 0 16 16" aria-hidden="true">
-                                <path d="M3 2v4.586l7 7L14.586 9l-7-7zM2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"/>
-                                <path d="M1.293 7.707A1 1 0 0 1 1 7.086V2h5.086a1 1 0 0 1 .707.293l.353.354-.707.707-.354-.354H2v4.086l.354.353-.707.708z"/>
-                            </svg>
-                            classify
-                        </span>
-                    {% elif dataset.task == 'pose' %}
-                        <span class="badge text-bg-warning d-inline-flex align-items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor"
-                                 class="bi bi-person-standing me-1" viewBox="0 0 16 16" aria-hidden="true">
-                                <path d="M8 3a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M6 6.75v8.5a.75.75 0 0 0 1.5 0V10.5a.5.5 0 0 1 1 0v4.75a.75.75 0 0 0 1.5 0v-8.5a.25.25 0 0 0-.25-.25h-3.5a.25.25 0 0 0-.25.25"/>
-                                <path d="M5.5 4A1.5 1.5 0 0 0 4 5.5v2a.75.75 0 0 0 1.5 0V5.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v2a.75.75 0 0 0 1.5 0v-2A1.5 1.5 0 0 0 10.5 4z"/>
-                            </svg>
-                            pose
-                        </span>
-                    {% else %}
-                        <span class="badge text-bg-info d-inline-flex align-items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor"
-                                 class="bi bi-bounding-box me-1" viewBox="0 0 16 16" aria-hidden="true">
-                                <path d="M5 2V0H0v5h2v6H0v5h5v-2h6v2h5v-5h-2V5h2V0h-5v2zm6 1v2h2v6h-2v2H5v-2H3V5h2V3zm1-2h3v3h-3zm3 11v3h-3v-3zM4 15H1v-3h3zM1 4V1h3v3z"/>
-                            </svg>
-                            detect
-                        </span>
-                    {% endif %}
-                    <span class="text-body-secondary small">
-                        <strong>{{ dataset.total }}</strong> {{ trans('images') }} ·
-                        <strong class="text-success">{{ dataset.labeled }}</strong> {{ trans('labeled') }} ({{ dataset.labeled_pct }}%)
-                    </span>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-3 text-body-secondary small">
+                        <span><strong>{{ dataset.total }}</strong> {{ trans('images') }}</span>
+                        <span>·</span>
+                        <span><strong class="text-success">{{ dataset.labeled }}</strong> {{ trans('labeled') }}</span>
+                        <span>·</span>
+                        <span><strong>{{ dataset.unlabeled }}</strong> {{ trans('unlabeled') }}</span>
+                        {% if dataset.by_split.inbox and dataset.by_split.inbox > 0 %}
+                            <span>·</span>
+                            <span class="text-warning fw-semibold"><strong>{{ dataset.by_split.inbox }}</strong> {{ trans('inbox') }}</span>
+                        {% endif %}
+                    </div>
                 </div>
-                <div class="progress dataset-detail__progress" style="height: 8px;" role="progressbar"
-                     aria-valuenow="{{ dataset.labeled_pct }}" aria-valuemin="0" aria-valuemax="100">
-                    <div class="progress-bar {% if dataset.labeled_pct >= 80 %}bg-success{% endif %}"
-                         style="width: {{ dataset.labeled_pct }}%"></div>
+
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <a class="btn btn-outline-secondary d-flex align-items-center gap-1 shadow-sm"
+                       href="{{ url_for('datasets.api_export_zip', name=dataset.name) }}"
+                       title="{{ trans('Download YOLO ZIP archive') }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-file-earmark-zip" viewBox="0 0 16 16"><path d="M5 10.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5m0-2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5m.5-2.5A.5.5 0 0 0 5 6.5v.01a.5.5 0 0 0 .5.49h2a.5.5 0 0 0 0-1zm0-2a.5.5 0 0 0-.5.5v.01a.5.5 0 0 0 .5.49h2a.5.5 0 0 0 0-1z"/><path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5z"/></svg>
+                        <span>{{ trans('Export ZIP') }}</span>
+                    </a>
+                    <a class="btn btn-primary d-flex align-items-center gap-1 shadow-sm"
+                       href="{{ url_for('datasets.dataset_annotate', name=dataset.name) }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16"><path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.8-6.8z"/><path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/></svg>
+                        <span>{{ trans('Annotate') }}</span>
+                    </a>
                 </div>
             </div>
-            <div class="d-flex flex-wrap gap-2">
-                <a class="btn btn-outline-secondary d-flex align-items-center gap-1"
-                   href="{{ url_for('datasets.api_export_zip', name=dataset.name) }}"
-                   title="{{ trans('Download YOLO ZIP archive') }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
-                         class="bi bi-file-earmark-zip" viewBox="0 0 16 16" aria-hidden="true">
-                        <path d="M5 10.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5m0-2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5m.5-2.5A.5.5 0 0 0 5 6.5v.01a.5.5 0 0 0 .5.49h2a.5.5 0 0 0 0-1zm0-2a.5.5 0 0 0-.5.5v.01a.5.5 0 0 0 .5.49h2a.5.5 0 0 0 0-1z"/>
-                        <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 1 1 1h8a1 1 0 0 0 1-1V4.5z"/>
-                    </svg>
-                    <span>{{ trans('Export ZIP') }}</span>
-                </a>
-                <a class="btn btn-primary d-flex align-items-center gap-1"
-                   href="{{ url_for('datasets.dataset_annotate', name=dataset.name) }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
-                         class="bi bi-pencil-square" viewBox="0 0 16 16" aria-hidden="true">
-                        <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.8-6.8z"/>
-                        <path fill-rule="evenodd"
-                              d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
-                    </svg>
-                    <span>{{ trans('Annotate') }}</span>
-                </a>
-                <button type="button" class="btn btn-outline-danger" id="btn-delete-dataset"
-                        title="{{ trans('Delete this dataset permanently?') }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                         class="bi bi-trash" viewBox="0 0 16 16" aria-hidden="true">
-                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
-                        <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
-                    </svg>
-                </button>
+
+            <div class="progress dataset-detail__progress mt-3" style="height: 6px;" role="progressbar"
+                 aria-valuenow="{{ dataset.labeled_pct }}" aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-bar {% if dataset.labeled_pct >= 80 %}bg-success{% else %}bg-primary{% endif %}"
+                     style="width: {{ dataset.labeled_pct }}%"></div>
             </div>
         </div>
 
+        <!-- Smart Guide Banner (Recommendation Card) -->
+        <div class="card border-primary-subtle shadow-sm mb-3 position-relative overflow-hidden" id="smart-guide-banner"
+             style="background: linear-gradient(135deg, rgba(var(--bs-primary-rgb), 0.08) 0%, rgba(var(--bs-success-rgb), 0.05) 100%);">
+            <div class="card-body p-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-3 min-w-0">
+                    <div class="rounded-3 p-2 d-flex align-items-center justify-content-center flex-shrink-0"
+                         style="width: 42px; height: 42px; background: rgba(var(--bs-primary-rgb), 0.15); color: var(--bs-primary);">
+                        {% if dataset.total == 0 %}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-camera" viewBox="0 0 16 16"><path d="M15 12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h1.172a3 3 0 0 0 2.12-.879l.83-.828A1 1 0 0 1 7.827 3h2.344a1 1 0 0 1 .707.293l.828.828A3 3 0 0 0 13.828 5H15a1 1 0 0 1 1 1zM2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 9.172 2H6.828a2 2 0 0 0-1.414.586l-.828.828A2 2 0 0 1 3.172 4z"/><path d="M8 11a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5m0 1a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M3 6.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0"/></svg>
+                        {% elif dataset.by_split.inbox and dataset.by_split.inbox > 0 %}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-shuffle text-warning" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 3.5A.5.5 0 0 1 .5 3H1c2.202 0 3.827 1.24 4.874 2.418.49.552.865 1.102 1.126 1.532.26-.43.636-.98 1.126-1.532C9.173 4.24 10.798 3 13 3v1c-1.798 0-3.173 1.01-4.126 2.082A9.6 9.6 0 0 0 7.556 8a9.6 9.6 0 0 0 1.318 1.918C9.827 10.99 11.202 12 13 12v1c-2.202 0-3.827-1.24-4.874-2.418A10.6 10.6 0 0 1 7 9.05c-.26.43-.636.98-1.126 1.532C4.827 11.76 3.202 13 1 13H.5a.5.5 0 0 1-.5-.5"/><path d="M13 5.466V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192m0 9v-3.932a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192"/></svg>
+                        {% elif dataset.unlabeled and dataset.unlabeled > 0 and dataset.labeled < 10 %}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16"><path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.8-6.8z"/><path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/></svg>
+                        {% elif dataset.labeled and dataset.labeled >= 10 %}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-rocket-takeoff text-success" viewBox="0 0 16 16"><path d="M9.752 6.193c.599.6 1.73.437 2.528-.362s.96-1.932.362-2.531c-.599-.6-1.73-.438-2.528.361-.798.8-.96 1.932-.362 2.532"/><path d="M15.811 3.312c-.363 1.534-1.334 3.626-3.64 5.932-2.257 2.256-4.301 3.224-5.82 3.587L7.84 14.34a.75.75 0 0 1-.854.855l-1.5-.375a.75.75 0 0 1-.41-.295l-1.22-1.626a.75.75 0 0 1-.137-.42l-.128-1.535a.75.75 0 0 1 .19-.526l1.512-1.512C5.59 9.38 6.558 7.336 8.814 5.08c2.306-2.306 4.398-3.277 5.931-3.64a.75.75 0 0 1 .866.866v1.006z"/></svg>
+                        {% else %}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-lightbulb text-primary" viewBox="0 0 16 16"><path d="M2 6a6 6 0 1 1 10.174 4.31c-.203.196-.359.4-.453.619l-.762 1.769A.5.5 0 0 1 10.5 13a.5.5 0 0 1 0 1 .5.5 0 0 1 0 1l-.224.447a1 1 0 0 1-.894.553H6.618a1 1 0 0 1-.894-.553L5.5 15a.5.5 0 0 1 0-1 .5.5 0 0 1 0-1 .5.5 0 0 1-.46-.302l-.761-1.77a2 2 0 0 0-.453-.618A5.98 5.98 0 0 1 2 6"/></svg>
+                        {% endif %}
+                    </div>
+                    <div class="min-w-0">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="badge text-bg-primary text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.05em;">{{ trans('Master Guide') }}</span>
+                            <span class="fw-bold text-body fs-6">
+                                {% if dataset.total == 0 %}
+                                    {{ trans('Step 1: Collect first frames') }}
+                                {% elif dataset.by_split.inbox and dataset.by_split.inbox > 0 %}
+                                    {{ trans('Step 1.5: Split inbox frames') }}
+                                {% elif dataset.unlabeled and dataset.unlabeled > 0 and dataset.labeled < 10 %}
+                                    {{ trans('Step 2: Annotate objects') }}
+                                {% elif dataset.labeled and dataset.labeled >= 10 %}
+                                    {{ trans('Step 3: Ready for YOLO training') }}
+                                {% else %}
+                                    {{ trans('Dataset Status') }}
+                                {% endif %}
+                            </span>
+                        </div>
+                        <p class="text-body-secondary small mb-0">
+                            {% if dataset.total == 0 %}
+                                {{ trans('Dataset is currently empty. Capture live frames from a camera or upload images/ZIP.') }}
+                            {% elif dataset.by_split.inbox and dataset.by_split.inbox > 0 %}
+                                {{ trans('You have {n} frames waiting in inbox. Split them into train and validation sets before training.').replace('{n}', dataset.by_split.inbox|string) }}
+                            {% elif dataset.unlabeled and dataset.unlabeled > 0 and dataset.labeled < 10 %}
+                                {{ trans('Annotate at least 10-20 frames to teach the neural network your objects, or use Auto-label AI.') }}
+                            {% elif dataset.labeled and dataset.labeled >= 10 %}
+                                {{ trans('{n} frames labeled! You can now start training your custom YOLO model.').replace('{n}', dataset.labeled|string) }}
+                            {% else %}
+                                {{ trans('Typical workflow: Collect frames → Annotate → Train model → Apply to counter.') }}
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-auto">
+                    {% if dataset.total == 0 %}
+                        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-1 shadow-sm" id="btn-guide-collect">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-camera-fill" viewBox="0 0 16 16"><path d="M10.5 8.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0"/><path d="M2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 9.172 2H6.828a2 2 0 0 0-1.414.586l-.828.828A2 2 0 0 1 3.172 4zm.5 2a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1m9 2.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0"/></svg>
+                            <span>{{ trans('Collect frames') }} →</span>
+                        </button>
+                    {% elif dataset.by_split.inbox and dataset.by_split.inbox > 0 %}
+                        <button type="button" class="btn btn-warning d-inline-flex align-items-center gap-1 shadow-sm" id="btn-guide-split">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-shuffle" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 3.5A.5.5 0 0 1 .5 3H1c2.202 0 3.827 1.24 4.874 2.418.49.552.865 1.102 1.126 1.532.26-.43.636-.98 1.126-1.532C9.173 4.24 10.798 3 13 3v1c-1.798 0-3.173 1.01-4.126 2.082A9.6 9.6 0 0 0 7.556 8a9.6 9.6 0 0 0 1.318 1.918C9.827 10.99 11.202 12 13 12v1c-2.202 0-3.827-1.24-4.874-2.418A10.6 10.6 0 0 1 7 9.05c-.26.43-.636.98-1.126 1.532C4.827 11.76 3.202 13 1 13H.5a.5.5 0 0 1-.5-.5"/><path d="M13 5.466V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192m0 9v-3.932a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192"/></svg>
+                            <span>{{ trans('Auto split now') }}</span>
+                        </button>
+                    {% elif dataset.unlabeled and dataset.unlabeled > 0 and dataset.labeled < 10 %}
+                        <a class="btn btn-primary d-inline-flex align-items-center gap-1 shadow-sm" href="{{ url_for('datasets.dataset_annotate', name=dataset.name) }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16"><path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.8-6.8z"/><path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/></svg>
+                            <span>{{ trans('Annotate frames') }} →</span>
+                        </a>
+                    {% elif dataset.labeled and dataset.labeled >= 10 %}
+                        <button type="button" class="btn btn-success text-white d-inline-flex align-items-center gap-1 shadow-sm" id="btn-guide-train">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-play-fill" viewBox="0 0 16 16"><path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/></svg>
+                            <span>{{ trans('Go to training') }} →</span>
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 4 Stat Summary Cards -->
         <div class="row g-3 dataset-detail__stats mb-3">
             <div class="col-6 col-md-3">
                 <div class="cv-card dataset-stat border-start border-4 border-primary">
                     <div class="dataset-stat__label d-flex justify-content-between align-items-center">
-                        <span>{{ trans('Train') }}</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor"
-                             class="bi bi-cpu text-primary opacity-50" viewBox="0 0 16 16" aria-hidden="true">
-                            <path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14a2.5 2.5 0 0 1-2.5 2.5v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0m-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3zM5 6.5A1.5 1.5 0 0 1 6.5 5h3A1.5 1.5 0 0 1 11 6.5v3A1.5 1.5 0 0 1 9.5 11h-3A1.5 1.5 0 0 1 5 9.5zM6.5 6a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5z"/>
-                        </svg>
+                        <span>{{ trans('Train split') }}</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-cpu text-primary opacity-50" viewBox="0 0 16 16"><path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14a2.5 2.5 0 0 1-2.5 2.5v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0m-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3zM5 6.5A1.5 1.5 0 0 1 6.5 5h3A1.5 1.5 0 0 1 11 6.5v3A1.5 1.5 0 0 1 9.5 11h-3A1.5 1.5 0 0 1 5 9.5zM6.5 6a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5z"/></svg>
                     </div>
                     <div class="dataset-stat__value text-primary">{{ dataset.by_split.train or 0 }}</div>
                 </div>
@@ -126,12 +190,8 @@
             <div class="col-6 col-md-3">
                 <div class="cv-card dataset-stat border-start border-4 border-success">
                     <div class="dataset-stat__label d-flex justify-content-between align-items-center">
-                        <span>{{ trans('Val') }}</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor"
-                             class="bi bi-check2-all text-success opacity-50" viewBox="0 0 16 16" aria-hidden="true">
-                            <path d="M12.354 4.354a.5.5 0 0 0-.708-.708L5 10.293 1.854 7.146a.5.5 0 1 0-.708.708l3.5 3.5a.5.5 0 0 0 .708 0zm-4.208 7-.896-.897.707-.707.543.543 6.646-6.647a.5.5 0 0 1 .708.708l-7 7a.5.5 0 0 1-.708 0"/>
-                            <path d="m5.354 7.146.896.897-.707.707-.897-.896a.5.5 0 1 1 .708-.708"/>
-                        </svg>
+                        <span>{{ trans('Val split') }}</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-check2-all text-success opacity-50" viewBox="0 0 16 16"><path d="M12.354 4.354a.5.5 0 0 0-.708-.708L5 10.293 1.854 7.146a.5.5 0 1 0-.708.708l3.5 3.5a.5.5 0 0 0 .708 0zm-4.208 7-.896-.897.707-.707.543.543 6.646-6.647a.5.5 0 0 1 .708.708l-7 7a.5.5 0 0 1-.708 0"/><path d="m5.354 7.146.896.897-.707.707-.897-.896a.5.5 0 1 1 .708-.708"/></svg>
                     </div>
                     <div class="dataset-stat__value text-success">{{ dataset.by_split.val or 0 }}</div>
                 </div>
@@ -139,25 +199,17 @@
             <div class="col-6 col-md-3">
                 <div class="cv-card dataset-stat border-start border-4 {% if dataset.by_split.inbox %}border-warning{% else %}border-secondary{% endif %}">
                     <div class="dataset-stat__label d-flex justify-content-between align-items-center">
-                        <span>{{ trans('Inbox') }}</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor"
-                             class="bi bi-inbox-fill {% if dataset.by_split.inbox %}text-warning{% else %}text-secondary{% endif %} opacity-50"
-                             viewBox="0 0 16 16">
-                            <path d="M4.98 4a.5.5 0 0 0-.39.188L1.54 8H6a.5.5 0 0 1 .5.5 1.5 1.5 0 1 0 3 0A.5.5 0 0 1 10 8h4.46l-3.05-3.812A.5.5 0 0 0 11.02 4zm-1.17-.437A1.5 1.5 0 0 1 4.98 3h6.04a1.5 1.5 0 0 1 1.17.563l3.7 4.625a.5.5 0 0 1 .106.374l-.39 3.124A1.5 1.5 0 0 1 14.117 13H1.883a1.5 1.5 0 0 1-1.489-1.314l-.39-3.124a.5.5 0 0 1 .106-.374z"/>
-                        </svg>
+                        <span>{{ trans('Inbox (pending)') }}</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-inbox-fill {% if dataset.by_split.inbox %}text-warning{% else %}text-secondary{% endif %} opacity-50" viewBox="0 0 16 16"><path d="M4.98 4a.5.5 0 0 0-.39.188L1.54 8H6a.5.5 0 0 1 .5.5 1.5 1.5 0 1 0 3 0A.5.5 0 0 1 10 8h4.46l-3.05-3.812A.5.5 0 0 0 11.02 4zm-1.17-.437A1.5 1.5 0 0 1 4.98 3h6.04a1.5 1.5 0 0 1 1.17.563l3.7 4.625a.5.5 0 0 1 .106.374l-.39 3.124A1.5 1.5 0 0 1 14.117 13H1.883a1.5 1.5 0 0 1-1.489-1.314l-.39-3.124a.5.5 0 0 1 .106-.374z"/></svg>
                     </div>
-                    <div class="dataset-stat__value {% if dataset.by_split.inbox %}text-warning{% endif %}">{{ dataset.by_split.inbox or 0 }}</div>
+                    <div class="dataset-stat__value {% if dataset.by_split.inbox %}text-warning fw-bold{% endif %}">{{ dataset.by_split.inbox or 0 }}</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
                 <div class="cv-card dataset-stat border-start border-4 border-info">
                     <div class="dataset-stat__label d-flex justify-content-between align-items-center">
                         <span>{{ trans('Classes') }} ({{ (dataset.classes or [])|length }})</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor"
-                             class="bi bi-tags text-info opacity-50" viewBox="0 0 16 16">
-                            <path d="M3 2v4.586l7 7L14.586 9l-7-7zM2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586z"/>
-                            <path d="M5.5 5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1m0 1a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M1 7.086a1 1 0 0 0 .293.707L8.75 15.25l-.043.043a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 0 7.586V3a1 1 0 0 1 1-1z"/>
-                        </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-tags text-info opacity-50" viewBox="0 0 16 16"><path d="M3 2v4.586l7 7L14.586 9l-7-7zM2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586z"/><path d="M5.5 5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1m0 1a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M1 7.086a1 1 0 0 0 .293.707L8.75 15.25l-.043.043a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 0 7.586V3a1 1 0 0 1 1-1z"/></svg>
                     </div>
                     <div class="dataset-stat__classes text-truncate" title="{{ dataset.classes|join(', ') }}">
                         {{ dataset.classes|join(', ') or '-' }}
@@ -166,65 +218,59 @@
             </div>
         </div>
 
-        {% if dataset.by_split.inbox and dataset.by_split.inbox > 0 %}
-            <div class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2 p-2 px-3 mb-3 rounded-3 shadow-sm">
-                <div class="d-flex align-items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
-                         class="bi bi-exclamation-circle text-warning flex-shrink-0" viewBox="0 0 16 16"
-                         aria-hidden="true">
-                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
-                        <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0M7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0z"/>
-                    </svg>
-                    <span><strong>{{ dataset.by_split.inbox }}</strong> {{ trans('images in inbox') }}. {{ trans('Import frames into inbox, then split into train/val before training.') }}</span>
-                </div>
-                <button type="button" class="btn btn-sm btn-warning d-inline-flex align-items-center gap-1"
-                        id="btn-quick-split">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
-                         class="bi bi-shuffle" viewBox="0 0 16 16" aria-hidden="true">
-                        <path fill-rule="evenodd"
-                              d="M0 3.5A.5.5 0 0 1 .5 3H1c2.202 0 3.827 1.24 4.874 2.418.49.552.865 1.102 1.126 1.532.26-.43.636-.98 1.126-1.532C9.173 4.24 10.798 3 13 3v1c-1.798 0-3.173 1.01-4.126 2.082A9.6 9.6 0 0 0 7.556 8a9.6 9.6 0 0 0 1.318 1.918C9.827 10.99 11.202 12 13 12v1c-2.202 0-3.827-1.24-4.874-2.418A10.6 10.6 0 0 1 7 9.05c-.26.43-.636.98-1.126 1.532C4.827 11.76 3.202 13 1 13H.5a.5.5 0 0 1-.5-.5"/>
-                        <path d="M13 5.466V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192m0 9v-3.932a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192"/>
-                    </svg>
-                    <span>{{ trans('Auto train/val split') }}</span>
+        <!-- 5 Lifecycle Step Navigation Tabs -->
+        <ul class="nav nav-pills dataset-detail__tabs mb-3 gap-1" role="tablist" id="dataset-main-tabs">
+            <li class="nav-item">
+                <button class="nav-link active d-flex align-items-center gap-2" id="tab-btn-frames"
+                        data-bs-toggle="tab" data-bs-target="#tab-frames" type="button">
+                    <span class="badge rounded-circle bg-body-secondary text-body" style="width: 20px; height: 20px; font-size: 0.72rem; padding: 2px;">1</span>
+                    <span>{{ trans('1. Collect frames') }}</span>
+                    {% if dataset.by_split.inbox and dataset.by_split.inbox > 0 %}
+                        <span class="badge text-bg-warning">{{ dataset.by_split.inbox }}</span>
+                    {% endif %}
                 </button>
-            </div>
-        {% endif %}
-
-        <ul class="nav nav-pills dataset-detail__tabs" role="tablist">
-            <li class="nav-item">
-                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-import"
-                        type="button">{{ trans('Import') }}</button>
             </li>
             <li class="nav-item">
-                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-images"
-                        type="button">{{ trans('Images') }} <span
-                        class="badge text-bg-secondary">{{ dataset.total }}</span></button>
+                <button class="nav-link d-flex align-items-center gap-2" id="tab-btn-annotations"
+                        data-bs-toggle="tab" data-bs-target="#tab-annotations" type="button">
+                    <span class="badge rounded-circle bg-body-secondary text-body" style="width: 20px; height: 20px; font-size: 0.72rem; padding: 2px;">2</span>
+                    <span>{{ trans('2. Annotate & Gallery') }}</span>
+                    <span class="badge text-bg-secondary">{{ dataset.total }}</span>
+                </button>
             </li>
             <li class="nav-item">
-                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-settings"
-                        type="button">{{ trans('Settings') }}</button>
+                <button class="nav-link d-flex align-items-center gap-2" id="tab-btn-train"
+                        data-bs-toggle="tab" data-bs-target="#tab-train" type="button">
+                    <span class="badge rounded-circle bg-body-secondary text-body" style="width: 20px; height: 20px; font-size: 0.72rem; padding: 2px;">3</span>
+                    <span>{{ trans('3. YOLO Training') }}</span>
+                </button>
             </li>
             <li class="nav-item">
-                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-train" type="button"
-                        id="train-tab-btn">{{ trans('Train') }}</button>
+                <button class="nav-link d-flex align-items-center gap-2" id="tab-btn-deploy"
+                        data-bs-toggle="tab" data-bs-target="#tab-deploy" type="button">
+                    <span class="badge rounded-circle bg-body-secondary text-body" style="width: 20px; height: 20px; font-size: 0.72rem; padding: 2px;">4</span>
+                    <span>{{ trans('4. Apply to counter') }}</span>
+                </button>
             </li>
-            <li class="nav-item">
-                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-qa"
-                        type="button">{{ trans('QA') }}</button>
+            <li class="nav-item ms-md-auto">
+                <button class="nav-link d-flex align-items-center gap-1 text-body-secondary" id="tab-btn-settings"
+                        data-bs-toggle="tab" data-bs-target="#tab-settings-qa" type="button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-gear" viewBox="0 0 16 16"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z"/></svg>
+                    <span>{{ trans('Settings & QA') }}</span>
+                </button>
             </li>
         </ul>
 
         <div class="tab-content">
-            <div class="tab-pane fade show active" id="tab-import">
-                <p class="dataset-tab-hint">{{ trans('Import frames into inbox, then split into train/val before training.') }}</p>
-
-                <!-- Direct Camera Live Capture (Bootstrap without trained models) -->
-                <div class="cv-card mb-4 border-primary overflow-hidden">
-                    <div class="card-header bg-primary-subtle d-flex justify-content-between align-items-center" style="border-top-left-radius: inherit; border-top-right-radius: inherit;">
+            <!-- ========================================== -->
+            <!-- TAB 1: COLLECT FRAMES                     -->
+            <!-- ========================================== -->
+            <div class="tab-pane fade show active" id="tab-frames">
+                <!-- Direct Camera Live Capture Card -->
+                <div class="cv-card mb-4 border-primary overflow-hidden shadow-sm">
+                    <div class="card-header bg-primary-subtle d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-camera-video text-primary" viewBox="0 0 16 16">
-                                <path fill-rule="evenodd" d="M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2zm11.5 5.175 3.5 1.556V4.269l-3.5 1.556zM2 4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h7.5a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z"/>
-                            </svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-camera-video text-primary" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2zm11.5 5.175 3.5 1.556V4.269l-3.5 1.556zM2 4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h7.5a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z"/></svg>
                             <span class="fw-semibold">{{ trans('Direct Camera Capture') }}</span>
                             <span class="badge text-bg-primary">{{ trans('No model required') }}</span>
                         </div>
@@ -257,66 +303,56 @@
                             <div class="col-md-5 col-sm-12">
                                 <div class="d-flex gap-2">
                                     <button type="button" class="btn btn-primary flex-grow-1 d-flex align-items-center justify-content-center gap-2 shadow-sm" id="btn-direct-cam-snapshot">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-camera-fill" viewBox="0 0 16 16">
-                                            <path d="M10.5 8.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0"/>
-                                            <path d="M2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 9.172 2H6.828a2 2 0 0 0-1.414.586l-.828.828A2 2 0 0 1 3.172 4zm.5 2a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1m9 2.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0"/>
-                                        </svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-camera-fill" viewBox="0 0 16 16"><path d="M10.5 8.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0"/><path d="M2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 9.172 2H6.828a2 2 0 0 0-1.414.586l-.828.828A2 2 0 0 1 3.172 4zm.5 2a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1m9 2.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0"/></svg>
                                         <span>{{ trans('Take Snapshot') }}</span>
                                     </button>
                                     <button type="button" class="btn btn-outline-secondary d-flex align-items-center justify-content-center gap-2 shadow-sm" id="btn-toggle-cam-preview">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye" id="btn-preview-icon" viewBox="0 0 16 16">
-                                            <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z"/>
-                                            <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0"/>
-                                        </svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye" id="btn-preview-icon" viewBox="0 0 16 16"><path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z"/><path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0"/></svg>
                                         <span id="cam-preview-btn-text">{{ trans('Show Preview') }}</span>
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Interval capture sub-panel -->
-                        <div class="mt-3 p-3 bg-body-tertiary rounded border">
-                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-                                <div class="fw-semibold small text-body-secondary d-flex align-items-center gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-clock-history text-primary" viewBox="0 0 16 16">
-                                        <path d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022zm2.004.45a7 7 0 0 0-.985-.299l.219-.976q.576.129 1.126.342zm1.37.71a7 7 0 0 0-.439-.27l.493-.87a8 8 0 0 1 .979.654l-.615.789a7 7 0 0 0-.418-.293"/>
-                                        <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/>
-                                        <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/>
-                                    </svg>
-                                    <span>{{ trans('Automatic Periodic Capture') }}</span>
-                                </div>
-                                <div id="interval-cam-badge" class="badge text-bg-primary d-none">
+                        <!-- Collapsible Periodic Capture Accordion -->
+                        <div class="mt-3 pt-3 border-top">
+                            <button class="btn btn-sm btn-link text-decoration-none p-0 d-inline-flex align-items-center gap-1 text-body-secondary fw-semibold"
+                                    type="button" data-bs-toggle="collapse" data-bs-target="#collapse-interval-cam" aria-expanded="false" aria-controls="collapse-interval-cam">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-clock-history text-primary" viewBox="0 0 16 16"><path d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022zm2.004.45a7 7 0 0 0-.985-.299l.219-.976q.576.129 1.126.342zm1.37.71a7 7 0 0 0-.439-.27l.493-.87a8 8 0 0 1 .979.654l-.615.789a7 7 0 0 0-.418-.293"/><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/></svg>
+                                <span>{{ trans('Automatic Periodic Capture (Interval shooting)') }}</span>
+                                <span class="badge text-bg-primary d-none ms-2" id="interval-cam-badge">
                                     {{ trans('Capturing') }}: <span id="interval-cam-count">0</span> / <span id="interval-cam-max">-</span>
-                                </div>
-                            </div>
-                            <div class="row g-2 align-items-center">
-                                <div class="col-sm-3 col-6">
-                                    <div class="input-group input-group-sm">
-                                        <span class="input-group-text">{{ trans('Every') }}</span>
-                                        <input type="number" class="form-control" id="interval-sec" value="3.0" min="0.5" step="0.5" title="{{ trans('Interval in seconds') }}">
-                                        <span class="input-group-text">{{ trans('sec') }}</span>
+                                </span>
+                            </button>
+
+                            <div class="collapse mt-2" id="collapse-interval-cam">
+                                <div class="p-3 bg-body-tertiary rounded border">
+                                    <div class="row g-2 align-items-center">
+                                        <div class="col-sm-3 col-6">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text">{{ trans('Every') }}</span>
+                                                <input type="number" class="form-control" id="interval-sec" value="3.0" min="0.5" step="0.5" title="{{ trans('Interval in seconds') }}">
+                                                <span class="input-group-text">{{ trans('sec') }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-3 col-6">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text">{{ trans('Max') }}</span>
+                                                <input type="number" class="form-control" id="interval-max-frames" value="30" min="1" max="500" title="{{ trans('Maximum frames to capture') }}">
+                                                <span class="input-group-text">{{ trans('frames') }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6 col-12 d-flex gap-2">
+                                            <button type="button" class="btn btn-sm btn-success flex-grow-1 text-white shadow-sm d-flex align-items-center justify-content-center gap-1" id="btn-start-interval-cam">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-play-fill" viewBox="0 0 16 16"><path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/></svg>
+                                                <span>{{ trans('Start Periodic Capture') }}</span>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-danger flex-grow-1 text-white shadow-sm d-none d-flex align-items-center justify-content-center gap-1" id="btn-stop-interval-cam">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-stop-fill" viewBox="0 0 16 16"><path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5"/></svg>
+                                                <span>{{ trans('Stop Periodic Capture') }}</span>
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="col-sm-3 col-6">
-                                    <div class="input-group input-group-sm">
-                                        <span class="input-group-text">{{ trans('Max') }}</span>
-                                        <input type="number" class="form-control" id="interval-max-frames" value="30" min="1" max="500" title="{{ trans('Maximum frames to capture') }}">
-                                        <span class="input-group-text">{{ trans('frames') }}</span>
-                                    </div>
-                                </div>
-                                <div class="col-sm-6 col-12 d-flex gap-2">
-                                    <button type="button" class="btn btn-sm btn-success flex-grow-1 text-white shadow-sm d-flex align-items-center justify-content-center gap-1" id="btn-start-interval-cam">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-play-fill" viewBox="0 0 16 16">
-                                            <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/>
-                                        </svg>
-                                        <span>{{ trans('Start Periodic Capture') }}</span>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-danger flex-grow-1 text-white shadow-sm d-none d-flex align-items-center justify-content-center gap-1" id="btn-stop-interval-cam">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-stop-fill" viewBox="0 0 16 16">
-                                            <path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5"/>
-                                        </svg>
-                                        <span>{{ trans('Stop Periodic Capture') }}</span>
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -342,13 +378,9 @@
                                         <div class="small text-secondary">{{ trans('Loading preview...') }}</div>
                                     </div>
                                     <div id="cam-preview-error" class="position-absolute top-50 start-50 translate-middle text-center text-light z-2 d-none">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-exclamation-triangle-fill text-warning mb-2" viewBox="0 0 16 16">
-                                            <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/>
-                                        </svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-exclamation-triangle-fill text-warning mb-2" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg>
                                         <div class="small text-light mb-2" id="cam-preview-error-msg">{{ trans('Failed to load camera stream') }}</div>
-                                        <button type="button" class="btn btn-sm btn-outline-warning" id="btn-cam-preview-retry">
-                                            {{ trans('Retry') }}
-                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-warning" id="btn-cam-preview-retry">{{ trans('Retry') }}</button>
                                     </div>
                                     <img id="cam-preview-img" src="" alt="" class="w-100 h-100" style="max-height: 480px; object-fit: contain; display: none;">
                                 </div>
@@ -357,41 +389,37 @@
                     </div>
                 </div>
 
+                <!-- 3 Import Sources Cards -->
                 <div class="row g-3">
                     <div class="col-lg-4">
-                        <div class="cv-card h-100">
-                            <div class="card-header">{{ trans('From cameras') }}</div>
+                        <div class="cv-card h-100 shadow-sm">
+                            <div class="card-header fw-semibold">{{ trans('From cameras') }}</div>
                             <div class="card-body d-flex flex-column">
                                 <p class="dataset-hint dataset-hint--tight">{{ trans('Copies saved frames from storage/saved_images. Pick one counter location or import all. Already imported files are skipped.') }}</p>
-                                <select class="form-select mb-3" id="import-location"
-                                        aria-describedby="import-location-hint">
+                                <select class="form-select mb-3" id="import-location" aria-describedby="import-location-hint">
                                     <option value="">{{ trans('All locations') }}</option>
                                     {% for loc in saved_locations %}
                                         <option value="{{ loc.location }}">{{ loc.location }} ({{ loc.count }})</option>
                                     {% endfor %}
                                 </select>
-                                <div class="form-text mb-3"
-                                     id="import-location-hint">{{ trans('Frames stay in inbox until you move or auto-split them.') }}</div>
-                                <button type="button" class="btn btn-primary w-100 mt-auto"
-                                        id="btn-import-camera">{{ trans('Import') }}</button>
+                                <div class="form-text mb-3" id="import-location-hint">{{ trans('Frames stay in inbox until you move or auto-split them.') }}</div>
+                                <button type="button" class="btn btn-primary w-100 mt-auto shadow-sm" id="btn-import-camera">{{ trans('Import') }}</button>
                             </div>
                         </div>
                     </div>
                     <div class="col-lg-4">
-                        <div class="cv-card h-100">
-                            <div class="card-header">{{ trans('Upload files / ZIP') }}</div>
+                        <div class="cv-card h-100 shadow-sm">
+                            <div class="card-header fw-semibold">{{ trans('Upload files / ZIP') }}</div>
                             <div class="card-body d-flex flex-column">
                                 <p class="dataset-hint dataset-hint--tight">{{ trans('Upload JPG/PNG/WebP images or a ZIP archive. Files already in the dataset are skipped.') }}</p>
-                                <input type="file" class="form-control mb-3" id="import-files" multiple
-                                       accept="image/*,.zip">
-                                <button type="button" class="btn btn-primary w-100 mt-auto"
-                                        id="btn-import-upload">{{ trans('Upload') }}</button>
+                                <input type="file" class="form-control mb-3" id="import-files" multiple accept="image/*,.zip">
+                                <button type="button" class="btn btn-primary w-100 mt-auto shadow-sm" id="btn-import-upload">{{ trans('Upload') }}</button>
                             </div>
                         </div>
                     </div>
                     <div class="col-lg-4">
-                        <div class="cv-card h-100">
-                            <div class="card-header">{{ trans('From recordings') }}</div>
+                        <div class="cv-card h-100 shadow-sm">
+                            <div class="card-header fw-semibold">{{ trans('From recordings') }}</div>
                             <div class="card-body d-flex flex-column">
                                 <p class="dataset-hint dataset-hint--tight">{{ trans('Extract frames from videos in storage/saved_recordings.') }}</p>
                                 <select class="form-select mb-2" id="import-recording">
@@ -402,32 +430,31 @@
                                 </select>
                                 <div class="row g-2 mb-3">
                                     <div class="col">
-                                        <label class="form-label small mb-1"
-                                               for="rec-every-n">{{ trans('every N') }}</label>
-                                        <input type="number" class="form-control" id="rec-every-n" value="10" min="1"
-                                               title="{{ trans('Take every N-th frame from the video.') }}">
-                                        <div class="form-text">{{ trans('Take every N-th frame from the video.') }}</div>
+                                        <label class="form-label small mb-1" for="rec-every-n">{{ trans('every N') }}</label>
+                                        <input type="number" class="form-control" id="rec-every-n" value="10" min="1" title="{{ trans('Take every N-th frame from the video.') }}">
                                     </div>
                                     <div class="col">
                                         <label class="form-label small mb-1" for="rec-max">{{ trans('max') }}</label>
-                                        <input type="number" class="form-control" id="rec-max" value="200" min="1"
-                                               title="{{ trans('Stop after this many extracted frames.') }}">
-                                        <div class="form-text">{{ trans('Stop after this many extracted frames.') }}</div>
+                                        <input type="number" class="form-control" id="rec-max" value="200" min="1" title="{{ trans('Stop after this many extracted frames.') }}">
                                     </div>
                                 </div>
-                                <button type="button" class="btn btn-primary w-100 mt-auto"
-                                        id="btn-import-recording">{{ trans('Extract frames') }}</button>
+                                <button type="button" class="btn btn-primary w-100 mt-auto shadow-sm" id="btn-import-recording">{{ trans('Extract frames') }}</button>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="cv-card mt-3">
+
+                <!-- Inbox auto-split card -->
+                <div class="cv-card mt-3 shadow-sm">
                     <div class="card-body">
                         <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
                             <button type="button" class="btn btn-outline-secondary" id="btn-auto-split"
                                     data-bs-toggle="tooltip" data-bs-placement="top"
                                     data-bs-title="{{ trans('Move inbox/train images into train and val by the ratio below.') }}">
                                 {{ trans('Auto train/val split') }}
+                            </button>
+                            <button type="button" class="btn btn-warning d-none" id="btn-quick-split">
+                                {{ trans('Auto split inbox') }}
                             </button>
                             <div class="input-group" style="width:auto;max-width:10rem">
                                 <span class="input-group-text">val</span>
@@ -441,8 +468,7 @@
                         <div class="dataset-inbox-path">
                             <div class="small text-body-secondary mb-1">{{ trans('Inbox folder on disk') }}</div>
                             <div class="input-group input-group-sm">
-                                <code class="form-control font-monospace"
-                                      id="inbox-path-text">{{ dataset.inbox_path }}</code>
+                                <code class="form-control font-monospace" id="inbox-path-text">{{ dataset.inbox_path }}</code>
                                 <button type="button" class="btn btn-outline-secondary" id="btn-copy-inbox"
                                         data-bs-toggle="tooltip" data-bs-placement="top"
                                         data-bs-title="{{ trans('Copy path to clipboard') }}">{{ trans('Copy') }}</button>
@@ -453,136 +479,87 @@
                 </div>
             </div>
 
-            <div class="tab-pane fade" id="tab-images">
-                <p class="dataset-tab-hint">{{ trans('Select images to move between splits, delete, or run Auto-label on unlabeled frames.') }}</p>
-                <div class="cv-card overflow-hidden">
-                    <div class="card-header dataset-images-toolbar d-flex flex-wrap gap-2 align-items-center">
-                        <div class="input-group input-group-sm" style="width:auto; max-width: 12rem;">
+            <!-- ========================================== -->
+            <!-- TAB 2: ANNOTATE & GALLERY                 -->
+            <!-- ========================================== -->
+            <div class="tab-pane fade" id="tab-annotations">
+                <div class="cv-card overflow-hidden shadow-sm">
+                    <div class="card-header dataset-images-toolbar d-flex flex-wrap gap-2 align-items-center bg-body-tertiary py-3">
+                        <div class="input-group input-group-sm" style="width:auto; max-width: 14rem;">
                             <span class="input-group-text">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
-                                     class="bi bi-search" viewBox="0 0 16 16" aria-hidden="true">
-                                    <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
-                                </svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/></svg>
                             </span>
-                            <input type="text" class="form-control" id="images-search-input"
-                                   placeholder="{{ trans('Search') }}…" aria-label="{{ trans('Search') }}">
+                            <input type="text" class="form-control" id="images-search-input" placeholder="{{ trans('Search') }}…" aria-label="{{ trans('Search') }}">
                         </div>
-                        <select class="form-select form-select-sm" style="width:auto" id="filter-split"
-                                aria-label="{{ trans('Split') }}">
+                        <select class="form-select form-select-sm" style="width:auto" id="filter-split" aria-label="{{ trans('Split') }}">
                             <option value="">{{ trans('All splits') }}</option>
                             <option value="inbox">inbox</option>
                             <option value="train">train</option>
                             <option value="val">val</option>
                         </select>
-                        <select class="form-select form-select-sm" style="width:auto" id="filter-labeled"
-                                aria-label="{{ trans('Status') }}">
+                        <select class="form-select form-select-sm" style="width:auto" id="filter-labeled" aria-label="{{ trans('Status') }}">
                             <option value="">{{ trans('All status') }}</option>
                             <option value="0">{{ trans('Unlabeled') }}</option>
                             <option value="1">{{ trans('Labeled') }}</option>
                         </select>
-                        <select class="form-select form-select-sm" style="width:auto" id="filter-class"
-                                aria-label="{{ trans('Class') }}">
+                        <select class="form-select form-select-sm" style="width:auto" id="filter-class" aria-label="{{ trans('Class') }}">
                             <option value="">{{ trans('All classes') }}</option>
                             {% for c in dataset.classes %}
                                 <option value="{{ c }}">{{ c }}</option>
                             {% endfor %}
                         </select>
                         <div class="btn-group btn-group-sm" role="group" aria-label="{{ trans('View mode') }}">
-                            <button type="button" class="btn btn-outline-secondary active" id="btn-view-table"
-                                    title="{{ trans('Table view') }}">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
-                                     class="bi bi-list-ul" viewBox="0 0 16 16">
-                                    <path fill-rule="evenodd"
-                                          d="M5 11.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m-3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2m0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2m0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/>
-                                </svg>
+                            <button type="button" class="btn btn-outline-secondary active" id="btn-view-table" title="{{ trans('Table view') }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-list-ul" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M5 11.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m-3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2m0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2m0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/></svg>
                             </button>
-                            <button type="button" class="btn btn-outline-secondary" id="btn-view-grid"
-                                    title="{{ trans('Grid view') }}">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
-                                     class="bi bi-grid" viewBox="0 0 16 16">
-                                    <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5zM2.5 2a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5zm6.5.5A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5zM1 10.5A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5zm6.5.5A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5z"/>
-                                </svg>
+                            <button type="button" class="btn btn-outline-secondary" id="btn-view-grid" title="{{ trans('Grid view') }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-grid" viewBox="0 0 16 16"><path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5zM2.5 2a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5zm6.5.5A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5zM1 10.5A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5zm6.5.5A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5z"/></svg>
                             </button>
                         </div>
                         <div class="vr d-none d-md-block"></div>
-                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-none"
-                              id="selected-counter">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
-                                 class="bi bi-check-circle me-1" viewBox="0 0 16 16" aria-hidden="true">
-                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
-                                <path d="m10.97 4.97-.02.022-3.473 4.425-2.093-2.094a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05"/>
-                            </svg>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-none" id="selected-counter">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-check-circle me-1" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/><path d="m10.97 4.97-.02.022-3.473 4.425-2.093-2.094a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05"/></svg>
                             <span id="selected-counter-num">0</span> {{ trans('Selected') }}
                         </span>
                         <div class="btn-group btn-group-sm" role="group">
-                            <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center"
-                                    id="btn-move-train"
-                                    data-bs-toggle="tooltip" data-bs-placement="top"
-                                    data-bs-title="{{ trans('Move selected images to the train split.') }}">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
-                                     class="bi bi-cpu me-1" viewBox="0 0 16 16">
-                                    <path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14a2.5 2.5 0 0 1-2.5 2.5v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0m-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3zM5 6.5A1.5 1.5 0 0 1 6.5 5h3A1.5 1.5 0 0 1 11 6.5v3A1.5 1.5 0 0 1 9.5 11h-3A1.5 1.5 0 0 1 5 9.5zM6.5 6a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5z"/>
-                                </svg>
+                            <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center" id="btn-move-train" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{ trans('Move selected images to the train split.') }}">
                                 <span>{{ trans('→ train') }}</span>
                             </button>
-                            <button type="button" class="btn btn-outline-success d-inline-flex align-items-center"
-                                    id="btn-move-val"
-                                    data-bs-toggle="tooltip" data-bs-placement="top"
-                                    data-bs-title="{{ trans('Move selected images to the val split.') }}">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
-                                     class="bi bi-check2-all me-1" viewBox="0 0 16 16" aria-hidden="true">
-                                    <path d="M12.354 4.354a.5.5 0 0 0-.708-.708L5 10.293 1.854 7.146a.5.5 0 1 0-.708.708l3.5 3.5a.5.5 0 0 0 .708 0zm-4.208 7-.896-.897.707-.707.543.543 6.646-6.647a.5.5 0 0 1 .708.708l-7 7a.5.5 0 0 1-.708 0"/>
-                                    <path d="m5.354 7.146.896.897-.707.707-.897-.896a.5.5 0 1 1 .708-.708"/>
-                                </svg>
+                            <button type="button" class="btn btn-outline-success d-inline-flex align-items-center" id="btn-move-val" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{ trans('Move selected images to the val split.') }}">
                                 <span>{{ trans('→ val') }}</span>
                             </button>
-                            <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center"
-                                    id="btn-move-inbox"
-                                    data-bs-toggle="tooltip" data-bs-placement="top"
-                                    data-bs-title="{{ trans('Move selected images to the inbox split.') }}">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
-                                     class="bi bi-inbox-fill me-1" viewBox="0 0 16 16">
-                                    <path d="M4.98 4a.5.5 0 0 0-.39.188L1.54 8H6a.5.5 0 0 1 .5.5 1.5 1.5 0 1 0 3 0A.5.5 0 0 1 10 8h4.46l-3.05-3.812A.5.5 0 0 0 11.02 4zm-1.17-.437A1.5 1.5 0 0 1 4.98 3h6.04a1.5 1.5 0 0 1 1.17.563l3.7 4.625a.5.5 0 0 1 .106.374l-.39 3.124A1.5 1.5 0 0 1 14.117 13H1.883a1.5 1.5 0 0 1-1.489-1.314l-.39-3.124a.5.5 0 0 1 .106-.374z"/>
-                                </svg>
+                            <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center" id="btn-move-inbox" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{ trans('Move selected images to the inbox split.') }}">
                                 <span>{{ trans('→ inbox') }}</span>
                             </button>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center"
-                                id="btn-delete-images"
-                                data-bs-toggle="tooltip" data-bs-placement="top"
-                                data-bs-title="{{ trans('Permanently delete selected images and their annotations.') }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor"
-                                 class="bi bi-trash me-1" viewBox="0 0 16 16" aria-hidden="true">
-                                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
-                                <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
-                            </svg>
+                        <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center" id="btn-delete-images" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{ trans('Permanently delete selected images and their annotations.') }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-trash me-1" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg>
                             <span>{{ trans('Delete') }}</span>
                         </button>
-                        <button type="button"
-                                class="btn btn-sm btn-outline-success ms-md-auto d-inline-flex align-items-center gap-1"
-                                id="btn-autolabel"
-                                data-bs-toggle="tooltip" data-bs-placement="top"
-                                data-bs-title="{{ trans('Run Auto-label model on selected (or unlabeled) images.') }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
-                                 class="bi bi-magic" viewBox="0 0 16 16" aria-hidden="true">
-                                <path d="M9.5 2.672a.5.5 0 1 0 1 0V.843a.5.5 0 0 0-1 0zm4.5.035A.5.5 0 0 0 13.293 2L12 3.293a.5.5 0 1 0 .707.707zM7.293 4A.5.5 0 1 0 8 3.293L6.707 2a.5.5 0 0 0-.707.707zm-.621 2.5a.5.5 0 1 0 0-1H4.843a.5.5 0 1 0 0 1zm8.485 0a.5.5 0 1 0 0-1h-1.829a.5.5 0 0 0 0 1zM13.293 10a.5.5 0 1 0 .707-.707L12.707 8a.5.5 0 1 0-.707.707zM9.5 11.157a.5.5 0 0 0 1 0V9.328a.5.5 0 0 0-1 0zm1.854-5.097a.5.5 0 0 0 0-.706l-.708-.708a.5.5 0 0 0-.707 0L.854 13.793a.5.5 0 0 0 0 .707l.707.707a.5.5 0 0 0 .707 0zm-1.414 1.414 1.414-1.414.708.707-1.414 1.414z"/>
-                            </svg>
-                            <span id="btn-autolabel-text">{{ trans('Auto-label') }}</span>
-                        </button>
+                        <div class="ms-md-auto d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-1" id="btn-autolabel" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{ trans('Run Auto-label model on selected (or unlabeled) images.') }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-magic" viewBox="0 0 16 16"><path d="M9.5 2.672a.5.5 0 1 0 1 0V.843a.5.5 0 0 0-1 0zm4.5.035A.5.5 0 0 0 13.293 2L12 3.293a.5.5 0 1 0 .707.707zM7.293 4A.5.5 0 1 0 8 3.293L6.707 2a.5.5 0 0 0-.707.707zm-.621 2.5a.5.5 0 1 0 0-1H4.843a.5.5 0 1 0 0 1zm8.485 0a.5.5 0 1 0 0-1h-1.829a.5.5 0 0 0 0 1zM13.293 10a.5.5 0 1 0 .707-.707L12.707 8a.5.5 0 1 0-.707.707zM9.5 11.157a.5.5 0 0 0 1 0V9.328a.5.5 0 0 0-1 0zm1.854-5.097a.5.5 0 0 0 0-.706l-.708-.708a.5.5 0 0 0-.707 0L.854 13.793a.5.5 0 0 0 0 .707l.707.707a.5.5 0 0 0 .707 0zm-1.414 1.414 1.414-1.414.708.707-1.414 1.414z"/></svg>
+                                <span id="btn-autolabel-text">{{ trans('Auto-label') }}</span>
+                            </button>
+                            <a class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1 shadow-sm" href="{{ url_for('datasets.dataset_annotate', name=dataset.name) }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16"><path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.8-6.8z"/><path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/></svg>
+                                <span>{{ trans('Annotate editor') }}</span>
+                            </a>
+                        </div>
                     </div>
+
+                    <!-- Table View -->
                     <div class="table-responsive dataset-images-table" id="images-table-view">
                         <table class="table table-modern table-sm table-hover mb-0 align-middle">
                             <thead>
                             <tr>
-                                <th style="width:2.25rem"><input type="checkbox" id="check-all-images"
-                                                                 class="form-check-input"
-                                                                 aria-label="{{ trans('All') }}"></th>
-                                <th style="width:4rem">{{ trans('Preview') }}</th>
+                                <th style="width:2.25rem"><input type="checkbox" id="check-all-images" class="form-check-input" aria-label="{{ trans('All') }}"></th>
+                                <th style="width:4.5rem">{{ trans('Preview') }}</th>
                                 <th>{{ trans('Image') }}</th>
                                 <th style="width:5rem">{{ trans('Split') }}</th>
                                 <th style="width:7rem">{{ trans('Status') }}</th>
                                 <th>{{ trans('Labels') }}</th>
-                                <th style="width:4.5rem"></th>
+                                <th style="width:5rem"></th>
                             </tr>
                             </thead>
                             <tbody id="images-tbody">
@@ -590,16 +567,14 @@
                                 <tr data-name="{{ img.name }}" data-split="{{ img.split }}"
                                     data-labeled="{{ 1 if img.labeled else 0 }}"
                                     data-labels="{{ (img.labels or [])|join(',') }}">
-                                    <td><input type="checkbox" class="form-check-input img-check"
-                                               value="{{ img.name }}"></td>
+                                    <td><input type="checkbox" class="form-check-input img-check" value="{{ img.name }}"></td>
                                     <td>
                                         <img src="{{ url_for('datasets.api_image_file', name=dataset.name, image_name=img.name) }}"
                                              alt="" loading="lazy" class="rounded border"
                                              style="width: 44px; height: 32px; object-fit: cover; background: #000;">
                                     </td>
-                                    <td class="text-truncate dataset-images-name"
-                                        title="{{ img.name }}">{{ img.name }}</td>
-                                    <td><span class="badge text-bg-dark">{{ img.split }}</span></td>
+                                    <td class="text-truncate dataset-images-name" style="max-width: 16rem;" title="{{ img.name }}">{{ img.name }}</td>
+                                    <td><span class="badge bg-body-secondary text-body font-monospace">{{ img.split }}</span></td>
                                     <td>
                                         {% if img.labeled %}
                                             <span class="badge text-bg-success">{{ trans('Labeled') }}</span>
@@ -607,50 +582,48 @@
                                             <span class="badge text-bg-secondary">{{ trans('Unlabeled') }}</span>
                                         {% endif %}
                                     </td>
-                                    <td class="text-truncate small text-body-secondary" style="max-width: 12rem;">
-                                        {{ (img.labels or [])|join(', ') or '-' }}
+                                    <td>
+                                        {% for l in img.labels or [] %}
+                                            <span class="badge bg-body-tertiary text-body border" style="font-size: 0.72rem;">{{ l }}</span>
+                                        {% else %}
+                                            <span class="text-body-secondary small">-</span>
+                                        {% endfor %}
                                     </td>
                                     <td>
-                                        <a class="btn btn-sm btn-link px-0"
-                                           href="{{ url_for('datasets.dataset_annotate', name=dataset.name, image=img.name) }}">{{ trans('Edit') }}</a>
+                                        <a class="btn btn-sm btn-outline-primary"
+                                           href="{{ url_for('datasets.dataset_annotate', name=dataset.name) }}?image={{ img.name }}">{{ trans('Edit') }}</a>
                                     </td>
                                 </tr>
                             {% else %}
                                 <tr>
-                                    <td colspan="7" class="empty-state">{{ trans('No images') }}</td>
+                                    <td colspan="7" class="text-center py-4 text-body-secondary">{{ trans('No images in dataset yet. Go to step 1 to collect frames.') }}</td>
                                 </tr>
                             {% endfor %}
                             </tbody>
                         </table>
                     </div>
+
+                    <!-- Grid View -->
                     <div class="dataset-images-grid p-3 d-none" id="images-grid-view">
-                        <div class="row g-2" id="images-grid-cards">
+                        <div class="row g-2" id="images-grid-row">
                             {% for img in images %}
-                                <div class="col-6 col-sm-4 col-md-3 col-xl-2 grid-card-col" data-name="{{ img.name }}"
-                                     data-split="{{ img.split }}" data-labeled="{{ 1 if img.labeled else 0 }}"
+                                <div class="col-6 col-sm-4 col-md-3 col-xl-2 img-grid-item"
+                                     data-name="{{ img.name }}" data-split="{{ img.split }}"
+                                     data-labeled="{{ 1 if img.labeled else 0 }}"
                                      data-labels="{{ (img.labels or [])|join(',') }}">
-                                    <div class="dataset-img-card h-100 d-flex flex-column">
-                                        <div class="dataset-img-card__check">
-                                            <input type="checkbox" class="form-check-input img-check"
-                                                   value="{{ img.name }}">
-                                        </div>
-                                        <a href="{{ url_for('datasets.dataset_annotate', name=dataset.name, image=img.name) }}"
-                                           class="text-decoration-none">
-                                            <img src="{{ url_for('datasets.api_image_file', name=dataset.name, image_name=img.name) }}"
-                                                 alt="{{ img.name }}" loading="lazy" class="dataset-img-card__thumb">
+                                    <div class="card h-100 overflow-hidden shadow-sm position-relative border">
+                                        <input type="checkbox" class="form-check-input img-check position-absolute top-0 start-0 m-2 z-2" value="{{ img.name }}">
+                                        <a href="{{ url_for('datasets.dataset_annotate', name=dataset.name) }}?image={{ img.name }}" class="d-block bg-dark" style="height: 120px;">
+                                            <img src="{{ url_for('datasets.api_image_file', name=dataset.name, image_name=img.name) }}" alt="" loading="lazy" class="w-100 h-100" style="object-fit: cover;">
                                         </a>
-                                        <div class="dataset-img-card__body d-flex flex-column flex-grow-1">
-                                            <div class="text-truncate fw-medium"
-                                                 title="{{ img.name }}">{{ img.name }}</div>
-                                            <div class="d-flex justify-content-between align-items-center mt-auto pt-1">
-                                                <span class="badge text-bg-dark"
-                                                      style="font-size: 0.65rem;">{{ img.split }}</span>
+                                        <div class="card-body p-2 d-flex flex-column gap-1">
+                                            <div class="small text-truncate" title="{{ img.name }}">{{ img.name }}</div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="badge bg-body-secondary text-body font-monospace" style="font-size: 0.65rem;">{{ img.split }}</span>
                                                 {% if img.labeled %}
-                                                    <span class="badge text-bg-success"
-                                                          style="font-size: 0.65rem;">{{ trans('Labeled') }}</span>
+                                                    <span class="badge text-bg-success" style="font-size: 0.65rem;">{{ trans('Labeled') }}</span>
                                                 {% else %}
-                                                    <span class="badge text-bg-secondary"
-                                                          style="font-size: 0.65rem;">{{ trans('Unlabeled') }}</span>
+                                                    <span class="badge text-bg-secondary" style="font-size: 0.65rem;">{{ trans('Unlabeled') }}</span>
                                                 {% endif %}
                                             </div>
                                         </div>
@@ -659,6 +632,8 @@
                             {% endfor %}
                         </div>
                     </div>
+
+                    <!-- Pagination -->
                     <div class="dataset-images-pagination d-flex justify-content-between align-items-center p-2 border-top bg-body-tertiary">
                         <div class="small text-body-secondary" id="pagination-info">
                             {{ dataset.total }} {{ trans('images') }}
@@ -666,127 +641,38 @@
                         <div class="d-flex align-items-center gap-2">
                             <span class="small text-body-secondary">{{ trans('Page') }}</span>
                             <div class="btn-group btn-group-sm">
-                                <button type="button" class="btn btn-outline-secondary" id="btn-page-prev" disabled>‹
-                                </button>
-                                <span class="btn btn-outline-secondary disabled fw-semibold"
-                                      id="page-current-num">1</span>
-                                <button type="button" class="btn btn-outline-secondary" id="btn-page-next" disabled>›
-                                </button>
+                                <button type="button" class="btn btn-outline-secondary" id="btn-page-prev" disabled>‹</button>
+                                <span class="btn btn-outline-secondary disabled fw-semibold" id="page-current-num">1</span>
+                                <button type="button" class="btn btn-outline-secondary" id="btn-page-next" disabled>›</button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="tab-pane fade" id="tab-settings">
-                <p class="dataset-tab-hint">{{ trans('Dataset vocabulary, Auto-label model, and helpers for merging or renaming classes.') }}</p>
-                <div class="cv-card">
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label" for="meta-display-name">{{ trans('Display name') }}</label>
-                                <input class="form-control" id="meta-display-name" value="{{ dataset.display_name }}">
-                                <div class="form-text">{{ trans('Human-readable title shown in the UI. Folder id stays the same.') }}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="meta-task">{{ trans('Task') }}</label>
-                                <select class="form-select" id="meta-task">
-                                    {% for t in ['detect', 'segment', 'classify', 'pose'] %}
-                                        <option value="{{ t }}"
-                                                {% if dataset.task == t %}selected{% endif %}>{{ t }}</option>
-                                    {% endfor %}
-                                </select>
-                                <div class="form-text">{{ trans('Changes annotation tools and format.') }}</div>
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label" for="meta-classes">{{ trans('Classes') }}</label>
-                                <input class="form-control" id="meta-classes" value="{{ dataset.classes|join(', ') }}">
-                                <div class="form-text">{{ trans('Comma-separated. Selecting an Auto-label model fills this from the detector; save to keep.') }}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label"
-                                       for="meta-autolabel-detector">{{ trans('Auto-label model') }}</label>
-                                <select class="form-select" id="meta-autolabel-detector">
-                                    <option value="">{{ trans('Default (first detector)') }}</option>
-                                    {% for m in detector_models %}
-                                        <option value="{{ m.location }}"
-                                                {% if dataset.autolabel_detector == m.location %}selected{% endif %}
-                                                {% if not m.exists %}disabled{% endif %}>
-                                            {{ m.label }}{% if not m.exists %} - {{ trans('missing') }}{% endif %}
-                                        </option>
-                                    {% else %}
-                                        <option value="" disabled>{{ trans('No detector models') }}</option>
-                                    {% endfor %}
-                                </select>
-                                <div class="form-text">{{ trans('Counter detector used for Auto-label and Active learning ranking.') }}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label"
-                                       for="meta-attributes">{{ trans('Attributes schema (JSON)') }}</label>
-                                <textarea class="form-control font-monospace" id="meta-attributes" rows="4"
-                                          placeholder='[{"name":"occluded","type":"bool"}]'>{{ dataset.attributes|tojson }}</textarea>
-                                <div class="form-text">{{ trans('Optional per-shape fields in the annotator (bool, text, enum…).') }}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label"
-                                       for="meta-keypoints">{{ trans('Keypoints schema (JSON)') }}</label>
-                                <textarea class="form-control font-monospace" id="meta-keypoints" rows="4"
-                                          placeholder='["nose","left_eye"]'>{{ dataset.keypoints_schema|tojson }}</textarea>
-                                <div class="form-text">{{ trans('Used for pose task: ordered keypoint names.') }}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="merge-source">{{ trans('Merge from dataset') }}</label>
-                                <div class="input-group">
-                                    <input class="form-control" id="merge-source"
-                                           placeholder="{{ trans('other-dataset') }}">
-                                    <button type="button" class="btn btn-outline-secondary" id="btn-merge"
-                                            data-bs-toggle="tooltip" data-bs-placement="top"
-                                            data-bs-title="{{ trans('Copy images and annotations from another dataset into this one.') }}">{{ trans('Merge') }}</button>
-                                </div>
-                                <div class="form-text">{{ trans('Enter the other dataset folder name (id), not the display title.') }}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">{{ trans('Reassign class') }}</label>
-                                <div class="input-group">
-                                    <input class="form-control" id="reassign-from" placeholder="{{ trans('from') }}">
-                                    <input class="form-control" id="reassign-to" placeholder="{{ trans('to') }}">
-                                    <button type="button" class="btn btn-outline-secondary" id="btn-reassign"
-                                            data-bs-toggle="tooltip" data-bs-placement="top"
-                                            data-bs-title="{{ trans('Rename a class on all shapes (and image labels).') }}">{{ trans('Reassign') }}</button>
-                                </div>
-                                <div class="form-text">{{ trans('Useful after fixing Auto-label class names.') }}</div>
-                            </div>
-                        </div>
-                        <div class="mt-3">
-                            <button type="button" class="btn btn-primary"
-                                    id="btn-save-meta">{{ trans('Save') }}</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
+            <!-- ========================================== -->
+            <!-- TAB 3: YOLO TRAINING                      -->
+            <!-- ========================================== -->
             <div class="tab-pane fade" id="tab-train">
-                <p class="dataset-tab-hint">{{ trans('Train on labeled train/val images, then apply the resulting weights to a counter.') }}</p>
                 <div class="row g-3">
                     <div class="col-lg-5">
-                        <div class="cv-card">
-                            <div class="card-header">{{ trans('Training') }}</div>
+                        <div class="cv-card shadow-sm h-100">
+                            <div class="card-header fw-semibold">{{ trans('Training setup') }}</div>
                             <div class="card-body">
                                 <div class="alert alert-warning small py-2 mb-3" id="gpu-warning">
                                     {{ trans('Training uses the GPU. Pause heavy counters on the same device if needed.') }}
                                 </div>
+
+                                <!-- Base model selection -->
                                 <div class="mb-3">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <label class="form-label mb-0" for="train-base-model">{{ trans('Base model') }}</label>
+                                        <label class="form-label mb-0 fw-semibold" for="train-base-model">{{ trans('Base model') }}</label>
                                         <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" id="btn-download-base-model">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-download me-1" viewBox="0 0 16 16">
-                                                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
-                                                <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/>
-                                            </svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-download me-1" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></svg>
                                             <span id="btn-download-base-label">{{ trans('Download model') }}</span>
                                         </button>
                                     </div>
-                                    <select class="form-select" id="train-base-model">
+                                    <select class="form-select shadow-sm" id="train-base-model">
                                         {% if available_base_models %}
                                             <optgroup label="{{ trans('Installed models') }}">
                                                 {% for m in available_base_models if m.installed %}
@@ -810,9 +696,9 @@
                                             {% endfor %}
                                         {% endif %}
                                     </select>
-                                    <div class="form-text">{{ trans('Starting checkpoint. If not downloaded yet, it will be automatically fetched before training.') }}</div>
-                                    
-                                    <!-- Base model download progress -->
+                                    <div class="form-text">{{ trans('Starting checkpoint. Automatically fetched if not present.') }}</div>
+
+                                    <!-- Download progress bar -->
                                     <div class="mt-2 d-none" id="base-model-download-box">
                                         <div class="d-flex justify-content-between small text-body-secondary mb-1">
                                             <span id="base-model-download-status">{{ trans('Downloading...') }}</span>
@@ -823,161 +709,302 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="row g-2 mb-3">
-                                    <div class="col-4">
-                                        <label class="form-label" for="train-epochs">{{ trans('Epochs') }}</label>
-                                        <input type="number" class="form-control" id="train-epochs"
-                                               value="{{ default_epochs }}" min="1"
-                                               title="{{ trans('Full passes over the training set.') }}">
-                                    </div>
-                                    <div class="col-4">
-                                        <label class="form-label" for="train-imgsz">{{ trans('imgsz') }}</label>
-                                        <input type="number" class="form-control" id="train-imgsz"
-                                               value="{{ default_imgsz }}"
-                                               title="{{ trans('Square input size in pixels (e.g. 640).') }}">
-                                    </div>
-                                    <div class="col-4">
-                                        <label class="form-label" for="train-batch">{{ trans('batch') }}</label>
-                                        <input type="number" class="form-control" id="train-batch" value="-1"
-                                               title="{{ trans('-1 = auto batch size for available VRAM.') }}">
-                                    </div>
-                                </div>
-                                <div class="row g-2 mb-1">
-                                    <div class="col">
-                                        <label class="form-label" for="train-device">{{ trans('device') }}</label>
-                                        <input class="form-control" id="train-device" value="auto"
-                                               title="{{ trans('auto, cpu, or GPU index like 0.') }}">
-                                    </div>
-                                    <div class="col">
-                                        <label class="form-label" for="train-export">{{ trans('Export') }}</label>
-                                        <select class="form-select" id="train-export"
-                                                title="{{ trans('Optional export after training (ONNX / TensorRT engine).') }}">
-                                            <option value="">{{ trans('None') }}</option>
-                                            <option value="onnx">onnx</option>
-                                            <option value="engine">engine</option>
-                                        </select>
+
+                                <!-- Training Speed & Quality Presets -->
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold mb-2">{{ trans('Training preset') }}</label>
+                                    <div class="d-flex flex-column gap-2" id="training-presets-container">
+                                        <div class="card border p-2 cursor-pointer transition-card train-preset-card" data-epochs="30" data-imgsz="640" style="cursor: pointer;">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div class="fw-bold small text-body">⚡ {{ trans('Quick test') }}</div>
+                                                <span class="badge text-bg-secondary">30 {{ trans('epochs') }}</span>
+                                            </div>
+                                            <div class="text-body-secondary" style="font-size: 0.75rem;">{{ trans('Fast check in 2-5 minutes to verify annotation quality.') }}</div>
+                                        </div>
+                                        <div class="card border border-primary bg-primary-subtle bg-opacity-25 p-2 cursor-pointer transition-card train-preset-card" data-epochs="100" data-imgsz="640" style="cursor: pointer;">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div class="fw-bold small text-body">⚖️ {{ trans('Balanced (Recommended)') }}</div>
+                                                <span class="badge text-bg-primary">100 {{ trans('epochs') }}</span>
+                                            </div>
+                                            <div class="text-body-secondary" style="font-size: 0.75rem;">{{ trans('Optimal trade-off between training time and detection accuracy.') }}</div>
+                                        </div>
+                                        <div class="card border p-2 cursor-pointer transition-card train-preset-card" data-epochs="300" data-imgsz="640" style="cursor: pointer;">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div class="fw-bold small text-body">🎯 {{ trans('Maximum Accuracy') }}</div>
+                                                <span class="badge text-bg-success">300 {{ trans('epochs') }}</span>
+                                            </div>
+                                            <div class="text-body-secondary" style="font-size: 0.75rem;">{{ trans('Thorough training for production deployments and small objects.') }}</div>
+                                        </div>
                                     </div>
                                 </div>
-                                <p class="form-text mb-3">{{ trans('batch -1 lets Ultralytics pick a safe size. Export is optional.') }}</p>
-                                <div class="form-check mb-3">
-                                    <input class="form-check-input" type="checkbox" id="train-dedupe">
-                                    <label class="form-check-label"
-                                           for="train-dedupe">{{ trans('Dedupe val from train') }}</label>
-                                    <div class="form-text">{{ trans('Remove from train any images that also appear in val.') }}</div>
-                                </div>
-                                <div class="d-flex flex-wrap gap-2">
-                                    <button type="button" class="btn btn-primary"
-                                            id="btn-start-train">{{ trans('Start training') }}</button>
-                                    <button type="button" class="btn btn-outline-warning"
-                                            id="btn-cancel-train">{{ trans('Cancel') }}</button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="cv-card mt-3">
-                            <div class="card-header">{{ trans('Apply weights to counter') }}</div>
-                            <div class="card-body">
-                                <p class="dataset-hint dataset-hint--tight">{{ trans('Write trained weights into a counter detector config and sync class names.') }}</p>
-                                <label class="form-label" for="apply-location">{{ trans('Location') }}</label>
-                                <select class="form-select mb-2" id="apply-location">
-                                    {% for loc in counter_locations %}
-                                        {% set label = counter_cameras.get(loc, loc) if counter_cameras is defined else loc %}
-                                        <option value="{{ loc }}">{% if label and label != loc %}{{ label }} ({{ loc }}){% else %}{{ loc }}{% endif %}</option>
-                                    {% else %}
-                                        <option value="" disabled>{{ trans('No data') }}</option>
-                                    {% endfor %}
-                                </select>
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <label class="form-label mb-0" for="apply-weights">{{ trans('Weights') }}</label>
-                                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none d-none"
-                                            id="btn-fill-best-weights">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13"
-                                             fill="currentColor" class="bi bi-magic me-1" viewBox="0 0 16 16"
-                                             aria-hidden="true">
-                                            <path d="M9.5 2.672a.5.5 0 1 0 1 0V.843a.5.5 0 0 0-1 0zm4.5.035A.5.5 0 0 0 13.293 2L12 3.293a.5.5 0 1 0 .707.707zM7.293 4A.5.5 0 1 0 8 3.293L6.707 2a.5.5 0 0 0-.707.707zm-.621 2.5a.5.5 0 1 0 0-1H4.843a.5.5 0 1 0 0 1zm8.485 0a.5.5 0 1 0 0-1h-1.829a.5.5 0 0 0 0 1zM13.293 10a.5.5 0 1 0 .707-.707L12.707 8a.5.5 0 1 0-.707.707zM9.5 11.157a.5.5 0 0 0 1 0V9.328a.5.5 0 0 0-1 0zm1.854-5.097a.5.5 0 0 0 0-.706l-.708-.708a.5.5 0 0 0-.707 0L.854 13.793a.5.5 0 0 0 0 .707l.707.707a.5.5 0 0 0 .707 0zm-1.414 1.414 1.414-1.414.708.707-1.414 1.414z"/>
-                                        </svg>
-                                        <span>{{ trans('Use trained weights') }}</span>
+
+                                <!-- Advanced Settings Accordion -->
+                                <div class="mb-3">
+                                    <button class="btn btn-sm btn-link text-decoration-none p-0 d-inline-flex align-items-center gap-1 text-body-secondary fw-semibold"
+                                            type="button" data-bs-toggle="collapse" data-bs-target="#advanced-train-collapse" aria-expanded="false">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-sliders" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M11.5 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M9.05 3a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0V3zM4.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M2.05 8a2.5 2.5 0 0 1 4.9 0H16v1H6.95a2.5 2.5 0 0 1-4.9 0H0V8zm9.45 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m-2.45 1a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0v-1z"/></svg>
+                                        <span>{{ trans('Advanced training parameters...') }}</span>
                                     </button>
+
+                                    <div class="collapse mt-2" id="advanced-train-collapse">
+                                        <div class="p-3 bg-body-tertiary rounded border small">
+                                            <div class="row g-2 mb-2">
+                                                <div class="col-4">
+                                                    <label class="form-label small mb-1" for="train-epochs">{{ trans('Epochs') }}</label>
+                                                    <input type="number" class="form-control form-control-sm" id="train-epochs" value="{{ default_epochs }}" min="1">
+                                                </div>
+                                                <div class="col-4">
+                                                    <label class="form-label small mb-1" for="train-imgsz">{{ trans('imgsz') }}</label>
+                                                    <input type="number" class="form-control form-control-sm" id="train-imgsz" value="{{ default_imgsz }}">
+                                                </div>
+                                                <div class="col-4">
+                                                    <label class="form-label small mb-1" for="train-batch">{{ trans('batch') }}</label>
+                                                    <input type="number" class="form-control form-control-sm" id="train-batch" value="-1" title="{{ trans('-1 = auto batch size') }}">
+                                                </div>
+                                            </div>
+                                            <div class="row g-2 mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small mb-1" for="train-device">{{ trans('device') }}</label>
+                                                    <input class="form-control form-control-sm" id="train-device" value="auto">
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small mb-1" for="train-export">{{ trans('Export') }}</label>
+                                                    <select class="form-select form-select-sm" id="train-export">
+                                                        <option value="">{{ trans('None') }}</option>
+                                                        <option value="onnx">onnx</option>
+                                                        <option value="engine">engine</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="form-check mt-2">
+                                                <input class="form-check-input" type="checkbox" id="train-dedupe">
+                                                <label class="form-check-label small" for="train-dedupe">{{ trans('Dedupe val from train') }}</label>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <input class="form-control mb-2" id="apply-weights"
-                                       placeholder="{{ trans('path to best.pt') }}">
-                                <div class="form-text mb-3">{{ trans('Relative path to best.pt from the training run (or absolute under the project).') }}</div>
-                                <button type="button" class="btn btn-outline-primary w-100"
-                                        id="btn-apply-weights">{{ trans('Apply') }}</button>
+
+                                <div class="d-flex flex-wrap gap-2 mt-auto pt-2">
+                                    <button type="button" class="btn btn-primary flex-grow-1 shadow-sm d-flex align-items-center justify-content-center gap-1" id="btn-start-train">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play-fill" viewBox="0 0 16 16"><path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/></svg>
+                                        <span>{{ trans('Start training') }}</span>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-warning" id="btn-cancel-train">{{ trans('Cancel') }}</button>
+                                </div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Training Log & Status View -->
                     <div class="col-lg-7">
-                        <div class="cv-card dataset-train-log-card h-100">
+                        <div class="cv-card dataset-train-log-card h-100 shadow-sm">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <div class="d-flex align-items-center gap-2">
-                                    <span>{{ trans('Training log') }}</span>
+                                    <span class="fw-semibold">{{ trans('Training process & logs') }}</span>
                                     <span class="badge text-bg-info d-none" id="train-epoch-badge"></span>
                                 </div>
                                 <span class="badge text-bg-secondary" id="train-status-badge">{{ trans('idle') }}</span>
                             </div>
                             <div class="progress d-none" id="train-progress-bar" style="height: 4px; border-radius: 0;">
-                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-success"
-                                     style="width: 0%"></div>
+                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" style="width: 0%"></div>
                             </div>
                             <div class="card-body p-0">
-                                <pre class="training-log mb-0" id="training-log"></pre>
+                                <pre class="training-log mb-0" id="training-log" style="min-height: 380px;"></pre>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="tab-pane fade" id="tab-qa">
-                <p class="dataset-tab-hint">{{ trans('Check annotation quality, or rank unlabeled images the model is least sure about.') }}</p>
-                <div class="cv-card">
-                    <div class="card-body">
-                        <div class="d-flex flex-wrap gap-2 mb-3">
-                            <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center"
-                                    id="btn-run-qa"
-                                    data-bs-toggle="tooltip" data-bs-placement="top"
-                                    data-bs-title="{{ trans('Scan labels: unlabeled count, out-of-bounds boxes, class balance. Does not run the model.') }}">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
-                                     class="bi bi-clipboard-pulse me-1" viewBox="0 0 16 16" aria-hidden="true">
-                                    <path fill-rule="evenodd"
-                                          d="M10 1.5a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5zm-5 0A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5v1A1.5 1.5 0 0 1 9.5 4h-3A1.5 1.5 0 0 1 5 2.5zm-2 0h1v1H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V3.5a1 1 0 0 0-1-1h-1v-1h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V3.5a2 2 0 0 1 2-2m6.979 6.856a.5.5 0 0 0-.968.04L7.92 10.49l-.94-3.135a.5.5 0 0 0-.926-.08L4.69 10H3.5a.5.5 0 0 0 0 1h1.5a.5.5 0 0 0 .468-.324l.643-1.784.829 2.763a.5.5 0 0 0 .948.065l1.196-2.585.502.836A.5.5 0 0 0 10 11h2.5a.5.5 0 0 0 0-1h-2.128z"/>
-                                </svg>
-                                <span>{{ trans('Run QA') }}</span>
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center"
-                                    id="btn-active-learning"
-                                    data-bs-toggle="tooltip" data-bs-placement="top"
-                                    data-bs-title="{{ trans('Run the Auto-label model on unlabeled images and list the most uncertain ones first. Does not write annotations.') }}">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
-                                     class="bi bi-graph-up-arrow me-1" viewBox="0 0 16 16" aria-hidden="true">
-                                    <path fill-rule="evenodd"
-                                          d="M0 0h1v15h15v1H0zm10 3.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V4.9l-3.613 4.417a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61L13.445 4H10.5a.5.5 0 0 1-.5-.5"/>
-                                </svg>
-                                <span>{{ trans('Active learning rank') }}</span>
-                            </button>
+            <!-- ========================================== -->
+            <!-- TAB 4: DEPLOY TO COUNTER                  -->
+            <!-- ========================================== -->
+            <div class="tab-pane fade" id="tab-deploy">
+                <div class="row g-3 justify-content-center">
+                    <div class="col-lg-8">
+                        <div class="cv-card shadow-sm border-0">
+                            <div class="card-header bg-body-tertiary d-flex align-items-center gap-2 py-3">
+                                <div class="p-2 rounded bg-success-subtle text-success">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-cpu" viewBox="0 0 16 16"><path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14a2.5 2.5 0 0 1-2.5 2.5v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0m-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3zM5 6.5A1.5 1.5 0 0 1 6.5 5h3A1.5 1.5 0 0 1 11 6.5v3A1.5 1.5 0 0 1 9.5 11h-3A1.5 1.5 0 0 1 5 9.5zM6.5 6a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5z"/></svg>
+                                </div>
+                                <div>
+                                    <h5 class="fw-bold mb-0">{{ trans('Apply weights to counter detector') }}</h5>
+                                    <span class="text-body-secondary small">{{ trans('Deploy your freshly trained custom YOLO weights into an active counter detector.') }}</span>
+                                </div>
+                            </div>
+                            <div class="card-body p-4">
+                                <div class="mb-4">
+                                    <label class="form-label fw-semibold" for="apply-location">{{ trans('Target Counter / Camera Location') }}</label>
+                                    <select class="form-select form-select-lg fs-6 shadow-sm mb-2" id="apply-location">
+                                        {% for loc in counter_locations %}
+                                            {% set label = counter_cameras.get(loc, loc) if counter_cameras is defined else loc %}
+                                            <option value="{{ loc }}">{% if label and label != loc %}{{ label }} ({{ loc }}){% else %}{{ loc }}{% endif %}</option>
+                                        {% else %}
+                                            <option value="" disabled>{{ trans('No counter locations configured') }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">{{ trans('Select which camera counter should run this neural network model.') }}</div>
+                                </div>
+
+                                <div class="mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <label class="form-label fw-semibold mb-0" for="apply-weights">{{ trans('Model weights path') }}</label>
+                                        <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none d-none" id="btn-fill-best-weights">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-magic me-1" viewBox="0 0 16 16"><path d="M9.5 2.672a.5.5 0 1 0 1 0V.843a.5.5 0 0 0-1 0zm4.5.035A.5.5 0 0 0 13.293 2L12 3.293a.5.5 0 1 0 .707.707zM7.293 4A.5.5 0 1 0 8 3.293L6.707 2a.5.5 0 0 0-.707.707zm-.621 2.5a.5.5 0 1 0 0-1H4.843a.5.5 0 1 0 0 1zm8.485 0a.5.5 0 1 0 0-1h-1.829a.5.5 0 0 0 0 1zM13.293 10a.5.5 0 1 0 .707-.707L12.707 8a.5.5 0 1 0-.707.707zM9.5 11.157a.5.5 0 0 0 1 0V9.328a.5.5 0 0 0-1 0zm1.854-5.097a.5.5 0 0 0 0-.706l-.708-.708a.5.5 0 0 0-.707 0L.854 13.793a.5.5 0 0 0 0 .707l.707.707a.5.5 0 0 0 .707 0zm-1.414 1.414 1.414-1.414.708.707-1.414 1.414z"/></svg>
+                                            <span>{{ trans('Use trained weights') }}</span>
+                                        </button>
+                                    </div>
+                                    <div class="input-group">
+                                        <input class="form-control font-monospace" id="apply-weights" placeholder="{{ trans('path to best.pt (e.g. storage/runs/train/.../weights/best.pt)') }}">
+                                    </div>
+                                    <div class="form-text">{{ trans('Relative path from training run or absolute file path under the project.') }}</div>
+                                </div>
+
+                                <div class="alert alert-info py-3 px-3 small d-flex align-items-center gap-3 mb-4 rounded-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-info-circle flex-shrink-0 text-info" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/><path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/></svg>
+                                    <div>
+                                        <strong>{{ trans('Automatic synchronization') }}:</strong> {{ trans('When applied, detector weights path and dataset class names are synchronized automatically into the counter detection configuration.') }}
+                                    </div>
+                                </div>
+
+                                <button type="button" class="btn btn-success btn-lg w-100 shadow-sm d-flex align-items-center justify-content-center gap-2" id="btn-apply-weights">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-check-circle" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/><path d="m10.97 4.97-.02.022-3.473 4.425-2.093-2.094a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05"/></svg>
+                                    <span>{{ trans('Apply weights to counter') }}</span>
+                                </button>
+                            </div>
                         </div>
-                        <p class="dataset-hint dataset-hint--tight">{{ trans('Results appear below as JSON. Use Active learning to decide which frames to annotate next.') }}</p>
-                        <div id="qa-cards-summary" class="row g-2 mb-3 d-none">
-                            <div class="col-sm-4">
-                                <div class="p-2 border rounded bg-body-tertiary text-center">
-                                    <div class="small text-body-secondary">{{ trans('Images') }}</div>
-                                    <div class="fs-5 fw-bold" id="qa-stat-images">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- TAB 5: SETTINGS & QA                      -->
+            <!-- ========================================== -->
+            <div class="tab-pane fade" id="tab-settings-qa">
+                <div class="row g-3">
+                    <!-- Metadata & Classes Card -->
+                    <div class="col-lg-7">
+                        <div class="cv-card shadow-sm h-100">
+                            <div class="card-header fw-semibold">{{ trans('Dataset metadata & vocabulary') }}</div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label" for="meta-display-name">{{ trans('Display name') }}</label>
+                                        <input class="form-control" id="meta-display-name" value="{{ dataset.display_name }}">
+                                        <div class="form-text">{{ trans('Human-readable title shown in the UI. Folder id stays the same.') }}</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label" for="meta-task">{{ trans('Task') }}</label>
+                                        <select class="form-select" id="meta-task">
+                                            {% for t in ['detect', 'segment', 'classify', 'pose'] %}
+                                                <option value="{{ t }}" {% if dataset.task == t %}selected{% endif %}>{{ t }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="form-text">{{ trans('Changes annotation tools and format.') }}</div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label" for="meta-classes">{{ trans('Classes') }}</label>
+                                        <input class="form-control" id="meta-classes" value="{{ dataset.classes|join(', ') }}">
+                                        <div class="form-text">{{ trans('Comma-separated list of target classes.') }}</div>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label class="form-label" for="meta-autolabel-detector">{{ trans('Auto-label model') }}</label>
+                                        <select class="form-select" id="meta-autolabel-detector">
+                                            <option value="">{{ trans('Default (first detector)') }}</option>
+                                            {% for m in detector_models %}
+                                                <option value="{{ m.location }}" {% if dataset.autolabel_detector == m.location %}selected{% endif %} {% if not m.exists %}disabled{% endif %}>
+                                                    {{ m.label }}{% if not m.exists %} - {{ trans('missing') }}{% endif %}
+                                                </option>
+                                            {% else %}
+                                                <option value="" disabled>{{ trans('No detector models') }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="form-text">{{ trans('Counter detector used for Auto-label and Active learning ranking.') }}</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label" for="meta-attributes">{{ trans('Attributes schema (JSON)') }}</label>
+                                        <textarea class="form-control font-monospace" id="meta-attributes" rows="3" placeholder='[{"name":"occluded","type":"bool"}]'>{{ dataset.attributes|tojson }}</textarea>
+                                        <div class="form-text">{{ trans('Optional per-shape fields in annotator.') }}</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label" for="meta-keypoints">{{ trans('Keypoints schema (JSON)') }}</label>
+                                        <textarea class="form-control font-monospace" id="meta-keypoints" rows="3" placeholder='["nose","left_eye"]'>{{ dataset.keypoints_schema|tojson }}</textarea>
+                                        <div class="form-text">{{ trans('Used for pose task: ordered keypoint names.') }}</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label" for="merge-source">{{ trans('Merge from dataset') }}</label>
+                                        <div class="input-group">
+                                            <input class="form-control" id="merge-source" placeholder="{{ trans('other-dataset') }}">
+                                            <button type="button" class="btn btn-outline-secondary" id="btn-merge" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{ trans('Copy images and annotations from another dataset into this one.') }}">{{ trans('Merge') }}</button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">{{ trans('Reassign class') }}</label>
+                                        <div class="input-group">
+                                            <input class="form-control" id="reassign-from" placeholder="{{ trans('from') }}">
+                                            <input class="form-control" id="reassign-to" placeholder="{{ trans('to') }}">
+                                            <button type="button" class="btn btn-outline-secondary" id="btn-reassign" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{ trans('Rename a class on all shapes.') }}">{{ trans('Reassign') }}</button>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="col-sm-4">
-                                <div class="p-2 border rounded bg-body-tertiary text-center">
-                                    <div class="small text-body-secondary">{{ trans('Labels') }}</div>
-                                    <div class="fs-5 fw-bold" id="qa-stat-labels">-</div>
-                                </div>
-                            </div>
-                            <div class="col-sm-4">
-                                <div class="p-2 border rounded bg-body-tertiary text-center">
-                                    <div class="small text-body-secondary">{{ trans('Unlabeled') }}</div>
-                                    <div class="fs-5 fw-bold" id="qa-stat-unlabeled">-</div>
+                                <div class="mt-3">
+                                    <button type="button" class="btn btn-primary shadow-sm" id="btn-save-meta">{{ trans('Save settings') }}</button>
                                 </div>
                             </div>
                         </div>
-                        <pre class="qa-output mb-0 rounded p-3 bg-body-tertiary border"
-                             id="qa-output">{{ trans('No report yet') }}</pre>
+                    </div>
+
+                    <!-- QA Audit & Danger Zone -->
+                    <div class="col-lg-5">
+                        <!-- QA Card -->
+                        <div class="cv-card shadow-sm mb-3">
+                            <div class="card-header fw-semibold">{{ trans('Quality Assurance (QA)') }}</div>
+                            <div class="card-body">
+                                <div class="d-flex flex-wrap gap-2 mb-3">
+                                    <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center" id="btn-run-qa">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-clipboard-pulse me-1" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10 1.5a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5zm-5 0A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5v1A1.5 1.5 0 0 1 9.5 4h-3A1.5 1.5 0 0 1 5 2.5zm-2 0h1v1H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V3.5a1 1 0 0 0-1-1h-1v-1h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V3.5a2 2 0 0 1 2-2m6.979 6.856a.5.5 0 0 0-.968.04L7.92 10.49l-.94-3.135a.5.5 0 0 0-.926-.08L4.69 10H3.5a.5.5 0 0 0 0 1h1.5a.5.5 0 0 0 .468-.324l.643-1.784.829 2.763a.5.5 0 0 0 .948.065l1.196-2.585.502.836A.5.5 0 0 0 10 11h2.5a.5.5 0 0 0 0-1h-2.128z"/></svg>
+                                        <span>{{ trans('Run QA') }}</span>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center" id="btn-active-learning">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-graph-up-arrow me-1" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 0h1v15h15v1H0zm10 3.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V4.9l-3.613 4.417a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61L13.445 4H10.5a.5.5 0 0 1-.5-.5"/></svg>
+                                        <span>{{ trans('Active learning rank') }}</span>
+                                    </button>
+                                </div>
+                                <div id="qa-cards-summary" class="row g-2 mb-3 d-none">
+                                    <div class="col-4">
+                                        <div class="p-2 border rounded bg-body-tertiary text-center">
+                                            <div class="small text-body-secondary">{{ trans('Images') }}</div>
+                                            <div class="fs-6 fw-bold" id="qa-stat-images">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="p-2 border rounded bg-body-tertiary text-center">
+                                            <div class="small text-body-secondary">{{ trans('Labels') }}</div>
+                                            <div class="fs-6 fw-bold" id="qa-stat-labels">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="p-2 border rounded bg-body-tertiary text-center">
+                                            <div class="small text-body-secondary">{{ trans('Unlabeled') }}</div>
+                                            <div class="fs-6 fw-bold" id="qa-stat-unlabeled">-</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <pre class="qa-output mb-0 rounded p-2 bg-body-tertiary border small font-monospace" id="qa-output" style="max-height: 200px; overflow-y: auto;">{{ trans('No report yet') }}</pre>
+                            </div>
+                        </div>
+
+                        <!-- Danger Zone Card -->
+                        <div class="cv-card shadow-sm border-danger-subtle">
+                            <div class="card-header bg-danger-subtle text-danger fw-semibold">{{ trans('Danger zone') }}</div>
+                            <div class="card-body">
+                                <p class="small text-body-secondary mb-3">{{ trans('Permanently remove this dataset and all associated frames and annotations from disk.') }}</p>
+                                <button type="button" class="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center gap-2" id="btn-delete-dataset">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg>
+                                    <span>{{ trans('Delete this dataset permanently') }}</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
