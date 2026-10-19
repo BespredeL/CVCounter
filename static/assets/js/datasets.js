@@ -1320,6 +1320,7 @@
             }
         } else if (actionParam === 'upload') {
             document.getElementById('tab-btn-frames')?.click();
+            document.getElementById('import-tab-files')?.click();
             const uploadBtn = document.getElementById('btn-import-upload');
             if (uploadBtn) {
                 uploadBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
