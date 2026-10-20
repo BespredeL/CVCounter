@@ -2,8 +2,6 @@
 # ! python3
 
 # Developed by: Aleksandr Kireev
-# Created: 26.03.2024
-# Updated: 25.06.2026
 # Website: https://bespredel.name
 
 import os

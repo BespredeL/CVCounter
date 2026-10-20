@@ -3,7 +3,6 @@
  * Reports page interactions and deletion.
  *
  * Developed by: Aleksandr Kireev
- * Created: 19.10.2026
  * Website: https://bespredel.name
  */
 

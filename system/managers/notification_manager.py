@@ -2,8 +2,6 @@
 # ! python3
 
 # Developed by: Aleksandr Kireev
-# Created: 21.07.2024
-# Updated: 28.04.2025
 # Website: https://bespredel.name
 
 from system.utils.exception_handler import InvalidLocationError, MissingSocketInstanceError, NotificationError

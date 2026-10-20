@@ -3,7 +3,6 @@
  * Reports saved media viewer (images and recordings) with lightbox navigation.
  *
  * Developed by: Aleksandr Kireev
- * Created: 09.10.2026
  * Website: https://bespredel.name
  */
 

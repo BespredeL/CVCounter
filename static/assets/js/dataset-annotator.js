@@ -3,7 +3,6 @@
  * Dataset image annotator (boxes, polygons, tracks, attributes).
  *
  * Developed by: Aleksandr Kireev
- * Created: 09.10.2026
  * Website: https://bespredel.name
  */
 

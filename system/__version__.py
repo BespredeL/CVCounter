@@ -2,8 +2,6 @@
 # ! python3
 
 # Developed by: Aleksandr Kireev
-# Created: 26.07.2026
-# Updated: 19.10.2026
 # Website: https://bespredel.name
 
 APP_VERSION = '5.9.2'

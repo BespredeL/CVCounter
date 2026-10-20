@@ -3,8 +3,6 @@
  * Fullscreen multi-location text counter view.
  *
  * Developed by: Aleksandr Kireev
- * Created: 03.06.2026
- * Updated: 25.07.2026
  * Website: https://bespredel.name
  */
 const CounterMultiText = {

@@ -3,7 +3,6 @@
  * Dataset hub UI (list, detail, training, and log viewer).
  *
  * Developed by: Aleksandr Kireev
- * Created: 09.10.2026
  * Website: https://bespredel.name
  */
 

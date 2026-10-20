@@ -2,8 +2,6 @@
 # ! python3
 
 # Developed by: Aleksandr Kireev
-# Created: 03.12.2025
-# Updated: 29.07.2026
 # Website: https://bespredel.name
 
 import json

@@ -3,8 +3,6 @@
  * Client-side i18n translation helper.
  *
  * Developed by: Aleksandr Kireev
- * Created: 04.06.2026
- * Updated: 08.06.2026
  * Website: https://bespredel.name
  */
 (function (global) {

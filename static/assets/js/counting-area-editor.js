@@ -2,8 +2,6 @@
  * Computer Vision Counter (CVCounter) - Counting Zone Editor
  *
  * Developed by: Aleksandr Kireev
- * Created: 03.06.2026
- * Updated: 08.06.2026
  * Website: https://bespredel.name
  */
 

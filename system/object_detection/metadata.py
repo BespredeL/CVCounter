@@ -2,7 +2,6 @@
 # ! python3
 
 # Developed by: Aleksandr Kireev
-# Created: 08.10.2026
 # Website: https://bespredel.name
 
 """

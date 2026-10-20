@@ -3,7 +3,6 @@
  * System Info & ML Runtimes Manager (CUDA, ONNX, TensorRT, OpenVINO).
  *
  * Developed by: Aleksandr Kireev
- * Created: 13.10.2026
  * Website: https://bespredel.name
  */
 

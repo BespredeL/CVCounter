@@ -3,7 +3,6 @@
  * Counter sidebar keyboards: on-screen numpad and physical NumPad shortcuts.
  *
  * Developed by: Aleksandr Kireev
- * Created: 08.06.2026
  * Website: https://bespredel.name
  */
 const CounterKeyboard = {

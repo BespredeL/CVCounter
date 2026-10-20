@@ -2,8 +2,6 @@
 # ! python3
 
 # Developed by: Aleksandr Kireev
-# Created: 20.05.2026
-# Updated: 08.10.2026
 # Website: https://bespredel.name
 
 from system.object_detection.base_object_detection import BaseObjectDetectionService, DetectionResult

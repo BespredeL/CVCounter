@@ -2,8 +2,6 @@
 # ! python3
 
 # Developed by: Aleksandr Kireev
-# Created: 26.07.2026
-# Updated: 26.07.2026
 # Website: https://bespredel.name
 
 import re

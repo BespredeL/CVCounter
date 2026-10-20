@@ -3,8 +3,6 @@
 from typing import Any
 
 # Developed by: Aleksandr Kireev
-# Created: 28.04.2025
-# Updated: 28.04.2025
 # Website: https://bespredel.name
 
 import cv2

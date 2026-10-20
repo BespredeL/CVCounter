@@ -2,8 +2,6 @@
 # ! python3
 
 # Developed by: Aleksandr Kireev
-# Created: 26.12.2024
-# Updated: 09.06.2026
 # Website: https://bespredel.name
 
 from abc import ABC, abstractmethod

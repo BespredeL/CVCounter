@@ -3,7 +3,6 @@
  * Settings Page Scripts (Navigation, Classes, Password Toggle, Model Export & Optimizations).
  *
  * Developed by: Aleksandr Kireev
- * Created: 13.10.2026
  * Website: https://bespredel.name
  */
 

@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 # ! python3
 # Developed by: Aleksandr Kireev
-# Created: 03.12.2025
-# Updated: 30.07.2026
 # Website: https://bespredel.name
 
 import os

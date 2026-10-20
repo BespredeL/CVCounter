@@ -2,8 +2,6 @@
 # ! python3
 
 # Developed by: Aleksandr Kireev
-# Created: 26.12.2024
-# Updated: 26.12.2024
 # Website: https://bespredel.name
 
 from typing import Optional

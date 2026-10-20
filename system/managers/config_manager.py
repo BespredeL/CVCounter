@@ -2,8 +2,6 @@
 # ! python3
 
 # Developed by: Aleksandr Kireev
-# Created: 01.11.2023
-# Updated: 28.07.2026
 # Website: https://bespredel.name
 
 import ast

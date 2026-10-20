@@ -2,8 +2,6 @@
 # ! python3
 
 # Developed by: Aleksandr Kireev
-# Created: 27.12.2024
-# Updated: 28.04.2025
 # Website: https://bespredel.name
 
 from datetime import datetime

@@ -2,7 +2,6 @@
 # ! python3
 
 # Developed by: Aleksandr Kireev
-# Created: 13.10.2026
 # Website: https://bespredel.name
 
 from __future__ import annotations
