@@ -1,6 +1,6 @@
 # CVCounter — Документация (Wiki)
 
-[![Website](https://img.shields.io/badge/website-bespredel.github.io-4dabf7.svg)](https://bespredel.github.io/cvcounter/)
+[![Website](https://img.shields.io/badge/website-cvcounter.createdby.ru-4dabf7.svg)](https://cvcounter.createdby.ru)
 [![Author](https://img.shields.io/badge/author-bespredel.name-8a2be2.svg)](https://bespredel.name)
 [![Wiki RU](https://img.shields.io/badge/Wiki-RU-blue.svg)](wiki_ru.md)
 [![Wiki EN](https://img.shields.io/badge/Wiki-EN-blue.svg)](wiki.md)

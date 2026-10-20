@@ -1,6 +1,6 @@
 # CVCounter - Система детекции и подсчёта объектов
 
-[![Website](https://img.shields.io/badge/website-bespredel.github.io-4dabf7.svg)](https://bespredel.github.io/cvcounter/)
+[![Website](https://img.shields.io/badge/website-cvcounter.createdby.ru-4dabf7.svg)](https://cvcounter.createdby.ru)
 [![Author](https://img.shields.io/badge/author-bespredel.name-8a2be2.svg)](https://bespredel.name)
 [![Readme EN](https://img.shields.io/badge/README-EN-blue.svg)](https://github.com/BespredeL/CVCounter/blob/master/README_EN.md)
 [![Readme RU](https://img.shields.io/badge/README-RU-blue.svg)](https://github.com/BespredeL/CVCounter/blob/master/README.md)
@@ -295,7 +295,7 @@ python train.py export --config my-dataset --export onnx
 
 ## 🔗 Полезные ссылки
 
-- Сайт проекта: [https://bespredel.github.io/cvcounter/](https://bespredel.github.io/cvcounter/)
+- Сайт проекта: [https://cvcounter.createdby.ru](https://cvcounter.createdby.ru)
 - Документация (Wiki RU): [docs/wiki_ru.md](docs/wiki_ru.md)
 - Описание API телеметрии: [docs/telemetry_api.md](docs/telemetry_api.md)
 - Движки инференса: [ONNX Runtime](https://onnxruntime.ai/) | [Intel OpenVINO](https://www.intel.com/openvino) | [Ultralytics YOLO](https://github.com/ultralytics) | [OpenCV](https://opencv.org/)

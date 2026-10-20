@@ -1,6 +1,6 @@
 # CVCounter - Real-Time Object Detection & Counting System
 
-[![Website](https://img.shields.io/badge/website-bespredel.github.io-4dabf7.svg)](https://bespredel.github.io/cvcounter/)
+[![Website](https://img.shields.io/badge/website-cvcounter.createdby.ru-4dabf7.svg)](https://cvcounter.createdby.ru)
 [![Author](https://img.shields.io/badge/author-bespredel.name-8a2be2.svg)](https://bespredel.name)
 [![Readme EN](https://img.shields.io/badge/README-EN-blue.svg)](https://github.com/BespredeL/CVCounter/blob/master/README_EN.md)
 [![Readme RU](https://img.shields.io/badge/README-RU-blue.svg)](https://github.com/BespredeL/CVCounter/blob/master/README.md)
@@ -295,7 +295,7 @@ Sample configuration structure:
 
 ## 🔗 Useful Links
 
-- Project Website: [https://bespredel.github.io/cvcounter/](https://bespredel.github.io/cvcounter/)
+- Project Website: [https://cvcounter.createdby.ru](https://cvcounter.createdby.ru)
 - Documentation (Wiki EN): [docs/wiki.md](docs/wiki.md)
 - Telemetry API Docs: [docs/telemetry_api.md](docs/telemetry_api.md)
 - Inference Engines: [ONNX Runtime](https://onnxruntime.ai/) | [Intel OpenVINO](https://www.intel.com/openvino) | [Ultralytics YOLO](https://github.com/ultralytics) | [OpenCV](https://opencv.org/)
