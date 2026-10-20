@@ -28,6 +28,19 @@
         "socketio_upgrade": true,
         "allow_web_control": true
     },
+    "api": {
+        "enabled": false,
+        "keys": [
+            {
+                "id": "key_default_admin",
+                "name": "Default Admin Key",
+                "key": "cvc_adm_default_secret_key_2026",
+                "role": "admin",
+                "enabled": true,
+                "created_at": "2026-10-20T00:00:00Z"
+            }
+        ]
+    },
     "datasets": {
         "max_upload_mb": 512
     },

@@ -68,6 +68,12 @@
     {% elif key == 'detections' %}
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
              class="bi bi-camera-video flex-shrink-0" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2zm11.5 5.175 3.5 1.556V4.269l-3.5 1.556zM2 4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h7.5a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z"/></svg>
+    {% elif key == 'api' %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+             class="bi bi-key flex-shrink-0" viewBox="0 0 16 16">
+            <path d="M0 8a4 4 0 0 1 7.465-2H14a.5.5 0 0 1 .354.146l1.5 1.5a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0L13 9.207l-.646.647a.5.5 0 0 1-.708 0L11 9.207l-.646.647a.5.5 0 0 1-.708 0L9 9.207l-.646.647A.5.5 0 0 1 8 10h-.535A4 4 0 0 1 0 8m4-3a3 3 0 1 0 2.712 4.285A.5.5 0 0 1 7.163 9h.63l.853-.854a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.793-.793-1-1H7.163a.5.5 0 0 1-.45-.285A3 3 0 0 0 4 5"/>
+            <path d="M4 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/>
+        </svg>
     {% else %}
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
              class="bi bi-gear flex-shrink-0" viewBox="0 0 16 16">
@@ -96,6 +102,8 @@
         {{ trans('Default parameters for YOLO detectors, tracking and thresholds.') }}
     {% elif key == 'detections' %}
         {{ trans('Configured camera locations, video sources and counting rules.') }}
+    {% elif key == 'api' %}
+        {{ trans('REST API v1 settings, programmatic access keys and role management.') }}
     {% else %}
         {{ trans('Configure application parameters, hardware, detection modules, and security.') }}
     {% endif %}
@@ -162,7 +170,7 @@
                                 aria-controls="pills-{{ key }}" aria-selected="{{ 'true' if loop.first else 'false' }}">
                             <div class="d-flex align-items-center gap-2 min-w-0">
                                 <span class="settings-nav-icon">{{ section_icon(key) }}</span>
-                                <span class="text-truncate fw-medium">{{ trans(key.replace('_', ' ')|title) }}</span>
+                                <span class="text-truncate fw-medium">{% if key == 'api' %}{{ trans('REST API') }}{% else %}{{ trans(key.replace('_', ' ')|title) }}{% endif %}</span>
                             </div>
                             {% if value is mapping %}
                                 <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill px-2 py-1 font-monospace fs-3xs">{{ value|length }}</span>
@@ -185,7 +193,6 @@
                                     <span id="settings-toolbar-section-title"
                                           class="fw-semibold">{{ trans('General') }}</span>
                                 </span>
-                                <span class="text-body-secondary small d-none d-lg-inline">{{ trans('Edit configuration sections on the left') }}</span>
                             </div>
                             <div class="d-flex align-items-center gap-2 ms-auto">
                                 <button type="submit"
@@ -209,7 +216,7 @@
                                         <div class="d-flex align-items-center gap-2 min-w-0">
                                             <span class="fs-5 text-primary">{{ section_icon(key) }}</span>
                                             <div class="min-w-0">
-                                                <h4 class="fw-bold mb-0 fs-6">{{ trans(key.replace('_', ' ')|title) }}</h4>
+                                                <h4 class="fw-bold mb-0 fs-6">{% if key == 'api' %}{{ trans('REST API') }}{% else %}{{ trans(key.replace('_', ' ')|title) }}{% endif %}</h4>
                                                 <span class="text-body-secondary small">{{ section_description(key) }}</span>
                                             </div>
                                         </div>
@@ -254,13 +261,7 @@
                                         {% endif %}
                                     </div>
 
-                                    {% if key != 'users' %}
-                                        <div class="cv-form-panel">
-                                            {% for sub_key, sub_value in value.items() %}
-                                                {{ forms.generate_form_fields(sub_key, sub_value, key ~ '-') }}
-                                            {% endfor %}
-                                        </div>
-                                    {% else %}
+                                    {% if key == 'users' %}
                                         <section class="cv-form-section">
                                             <h3 class="cv-form-section__title">{{ trans(key.replace('_', ' ')|title) }}</h3>
                                             <div class="cv-form-section__body cv-form-grid cv-form-grid--users">
@@ -286,6 +287,419 @@
                                                 {% endfor %}
                                             </div>
                                         </section>
+                                    {% elif key == 'api' %}
+                                        <div class="cv-form-panel">
+                                            <!-- API Master Toggle & Endpoints Info -->
+                                            <div class="cv-form-section mb-3">
+                                                <div class="cv-form-section__header d-flex flex-wrap align-items-center justify-content-between gap-3">
+                                                    <div>
+                                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                                            <h5 class="fw-semibold mb-0 fs-6">{{ trans('REST API v1 Status') }}</h5>
+                                                            <span class="badge {% if value.get('enabled', True) %}bg-success-subtle text-success border border-success-subtle{% else %}bg-secondary-subtle text-secondary border{% endif %}" id="api-status-badge">
+                                                                {% if value.get('enabled', True) %}{{ trans('Active') }}{% else %}{{ trans('Disabled') }}{% endif %}
+                                                            </span>
+                                                        </div>
+                                                        <p class="text-body-secondary small mb-0">
+                                                            {{ trans('Base URL') }}: <code class="user-select-all">/api/v1/</code> · {{ trans('Authentication via header') }}: <code>X-API-Key: &lt;key&gt;</code>
+                                                        </p>
+                                                    </div>
+                                                    <div class="form-check form-switch fs-5 mb-0">
+                                                        <input class="form-check-input cursor-pointer" type="checkbox" role="switch" id="switch-api-enabled" {% if value.get('enabled', True) %}checked{% endif %} title="{{ trans('Enable or disable REST API') }}">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- API Keys Section -->
+                                            <div class="cv-form-section">
+                                                <div class="cv-form-section__header d-flex flex-wrap align-items-center justify-content-between gap-2 pb-2 border-bottom">
+                                                    <div>
+                                                        <h5 class="fw-semibold mb-1 fs-6">{{ trans('API Access Keys') }}</h5>
+                                                        <p class="text-body-secondary small mb-0">{{ trans('Pre-shared keys for programmatic access with role-based permissions.') }}</p>
+                                                    </div>
+                                                    <button type="button" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1 shadow-xs" id="btn-open-create-api-key" data-bs-toggle="modal" data-bs-target="#createApiKeyModal">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
+                                                            <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/>
+                                                        </svg>
+                                                        <span>{{ trans('Create API Key') }}</span>
+                                                    </button>
+                                                </div>
+
+                                                <div class="table-responsive">
+                                                    <table class="table table-modern align-middle mb-0" id="table-api-keys">
+                                                        <thead class="border-bottom fs-xs text-uppercase text-body-secondary">
+                                                            <tr>
+                                                                <th>{{ trans('Name') }}</th>
+                                                                <th>{{ trans('Role') }}</th>
+                                                                <th>{{ trans('Key') }}</th>
+                                                                <th>{{ trans('Created') }}</th>
+                                                                <th class="text-end">{{ trans('Actions') }}</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody id="api-keys-tbody">
+                                                            {% set keys_list = value.get('keys', []) %}
+                                                             {% if keys_list %}
+                                                                 {% for k in keys_list %}
+                                                                     <tr data-key-id="{{ k.id }}" data-key-name="{{ k.name }}">
+                                                                         <td>
+                                                                             <div class="fw-semibold text-body">{{ k.name }}</div>
+                                                                             <div class="text-body-secondary font-monospace fs-3xs">ID: {{ k.id }}</div>
+                                                                         </td>
+                                                                         <td>
+                                                                             {% if k.role == 'admin' %}
+                                                                                 <span class="badge bg-danger-subtle text-danger border border-danger-subtle">{{ trans('Admin') }}</span>
+                                                                             {% elif k.role == 'write' %}
+                                                                                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ trans('Write / Control') }}</span>
+                                                                             {% else %}
+                                                                                 <span class="badge bg-secondary-subtle text-secondary-emphasis border">{{ trans('Read Only') }}</span>
+                                                                             {% endif %}
+                                                                         </td>
+                                                                         <td>
+                                                                             <code class="font-monospace text-body-secondary">{{ k.key[:8] }}••••••••{{ k.key[-4:] if k.key|length > 12 else '' }}</code>
+                                                                         </td>
+                                                                         <td class="small text-body-secondary">
+                                                                             {{ k.created_at[:10] if k.created_at else '-' }}
+                                                                         </td>
+                                                                         <td class="text-end">
+                                                                             <button type="button" class="btn btn-outline-danger btn-sm py-1 px-2 btn-delete-api-key" data-key-id="{{ k.id }}" data-key-name="{{ k.name }}" title="{{ trans('Delete Key') }}">
+                                                                                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                                                                                     <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+                                                                                     <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+                                                                                 </svg>
+                                                                             </button>
+                                                                         </td>
+                                                                     </tr>
+                                                                 {% endfor %}
+                                                             {% else %}
+                                                                 <tr id="tr-no-api-keys">
+                                                                     <td colspan="5" class="text-center py-4 text-body-secondary small">
+                                                                         {{ trans('No API keys configured yet. Click Create API Key to generate one.') }}
+                                                                     </td>
+                                                                 </tr>
+                                                             {% endif %}
+                                                         </tbody>
+                                                     </table>
+                                                 </div>
+
+                                            </div>
+
+                                            <!-- Dedicated REST API Endpoints Section -->
+                                             <div class="cv-form-section mt-4">
+                                                 <div class="cv-form-section__header d-flex flex-wrap align-items-center justify-content-between gap-2 pb-2 border-bottom">
+                                                     <div>
+                                                         <h5 class="fw-semibold mb-1 fs-6 d-flex align-items-center gap-2">
+                                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-code-slash text-primary flex-shrink-0" viewBox="0 0 16 16">
+                                                                 <path d="M10.478 1.647a.5.5 0 1 0-.956-.294l-4 13a.5.5 0 0 0 .956.294zM4.854 4.146a.5.5 0 0 1 0 .708L1.707 7l3.147 3.146a.5.5 0 0 1-.708.708l-3.5-3.5a.5.5 0 0 1 0-.708l3.5-3.5a.5.5 0 0 1 .708 0m6.292 0a.5.5 0 0 0 0 .708L14.293 7l-3.147 3.146a.5.5 0 0 0 .708.708l3.5-3.5a.5.5 0 0 0 0-.708l-3.5-3.5a.5.5 0 0 0-.708 0"/>
+                                                             </svg>
+                                                             <span>{{ trans('REST API Endpoints & Examples') }}</span>
+                                                         </h5>
+                                                         <p class="text-body-secondary small mb-0">{{ trans('Quick reference and ready-to-use cURL commands for all available REST API endpoints.') }}</p>
+                                                     </div>
+                                                     <div class="d-flex align-items-center gap-2">
+                                                         <button type="button" class="btn btn-outline-secondary btn-sm py-1 px-3 fs-xs d-inline-flex align-items-center gap-1 shadow-xs" id="btn-copy-all-curl" title="{{ trans('Copy all') }}">
+                                                             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16">
+                                                                 <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/>
+                                                                 <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/>
+                                                             </svg>
+                                                             <span id="btn-copy-all-curl-text">{{ trans('Copy all') }}</span>
+                                                         </button>
+                                                     </div>
+                                                 </div>
+
+                                                 <div class="cv-terminal">
+                                                     <div class="cv-terminal__body">
+
+                                                         <!-- GROUP 1: SYSTEM -->
+                                                         <div class="cv-terminal__group-header d-flex align-items-center justify-content-between">
+                                                             <span class="text-uppercase font-monospace fw-semibold fs-3xs text-secondary-emphasis">// {{ trans('System Endpoints') }}</span>
+                                                             <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace fs-3xs">2 endpoints</span>
+                                                         </div>
+
+                                                         <!-- 1. System Health -->
+                                                         <div class="cv-terminal__snippet">
+                                                             <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-1">
+                                                                 <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                     <span class="cv-badge-method cv-badge-method--get">GET</span>
+                                                                     <span class="font-monospace fw-semibold text-light fs-xs">/api/v1/system/health</span>
+                                                                     <span class="cv-badge-role">read</span>
+                                                                     <span class="text-secondary small d-none d-md-inline">— {{ trans('System health check & uptime') }}</span>
+                                                                 </div>
+                                                                 <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fs-3xs cv-terminal__copy-btn btn-copy-single-curl" data-raw-cmd="curl -H &quot;X-API-Key: YOUR_KEY&quot; {{ request.host_url }}api/v1/system/health" title="{{ trans('Copy cURL') }}">
+                                                                     <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="currentColor" class="bi bi-clipboard me-1" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/></svg>
+                                                                     <span>{{ trans('Copy') }}</span>
+                                                                 </button>
+                                                             </div>
+                                                             <div class="cv-terminal__code"><span class="cv-terminal__prompt">$ </span><span class="cv-terminal__cmd">curl</span> <span class="cv-terminal__flag">-H</span> <span class="cv-terminal__header-val">"X-API-Key: YOUR_KEY"</span> <span class="cv-terminal__url">{{ request.host_url }}api/v1/system/health</span></div>
+                                                         </div>
+
+                                                         <!-- 2. System Info -->
+                                                         <div class="cv-terminal__snippet">
+                                                             <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-1">
+                                                                 <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                     <span class="cv-badge-method cv-badge-method--get">GET</span>
+                                                                     <span class="font-monospace fw-semibold text-light fs-xs">/api/v1/system/info</span>
+                                                                     <span class="cv-badge-role">read</span>
+                                                                     <span class="text-secondary small d-none d-md-inline">— {{ trans('Hardware, GPU/CUDA & PyTorch info') }}</span>
+                                                                 </div>
+                                                                 <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fs-3xs cv-terminal__copy-btn btn-copy-single-curl" data-raw-cmd="curl -H &quot;X-API-Key: YOUR_KEY&quot; {{ request.host_url }}api/v1/system/info" title="{{ trans('Copy cURL') }}">
+                                                                     <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="currentColor" class="bi bi-clipboard me-1" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/></svg>
+                                                                     <span>{{ trans('Copy') }}</span>
+                                                                 </button>
+                                                             </div>
+                                                             <div class="cv-terminal__code"><span class="cv-terminal__prompt">$ </span><span class="cv-terminal__cmd">curl</span> <span class="cv-terminal__flag">-H</span> <span class="cv-terminal__header-val">"X-API-Key: YOUR_KEY"</span> <span class="cv-terminal__url">{{ request.host_url }}api/v1/system/info</span></div>
+                                                         </div>
+
+                                                         <!-- GROUP 2: COUNTERS & CONTROL -->
+                                                         <div class="cv-terminal__group-header d-flex align-items-center justify-content-between">
+                                                             <span class="text-uppercase font-monospace fw-semibold fs-3xs text-secondary-emphasis">// {{ trans('Counters & Control') }}</span>
+                                                             <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace fs-3xs">8 endpoints</span>
+                                                         </div>
+
+                                                         <!-- 3. List Counters -->
+                                                         <div class="cv-terminal__snippet">
+                                                             <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-1">
+                                                                 <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                     <span class="cv-badge-method cv-badge-method--get">GET</span>
+                                                                     <span class="font-monospace fw-semibold text-light fs-xs">/api/v1/counters</span>
+                                                                     <span class="cv-badge-role">read</span>
+                                                                     <span class="text-secondary small d-none d-md-inline">— {{ trans('List all counters & live counts') }}</span>
+                                                                 </div>
+                                                                 <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fs-3xs cv-terminal__copy-btn btn-copy-single-curl" data-raw-cmd="curl -H &quot;X-API-Key: YOUR_KEY&quot; {{ request.host_url }}api/v1/counters" title="{{ trans('Copy cURL') }}">
+                                                                     <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="currentColor" class="bi bi-clipboard me-1" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/></svg>
+                                                                     <span>{{ trans('Copy') }}</span>
+                                                                 </button>
+                                                             </div>
+                                                             <div class="cv-terminal__code"><span class="cv-terminal__prompt">$ </span><span class="cv-terminal__cmd">curl</span> <span class="cv-terminal__flag">-H</span> <span class="cv-terminal__header-val">"X-API-Key: YOUR_KEY"</span> <span class="cv-terminal__url">{{ request.host_url }}api/v1/counters</span></div>
+                                                         </div>
+
+                                                         <!-- 4. Single Counter Detail -->
+                                                         <div class="cv-terminal__snippet">
+                                                             <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-1">
+                                                                 <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                     <span class="cv-badge-method cv-badge-method--get">GET</span>
+                                                                     <span class="font-monospace fw-semibold text-light fs-xs">/api/v1/counters/{location}</span>
+                                                                     <span class="cv-badge-role">read</span>
+                                                                     <span class="text-secondary small d-none d-md-inline">— {{ trans('Single counter detail & status') }}</span>
+                                                                 </div>
+                                                                 <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fs-3xs cv-terminal__copy-btn btn-copy-single-curl" data-raw-cmd="curl -H &quot;X-API-Key: YOUR_KEY&quot; {{ request.host_url }}api/v1/counters/CAMERA_ID" title="{{ trans('Copy cURL') }}">
+                                                                     <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="currentColor" class="bi bi-clipboard me-1" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/></svg>
+                                                                     <span>{{ trans('Copy') }}</span>
+                                                                 </button>
+                                                             </div>
+                                                             <div class="cv-terminal__code"><span class="cv-terminal__prompt">$ </span><span class="cv-terminal__cmd">curl</span> <span class="cv-terminal__flag">-H</span> <span class="cv-terminal__header-val">"X-API-Key: YOUR_KEY"</span> <span class="cv-terminal__url">{{ request.host_url }}api/v1/counters/CAMERA_ID</span></div>
+                                                         </div>
+
+                                                         <!-- 5. Start Counter -->
+                                                         <div class="cv-terminal__snippet">
+                                                             <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-1">
+                                                                 <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                     <span class="cv-badge-method cv-badge-method--post">POST</span>
+                                                                     <span class="font-monospace fw-semibold text-light fs-xs">/api/v1/counters/{location}/start</span>
+                                                                     <span class="cv-badge-role">write</span>
+                                                                     <span class="text-secondary small d-none d-md-inline">— {{ trans('Start counter stream & detection') }}</span>
+                                                                 </div>
+                                                                 <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fs-3xs cv-terminal__copy-btn btn-copy-single-curl" data-raw-cmd="curl -X POST -H &quot;X-API-Key: YOUR_KEY&quot; {{ request.host_url }}api/v1/counters/CAMERA_ID/start" title="{{ trans('Copy cURL') }}">
+                                                                     <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="currentColor" class="bi bi-clipboard me-1" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/></svg>
+                                                                     <span>{{ trans('Copy') }}</span>
+                                                                 </button>
+                                                             </div>
+                                                             <div class="cv-terminal__code"><span class="cv-terminal__prompt">$ </span><span class="cv-terminal__cmd">curl</span> <span class="cv-terminal__flag">-X POST -H</span> <span class="cv-terminal__header-val">"X-API-Key: YOUR_KEY"</span> <span class="cv-terminal__url">{{ request.host_url }}api/v1/counters/CAMERA_ID/start</span></div>
+                                                         </div>
+
+                                                         <!-- 6. Pause / Resume Counter -->
+                                                         <div class="cv-terminal__snippet">
+                                                             <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-1">
+                                                                 <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                     <span class="cv-badge-method cv-badge-method--post">POST</span>
+                                                                     <span class="font-monospace fw-semibold text-light fs-xs">/api/v1/counters/{location}/pause</span>
+                                                                     <span class="cv-badge-role">write</span>
+                                                                     <span class="text-secondary small d-none d-md-inline">— {{ trans('Pause or resume counter') }}</span>
+                                                                 </div>
+                                                                 <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fs-3xs cv-terminal__copy-btn btn-copy-single-curl" data-raw-cmd="curl -X POST -H &quot;X-API-Key: YOUR_KEY&quot; -H &quot;Content-Type: application/json&quot; -d '{&quot;action&quot;:&quot;pause&quot;}' {{ request.host_url }}api/v1/counters/CAMERA_ID/pause" title="{{ trans('Copy cURL') }}">
+                                                                     <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="currentColor" class="bi bi-clipboard me-1" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/></svg>
+                                                                     <span>{{ trans('Copy') }}</span>
+                                                                 </button>
+                                                             </div>
+                                                             <div class="cv-terminal__code"><span class="cv-terminal__prompt">$ </span><span class="cv-terminal__cmd">curl</span> <span class="cv-terminal__flag">-X POST -H</span> <span class="cv-terminal__header-val">"X-API-Key: YOUR_KEY"</span> <span class="cv-terminal__flag">-H</span> <span class="cv-terminal__header-val">"Content-Type: application/json"</span> <span class="cv-terminal__flag">-d</span> <span class="cv-terminal__header-val">'{"action":"pause"}'</span> <span class="cv-terminal__url">{{ request.host_url }}api/v1/counters/CAMERA_ID/pause</span></div>
+                                                         </div>
+
+                                                         <!-- 7. Reset Counter -->
+                                                         <div class="cv-terminal__snippet">
+                                                             <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-1">
+                                                                 <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                     <span class="cv-badge-method cv-badge-method--post">POST</span>
+                                                                     <span class="font-monospace fw-semibold text-light fs-xs">/api/v1/counters/{location}/reset</span>
+                                                                     <span class="cv-badge-role">write</span>
+                                                                     <span class="text-secondary small d-none d-md-inline">— {{ trans('Reset counter values to zero') }}</span>
+                                                                 </div>
+                                                                 <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fs-3xs cv-terminal__copy-btn btn-copy-single-curl" data-raw-cmd="curl -X POST -H &quot;X-API-Key: YOUR_KEY&quot; {{ request.host_url }}api/v1/counters/CAMERA_ID/reset" title="{{ trans('Copy cURL') }}">
+                                                                     <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="currentColor" class="bi bi-clipboard me-1" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/></svg>
+                                                                     <span>{{ trans('Copy') }}</span>
+                                                                 </button>
+                                                             </div>
+                                                             <div class="cv-terminal__code"><span class="cv-terminal__prompt">$ </span><span class="cv-terminal__cmd">curl</span> <span class="cv-terminal__flag">-X POST -H</span> <span class="cv-terminal__header-val">"X-API-Key: YOUR_KEY"</span> <span class="cv-terminal__url">{{ request.host_url }}api/v1/counters/CAMERA_ID/reset</span></div>
+                                                         </div>
+
+                                                         <!-- 8. Save Counts Report -->
+                                                         <div class="cv-terminal__snippet">
+                                                             <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-1">
+                                                                 <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                     <span class="cv-badge-method cv-badge-method--post">POST</span>
+                                                                     <span class="font-monospace fw-semibold text-light fs-xs">/api/v1/counters/{location}/save</span>
+                                                                     <span class="cv-badge-role">write</span>
+                                                                     <span class="text-secondary small d-none d-md-inline">— {{ trans('Save counts session to report in database') }}</span>
+                                                                 </div>
+                                                                 <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fs-3xs cv-terminal__copy-btn btn-copy-single-curl" data-raw-cmd="curl -X POST -H &quot;X-API-Key: YOUR_KEY&quot; -H &quot;Content-Type: application/json&quot; -d '{&quot;defect_count&quot;:0}' {{ request.host_url }}api/v1/counters/CAMERA_ID/save" title="{{ trans('Copy cURL') }}">
+                                                                     <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="currentColor" class="bi bi-clipboard me-1" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/></svg>
+                                                                     <span>{{ trans('Copy') }}</span>
+                                                                 </button>
+                                                             </div>
+                                                             <div class="cv-terminal__code"><span class="cv-terminal__prompt">$ </span><span class="cv-terminal__cmd">curl</span> <span class="cv-terminal__flag">-X POST -H</span> <span class="cv-terminal__header-val">"X-API-Key: YOUR_KEY"</span> <span class="cv-terminal__flag">-H</span> <span class="cv-terminal__header-val">"Content-Type: application/json"</span> <span class="cv-terminal__flag">-d</span> <span class="cv-terminal__header-val">'{"defect_count":0}'</span> <span class="cv-terminal__url">{{ request.host_url }}api/v1/counters/CAMERA_ID/save</span></div>
+                                                         </div>
+
+                                                         <!-- 9. Stop Counter -->
+                                                         <div class="cv-terminal__snippet">
+                                                             <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-1">
+                                                                 <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                     <span class="cv-badge-method cv-badge-method--post">POST</span>
+                                                                     <span class="font-monospace fw-semibold text-light fs-xs">/api/v1/counters/{location}/stop</span>
+                                                                     <span class="cv-badge-role">write</span>
+                                                                     <span class="text-secondary small d-none d-md-inline">— {{ trans('Stop counter stream & free resources') }}</span>
+                                                                 </div>
+                                                                 <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fs-3xs cv-terminal__copy-btn btn-copy-single-curl" data-raw-cmd="curl -X POST -H &quot;X-API-Key: YOUR_KEY&quot; {{ request.host_url }}api/v1/counters/CAMERA_ID/stop" title="{{ trans('Copy cURL') }}">
+                                                                     <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="currentColor" class="bi bi-clipboard me-1" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/></svg>
+                                                                     <span>{{ trans('Copy') }}</span>
+                                                                 </button>
+                                                             </div>
+                                                             <div class="cv-terminal__code"><span class="cv-terminal__prompt">$ </span><span class="cv-terminal__cmd">curl</span> <span class="cv-terminal__flag">-X POST -H</span> <span class="cv-terminal__header-val">"X-API-Key: YOUR_KEY"</span> <span class="cv-terminal__url">{{ request.host_url }}api/v1/counters/CAMERA_ID/stop</span></div>
+                                                         </div>
+
+                                                         <!-- 10. Snapshot -->
+                                                         <div class="cv-terminal__snippet">
+                                                             <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-1">
+                                                                 <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                     <span class="cv-badge-method cv-badge-method--get">GET</span>
+                                                                     <span class="font-monospace fw-semibold text-light fs-xs">/api/v1/counters/{location}/snapshot</span>
+                                                                     <span class="cv-badge-role">read</span>
+                                                                     <span class="text-secondary small d-none d-md-inline">— {{ trans('Download JPEG snapshot frame') }}</span>
+                                                                 </div>
+                                                                 <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fs-3xs cv-terminal__copy-btn btn-copy-single-curl" data-raw-cmd="curl -H &quot;X-API-Key: YOUR_KEY&quot; &quot;{{ request.host_url }}api/v1/counters/CAMERA_ID/snapshot?annotated=true&quot; --output snapshot.jpg" title="{{ trans('Copy cURL') }}">
+                                                                     <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="currentColor" class="bi bi-clipboard me-1" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/></svg>
+                                                                     <span>{{ trans('Copy') }}</span>
+                                                                 </button>
+                                                             </div>
+                                                             <div class="cv-terminal__code"><span class="cv-terminal__prompt">$ </span><span class="cv-terminal__cmd">curl</span> <span class="cv-terminal__flag">-H</span> <span class="cv-terminal__header-val">"X-API-Key: YOUR_KEY"</span> <span class="cv-terminal__url">"{{ request.host_url }}api/v1/counters/CAMERA_ID/snapshot?annotated=true"</span> <span class="cv-terminal__flag">--output snapshot.jpg</span></div>
+                                                         </div>
+
+                                                         <!-- GROUP 3: REPORTS -->
+                                                         <div class="cv-terminal__group-header d-flex align-items-center justify-content-between">
+                                                             <span class="text-uppercase font-monospace fw-semibold fs-3xs text-secondary-emphasis">// {{ trans('Reports Endpoints') }}</span>
+                                                             <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace fs-3xs">3 endpoints</span>
+                                                         </div>
+
+                                                         <!-- 11. List Reports -->
+                                                         <div class="cv-terminal__snippet">
+                                                             <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-1">
+                                                                 <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                     <span class="cv-badge-method cv-badge-method--get">GET</span>
+                                                                     <span class="font-monospace fw-semibold text-light fs-xs">/api/v1/reports</span>
+                                                                     <span class="cv-badge-role">read</span>
+                                                                     <span class="text-secondary small d-none d-md-inline">— {{ trans('List saved reports with pagination') }}</span>
+                                                                 </div>
+                                                                 <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fs-3xs cv-terminal__copy-btn btn-copy-single-curl" data-raw-cmd="curl -H &quot;X-API-Key: YOUR_KEY&quot; &quot;{{ request.host_url }}api/v1/reports?limit=20&quot;" title="{{ trans('Copy cURL') }}">
+                                                                     <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="currentColor" class="bi bi-clipboard me-1" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/></svg>
+                                                                     <span>{{ trans('Copy') }}</span>
+                                                                 </button>
+                                                             </div>
+                                                             <div class="cv-terminal__code"><span class="cv-terminal__prompt">$ </span><span class="cv-terminal__cmd">curl</span> <span class="cv-terminal__flag">-H</span> <span class="cv-terminal__header-val">"X-API-Key: YOUR_KEY"</span> <span class="cv-terminal__url">"{{ request.host_url }}api/v1/reports?limit=20"</span></div>
+                                                         </div>
+
+                                                         <!-- 12. Report Detail -->
+                                                         <div class="cv-terminal__snippet">
+                                                             <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-1">
+                                                                 <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                     <span class="cv-badge-method cv-badge-method--get">GET</span>
+                                                                     <span class="font-monospace fw-semibold text-light fs-xs">/api/v1/reports/{id}</span>
+                                                                     <span class="cv-badge-role">read</span>
+                                                                     <span class="text-secondary small d-none d-md-inline">— {{ trans('Get report details & class counts') }}</span>
+                                                                 </div>
+                                                                 <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fs-3xs cv-terminal__copy-btn btn-copy-single-curl" data-raw-cmd="curl -H &quot;X-API-Key: YOUR_KEY&quot; {{ request.host_url }}api/v1/reports/REPORT_ID" title="{{ trans('Copy cURL') }}">
+                                                                     <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="currentColor" class="bi bi-clipboard me-1" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/></svg>
+                                                                     <span>{{ trans('Copy') }}</span>
+                                                                 </button>
+                                                             </div>
+                                                             <div class="cv-terminal__code"><span class="cv-terminal__prompt">$ </span><span class="cv-terminal__cmd">curl</span> <span class="cv-terminal__flag">-H</span> <span class="cv-terminal__header-val">"X-API-Key: YOUR_KEY"</span> <span class="cv-terminal__url">{{ request.host_url }}api/v1/reports/REPORT_ID</span></div>
+                                                         </div>
+
+                                                         <!-- 13. Delete Report -->
+                                                         <div class="cv-terminal__snippet">
+                                                             <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-1">
+                                                                 <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                     <span class="cv-badge-method cv-badge-method--delete">DELETE</span>
+                                                                     <span class="font-monospace fw-semibold text-light fs-xs">/api/v1/reports/{id}</span>
+                                                                     <span class="cv-badge-role">admin</span>
+                                                                     <span class="text-secondary small d-none d-md-inline">— {{ trans('Permanently delete report record') }}</span>
+                                                                 </div>
+                                                                 <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fs-3xs cv-terminal__copy-btn btn-copy-single-curl" data-raw-cmd="curl -X DELETE -H &quot;X-API-Key: YOUR_KEY&quot; {{ request.host_url }}api/v1/reports/REPORT_ID" title="{{ trans('Copy cURL') }}">
+                                                                     <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="currentColor" class="bi bi-clipboard me-1" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/></svg>
+                                                                     <span>{{ trans('Copy') }}</span>
+                                                                 </button>
+                                                             </div>
+                                                             <div class="cv-terminal__code"><span class="cv-terminal__prompt">$ </span><span class="cv-terminal__cmd">curl</span> <span class="cv-terminal__flag">-X DELETE -H</span> <span class="cv-terminal__header-val">"X-API-Key: YOUR_KEY"</span> <span class="cv-terminal__url">{{ request.host_url }}api/v1/reports/REPORT_ID</span></div>
+                                                         </div>
+
+                                                     </div>
+                                                 </div>
+
+                                                 <!-- Hidden full text container for Copy All -->
+                                                 <textarea class="d-none" id="all-curl-examples-text"># --- SYSTEM ENDPOINTS ---
+# Check system health & uptime
+curl -H "X-API-Key: YOUR_KEY" {{ request.host_url }}api/v1/system/health
+
+# Hardware, GPU/CUDA & PyTorch info
+curl -H "X-API-Key: YOUR_KEY" {{ request.host_url }}api/v1/system/info
+
+# --- COUNTERS & CONTROL ---
+# List all counters & live counts
+curl -H "X-API-Key: YOUR_KEY" {{ request.host_url }}api/v1/counters
+
+# Single counter detail & status
+curl -H "X-API-Key: YOUR_KEY" {{ request.host_url }}api/v1/counters/CAMERA_ID
+
+# Start counter stream & detection
+curl -X POST -H "X-API-Key: YOUR_KEY" {{ request.host_url }}api/v1/counters/CAMERA_ID/start
+
+# Pause or resume counter
+curl -X POST -H "X-API-Key: YOUR_KEY" -H "Content-Type: application/json" -d '{"action":"pause"}' {{ request.host_url }}api/v1/counters/CAMERA_ID/pause
+
+# Reset counter values to zero
+curl -X POST -H "X-API-Key: YOUR_KEY" {{ request.host_url }}api/v1/counters/CAMERA_ID/reset
+
+# Save counts session to report in database
+curl -X POST -H "X-API-Key: YOUR_KEY" -H "Content-Type: application/json" -d '{"defect_count":0}' {{ request.host_url }}api/v1/counters/CAMERA_ID/save
+
+# Stop counter stream & free resources
+curl -X POST -H "X-API-Key: YOUR_KEY" {{ request.host_url }}api/v1/counters/CAMERA_ID/stop
+
+# Download JPEG snapshot frame
+curl -H "X-API-Key: YOUR_KEY" "{{ request.host_url }}api/v1/counters/CAMERA_ID/snapshot?annotated=true" --output snapshot.jpg
+
+# --- REPORTS ENDPOINTS ---
+# List saved reports with pagination
+curl -H "X-API-Key: YOUR_KEY" "{{ request.host_url }}api/v1/reports?limit=20"
+
+# Get report details & class counts
+curl -H "X-API-Key: YOUR_KEY" {{ request.host_url }}api/v1/reports/REPORT_ID
+
+# Permanently delete report record
+curl -X DELETE -H "X-API-Key: YOUR_KEY" {{ request.host_url }}api/v1/reports/REPORT_ID</textarea>
+                                             </div>
+                                         </div>
+                                    {% else %}
+                                        <div class="cv-form-panel">
+                                            {% for sub_key, sub_value in value.items() %}
+                                                {{ forms.generate_form_fields(sub_key, sub_value, key ~ '-') }}
+                                            {% endfor %}
+                                        </div>
                                     {% endif %}
                                 </div>
                             {% endfor %}
@@ -604,6 +1018,73 @@
         </div>
     </div>
     <!-- END: Add Camera Modal -->
+
+    <!-- START: Create API Key Modal -->
+    <div class="modal fade" id="createApiKeyModal" tabindex="-1" aria-labelledby="createApiKeyModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content modal-content-rounded shadow-lg border-0">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title d-flex align-items-center gap-2 mb-0" id="createApiKeyModalLabel">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-key text-primary flex-shrink-0" viewBox="0 0 16 16">
+                            <path d="M0 8a4 4 0 0 1 7.465-2H14a.5.5 0 0 1 .354.146l1.5 1.5a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0L13 9.207l-.646.647a.5.5 0 0 1-.708 0L11 9.207l-.646.647a.5.5 0 0 1-.708 0L9 9.207l-.646.647A.5.5 0 0 1 8 10h-.535A4 4 0 0 1 0 8m4-3a3 3 0 1 0 2.712 4.285A.5.5 0 0 1 7.163 9h.63l.853-.854a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.793-.793-1-1H7.163a.5.5 0 0 1-.45-.285A3 3 0 0 0 4 5"/>
+                            <path d="M4 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/>
+                        </svg>
+                        <span>{{ trans('Create REST API Key') }}</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="btn-close-create-key-modal"></button>
+                </div>
+                <form id="form-create-api-key">
+                    <div class="modal-body p-3 p-md-4">
+                        <div class="mb-3" id="create-key-form-fields">
+                            <label for="new_api_key_name" class="form-label fw-semibold small text-body-secondary mb-1">
+                                {{ trans('Key Name / Description') }} <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="new_api_key_name" required placeholder="{{ trans('e.g. Mobile App, 1C Sync, Telegram Bot') }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="new_api_key_role" class="form-label fw-semibold small text-body-secondary mb-1">
+                                {{ trans('Access Role') }}
+                            </label>
+                            <select class="form-select" id="new_api_key_role">
+                                <option value="read">{{ trans('Read Only — list counters, snapshots, reports, health') }}</option>
+                                <option value="write">{{ trans('Write / Control — start, stop, pause, reset, save counts') }}</option>
+                                <option value="admin">{{ trans('Admin — full control, delete reports and manage keys') }}</option>
+                            </select>
+                        </div>
+                        <div class="alert alert-success d-none mt-3 mb-0" id="create-key-success-alert">
+                            <div class="fw-semibold mb-1 d-flex align-items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-circle flex-shrink-0" viewBox="0 0 16 16">
+                                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+                                    <path d="m10.97 4.97-.02.022-3.473 4.425-2.093-2.094a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05"/>
+                                </svg>
+                                <span>{{ trans('Key Created! Copy it now:') }}</span>
+                            </div>
+                            <p class="small text-danger mb-2">{{ trans('This is the only time the full key will be displayed. Store it securely.') }}</p>
+                            <div class="input-group">
+                                <input type="text" class="form-control font-monospace form-control-sm user-select-all" id="created-raw-key" readonly>
+                                <button type="button" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1" id="btn-copy-raw-key">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16">
+                                        <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/>
+                                        <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/>
+                                    </svg>
+                                    <span id="btn-copy-text">{{ trans('Copy') }}</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="alert alert-danger d-none mt-3 mb-0" id="create-key-error-alert"></div>
+                    </div>
+                    <div class="modal-footer border-top">
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">{{ trans('Close') }}</button>
+                        <button type="submit" class="btn btn-primary btn-sm px-3 d-inline-flex align-items-center gap-2" id="btn-submit-create-key">
+                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="spinner-create-key"></span>
+                            <span>{{ trans('Generate Key') }}</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- END: Create API Key Modal -->
 
     {% include 'partials/add_custom_field_modal.html' %}
 {% endblock %}

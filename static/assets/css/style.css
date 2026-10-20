@@ -1167,6 +1167,147 @@ html[data-bs-theme="dark"] .bootstrap-select .no-results {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Terminal & Developer Console (API Endpoints & Quickstart)                  */
+/* -------------------------------------------------------------------------- */
+
+.cv-terminal {
+    background-color: #0b0f17 !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 0 0 var(--cv-radius, 12px) var(--cv-radius, 12px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+}
+
+.cv-terminal__body {
+    padding: 1.15rem;
+    font-family: var(--cv-font-mono, monospace);
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    color: #e6edf3;
+}
+
+.cv-terminal__group-header {
+    padding: 0.6rem 0.25rem 0.45rem 0.25rem;
+    margin-top: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 0.75rem;
+}
+
+.cv-terminal__group-header:first-child {
+    margin-top: 0;
+}
+
+.cv-terminal__snippet {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 8px;
+    padding: 0.65rem 0.85rem;
+    margin-bottom: 0.65rem;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.cv-terminal__snippet:last-child {
+    margin-bottom: 0;
+}
+
+.cv-terminal__snippet:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.16);
+}
+
+.cv-badge-method {
+    font-family: var(--cv-font-mono, monospace);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    display: inline-block;
+    line-height: 1.2;
+}
+
+.cv-badge-method--get {
+    background: rgba(39, 201, 63, 0.15) !important;
+    color: #38d39f !important;
+    border: 1px solid rgba(39, 201, 63, 0.35) !important;
+}
+
+.cv-badge-method--post {
+    background: rgba(77, 171, 247, 0.15) !important;
+    color: #79c0ff !important;
+    border: 1px solid rgba(77, 171, 247, 0.35) !important;
+}
+
+.cv-badge-method--delete {
+    background: rgba(255, 95, 86, 0.15) !important;
+    color: #ff7b72 !important;
+    border: 1px solid rgba(255, 95, 86, 0.35) !important;
+}
+
+.cv-badge-role {
+    font-family: var(--cv-font-mono, monospace);
+    font-size: 0.625rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #8b949e;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    line-height: 1.2;
+}
+
+.cv-terminal__comment {
+    color: #8b949e;
+    font-size: 0.75rem;
+    user-select: none;
+}
+
+.cv-terminal__code {
+    white-space: pre-wrap;
+    word-break: break-all;
+    user-select: all;
+    color: #e6edf3;
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
+.cv-terminal__prompt {
+    color: #4dabf7;
+    user-select: none;
+    font-weight: 600;
+}
+
+.cv-terminal__cmd {
+    color: #79c0ff;
+    font-weight: 600;
+}
+
+.cv-terminal__flag {
+    color: #ffa657;
+}
+
+.cv-terminal__url {
+    color: #7ee787;
+}
+
+.cv-terminal__header-val {
+    color: #d2a8ff;
+}
+
+.cv-terminal__copy-btn {
+    opacity: 0.75;
+    transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.cv-terminal__snippet:hover .cv-terminal__copy-btn {
+    opacity: 1;
+}
+
+.cv-terminal__copy-btn:hover {
+    opacity: 1;
+    transform: scale(1.05);
+}
+
+/* -------------------------------------------------------------------------- */
 /* Base print media styles                                                    */
 /* -------------------------------------------------------------------------- */
 

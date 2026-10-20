@@ -19,6 +19,14 @@ from .auth import (
     setup_auth,
     verify_credentials,
 )
+from .api_auth import (
+    ROLE_HIERARCHY,
+    api_key_required,
+    generate_api_key,
+    get_api_key_from_request,
+    mask_api_key,
+    validate_api_key,
+)
 
 __all__ = [
     'get_app_context',
@@ -34,4 +42,10 @@ __all__ = [
     'check_password_hash',
     'get_authenticated_username',
     '_safe_next_url',
+    'ROLE_HIERARCHY',
+    'api_key_required',
+    'generate_api_key',
+    'get_api_key_from_request',
+    'mask_api_key',
+    'validate_api_key',
 ]

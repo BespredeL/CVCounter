@@ -40,6 +40,7 @@ class ConfigValidator:
         self._validate_db(config.get('db', {}), config_path)
         self._validate_telemetry(config.get('telemetry', {}))
         self._validate_form(config.get('form', {}))
+        self._validate_api(config.get('api', {}))
         self._validate_detection_default(config.get('detection_default', {}), config_path)
         self._validate_detections(config.get('detections', {}), config_path)
 
@@ -240,6 +241,34 @@ class ConfigValidator:
 
         if 'hmac_secret' in telemetry and not isinstance(telemetry['hmac_secret'], str):
             self.errors.append("'telemetry.hmac_secret' must be a string")
+
+    def _validate_api(self, api: Dict[str, Any]) -> None:
+        """
+        Validate API configuration section.
+
+        Args:
+            api (dict): API configuration section
+        """
+        if not api:
+            return
+
+        if 'enabled' in api and not isinstance(api['enabled'], bool):
+            self.errors.append("'api.enabled' must be a boolean")
+
+        if 'keys' in api:
+            if not isinstance(api['keys'], list):
+                self.errors.append("'api.keys' must be a list")
+            else:
+                for idx, entry in enumerate(api['keys']):
+                    if not isinstance(entry, dict):
+                        self.errors.append(f"'api.keys[{idx}]' must be an object")
+                        continue
+                    if 'key' not in entry or not isinstance(entry['key'], str) or not entry['key'].strip():
+                        self.errors.append(f"'api.keys[{idx}].key' is required and must be a non-empty string")
+                    if 'role' in entry and entry['role'] not in ('read', 'write', 'admin'):
+                        self.errors.append(f"'api.keys[{idx}].role' must be one of: read, write, admin")
+                    if 'enabled' in entry and not isinstance(entry['enabled'], bool):
+                        self.errors.append(f"'api.keys[{idx}].enabled' must be a boolean")
 
     def _validate_db(self, db: Dict[str, Any], config_path: Optional[str] = None) -> None:
         """

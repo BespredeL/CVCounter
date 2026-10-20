@@ -1487,6 +1487,226 @@
                     exportModal.hide();
                 });
             }
+
+            // Initialize API Key Management
+            initApiKeyManagement();
+        }
+
+        function initApiKeyManagement() {
+            var switchApi = document.getElementById('switch-api-enabled');
+            var statusBadge = document.getElementById('api-status-badge');
+            var formCreateKey = document.getElementById('form-create-api-key');
+            var createKeyModalEl = document.getElementById('createApiKeyModal');
+            var btnSubmitKey = document.getElementById('btn-submit-create-key');
+            var spinnerKey = document.getElementById('spinner-create-key');
+            var successAlert = document.getElementById('create-key-success-alert');
+            var errorAlert = document.getElementById('create-key-error-alert');
+            var rawKeyInput = document.getElementById('created-raw-key');
+            var btnCopyKey = document.getElementById('btn-copy-raw-key');
+            var btnCopyText = document.getElementById('btn-copy-text');
+            var keysTbody = document.getElementById('api-keys-tbody');
+
+            if (switchApi) {
+                switchApi.addEventListener('change', function () {
+                    var enabled = switchApi.checked;
+                    fetch('/settings/api/toggle', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({enabled: enabled})
+                    })
+                    .then(function (res) { return res.json(); })
+                    .then(function (data) {
+                        if (data.ok) {
+                            if (statusBadge) {
+                                if (enabled) {
+                                    statusBadge.className = 'badge bg-success-subtle text-success border border-success-subtle';
+                                    statusBadge.textContent = t('Active');
+                                } else {
+                                    statusBadge.className = 'badge bg-secondary-subtle text-secondary border';
+                                    statusBadge.textContent = t('Disabled');
+                                }
+                            }
+                        } else {
+                            switchApi.checked = !enabled;
+                            alert(data.error || 'Failed to update status');
+                        }
+                    })
+                    .catch(function () {
+                        switchApi.checked = !enabled;
+                    });
+                });
+            }
+
+            if (formCreateKey) {
+                formCreateKey.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    var nameInput = document.getElementById('new_api_key_name');
+                    var roleInput = document.getElementById('new_api_key_role');
+                    var name = (nameInput ? nameInput.value : '').trim();
+                    var role = roleInput ? roleInput.value : 'read';
+
+                    if (!name) return;
+
+                    btnSubmitKey.disabled = true;
+                    if (spinnerKey) spinnerKey.classList.remove('d-none');
+                    if (errorAlert) errorAlert.classList.add('d-none');
+
+                    fetch('/settings/api/keys/create', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({name: name, role: role})
+                    })
+                    .then(function (res) { return res.json(); })
+                    .then(function (data) {
+                        btnSubmitKey.disabled = false;
+                        if (spinnerKey) spinnerKey.classList.add('d-none');
+                        if (data.ok && data.key) {
+                            var k = data.key;
+                            if (successAlert && rawKeyInput) {
+                                rawKeyInput.value = k.key;
+                                successAlert.classList.remove('d-none');
+                            }
+                            var noKeysTr = document.getElementById('tr-no-api-keys');
+                            if (noKeysTr) noKeysTr.remove();
+
+                            var roleBadge = '<span class="badge bg-secondary-subtle text-secondary-emphasis border">' + escapeHtml(t('Read Only')) + '</span>';
+                            if (k.role === 'admin') {
+                                roleBadge = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle">' + escapeHtml(t('Admin')) + '</span>';
+                            } else if (k.role === 'write') {
+                                roleBadge = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle">' + escapeHtml(t('Write / Control')) + '</span>';
+                            }
+
+                            var maskedKey = (k.key.length > 12) ? (k.key.substring(0, 8) + '••••••••' + k.key.substring(k.key.length - 4)) : '••••••••';
+                            var dateStr = k.created_at ? k.created_at.substring(0, 10) : '-';
+
+                            var tr = document.createElement('tr');
+                            tr.setAttribute('data-key-id', k.id);
+                            tr.setAttribute('data-key-name', k.name);
+                            tr.innerHTML = '<td><div class="fw-semibold text-body">' + escapeHtml(k.name) + '</div><div class="text-body-secondary font-monospace fs-3xs">ID: ' + escapeHtml(k.id) + '</div></td>' +
+                                '<td>' + roleBadge + '</td>' +
+                                '<td><code class="font-monospace text-body-secondary">' + escapeHtml(maskedKey) + '</code></td>' +
+                                '<td class="small text-body-secondary">' + escapeHtml(dateStr) + '</td>' +
+                                '<td class="text-end"><button type="button" class="btn btn-outline-danger btn-sm py-1 px-2 btn-delete-api-key" data-key-id="' + escapeHtml(k.id) + '" data-key-name="' + escapeHtml(k.name) + '" title="' + escapeHtml(t('Delete Key')) + '"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg></button></td>';
+
+                            if (keysTbody) keysTbody.prepend(tr);
+                            nameInput.value = '';
+                        } else {
+                            if (errorAlert) {
+                                errorAlert.textContent = data.error || 'Failed to create key';
+                                errorAlert.classList.remove('d-none');
+                            }
+                        }
+                    })
+                    .catch(function (err) {
+                        btnSubmitKey.disabled = false;
+                        if (spinnerKey) spinnerKey.classList.add('d-none');
+                        if (errorAlert) {
+                            errorAlert.textContent = String(err);
+                            errorAlert.classList.remove('d-none');
+                        }
+                    });
+                });
+            }
+
+            if (createKeyModalEl) {
+                createKeyModalEl.addEventListener('hidden.bs.modal', function () {
+                    if (successAlert) successAlert.classList.add('d-none');
+                    if (errorAlert) errorAlert.classList.add('d-none');
+                    if (rawKeyInput) rawKeyInput.value = '';
+                });
+            }
+
+            if (btnCopyKey && rawKeyInput) {
+                btnCopyKey.addEventListener('click', function () {
+                    if (!rawKeyInput.value) return;
+                    navigator.clipboard.writeText(rawKeyInput.value).then(function () {
+                        if (btnCopyText) btnCopyText.textContent = t('Copied!');
+                        setTimeout(function () {
+                            if (btnCopyText) btnCopyText.textContent = t('Copy');
+                        }, 2000);
+                    });
+                });
+            }
+
+            var btnCopyAllCurl = document.getElementById('btn-copy-all-curl') || document.getElementById('btn-copy-curl-examples');
+            var btnCopyAllCurlText = document.getElementById('btn-copy-all-curl-text') || document.getElementById('btn-copy-curl-text');
+            var allCurlEl = document.getElementById('all-curl-examples-text') || document.getElementById('curl-examples-code');
+            if (btnCopyAllCurl && allCurlEl) {
+                btnCopyAllCurl.addEventListener('click', function () {
+                    var text = allCurlEl.value !== undefined ? allCurlEl.value : allCurlEl.textContent;
+                    navigator.clipboard.writeText(text.trim()).then(function () {
+                        if (btnCopyAllCurlText) btnCopyAllCurlText.textContent = t('Copied!');
+                        setTimeout(function () {
+                            if (btnCopyAllCurlText) btnCopyAllCurlText.textContent = t('Copy all');
+                        }, 2000);
+                    });
+                });
+            }
+
+            document.addEventListener('click', function (e) {
+                var btnSingle = e.target.closest('.btn-copy-single-curl');
+                if (!btnSingle) return;
+                var rawCmd = btnSingle.getAttribute('data-raw-cmd');
+                if (!rawCmd) return;
+                var spanText = btnSingle.querySelector('span');
+                var originalText = spanText ? spanText.textContent : '';
+                navigator.clipboard.writeText(rawCmd.trim()).then(function () {
+                    if (spanText) spanText.textContent = t('Copied!');
+                    setTimeout(function () {
+                        if (spanText) spanText.textContent = originalText || t('Copy');
+                    }, 2000);
+                });
+            });
+
+            document.addEventListener('click', async function (e) {
+                var btn = e.target.closest('.btn-delete-api-key');
+                if (!btn) return;
+                var keyId = btn.getAttribute('data-key-id');
+                if (!keyId) return;
+                var keyRow = btn.closest('tr');
+                var keyName = btn.getAttribute('data-key-name') || (keyRow ? keyRow.getAttribute('data-key-name') : '') || keyId;
+
+                var confirmMsg = (typeof window.trans === 'function'
+                    ? window.trans('Are you sure you want to revoke API key "{name}"? External systems using it will immediately lose access.', {name: keyName})
+                    : null) || ('Are you sure you want to revoke API key "' + keyName + '"? External systems using it will immediately lose access.');
+
+                var confirmed = typeof window.appConfirm === 'function'
+                    ? await window.appConfirm({
+                        title: t('Revoke Key'),
+                        message: confirmMsg,
+                        confirmText: t('Delete'),
+                        tone: 'danger',
+                    })
+                    : confirm(confirmMsg);
+
+                if (!confirmed) return;
+
+                btn.disabled = true;
+                fetch('/settings/api/keys/delete', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({key_id: keyId})
+                })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (data.ok) {
+                        var row = btn.closest('tr');
+                        if (row) row.remove();
+                        if (keysTbody && !keysTbody.querySelector('tr')) {
+                            keysTbody.innerHTML = '<tr id="tr-no-api-keys"><td colspan="5" class="text-center py-4 text-body-secondary small">' +
+                                escapeHtml(t('No API keys configured yet. Click Create API Key to generate one.')) +
+                                '</td></tr>';
+                        }
+                    } else {
+                        btn.disabled = false;
+                        alert(data.error || 'Failed to delete key');
+                    }
+                })
+                .catch(function (err) {
+                    btn.disabled = false;
+                    alert(String(err));
+                });
+            });
         }
     }
 

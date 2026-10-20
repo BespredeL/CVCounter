@@ -22,6 +22,7 @@ CVCounter is a flexible and high-performance web-based computer vision system de
 - 📊 **Reports & Analytics:** Batch and shift history, class breakdowns, saved media viewer, and export/printing in A4 format.
 - 🚀 **1-Click Automated Setup:** Installer automatically detects GPUs (NVIDIA CUDA, AMD DirectML, Intel OpenVINO) and configures the environment.
 - 🛠️ **Runtime Management:** Hardware acceleration diagnostics and one-click installation of missing inference libraries directly from the UI.
+- 🔌 **REST API v1:** Full programmatic interface for integrations with CRM, ERP, Telegram bots, and external systems (API key authentication, access roles, counter controls, report queries, and camera snapshots). Read more: [`docs/api.md`](docs/api.md).
 - 🔐 **Web Interface:** User authentication, visual zone editor, dynamic batch form fields, event logs, and real-time system diagnostics.
 
 > [!TIP]

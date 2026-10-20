@@ -27,7 +27,7 @@ from system.utils.i18n import load_translations, trans as translate
 from system.utils.paths import resolve_sqlite_uri
 from system.utils.utils import slug, system_check, should_run_startup_system_check
 from system.db.models.base_model import TablePrefixBase
-from routes import counters_bp, reports_bp, settings_bp, main_bp, datasets_bp
+from routes import counters_bp, reports_bp, settings_bp, main_bp, datasets_bp, api_v1_bp
 
 
 # --------------------------------------------------------------------------------
@@ -322,6 +322,7 @@ def register_blueprints(app: Flask):
     app.register_blueprint(reports_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(datasets_bp)
+    app.register_blueprint(api_v1_bp)
 
 
 def register_error_handlers(app: Flask, context: dict):
@@ -355,28 +356,44 @@ def register_error_handlers(app: Flask, context: dict):
         except Exception:
             pass
 
+    from flask import jsonify, render_template, request
+
+    def _is_api_request() -> bool:
+        return request.path.startswith('/api/v1')
+
     @app.errorhandler(400)
     def bad_request(error):
         """Handle 400 Bad Request errors."""
-        logger.warning(f"Bad Request: {request.url} - {error.description if hasattr(error, 'description') else str(error)}")
+        desc = error.description if hasattr(error, 'description') else str(error)
+        logger.warning(f"Bad Request: {request.url} - {desc}")
+        if _is_api_request():
+            return jsonify({'success': False, 'error': {'code': 'bad_request', 'message': desc}}), 400
         return render_template('errors/400.html', error=error), 400
 
     @app.errorhandler(401)
     def unauthorized(error):
         """Handle 401 Unauthorized errors."""
+        desc = error.description if hasattr(error, 'description') else "Unauthorized"
         logger.warning(f"Unauthorized access attempt: {request.url}")
+        if _is_api_request():
+            return jsonify({'success': False, 'error': {'code': 'unauthorized', 'message': desc}}), 401
         return render_template('errors/401.html', error=error), 401
 
     @app.errorhandler(403)
     def forbidden(error):
         """Handle 403 Forbidden errors."""
-        logger.warning(f"Forbidden access: {request.url} - {error.description if hasattr(error, 'description') else str(error)}")
+        desc = error.description if hasattr(error, 'description') else "Forbidden"
+        logger.warning(f"Forbidden access: {request.url} - {desc}")
+        if _is_api_request():
+            return jsonify({'success': False, 'error': {'code': 'forbidden', 'message': desc}}), 403
         return render_template('errors/403.html', error=error), 403
 
     @app.errorhandler(404)
     def not_found(error):
         """Handle 404 Not Found errors."""
         logger.debug(f"Page not found: {request.url}")
+        if _is_api_request():
+            return jsonify({'success': False, 'error': {'code': 'not_found', 'message': 'Endpoint not found'}}), 404
         return render_template('errors/404.html', error=error), 404
 
     @app.errorhandler(500)
@@ -384,6 +401,8 @@ def register_error_handlers(app: Flask, context: dict):
         """Handle 500 Internal Server Error."""
         logger.error(f"Internal Server Error: {request.url} - {str(error)}")
         logger.log_exception()
+        if _is_api_request():
+            return jsonify({'success': False, 'error': {'code': 'internal_server_error', 'message': str(error)}}), 500
         return render_template('errors/500.html', error=error), 500
 
     @app.errorhandler(ConfigNotFoundError)

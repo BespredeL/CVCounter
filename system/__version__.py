@@ -4,4 +4,4 @@
 # Developed by: Aleksandr Kireev
 # Website: https://bespredel.name
 
-APP_VERSION = '5.9.2'
+APP_VERSION = '5.10.0'

@@ -9,5 +9,6 @@ from .reports import reports_bp
 from .settings import settings_bp
 from .main import main_bp
 from .datasets import datasets_bp
+from .api import api_v1_bp
 
-__all__ = ['counters_bp', 'reports_bp', 'settings_bp', 'main_bp', 'datasets_bp']
+__all__ = ['counters_bp', 'reports_bp', 'settings_bp', 'main_bp', 'datasets_bp', 'api_v1_bp']
