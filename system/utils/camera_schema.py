@@ -31,6 +31,7 @@ CANONICAL_CAMERA_KEYS: List[str] = [
     "iou",
     "device",
     "vid_stride",
+    "indicator_mode",
     "indicator_size",
     # 3. Counting Areas (Zones)
     "counting_area",
@@ -65,6 +66,7 @@ CANONICAL_DEFAULTS: Dict[str, Any] = {
     "iou": 0.7,
     "device": 0,
     "vid_stride": 1,
+    "indicator_mode": "circle",
     "indicator_size": 10,
     "counting_area": [
         [0, 0],

@@ -128,19 +128,37 @@ body.app-body--counter {
     background: #000;
 }
 
+.counting-area-fab,
+.counter-overlay-btn {
+    display: inline-flex;
+    align-items: center;
+    opacity: 0.92;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(4px);
+    background-color: rgba(33, 37, 41, 0.85);
+}
+
 .counting-area-fab {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 5;
+}
+
+.counter-overlay-actions {
     position: absolute;
     top: 0.75rem;
     right: 0.75rem;
     z-index: 5;
     display: inline-flex;
     align-items: center;
-    opacity: 0.92;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    gap: 0.5rem;
 }
 
-.counting-area-fab:hover {
+.counting-area-fab:hover,
+.counter-overlay-btn:hover {
     opacity: 1;
+    background-color: rgba(33, 37, 41, 0.98);
 }
 
 .counting-area-toolbar {

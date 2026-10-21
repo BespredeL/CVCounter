@@ -14,6 +14,7 @@ from typing import Generator, List, Optional, Tuple
 
 import cv2
 import numpy as np
+from PIL import Image, ImageDraw, ImageFont
 from flask_socketio import SocketIO
 from numpy import ndarray
 from system.managers.config_manager import ConfigManager
@@ -35,6 +36,41 @@ from system.managers.video_recorder_manager import VideoRecorderManager
 from system.utils.telemetry import get_telemetry
 
 _PLACEHOLDER_MJPEG_CHUNK: bytes | None = None
+_LABEL_FONT: ImageFont.ImageFont | None = None
+_LABEL_FONT_SIZE: int = 13
+
+
+def _get_label_font(size: int = 13) -> ImageFont.ImageFont | None:
+    """
+    Get a cached TrueType font that supports Unicode / Cyrillic, falling back to default.
+    """
+    global _LABEL_FONT, _LABEL_FONT_SIZE
+    if _LABEL_FONT is not None and _LABEL_FONT_SIZE == size:
+        return _LABEL_FONT
+
+    font_candidates = [
+        "arial.ttf",
+        "segoeui.ttf",
+        "tahoma.ttf",
+        "calibri.ttf",
+        "DejaVuSans.ttf",
+        "LiberationSans-Regular.ttf",
+        "FreeSans.ttf",
+    ]
+    for font_name in font_candidates:
+        try:
+            _LABEL_FONT = ImageFont.truetype(font_name, size)
+            _LABEL_FONT_SIZE = size
+            return _LABEL_FONT
+        except Exception:
+            continue
+
+    try:
+        _LABEL_FONT = ImageFont.load_default()
+        _LABEL_FONT_SIZE = size
+    except Exception:
+        _LABEL_FONT = None
+    return _LABEL_FONT
 
 
 def _placeholder_mjpeg_chunk() -> bytes:
@@ -76,6 +112,7 @@ class ObjectCounter:
     DEFAULT_TRACKER_IOU: float = 0.3
     DEFAULT_JPEG_QUALITY: int = 90
     DEFAULT_INDICATOR_SIZE: int = 10
+    DEFAULT_INDICATOR_MODE: str = 'circle'
     DEFAULT_VID_STRIDE: int = 1
     DEFAULT_RECORDING_PATH: str = "storage/saved_recordings"
     DEFAULT_MJPEG_FPS: float = 15.0
@@ -917,6 +954,14 @@ class ObjectCounter:
                                                                                                   self.DEFAULT_VIDEO_QUALITY))
         self.indicator_size: int = detector_config.get('indicator_size', detection_default.get("indicator_size",
                                                                                                self.DEFAULT_INDICATOR_SIZE))
+        self.indicator_mode: str = str(
+            detector_config.get(
+                'indicator_mode',
+                detection_default.get("indicator_mode", self.DEFAULT_INDICATOR_MODE)
+            )
+        ).strip().lower()
+        if self.indicator_mode not in ('circle', 'box'):
+            self.indicator_mode = self.DEFAULT_INDICATOR_MODE
         self.vid_stride: int = detector_config.get('vid_stride',
                                                    detection_default.get("vid_stride", self.DEFAULT_VID_STRIDE))
         self.classes: dict = detector_config.get('classes', {})
@@ -1118,7 +1163,30 @@ class ObjectCounter:
 
         return cv2.addWeighted(overlay, self.DEFAULT_POLYGON_ALPHA, image, 1 - self.DEFAULT_POLYGON_ALPHA, 0)
 
-    def _draw_indicator(self, image: np.ndarray, center: tuple[int, int], rid: int) -> None:
+    def set_indicator_mode(self, mode: str) -> str:
+        """
+        Set the indicator display mode ('circle' or 'box').
+
+        Args:
+            mode (str): The indicator mode.
+
+        Returns:
+            str: Active indicator mode.
+        """
+        mode = str(mode).strip().lower()
+        if mode not in ('circle', 'box'):
+            mode = self.DEFAULT_INDICATOR_MODE
+        self.indicator_mode = mode
+        return self.indicator_mode
+
+    def _draw_indicator(
+        self,
+        image: np.ndarray,
+        center: tuple[int, int],
+        rid: int,
+        box: tuple[int, int, int, int] | None = None,
+        class_id: int = -1,
+    ) -> None:
         """
         Draws an indicator on the given image (in place).
 
@@ -1126,12 +1194,69 @@ class ObjectCounter:
             image (numpy.ndarray): The image on which the indicator should be drawn.
             center (tuple[int, int]): The center coordinates of the indicator.
             rid (int): The ID of the indicator.
+            box (tuple[int, int, int, int], optional): (x1, y1, x2, y2) bounding box.
+            class_id (int, optional): The class ID of the object.
 
         Returns:
             None
         """
         color = (0, 255, 0) if rid in self.total_objects else (255, 0, 255)
-        cv2.circle(image, center, self.indicator_size, color, cv2.FILLED)
+
+        if self.indicator_mode == 'box' and box is not None:
+            x1, y1, x2, y2 = box
+            # Draw bounding box rectangle
+            cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
+
+            # Center tracking dot (subtle, so users see the point triggering the counting zone)
+            dot_radius = max(3, min(self.indicator_size // 2, 6))
+            cv2.circle(image, center, dot_radius, color, cv2.FILLED)
+
+            # Prepare text badge: Class name + track ID
+            cls_name = self._class_label(class_id)
+            label = f"{cls_name} #{rid}" if rid is not None and rid >= 0 else cls_name
+
+            font = _get_label_font(13)
+            img_h, img_w = image.shape[:2]
+
+            if font is not None:
+                mask_w, mask_h = font.getmask(label).size
+                pad_x, pad_y = 5, 3
+                badge_w = mask_w + pad_x * 2
+                badge_h = mask_h + pad_y * 2 + 2
+
+                badge_x1 = max(0, min(x1, img_w - badge_w))
+                badge_x2 = min(img_w, badge_x1 + badge_w)
+
+                if y1 - badge_h >= 0:
+                    badge_y1 = y1 - badge_h
+                    badge_y2 = y1
+                else:
+                    badge_y1 = min(img_h - 1, max(0, y1))
+                    badge_y2 = min(img_h, badge_y1 + badge_h)
+
+                bw = badge_x2 - badge_x1
+                bh = badge_y2 - badge_y1
+
+                if bw > 0 and bh > 0:
+                    cv2.rectangle(image, (badge_x1, badge_y1), (badge_x2, badge_y2), color, cv2.FILLED)
+                    try:
+                        patch = image[badge_y1:badge_y2, badge_x1:badge_x2]
+                        pil_patch = Image.fromarray(patch)
+                        draw = ImageDraw.Draw(pil_patch)
+                        draw.text((pad_x, pad_y), label, font=font, fill=(0, 0, 0))
+                        image[badge_y1:badge_y2, badge_x1:badge_x2] = np.asarray(pil_patch)
+                    except Exception:
+                        pass
+            else:
+                (text_w, text_h), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+                badge_h = text_h + baseline + 4
+                badge_y1 = max(0, y1 - badge_h) if y1 - badge_h >= 0 else min(img_h - badge_h, y1)
+                badge_y2 = badge_y1 + badge_h
+                badge_x2 = min(img_w, x1 + text_w + 6)
+                cv2.rectangle(image, (x1, badge_y1), (badge_x2, badge_y2), color, cv2.FILLED)
+                cv2.putText(image, label, (x1 + 3, badge_y2 - baseline - 2), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+        else:
+            cv2.circle(image, center, self.indicator_size, color, cv2.FILLED)
 
     def _ensure_counting_mask(self, frame_shape: Tuple[int, int]) -> None:
         """
@@ -1190,7 +1315,7 @@ class ObjectCounter:
             cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
 
             # Draw indicator on the image
-            self._draw_indicator(image, (cx, cy), rid)
+            self._draw_indicator(image, (cx, cy), rid, box=(x1, y1, x2, y2), class_id=class_id)
 
             # Check if the object is within the counting area using mask
             if (

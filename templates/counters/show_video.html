@@ -15,15 +15,40 @@
             <div class="img-container">
                 <img id="video_feed" class="user-select-none"
                      src="{{ url_for('counters.counter_get_frames', location=location) }}" alt=""/>
-                <a href="{{ url_for('counters.counting_area_edit', location=location) }}"
-                   class="btn btn-sm btn-dark counting-area-fab shadow"
-                   title="{{ trans('Configure counting zone') }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-intersect"
-                         viewBox="0 0 16 16">
-                        <path d="M0 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2H2a2 2 0 0 1-2-2zm5 10v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2v5a2 2 0 0 1-2 2zm6-8V2a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2V6a2 2 0 0 1 2-2z"/>
-                    </svg>
-                    <span class="d-none d-md-inline ms-1">{{ trans('Counting zone') }}</span>
-                </a>
+                {% if not auth_enabled or auth_user %}
+                <div class="counter-overlay-actions">
+                    <button type="button"
+                            class="btn btn-sm btn-dark counter-overlay-btn shadow"
+                            id="btn-toggle-indicator"
+                            data-mode="{{ indicator_mode }}"
+                            data-text-box="{{ trans('Bounding box') }}"
+                            data-text-dot="{{ trans('Dot') }}"
+                            title="{{ trans('Toggle indicator mode') }}">
+                        <span id="indicator-icon" class="d-inline-flex align-items-center">
+                            {% if indicator_mode == 'box' %}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bounding-box" viewBox="0 0 16 16">
+                                <path d="M5 2V0H0v5h2v6H0v5h5v-2h6v2h5v-5h-2V5h2V0h-5v2H5zm6 1v2h2v6h-2v2H5v-2H3V5h2V3h6zm1-2h3v3h-3V1zm3 11v3h-3v-3h3zM4 15H1v-3h3v3zM1 4V1h3v3H1z"/>
+                            </svg>
+                            {% else %}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-record-circle" viewBox="0 0 16 16">
+                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                <path d="M11 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/>
+                            </svg>
+                            {% endif %}
+                        </span>
+                        <span class="d-none d-md-inline ms-1" id="indicator-label">{{ trans('Bounding box') if indicator_mode == 'box' else trans('Dot') }}</span>
+                    </button>
+                    <a href="{{ url_for('counters.counting_area_edit', location=location) }}"
+                       class="btn btn-sm btn-dark counter-overlay-btn shadow"
+                       title="{{ trans('Configure counting zone') }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-intersect"
+                             viewBox="0 0 16 16">
+                            <path d="M0 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2H2a2 2 0 0 1-2-2zm5 10v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2v5a2 2 0 0 1-2 2zm6-8V2a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2V6a2 2 0 0 1 2-2z"/>
+                        </svg>
+                        <span class="d-none d-md-inline ms-1">{{ trans('Counting zone') }}</span>
+                    </a>
+                </div>
+                {% endif %}
             </div>
 
             <div class="{{ 'd-flex' if is_paused else 'd-none' }} justify-content-center align-items-center pause-display"
@@ -54,6 +79,7 @@
                 start: {{ url_for('counters.start_count', location=location)|tojson }},
                 pause: {{ url_for('counters.pause_count', location=location)|tojson }},
                 capture: {{ url_for('counters.save_capture', location=location)|tojson }},
+                indicatorMode: {{ url_for('counters.toggle_indicator_mode', location=location)|tojson }},
             },
         };
     </script>

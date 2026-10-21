@@ -394,11 +394,15 @@ def counter_video(location: str = None):
         detection_config=detection_config
     )
 
+    counter = object_counters[location]
+    indicator_mode = getattr(counter, 'indicator_mode', 'circle')
+
     return render_template(
         'counters/show_video.html',
         title=locations_dict.get(location, ''),
         location=location,
-        is_paused=object_counters[location].is_pause(),
+        is_paused=counter.is_pause(),
+        indicator_mode=indicator_mode,
         form_config=form_config,
         custom_fields=custom_fields,
         counter_on_sidebar=True,
@@ -631,6 +635,61 @@ def counting_area_save(location: str = None):
         'counting_areas': legacy['counting_areas'],
         'counting_area': legacy['counting_area'],
         'counting_area_color': legacy['counting_area_color'],
+    })
+
+
+@counters_bp.route('/counter/<string:location>/indicator_mode', methods=['GET', 'POST'])
+@login_required
+def toggle_indicator_mode(location: str = None):
+    """
+    Toggle or update the detection indicator mode (circle vs box) for a counter.
+
+    Args:
+        location (str): The identifier for the detection location
+
+    Returns:
+        JSON response with current or updated indicator mode.
+    """
+    context = get_app_context()
+    config = context['config']
+    object_counters = context['object_counters']
+
+    location = str(location).strip()
+    _require_detection_location(location)
+
+    counter = object_counters.get(location)
+    current_mode = getattr(counter, 'indicator_mode', 'circle') if counter else 'circle'
+
+    if request.method == 'POST':
+        req_data = request.get_json(silent=True) or request.form or {}
+        new_mode = req_data.get('mode')
+        if not new_mode:
+            new_mode = 'box' if current_mode == 'circle' else 'circle'
+        else:
+            new_mode = str(new_mode).strip().lower()
+            if new_mode not in ('circle', 'box'):
+                new_mode = 'circle'
+
+        if counter:
+            counter.set_indicator_mode(new_mode)
+
+        config.set(f'detections.{location}.indicator_mode', new_mode)
+        config.save_config()
+
+        message = (
+            translate('Indicator mode switched to Bounding box')
+            if new_mode == 'box'
+            else translate('Indicator mode switched to Dot')
+        )
+        return jsonify({
+            'status': 'success',
+            'indicator_mode': new_mode,
+            'message': message,
+        })
+
+    return jsonify({
+        'status': 'success',
+        'indicator_mode': current_mode,
     })
 
 

@@ -59,6 +59,7 @@
         {%- elif key == 'iou' -%}{{ trans('Intersection-Over-Union threshold for Non-Maximum Suppression (NMS)') }}
         {%- elif key == 'device' -%}{{ trans('Inference compute device: 0 for first GPU, or "cpu" for processor') }}
         {%- elif key == 'vid_stride' -%}{{ trans('Frame skip interval: 1 processes every frame, 2 processes every second frame') }}
+        {%- elif key == 'indicator_mode' -%}{{ trans('Display style for detected objects: dot or bounding box with label') }}
         {%- elif key == 'indicator_size' -%}{{ trans('Size in pixels of bounding boxes and tracking dots on frames') }}
         {%- elif key == 'classes' -%}{{ trans('Dictionary of class IDs and object label names') }}
         {%- elif key == 'enable' -%}{{ trans('Enable this module') }}
@@ -501,6 +502,12 @@
                         {% for mode in ['threading', 'eventlet', 'gevent'] %}
                             <option value="{{ mode }}" {% if value == mode %}selected{% endif %}>{{ mode }}</option>
                         {% endfor %}
+                    </select>
+                {% elif key == 'indicator_mode' %}
+                    <select id="{{ field_id }}" name="{{ field_id }}"
+                            class="form-select cv-form-control cv-form-select">
+                        <option value="circle" {% if value != 'box' %}selected{% endif %}>{{ trans('Dot') }} (circle)</option>
+                        <option value="box" {% if value == 'box' %}selected{% endif %}>{{ trans('Bounding box') }} (box)</option>
                     </select>
                 {% elif key == 'socketio_transports' %}
                     {% set val_list = value if (value is iterable and value is not string) else [value|string] %}

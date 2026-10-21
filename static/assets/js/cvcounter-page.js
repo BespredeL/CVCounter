@@ -314,6 +314,82 @@ const CounterPage = {
     },
 
     /**
+     * Toggle the indicator display mode (circle vs box).
+     *
+     * @param {string} url - Toggle endpoint URL
+     * @returns {void}
+     */
+    toggleIndicatorMode(url) {
+        if (!url) {
+            return;
+        }
+
+        const btn = document.getElementById("btn-toggle-indicator");
+        if (btn) {
+            btn.disabled = true;
+        }
+
+        const notify = (msg, type = "primary") => {
+            if (typeof window.showToast === "function") {
+                window.showToast(msg, type);
+            } else if (typeof showToast === "function") {
+                showToast(msg, type);
+            }
+        };
+
+        const t = (key, params) => {
+            if (typeof window.trans === "function") {
+                return window.trans(key, params);
+            }
+            return key;
+        };
+
+        fetch(url, {
+            method: "POST",
+            headers: {
+                "X-Requested-With": "XMLHttpRequest",
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            },
+        })
+            .then(async (r) => {
+                const data = await r.json().catch(() => null);
+                if (!r.ok || data?.status !== "success") {
+                    throw new Error(data?.message || t("Failed to switch indicator mode"));
+                }
+                return data;
+            })
+            .then((data) => {
+                const mode = data?.indicator_mode || "circle";
+                const isBox = mode === "box";
+                if (btn) {
+                    btn.dataset.mode = mode;
+                    const icon = btn.querySelector("#indicator-icon");
+                    if (icon) {
+                        icon.innerHTML = isBox
+                            ? '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bounding-box" viewBox="0 0 16 16"><path d="M5 2V0H0v5h2v6H0v5h5v-2h6v2h5v-5h-2V5h2V0h-5v2H5zm6 1v2h2v6h-2v2H5v-2H3V5h2V3h6zm1-2h3v3h-3V1zm3 11v3h-3v-3h3zM4 15H1v-3h3v3zM1 4V1h3v3H1z"/></svg>'
+                            : '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-record-circle" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M11 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/></svg>';
+                    }
+                    const label = btn.querySelector("#indicator-label");
+                    if (label) {
+                        label.textContent = isBox
+                            ? (btn.dataset.textBox || t("Bounding box"))
+                            : (btn.dataset.textDot || t("Dot"));
+                    }
+                }
+                notify(data?.message || (isBox ? t("Bounding box") : t("Dot")), "success");
+            })
+            .catch((err) => {
+                notify(err?.message || t("Failed to switch indicator mode"), "danger");
+            })
+            .finally(() => {
+                if (btn) {
+                    btn.disabled = false;
+                }
+            });
+    },
+
+    /**
      * Refresh displayed totals using server counts and keyboard inputs.
      *
      * @returns {void}
@@ -532,6 +608,13 @@ const CounterPage = {
         document.getElementById("save-capture")?.addEventListener("click", () => {
             this.saveCapture(urls.capture);
         });
+
+        const btnToggleIndicator = document.getElementById("btn-toggle-indicator");
+        if (btnToggleIndicator && urls.indicatorMode) {
+            btnToggleIndicator.addEventListener("click", () => {
+                this.toggleIndicatorMode(urls.indicatorMode);
+            });
+        }
     },
 
     /**
