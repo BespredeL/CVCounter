@@ -16,6 +16,13 @@ except ImportError:
 
 try:
     from ultralytics import YOLO, settings
+    # Disable CUDA Graph capture in Ultralytics TensorRT backend to ensure thread-safety
+    # and prevent 'Offset increment outside graph capture encountered unexpectedly' errors
+    try:
+        from ultralytics.nn.backends import tensorrt as trt_backend
+        trt_backend.TORCH_1_10 = False
+    except Exception:
+        pass
     _ULTRALYTICS_AVAILABLE = True
 except ImportError:
     YOLO = None
@@ -72,6 +79,12 @@ class ObjectDetectionYOLO(BaseObjectDetectionService):
                 verbose=kwargs.get('verbose', self.verbose),
             )
         except Exception as e:
+            if torch is not None and torch.cuda.is_available():
+                try:
+                    torch.cuda.empty_cache()
+                    torch.cuda.manual_seed(0)
+                except Exception:
+                    pass
             if hasattr(self, 'weights') and self.weights and Path(self.weights).suffix.lower() in ('.engine', '.trt'):
                 from system.object_detection.registry import find_fallback_weights
                 fallback = find_fallback_weights(self.weights)
@@ -155,6 +168,12 @@ class ObjectDetectionYOLO(BaseObjectDetectionService):
                     )
 
         try:
+            if ext in ('.engine', '.trt'):
+                try:
+                    from ultralytics.nn.backends import tensorrt as trt_backend
+                    trt_backend.TORCH_1_10 = False
+                except Exception:
+                    pass
             self.model = YOLO(weights)
             # If TensorRT engine, do quick warmup verification to catch missing backend or CUDA mismatch early
             if ext in ('.engine', '.trt'):
