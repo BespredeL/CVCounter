@@ -34,7 +34,12 @@ def is_ajax() -> bool:
     Returns:
         bool: True if the request is an AJAX request.
     """
-    return str(request.headers.get('X-Requested-With')).lower() == 'XMLHttpRequest'.lower()
+    if str(request.headers.get('X-Requested-With', '')).lower() == 'xmlhttprequest':
+        return True
+    accept = request.headers.get('Accept', '')
+    if 'application/json' in accept:
+        return True
+    return False
 
 
 def slug(s: str) -> str:

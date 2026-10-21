@@ -255,21 +255,61 @@ const CounterPage = {
      * @returns {void}
      */
     saveCapture(url) {
-        fetch(url)
-            .then((r) => r.json())
-            .then((data) => {
-                const statusClass = data?.status === "saved" ? "btn-success" : "btn-danger";
-                const btn = document.getElementById("save-capture");
+        const btn = document.getElementById("save-capture");
+        if (btn) {
+            btn.disabled = true;
+        }
 
-                if (!btn) {
-                    return;
+        const notify = (msg, type = "primary") => {
+            if (typeof window.showToast === "function") {
+                window.showToast(msg, type);
+            } else if (typeof showToast === "function") {
+                showToast(msg, type);
+            }
+        };
+
+        const t = (key, params) => {
+            if (typeof window.trans === "function") {
+                return window.trans(key, params);
+            }
+            return key;
+        };
+
+        fetch(url, {
+            headers: {
+                "X-Requested-With": "XMLHttpRequest",
+                "Accept": "application/json",
+            },
+        })
+            .then(async (r) => {
+                const data = await r.json().catch(() => null);
+                if (!r.ok || data?.status !== "saved") {
+                    throw new Error(data?.message || t("Failed to capture frame"));
                 }
-
-                btn.classList.add(statusClass);
-
-                setTimeout(() => {
-                    btn.classList.remove(statusClass);
-                }, 500);
+                return data;
+            })
+            .then((data) => {
+                if (btn) {
+                    btn.classList.add("btn-success");
+                    setTimeout(() => btn.classList.remove("btn-success"), 1200);
+                }
+                const filename = data?.filename || "";
+                const msg = filename
+                    ? `${t("Saved frame")}: ${filename}`
+                    : t("Saved frame");
+                notify(msg, "success");
+            })
+            .catch((err) => {
+                if (btn) {
+                    btn.classList.add("btn-danger");
+                    setTimeout(() => btn.classList.remove("btn-danger"), 1200);
+                }
+                notify(err?.message || t("Failed to capture frame"), "danger");
+            })
+            .finally(() => {
+                if (btn) {
+                    btn.disabled = false;
+                }
             });
     },
 

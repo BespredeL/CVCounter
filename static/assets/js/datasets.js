@@ -1502,11 +1502,12 @@
         const searchVal = (document.getElementById('images-search-input')?.value || '').trim().toLowerCase();
 
         const tableRows = Array.from(document.querySelectorAll('#images-tbody tr[data-name]'));
-        const gridCols = Array.from(document.querySelectorAll('#images-grid-cards .grid-card-col[data-name]'));
+        const gridCols = Array.from(document.querySelectorAll('#images-grid-row .img-grid-item[data-name], #images-grid-view .img-grid-item[data-name]'));
 
         const visibleNames = [];
+        const sourceItems = tableRows.length ? tableRows : gridCols;
 
-        tableRows.forEach((tr) => {
+        sourceItems.forEach((tr) => {
             const name = tr.dataset.name;
             const sp = tr.dataset.split || '';
             const isLab = tr.dataset.labeled === '1';
