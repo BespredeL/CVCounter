@@ -343,26 +343,30 @@
         border: 1px solid #fca5a5 !important;
     }
 
-    /* --- 7. Two-column grid layout --- */
+    /* --- 7. Single-column print layout --- */
     .reports-detail-page .row.g-4 {
         display: flex !important;
-        flex-direction: row !important;
-        gap: 12px !important;
+        flex-direction: column !important;
+        gap: 0 !important;
         margin: 0 !important;
         width: 100% !important;
     }
 
-    .reports-detail-page .row.g-4>.col-lg-7 {
-        flex: 0 0 calc(58% - 6px) !important;
-        max-width: calc(58% - 6px) !important;
-        width: calc(58% - 6px) !important;
+    /* 1. Хронология сессии + 2. Дополнительно (в col-lg-5) идут первыми */
+    .reports-detail-page .row.g-4>.col-lg-5 {
+        order: 1 !important;
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        width: 100% !important;
         padding: 0 !important;
     }
 
-    .reports-detail-page .row.g-4>.col-lg-5 {
-        flex: 0 0 calc(42% - 6px) !important;
-        max-width: calc(42% - 6px) !important;
-        width: calc(42% - 6px) !important;
+    /* 3. Распределение по классам + 4. Всё остальное (в col-lg-7) идут следом */
+    .reports-detail-page .row.g-4>.col-lg-7 {
+        order: 2 !important;
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        width: 100% !important;
         padding: 0 !important;
     }
 
