@@ -83,6 +83,7 @@
             this.panning = null;
             this.editDrag = null;
             this.undoStack = [];
+            this.redoStack = [];
             this.maxUndo = 30;
 
             this.fillClassSelect();
@@ -107,6 +108,7 @@
             if (this.undoStack.length > this.maxUndo) {
                 this.undoStack.shift();
             }
+            this.redoStack = [];
         }
 
         undo() {
@@ -114,6 +116,8 @@
                 this.setStatus(t('Nothing to undo'), 'info');
                 return;
             }
+            const currentSnapshot = JSON.stringify(this.doc.shapes || []);
+            this.redoStack.push(currentSnapshot);
             const prev = this.undoStack.pop();
             try {
                 this.doc.shapes = JSON.parse(prev);
@@ -123,6 +127,25 @@
                 this.renderAttrs();
                 this.redraw();
                 this.setStatus(t('Undo applied'), 'info');
+            } catch (_) {}
+        }
+
+        redo() {
+            if (!this.redoStack.length) {
+                this.setStatus(t('Nothing to redo'), 'info');
+                return;
+            }
+            const currentSnapshot = JSON.stringify(this.doc.shapes || []);
+            this.undoStack.push(currentSnapshot);
+            const next = this.redoStack.pop();
+            try {
+                this.doc.shapes = JSON.parse(next);
+                this.selectedId = null;
+                this.markDirty();
+                this.renderShapesList();
+                this.renderAttrs();
+                this.redraw();
+                this.setStatus(t('Redo applied'), 'info');
             } catch (_) {}
         }
 
@@ -230,6 +253,7 @@
             document.getElementById('ann-next').addEventListener('click', () => this.navigate(1));
             document.getElementById('ann-skip').addEventListener('click', () => this.navigate(1, true));
             document.getElementById('ann-undo')?.addEventListener('click', () => this.undo());
+            document.getElementById('ann-redo')?.addEventListener('click', () => this.redo());
             document.getElementById('ann-save').addEventListener('click', () => this.save());
             document.getElementById('ann-delete').addEventListener('click', () => this.deleteSelected());
             document.getElementById('ann-delete-image')?.addEventListener('click', () => this.deleteCurrentImage());
@@ -442,6 +466,7 @@
             this.drawing = null;
             this.editDrag = null;
             this.undoStack = [];
+            this.redoStack = [];
             this.setLoading(true);
             this.emptyEl?.classList.add('d-none');
             this.setStatus(t('Loading…'));
@@ -1307,44 +1332,80 @@
         }
 
         onKey(e) {
-            if (e.target.matches('input, textarea, select')) return;
-            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+            // Ignore when typing inside text inputs and textareas
+            const isTextInput = e.target.matches("input[type='text'], input[type='search'], input[type='number'], input[type='password'], textarea");
+            if (isTextInput) {
+                if (e.key === 'Escape') {
+                    e.target.blur();
+                    this.setMode('select');
+                }
+                return;
+            }
+
+            // If a select dropdown is focused, allow Esc to unfocus and switch to select mode
+            if (e.target.matches('select')) {
+                if (e.key === 'Escape') {
+                    e.target.blur();
+                    this.setMode('select');
+                    return;
+                }
+                // Allow up/down arrows to navigate options within select
+                if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                    return;
+                }
+                // For any action shortcut, blur the select so the shortcut runs cleanly
+                e.target.blur();
+            }
+
+            // Undo: Ctrl+Z (supports English and Russian layouts)
+            if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyZ' || e.key.toLowerCase() === 'z' || e.key === 'я' || e.key === 'Я') && !e.shiftKey) {
                 e.preventDefault();
                 this.undo();
-            } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+            } else if ((e.ctrlKey || e.metaKey) && (
+                e.code === 'KeyY' || e.key.toLowerCase() === 'y' || e.key === 'н' || e.key === 'Н' ||
+                (e.shiftKey && (e.code === 'KeyZ' || e.key.toLowerCase() === 'z' || e.key === 'я' || e.key === 'Я'))
+            )) {
+                e.preventDefault();
+                this.redo();
+            } else if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyA' || e.key.toLowerCase() === 'a' || e.key === 'ф' || e.key === 'Ф')) {
                 e.preventDefault();
                 this.autoLabelCurrent();
-            } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+            } else if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyS' || e.key.toLowerCase() === 's' || e.key === 'ы' || e.key === 'Ы')) {
                 e.preventDefault();
                 this.save();
-            } else if (e.key === 'a' || e.key === 'A') {
+            } else if (e.code === 'KeyA' || e.key === 'a' || e.key === 'A' || e.key === 'ф' || e.key === 'Ф' || e.key === 'ArrowLeft') {
                 e.preventDefault();
                 this.navigate(-1);
-            } else if (e.key === 'd' || e.key === 'D') {
+            } else if (e.code === 'KeyD' || e.key === 'd' || e.key === 'D' || e.key === 'в' || e.key === 'В' || e.key === 'ArrowRight') {
                 e.preventDefault();
                 this.navigate(1);
-            } else if (e.key === ' ') {
+            } else if (e.key === ' ' || e.code === 'Space') {
                 e.preventDefault();
                 this.navigate(1, true);
-            } else if (e.key === 'w' || e.key === 'W') {
+            } else if (e.code === 'KeyW' || e.key === 'w' || e.key === 'W' || e.key === 'ц' || e.key === 'Ц') {
                 this.setMode('rect');
-            } else if (e.key === 'v' || e.key === 'V' || e.key === 'Escape') {
+            } else if (e.code === 'KeyP' || e.key === 'p' || e.key === 'P' || e.key === 'з' || e.key === 'З') {
+                if (document.getElementById('ann-mode-poly')) {
+                    this.setMode('poly');
+                }
+            } else if (e.code === 'KeyV' || e.key === 'v' || e.key === 'V' || e.key === 'м' || e.key === 'М' || e.key === 'Escape') {
                 this.setMode('select');
             } else if (e.key === 'Delete' || e.key === 'Backspace') {
                 e.preventDefault();
                 this.deleteSelected();
-            } else if (e.key === '=' || e.key === '+') {
+            } else if (e.key === '=' || e.key === '+' || e.code === 'NumpadAdd' || e.code === 'Equal') {
                 e.preventDefault();
                 this.nudgeZoom(1.25);
-            } else if (e.key === '-' || e.key === '_') {
+            } else if (e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract' || e.code === 'Minus') {
                 e.preventDefault();
                 this.nudgeZoom(1 / 1.25);
-            } else if (e.key === '0') {
+            } else if (e.key === '0' || e.code === 'Digit0' || e.code === 'Numpad0') {
                 e.preventDefault();
                 this.resetView();
-            } else if (/^[1-9]$/.test(e.key)) {
-                const idx = Number(e.key) - 1;
-                if (this.classes[idx]) {
+            } else if (/^[1-9]$/.test(e.key) || (e.code && (e.code.startsWith('Digit') || e.code.startsWith('Numpad')) && !e.code.endsWith('0'))) {
+                const num = parseInt(e.key, 10) || parseInt(e.code.replace(/\D/g, ''), 10);
+                const idx = num - 1;
+                if (idx >= 0 && this.classes[idx]) {
                     this.classSelect.value = this.classes[idx];
                     const shape = this.selectedShape();
                     if (shape) {
@@ -1354,7 +1415,7 @@
                         this.redraw();
                     }
                 }
-            } else if (e.key === 'Enter' && this.mode === 'poly') {
+            } else if ((e.key === 'Enter' || e.code === 'Enter' || e.code === 'NumpadEnter') && this.mode === 'poly') {
                 this.finishPolygon();
             }
         }

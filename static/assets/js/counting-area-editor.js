@@ -737,6 +737,11 @@ class CountingAreaEditor {
         // Keyboard shortcuts
         window.addEventListener("keydown", (e) => this.onKeyDown(e));
         window.addEventListener("keyup", (e) => this.onKeyUp(e));
+        window.addEventListener("blur", () => {
+            this.isSpacePressed = false;
+            this.isAltPressed = false;
+            this.canvas.classList.remove("cursor-grab", "cursor-grabbing");
+        });
 
         // Canvas / Viewport pointer events
         this.bindPointerEvents();
@@ -1218,24 +1223,28 @@ class CountingAreaEditor {
      * Handle keydown shortcuts
      */
     onKeyDown(e) {
-        if (e.target.matches("input, textarea, select")) return;
+        // Ignore typing inside text inputs and textareas
+        if (e.target.matches("input[type='text'], input[type='search'], input[type='number'], input[type='password'], textarea")) return;
 
-        // Ctrl+Z: Undo
-        if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z") && !e.shiftKey) {
+        // Ctrl+Z: Undo (supports English and Russian layouts)
+        if ((e.ctrlKey || e.metaKey) && (e.code === "KeyZ" || e.key === "z" || e.key === "Z" || e.key === "я" || e.key === "Я") && !e.shiftKey) {
             e.preventDefault();
             this.undo();
             return;
         }
 
         // Ctrl+Y or Ctrl+Shift+Z: Redo
-        if ((e.ctrlKey || e.metaKey) && (e.key === "y" || e.key === "Y" || (e.shiftKey && (e.key === "z" || e.key === "Z")))) {
+        if ((e.ctrlKey || e.metaKey) && (
+            e.code === "KeyY" || e.key === "y" || e.key === "Y" || e.key === "н" || e.key === "Н" ||
+            (e.shiftKey && (e.code === "KeyZ" || e.key === "z" || e.key === "Z" || e.key === "я" || e.key === "Я"))
+        )) {
             e.preventDefault();
             this.redo();
             return;
         }
 
         // Ctrl+S: Save
-        if ((e.ctrlKey || e.metaKey) && (e.key === "s" || e.key === "S")) {
+        if ((e.ctrlKey || e.metaKey) && (e.code === "KeyS" || e.key === "s" || e.key === "S" || e.key === "ы" || e.key === "Ы")) {
             e.preventDefault();
             this.save();
             return;
@@ -1244,44 +1253,53 @@ class CountingAreaEditor {
         // Space: Pan tool
         if (e.code === "Space" && !this.isSpacePressed) {
             this.isSpacePressed = true;
+            if (e.target && typeof e.target.blur === "function") {
+                e.target.blur();
+            }
             this.canvas.classList.add("cursor-grab");
             e.preventDefault();
             return;
         }
 
         // Alt: Whole zone drag
-        if (e.key === "Alt") {
+        if (e.key === "Alt" || e.code === "AltLeft" || e.code === "AltRight") {
             this.isAltPressed = true;
         }
 
-        // Tool shortcuts
-        if (e.key === "v" || e.key === "V" || e.key === "1") {
+        // Tool mode shortcuts (keys 1-3, V, P, R in EN and RU layouts)
+        if (e.code === "KeyV" || e.code === "Digit1" || e.code === "Numpad1" || e.key === "v" || e.key === "V" || e.key === "м" || e.key === "М") {
             this.setToolMode("edit");
-        } else if (e.key === "p" || e.key === "P" || e.key === "2") {
+        } else if (e.code === "KeyP" || e.code === "Digit2" || e.code === "Numpad2" || e.key === "p" || e.key === "P" || e.key === "з" || e.key === "З") {
             this.setToolMode("draw");
-        } else if (e.key === "r" || e.key === "R" || e.key === "3") {
+        } else if (e.code === "KeyR" || e.code === "Digit3" || e.code === "Numpad3" || e.key === "r" || e.key === "R" || e.key === "к" || e.key === "К") {
             this.setToolMode("rect");
-        } else if (e.key === "f" || e.key === "F") {
+        } else if (e.code === "KeyF" || e.key === "f" || e.key === "F" || e.key === "а" || e.key === "А") {
             this.fitToView();
-        } else if (e.key === "+" || e.key === "=") {
+        } else if (e.key === "+" || e.key === "=" || e.code === "NumpadAdd" || e.code === "Equal") {
             this.zoomStep(1.25);
-        } else if (e.key === "-" || e.key === "_") {
+        } else if (e.key === "-" || e.key === "_" || e.code === "NumpadSubtract" || e.code === "Minus") {
             this.zoomStep(1 / 1.25);
-        } else if (e.key === "0") {
-            this.fitToView();
+        } else if (e.code === "Digit0" || e.code === "Numpad0" || e.key === "0") {
+            this.resetZoomTo100();
         } else if (e.key === "Escape") {
             if (this.toolMode !== "edit") {
                 this.setToolMode("edit");
             }
         } else if (e.key === "Delete" || e.key === "Backspace") {
-            // Delete hovered vertex or clear active
-            if (this.hoverVertexIndex >= 0 && this.points.length > COUNTING_AREA_MIN_POINTS) {
-                this.pushState();
-                this.points.splice(this.hoverVertexIndex, 1);
-                this.hoverVertexIndex = -1;
-                this.syncActiveZoneUI();
-                this.renderZoneList();
-                this.redraw();
+            // Delete hovered vertex or clear active zone
+            if (this.hoverVertexIndex >= 0) {
+                if (this.points.length > COUNTING_AREA_MIN_POINTS) {
+                    this.pushState();
+                    this.points.splice(this.hoverVertexIndex, 1);
+                    this.hoverVertexIndex = -1;
+                    this.syncActiveZoneUI();
+                    this.renderZoneList();
+                    this.redraw();
+                } else {
+                    showToast(window.trans("Need at least 3 points"), "warning");
+                }
+            } else if (this.points.length > 0) {
+                this.clearActiveZone();
             }
         }
     }
@@ -1294,7 +1312,7 @@ class CountingAreaEditor {
             this.isSpacePressed = false;
             this.canvas.classList.remove("cursor-grab", "cursor-grabbing");
         }
-        if (e.key === "Alt") {
+        if (e.key === "Alt" || e.code === "AltLeft" || e.code === "AltRight") {
             this.isAltPressed = false;
         }
     }

@@ -56,12 +56,12 @@
 
                 <div class="btn-group btn-group-sm" role="group" aria-label="{{ trans('Select') }}">
                     <button type="button" class="btn btn-outline-primary active" id="ann-mode-select"
-                            data-mode="select">{{ trans('Select') }}</button>
+                            data-mode="select" title="V / Esc">{{ trans('Select') }}</button>
                     <button type="button" class="btn btn-outline-primary" id="ann-mode-rect" data-mode="rect"
                             title="W">{{ trans('Box') }}</button>
                     {% if dataset.task in ['segment', 'detect'] %}
                         <button type="button" class="btn btn-outline-primary" id="ann-mode-poly"
-                                data-mode="poly">{{ trans('Polygon') }}</button>
+                                data-mode="poly" title="P">{{ trans('Polygon') }}</button>
                     {% endif %}
                 </div>
 
@@ -98,6 +98,14 @@
                             <path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466"/>
                         </svg>
                         <span>{{ trans('Undo') }}</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center" id="ann-redo"
+                            title="Ctrl+Y / Ctrl+Shift+Z · {{ trans('Redo') }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-arrow-clockwise me-1" viewBox="0 0 16 16" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+                            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192L10.77 2.308a.25.25 0 0 1 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
+                        </svg>
+                        <span>{{ trans('Redo') }}</span>
                     </button>
                     <button type="button" class="btn btn-sm btn-outline-success d-inline-flex align-items-center" id="ann-autolabel"
                             title="Ctrl+A · {{ trans('Run Auto-label on this image only (uses model from dataset settings).') }}">
@@ -195,14 +203,17 @@
 
                 <div class="annotator__hotkeys text-body-secondary mb-0">
                     <div class="mb-3">
-                        <kbd>A</kbd> / <kbd>D</kbd> - {{ trans('frames') }}<br>
+                        <kbd>A</kbd> / <kbd>D</kbd> (<kbd>&larr;</kbd>/<kbd>&rarr;</kbd>) - {{ trans('frames') }}<br>
                         <kbd>W</kbd> - {{ trans('Box') }}<br>
+                        {% if dataset.task in ['segment', 'detect'] %}
+                            <kbd>P</kbd> - {{ trans('Polygon') }}<br>
+                        {% endif %}
                         <kbd>1</kbd> – <kbd>9</kbd> - {{ trans('class') }}<br>
                     </div>
 
                     <div class="mb-3">
                         <kbd>Del</kbd> - {{ trans('Delete shape') }}<br>
-                        <kbd>Ctrl</kbd> + <kbd>Z</kbd> - {{ trans('Undo') }}<br>
+                        <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd> - {{ trans('Undo') }} / {{ trans('Redo') }}<br>
                         <kbd>Space</kbd> - {{ trans('Skip') }}<br>
                         <kbd>Ctrl</kbd> + <kbd>A</kbd> - {{ trans('Auto-label') }}<br>
                         <kbd>Ctrl</kbd> + <kbd>S</kbd> - {{ trans('Save') }}<br>
@@ -220,7 +231,7 @@
 
     <!-- Modal Shortcuts -->
     <div class="modal fade" id="shortcutsModal" tabindex="-1" aria-labelledby="shortcutsModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title d-flex align-items-center gap-2" id="shortcutsModalLabel">
@@ -235,12 +246,15 @@
                 <div class="modal-body p-0">
                     <table class="table table-sm table-hover mb-0">
                         <tbody>
-                            <tr><td class="ps-3"><kbd>A</kbd> / <kbd>D</kbd></td><td>{{ trans('Previous') }} / {{ trans('Next image') }}</td></tr>
+                            <tr><td class="ps-3"><kbd>A</kbd> / <kbd>D</kbd> / <kbd>&larr;</kbd> / <kbd>&rarr;</kbd></td><td>{{ trans('Previous') }} / {{ trans('Next image') }}</td></tr>
                             <tr><td class="ps-3"><kbd>Space</kbd></td><td>{{ trans('Skip') }} ({{ trans('Next without save') }})</td></tr>
                             <tr><td class="ps-3"><kbd>W</kbd></td><td>{{ trans('Rectangle mode') }}</td></tr>
+                            {% if dataset.task in ['segment', 'detect'] %}
+                            <tr><td class="ps-3"><kbd>P</kbd></td><td>{{ trans('Polygon') }} ({{ trans('Draw polygon') }}, <kbd>Enter</kbd> - {{ trans('Apply') }})</td></tr>
+                            {% endif %}
                             <tr><td class="ps-3"><kbd>V</kbd> / <kbd>Esc</kbd></td><td>{{ trans('Select mode') }}</td></tr>
                             <tr><td class="ps-3"><kbd>1</kbd> – <kbd>9</kbd></td><td>{{ trans('Active class for new shapes. Keys 1–9 switch class.') }}</td></tr>
-                            <tr><td class="ps-3"><kbd>Ctrl</kbd> + <kbd>Z</kbd></td><td>{{ trans('Undo last shape action') }}</td></tr>
+                            <tr><td class="ps-3"><kbd>Ctrl</kbd> + <kbd>Z</kbd> / <kbd>Ctrl</kbd> + <kbd>Y</kbd></td><td>{{ trans('Undo') }} / {{ trans('Redo') }}</td></tr>
                             <tr><td class="ps-3"><kbd>Ctrl</kbd> + <kbd>S</kbd></td><td>{{ trans('Save') }}</td></tr>
                             <tr><td class="ps-3"><kbd>Ctrl</kbd> + <kbd>A</kbd></td><td>{{ trans('Auto-label') }}</td></tr>
                             <tr><td class="ps-3"><kbd>Del</kbd> / <kbd>Backspace</kbd></td><td>{{ trans('Delete the selected shape, not the image.') }}</td></tr>
