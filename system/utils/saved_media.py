@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 import threading
 from datetime import datetime
@@ -104,6 +105,21 @@ def _file_meta(path: Path) -> dict[str, Any]:
     }
 
 
+def _file_meta_from_entry(entry: os.DirEntry) -> dict[str, Any]:
+    """
+    Get file metadata directly from an os.DirEntry, leveraging cached stat attributes.
+    """
+    stat = entry.stat()
+    mtime = datetime.fromtimestamp(stat.st_mtime)
+    return {
+        'name': entry.name,
+        'size': stat.st_size,
+        'size_label': _format_size(stat.st_size),
+        'mtime': mtime,
+        'mtime_label': mtime.strftime('%d.%m.%Y %H:%M:%S'),
+    }
+
+
 def images_dir_for_location(location: str, config=None) -> Path:
     """
     Resolve the folder where capture images for ``location`` are stored.
@@ -195,17 +211,23 @@ def list_saved_images(
     folder = images_dir_for_location(location, config)
     if not folder.is_dir():
         return []
-    files = [
-        p for p in folder.iterdir()
-        if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS
-    ]
-    files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+
+    try:
+        with os.scandir(folder) as it:
+            entries = [
+                entry for entry in it
+                if entry.is_file() and Path(entry.name).suffix.lower() in IMAGE_EXTENSIONS
+            ]
+    except OSError:
+        return []
+
+    entries.sort(key=lambda e: e.stat().st_mtime, reverse=True)
     offset = max(0, int(offset or 0))
     limit = max(0, int(limit or 0))
     if limit == 0:
         return []
-    files = files[offset: offset + limit]
-    return [_file_meta(p) for p in files]
+    entries = entries[offset: offset + limit]
+    return [_file_meta_from_entry(e) for e in entries]
 
 
 def list_saved_recordings(
@@ -229,17 +251,23 @@ def list_saved_recordings(
     folder = recordings_dir_for_location(location, config)
     if not folder.is_dir():
         return []
-    files = [
-        p for p in folder.iterdir()
-        if p.is_file() and p.suffix.lower() in VIDEO_EXTENSIONS
-    ]
-    files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+
+    try:
+        with os.scandir(folder) as it:
+            entries = [
+                entry for entry in it
+                if entry.is_file() and Path(entry.name).suffix.lower() in VIDEO_EXTENSIONS
+            ]
+    except OSError:
+        return []
+
+    entries.sort(key=lambda e: e.stat().st_mtime, reverse=True)
     offset = max(0, int(offset or 0))
     limit = max(0, int(limit or 0))
     if limit == 0:
         return []
-    files = files[offset: offset + limit]
-    return [_file_meta(p) for p in files]
+    entries = entries[offset: offset + limit]
+    return [_file_meta_from_entry(e) for e in entries]
 
 
 def count_saved_images(location: str, config=None) -> int:
@@ -251,10 +279,14 @@ def count_saved_images(location: str, config=None) -> int:
     folder = images_dir_for_location(location, config)
     if not folder.is_dir():
         return 0
-    return sum(
-        1 for p in folder.iterdir()
-        if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS
-    )
+    try:
+        with os.scandir(folder) as it:
+            return sum(
+                1 for entry in it
+                if entry.is_file() and Path(entry.name).suffix.lower() in IMAGE_EXTENSIONS
+            )
+    except OSError:
+        return 0
 
 
 def count_saved_recordings(location: str, config=None) -> int:
@@ -266,10 +298,14 @@ def count_saved_recordings(location: str, config=None) -> int:
     folder = recordings_dir_for_location(location, config)
     if not folder.is_dir():
         return 0
-    return sum(
-        1 for p in folder.iterdir()
-        if p.is_file() and p.suffix.lower() in VIDEO_EXTENSIONS
-    )
+    try:
+        with os.scandir(folder) as it:
+            return sum(
+                1 for entry in it
+                if entry.is_file() and Path(entry.name).suffix.lower() in VIDEO_EXTENSIONS
+            )
+    except OSError:
+        return 0
 
 
 def resolve_saved_image(location: str, filename: str, config=None) -> Optional[Path]:

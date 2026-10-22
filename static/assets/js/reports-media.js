@@ -256,4 +256,65 @@
         resetMedia();
         currentIndex = -1;
     });
+
+    /* --- Lazy Loading for Media Thumbnails --- */
+    function initMediaLazyLoading() {
+        const lazyImages = root.querySelectorAll("img.reports-media__lazy-img");
+        if (!lazyImages.length) return;
+
+        function markLoaded(img) {
+            img.classList.add("is-loaded");
+            const frame = img.closest(".reports-media__thumb-frame");
+            if (frame) {
+                frame.classList.add("is-loaded");
+            }
+        }
+
+        function loadImage(img) {
+            const dataSrc = img.dataset.src;
+            if (!dataSrc || img.dataset.lazyLoaded === "true") return;
+            img.dataset.lazyLoaded = "true";
+
+            img.addEventListener("load", () => markLoaded(img), { once: true });
+            img.addEventListener("error", () => markLoaded(img), { once: true });
+
+            img.src = dataSrc;
+            if (img.complete) {
+                markLoaded(img);
+            }
+        }
+
+        if (!("IntersectionObserver" in window)) {
+            lazyImages.forEach(loadImage);
+            return;
+        }
+
+        const observer = new IntersectionObserver((entries, obs) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    obs.unobserve(img);
+                    loadImage(img);
+                }
+            });
+        }, {
+            rootMargin: "200px 0px",
+            threshold: 0.01
+        });
+
+        lazyImages.forEach((img) => observer.observe(img));
+
+        root.querySelectorAll('[data-bs-toggle="tab"]').forEach((tabBtn) => {
+            tabBtn.addEventListener("shown.bs.tab", () => {
+                const activePane = root.querySelector(".tab-pane.active");
+                if (activePane) {
+                    activePane.querySelectorAll("img.reports-media__lazy-img:not([data-lazy-loaded='true'])").forEach((img) => {
+                        observer.observe(img);
+                    });
+                }
+            });
+        });
+    }
+
+    initMediaLazyLoading();
 })();

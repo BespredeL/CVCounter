@@ -113,9 +113,19 @@ class ObjectDetectionYOLO(BaseObjectDetectionService):
                 raise
 
         boxes = results[0].boxes
-        boxes_xyxy = boxes.xyxy.cpu().numpy()
-        confidences = boxes.conf.cpu().numpy()
-        classes = boxes.cls.cpu().numpy().astype(int)
+        if boxes is None or len(boxes) == 0:
+            import numpy as np
+            return np.empty((0, 4)), np.empty((0,)), np.empty((0,), dtype=int)
+
+        if hasattr(boxes, 'data') and boxes.data is not None:
+            data = boxes.data.cpu().numpy()
+            boxes_xyxy = data[:, :4]
+            confidences = data[:, 4]
+            classes = data[:, 5].astype(int)
+        else:
+            boxes_xyxy = boxes.xyxy.cpu().numpy()
+            confidences = boxes.conf.cpu().numpy()
+            classes = boxes.cls.cpu().numpy().astype(int)
 
         return boxes_xyxy, confidences, classes
 

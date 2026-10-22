@@ -373,6 +373,26 @@ class DatabaseManager:
         finally:
             session.close()
 
+    def get_session_counts_by_location(self) -> dict[str, int]:
+        """
+        Returns a mapping of location -> total saved session count in a single query.
+
+        Returns:
+            dict[str, int]: Map of location to number of sessions.
+        """
+        session = self.create_session()
+        try:
+            rows = session.query(
+                CVCounter.location,
+                func.count(CVCounter.id)
+            ).group_by(CVCounter.location).all()
+            return {str(loc): int(cnt) for loc, cnt in rows}
+        except SQLAlchemyError as error:
+            self.__logger.error(f"Error retrieving session counts by location: {error}")
+            return {}
+        finally:
+            session.close()
+
     def close(self) -> None:
         """
         Closes all database connections and releases resources.

@@ -64,7 +64,7 @@ def nms_boxes(
         iou_threshold: float,
 ) -> DetectionResult:
     """
-    Fast Non-Maximum Suppression for boxes using OpenCV's vectorized C++ implementation.
+    Non-Maximum Suppression for bounding boxes.
 
     Args:
         boxes_xyxy (ndarray): The boxes to suppress in [x1, y1, x2, y2] format.
@@ -85,14 +85,35 @@ def nms_boxes(
     boxes_xywh[:, 2] = np.maximum(0.0, boxes_xyxy[:, 2] - boxes_xyxy[:, 0])
     boxes_xywh[:, 3] = np.maximum(0.0, boxes_xyxy[:, 3] - boxes_xyxy[:, 1])
 
+    # Batched multi-class NMS
+    if hasattr(cv2.dnn, 'NMSBoxesBatched'):
+        try:
+            nms_indices = cv2.dnn.NMSBoxesBatched(
+                bboxes=boxes_xywh,
+                scores=confidences,
+                class_ids=classes.astype(np.int32),
+                score_threshold=0.0,
+                nms_threshold=float(iou_threshold),
+            )
+            if len(nms_indices) == 0:
+                return (
+                    np.empty((0, 4), dtype=boxes_xyxy.dtype),
+                    np.empty((0,), dtype=confidences.dtype),
+                    np.empty((0,), dtype=classes.dtype),
+                )
+            keep_indices = np.asarray(nms_indices).flatten()
+            return boxes_xyxy[keep_indices], confidences[keep_indices], classes[keep_indices]
+        except Exception:
+            pass
+
     keep_indices = []
     # Class-aware NMS
     for class_id in np.unique(classes):
         class_mask = (classes == class_id)
         class_indices = np.where(class_mask)[0]
 
-        cls_boxes = boxes_xywh[class_mask].tolist()
-        cls_scores = confidences[class_mask].tolist()
+        cls_boxes = boxes_xywh[class_mask]
+        cls_scores = confidences[class_mask]
 
         nms_indices = cv2.dnn.NMSBoxes(
             bboxes=cls_boxes,
@@ -101,7 +122,7 @@ def nms_boxes(
             nms_threshold=float(iou_threshold),
         )
         if len(nms_indices) > 0:
-            flat_indices = np.array(nms_indices).flatten()
+            flat_indices = np.asarray(nms_indices).flatten()
             keep_indices.extend(class_indices[flat_indices])
 
     if not keep_indices:

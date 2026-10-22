@@ -92,9 +92,10 @@ def reports() -> str:
     from system.utils.telemetry import get_telemetry
     get_telemetry().track('reports_view')
 
+    session_counts = db_manager.get_session_counts_by_location()
+
     for loc_key, loc_title in locations_dict.items():
-        paginated = db_manager.get_paginated(loc_key, page=1, per_page=1)
-        loc_reports = paginated['total'] if paginated else 0
+        loc_reports = session_counts.get(loc_key, 0)
         loc_images = count_saved_images(loc_key, config=config)
         loc_videos = count_saved_recordings(loc_key, config=config)
         is_active = loc_key in active_counters

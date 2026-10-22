@@ -4,6 +4,7 @@
 # Developed by: Aleksandr Kireev
 # Website: https://bespredel.name
 
+from collections import deque
 import json
 import os
 from pathlib import Path
@@ -74,6 +75,39 @@ def _get_label_font(size: int = 13) -> ImageFont.ImageFont | None:
     return _LABEL_FONT
 
 
+_BADGE_CACHE: dict[tuple[str, tuple[int, int, int]], np.ndarray] = {}
+_MAX_BADGE_CACHE_SIZE: int = 500
+
+
+def _render_cached_badge(label: str, color: tuple[int, int, int], font: ImageFont.ImageFont) -> np.ndarray:
+    """
+    Renders or fetches a cached text badge image for bounding box indicators.
+    """
+    global _BADGE_CACHE
+    key = (label, color)
+    cached = _BADGE_CACHE.get(key)
+    if cached is not None:
+        return cached
+
+    mask_w, mask_h = font.getmask(label).size
+    pad_x, pad_y = 5, 3
+    badge_w = mask_w + pad_x * 2
+    badge_h = mask_h + pad_y * 2 + 2
+
+    # BGR to RGB for PIL
+    rgb_color = (int(color[2]), int(color[1]), int(color[0]))
+    img = Image.new('RGB', (badge_w, badge_h), color=rgb_color)
+    draw = ImageDraw.Draw(img)
+    draw.text((pad_x, pad_y), label, font=font, fill=(0, 0, 0))
+    badge_np = cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2BGR)
+
+    if len(_BADGE_CACHE) >= _MAX_BADGE_CACHE_SIZE:
+        _BADGE_CACHE.clear()
+    _BADGE_CACHE[key] = badge_np
+    return badge_np
+
+
+
 def _placeholder_mjpeg_chunk() -> bytes:
     """
     Minimal multipart JPEG chunk so Werkzeug commits headers before the first real frame.
@@ -138,6 +172,8 @@ class ObjectCounter:
 
         # Init variables
         self.total_objects: set = set()
+        self._total_objects_queue: deque = deque()
+        self._max_tracked_history: int = 30000
         self.total_count: int = 0
         self.current_count: int = 0
         self.defect_count: int = 0
@@ -584,6 +620,7 @@ class ObjectCounter:
         final_class_counts = self._by_class_payload()
 
         self.total_objects.clear()
+        self._total_objects_queue.clear()
         self.total_count = 0
         self.current_count = 0
         self.defect_count = 0
@@ -1022,8 +1059,10 @@ class ObjectCounter:
         # Started counter value from config
         start_count: int = int(detector_config.get('start_total_count', 0))
         if start_count > 0:
-            self.total_count: int = start_count
-            self.total_objects: set = set(range(-start_count, 0))
+            self.total_count = start_count
+            start_ids = range(-start_count, 0)
+            self.total_objects = set(start_ids)
+            self._total_objects_queue = deque(start_ids, maxlen=self._max_tracked_history)
             config_manager.set(f"detections.{self.location}.start_total_count", 0)
             config_manager.save_config()
 
@@ -1158,7 +1197,11 @@ class ObjectCounter:
             return self.tracker.update(np.empty((0, 6)))
 
         # Prepare detections for the tracker: [x1, y1, x2, y2, conf, class]
-        detections = np.concatenate((xyxy, conf.reshape(-1, 1), cls.reshape(-1, 1)), axis=1)
+        n_dets = len(xyxy)
+        detections = np.empty((n_dets, 6), dtype=np.float32)
+        detections[:, :4] = xyxy
+        detections[:, 4] = conf
+        detections[:, 5] = cls
 
         # Tracked boxes: [x1, y1, x2, y2, track_id, class_id]
         return self.tracker.update(detections)
@@ -1272,10 +1315,8 @@ class ObjectCounter:
             img_h, img_w = image.shape[:2]
 
             if font is not None:
-                mask_w, mask_h = font.getmask(label).size
-                pad_x, pad_y = 5, 3
-                badge_w = mask_w + pad_x * 2
-                badge_h = mask_h + pad_y * 2 + 2
+                badge = _render_cached_badge(label, color, font)
+                badge_h, badge_w = badge.shape[:2]
 
                 badge_x1 = max(0, min(x1, img_w - badge_w))
                 badge_x2 = min(img_w, badge_x1 + badge_w)
@@ -1291,15 +1332,7 @@ class ObjectCounter:
                 bh = badge_y2 - badge_y1
 
                 if bw > 0 and bh > 0:
-                    cv2.rectangle(image, (badge_x1, badge_y1), (badge_x2, badge_y2), color, cv2.FILLED)
-                    try:
-                        patch = image[badge_y1:badge_y2, badge_x1:badge_x2]
-                        pil_patch = Image.fromarray(patch)
-                        draw = ImageDraw.Draw(pil_patch)
-                        draw.text((pad_x, pad_y), label, font=font, fill=(0, 0, 0))
-                        image[badge_y1:badge_y2, badge_x1:badge_x2] = np.asarray(pil_patch)
-                    except Exception:
-                        pass
+                    image[badge_y1:badge_y2, badge_x1:badge_x2] = badge[:bh, :bw]
             else:
                 (text_w, text_h), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
                 badge_h = text_h + baseline + 4
@@ -1379,12 +1412,13 @@ class ObjectCounter:
                     and rid not in self.total_objects
             ):
                 self.total_objects.add(rid)
+                self._total_objects_queue.append(rid)
                 self.total_count += 1
                 self.current_count += 1
                 self._increment_class_count(class_id)
-                if len(self.total_objects) > 50000:
-                    cutoff_id = max(self.total_objects) - 25000
-                    self.total_objects = {oid for oid in self.total_objects if oid >= cutoff_id}
+                if len(self._total_objects_queue) > self._max_tracked_history:
+                    old_id = self._total_objects_queue.popleft()
+                    self.total_objects.discard(old_id)
 
         self.emit_live_counts()
 
