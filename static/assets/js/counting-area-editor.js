@@ -39,6 +39,22 @@ const COUNTING_AREA_ZONE_COLORS = [
 ];
 
 /**
+ * Direction configurations and labels
+ * @type {Record<string, {label: string, icon: string, symbol: string}>}
+ */
+const COUNTING_AREA_DIRECTION_INFO = {
+    any: { label: "Any direction", icon: "🔄", symbol: "Any", ux: 0, uy: 0 },
+    left_to_right: { label: "Left to right", icon: "➡️", symbol: "L → R", ux: 1, uy: 0 },
+    right_to_left: { label: "Right to left", icon: "⬅️", symbol: "R → L", ux: -1, uy: 0 },
+    top_to_bottom: { label: "Top to bottom", icon: "⬇️", symbol: "T ↓ B", ux: 0, uy: 1 },
+    bottom_to_top: { label: "Bottom to top", icon: "⬆️", symbol: "B ↑ T", ux: 0, uy: -1 },
+    top_left_to_bottom_right: { label: "Top-left to bottom-right", icon: "↘️", symbol: "TL ↘ BR", ux: 0.7071, uy: 0.7071 },
+    bottom_left_to_top_right: { label: "Bottom-left to top-right", icon: "↗️", symbol: "BL ↗ TR", ux: 0.7071, uy: -0.7071 },
+    top_right_to_bottom_left: { label: "Top-right to bottom-left", icon: "↙️", symbol: "TR ↙ BL", ux: -0.7071, uy: 0.7071 },
+    bottom_right_to_top_left: { label: "Bottom-right to top-left", icon: "↖️", symbol: "BR ↖ TL", ux: -0.7071, uy: -0.7071 },
+};
+
+/**
  * Utility functions for color conversions
  */
 const CountingAreaColorUtil = {
@@ -261,12 +277,14 @@ class CountingAreaEditor {
      * Create a zone object
      * @param {number[]} colorBgr
      * @param {Array<{x: number, y: number}>} [points]
-     * @returns {{points: Array<{x: number, y: number}>, colorBgr: number[], visible: boolean}}
+     * @param {string} [direction]
+     * @returns {{points: Array<{x: number, y: number}>, colorBgr: number[], direction: string, visible: boolean}}
      */
-    createZone(colorBgr, points = []) {
+    createZone(colorBgr, points = [], direction = "any") {
         return {
             points: points ? points.map((p) => ({ x: p.x, y: p.y })) : [],
             colorBgr: [...(colorBgr || COUNTING_AREA_ZONE_COLORS[0])],
+            direction: direction || "any",
             visible: true,
         };
     }
@@ -301,6 +319,7 @@ class CountingAreaEditor {
             zones: this.zones.map((z) => ({
                 points: z.points.map((p) => ({ x: p.x, y: p.y })),
                 colorBgr: [...z.colorBgr],
+                direction: z.direction || "any",
                 visible: z.visible !== false,
             })),
         };
@@ -325,13 +344,14 @@ class CountingAreaEditor {
             zones: this.zones.map((z) => ({
                 points: z.points.map((p) => ({ x: p.x, y: p.y })),
                 colorBgr: [...z.colorBgr],
+                direction: z.direction || "any",
                 visible: z.visible !== false,
             })),
         };
         this.redoStack.push(currentSnapshot);
 
         const state = this.historyStack.pop();
-        this.zones = state.zones.map((z) => this.createZone(z.colorBgr, z.points));
+        this.zones = state.zones.map((z) => this.createZone(z.colorBgr, z.points, z.direction));
         this.activeZoneIndex = Math.min(state.activeZoneIndex, this.zones.length - 1);
 
         this.updateHistoryButtons();
@@ -352,13 +372,14 @@ class CountingAreaEditor {
             zones: this.zones.map((z) => ({
                 points: z.points.map((p) => ({ x: p.x, y: p.y })),
                 colorBgr: [...z.colorBgr],
+                direction: z.direction || "any",
                 visible: z.visible !== false,
             })),
         };
         this.historyStack.push(currentSnapshot);
 
         const state = this.redoStack.pop();
-        this.zones = state.zones.map((z) => this.createZone(z.colorBgr, z.points));
+        this.zones = state.zones.map((z) => this.createZone(z.colorBgr, z.points, z.direction));
         this.activeZoneIndex = Math.min(state.activeZoneIndex, this.zones.length - 1);
 
         this.updateHistoryButtons();
@@ -450,7 +471,7 @@ class CountingAreaEditor {
             y: Math.min(this.frameHeight, p.y + offset),
         }));
 
-        const newZone = this.createZone(nextColor, newPoints);
+        const newZone = this.createZone(nextColor, newPoints, source.direction || "any");
         this.zones.push(newZone);
         this.selectZone(this.zones.length - 1);
         showToast(window.trans("Zone duplicated"), "info");
@@ -511,6 +532,17 @@ class CountingAreaEditor {
             this.activeZonePtsBadge.textContent = `${count} ${window.trans("Points").toLowerCase()}`;
             this.activeZonePtsBadge.className = `badge ${count >= COUNTING_AREA_MIN_POINTS ? "bg-success-subtle text-success-emphasis border border-success-subtle" : "bg-warning-subtle text-warning-emphasis border border-warning-subtle"}`;
         }
+
+        // Update direction radio and label
+        const dir = zone.direction || "any";
+        const dirRadio = document.querySelector(`input[name='ca-zone-direction'][value='${dir}']`);
+        if (dirRadio) dirRadio.checked = true;
+
+        const dirLabel = document.getElementById("ca-direction-label");
+        if (dirLabel) {
+            const info = COUNTING_AREA_DIRECTION_INFO[dir] || COUNTING_AREA_DIRECTION_INFO.any;
+            dirLabel.textContent = `${info.icon} ${window.trans(info.label)}`;
+        }
     }
 
     /**
@@ -552,12 +584,25 @@ class CountingAreaEditor {
             name.className = "fw-medium small text-truncate";
             name.textContent = window.trans("Zone {index}", { index: idx + 1 });
 
+            const dir = zone.direction || "any";
+            const dirInfo = COUNTING_AREA_DIRECTION_INFO[dir] || COUNTING_AREA_DIRECTION_INFO.any;
+
+            const statsRow = document.createElement("div");
+            statsRow.className = "d-flex align-items-center gap-1 flex-wrap";
+
             const stats = document.createElement("span");
             stats.className = "text-body-secondary font-monospace";
             stats.style.fontSize = "0.72rem";
             stats.textContent = `${count} pts · ${area}%`;
 
-            info.append(name, stats);
+            const dirBadge = document.createElement("span");
+            dirBadge.className = `badge rounded-pill ${dir === "any" ? "bg-body-secondary text-body-secondary" : "bg-primary-subtle text-primary border border-primary-subtle"}`;
+            dirBadge.style.fontSize = "0.68rem";
+            dirBadge.textContent = `${dirInfo.icon} ${window.trans(dirInfo.label)}`;
+            dirBadge.title = window.trans(dirInfo.label);
+
+            statsRow.append(stats, dirBadge);
+            info.append(name, statsRow);
             left.append(swatch, info);
 
             // Right: Actions (Visibility, Duplicate, Delete)
@@ -656,6 +701,19 @@ class CountingAreaEditor {
             this.syncActiveZoneUI();
             this.renderZoneList();
             this.redraw();
+        });
+
+        // Direction radio selection
+        document.querySelectorAll("input[name='ca-zone-direction']").forEach((radio) => {
+            radio.addEventListener("change", (e) => {
+                if (this.activeZone) {
+                    this.pushState();
+                    this.activeZone.direction = e.target.value;
+                    this.syncActiveZoneUI();
+                    this.renderZoneList();
+                    this.redraw();
+                }
+            });
         });
 
         // Zoom controls
@@ -1405,7 +1463,14 @@ class CountingAreaEditor {
 
             // Centroid zone badge
             const centroid = CountingAreaGeometry.polygonCentroid(points);
-            this.drawCentroidBadge(centroid.x, centroid.y, window.trans("Zone {index}", { index: zoneIndex + 1 }), hex, isActive);
+            const dir = zone.direction || "any";
+            const dirInfo = COUNTING_AREA_DIRECTION_INFO[dir] || COUNTING_AREA_DIRECTION_INFO.any;
+            const badgeLabel = `${window.trans("Zone {index}", { index: zoneIndex + 1 })}${dir !== "any" ? " " + dirInfo.icon : ""}`;
+            this.drawCentroidBadge(centroid.x, centroid.y, badgeLabel, hex, isActive);
+
+            if (dir !== "any") {
+                this.drawDirectionArrow(centroid.x, centroid.y, dir, hex, isActive);
+            }
         } else if (points.length === 2) {
             this.ctx.beginPath();
             this.ctx.moveTo(points[0].x, points[0].y);
@@ -1510,6 +1575,61 @@ class CountingAreaEditor {
     }
 
     /**
+     * Draw direction arrow on canvas inside zone
+     * @param {number} cx
+     * @param {number} cy
+     * @param {string} direction
+     * @param {string} hex
+     * @param {boolean} isActive
+     */
+    drawDirectionArrow(cx, cy, direction, hex, isActive) {
+        const info = COUNTING_AREA_DIRECTION_INFO[direction];
+        if (!info || (!info.ux && !info.uy)) return;
+
+        const arrowLen = Math.max(22, Math.min(55, 36 / this.scale));
+        const dx = arrowLen * info.ux;
+        const dy = arrowLen * info.uy;
+
+        const startX = cx - dx * 0.7;
+        const startY = cy - dy * 0.7;
+        const endX = cx + dx * 0.7;
+        const endY = cy + dy * 0.7;
+
+        const headLen = Math.max(7, arrowLen * 0.35);
+        const angle = Math.atan2(endY - startY, endX - startX);
+
+        this.ctx.save();
+        this.ctx.strokeStyle = isActive ? "#ffffff" : hex;
+        this.ctx.fillStyle = isActive ? "#ffffff" : hex;
+        this.ctx.lineWidth = (isActive ? 3.5 : 2.5) / this.scale;
+        this.ctx.lineCap = "round";
+
+        this.ctx.shadowColor = "rgba(0,0,0,0.85)";
+        this.ctx.shadowBlur = 4;
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(startX, startY);
+        this.ctx.lineTo(endX, endY);
+        this.ctx.stroke();
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(endX, endY);
+        this.ctx.lineTo(
+            endX - headLen * Math.cos(angle - Math.PI / 6),
+            endY - headLen * Math.sin(angle - Math.PI / 6)
+        );
+        this.ctx.lineTo(
+            endX - headLen * Math.cos(angle + Math.PI / 6),
+            endY - headLen * Math.sin(angle + Math.PI / 6)
+        );
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.stroke();
+
+        this.ctx.restore();
+    }
+
+    /**
      * Load initial configuration data from server
      */
     async load() {
@@ -1542,16 +1662,18 @@ class CountingAreaEditor {
                 const color = Array.isArray(area.color) && area.color.length === 3
                     ? area.color
                     : COUNTING_AREA_ZONE_COLORS[index % COUNTING_AREA_ZONE_COLORS.length];
-                return this.createZone(color, (area.points || []).map((p) => ({ x: p[0], y: p[1] })));
+                const direction = typeof area.direction === "string" ? area.direction : "any";
+                return this.createZone(color, (area.points || []).map((p) => ({ x: p[0], y: p[1] })), direction);
             });
         }
 
         const fallbackColor = Array.isArray(data.counting_area_color) && data.counting_area_color.length === 3
             ? data.counting_area_color
             : COUNTING_AREA_ZONE_COLORS[0];
+        const fallbackDirection = typeof data.counting_area_direction === "string" ? data.counting_area_direction : "any";
 
         return [
-            this.createZone(fallbackColor, (data.counting_area || []).map((p) => ({ x: p[0], y: p[1] }))),
+            this.createZone(fallbackColor, (data.counting_area || []).map((p) => ({ x: p[0], y: p[1] })), fallbackDirection),
         ];
     }
 
@@ -1606,6 +1728,7 @@ class CountingAreaEditor {
             counting_areas: this.zones.map((zone) => ({
                 points: zone.points.map((p) => [p.x, p.y]),
                 color: zone.colorBgr,
+                direction: zone.direction || "any",
             })),
         };
 

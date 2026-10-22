@@ -282,6 +282,77 @@
                                 <button type="button" class="ca-color-chip" data-color="#1de9b6" style="--chip-color:#1de9b6" title="Teal"></button>
                             </div>
                         </div>
+
+                        <!-- Direction Customization -->
+                        <div class="mt-3 pt-3 border-top">
+                            <label class="form-label small text-body-secondary fw-semibold text-uppercase tracking-wider mb-2">
+                                {{ trans('Counting direction') }}
+                            </label>
+                            <div class="ca-direction-dpad d-grid gap-1 mb-1" style="grid-template-columns: repeat(3, 1fr);" id="ca-direction-group" aria-label="Counting Direction">
+                                <!-- Row 1: ↖️ ⬆️ ↗️ -->
+                                <div>
+                                    <input type="radio" class="btn-check" name="ca-zone-direction" id="ca-dir-brtl" value="bottom_right_to_top_left" autocomplete="off">
+                                    <label class="btn btn-sm btn-outline-secondary w-100 py-1 px-0" for="ca-dir-brtl" title="{{ trans('Bottom-right to top-left') }}">
+                                        <span>↖️</span>
+                                    </label>
+                                </div>
+                                <div>
+                                    <input type="radio" class="btn-check" name="ca-zone-direction" id="ca-dir-btt" value="bottom_to_top" autocomplete="off">
+                                    <label class="btn btn-sm btn-outline-secondary w-100 py-1 px-0" for="ca-dir-btt" title="{{ trans('Bottom to top') }}">
+                                        <span>⬆️</span>
+                                    </label>
+                                </div>
+                                <div>
+                                    <input type="radio" class="btn-check" name="ca-zone-direction" id="ca-dir-bltr" value="bottom_left_to_top_right" autocomplete="off">
+                                    <label class="btn btn-sm btn-outline-secondary w-100 py-1 px-0" for="ca-dir-bltr" title="{{ trans('Bottom-left to top-right') }}">
+                                        <span>↗️</span>
+                                    </label>
+                                </div>
+
+                                <!-- Row 2: ⬅️ 🔄 ➡️ -->
+                                <div>
+                                    <input type="radio" class="btn-check" name="ca-zone-direction" id="ca-dir-rtl" value="right_to_left" autocomplete="off">
+                                    <label class="btn btn-sm btn-outline-secondary w-100 py-1 px-0" for="ca-dir-rtl" title="{{ trans('Right to left') }}">
+                                        <span>⬅️</span>
+                                    </label>
+                                </div>
+                                <div>
+                                    <input type="radio" class="btn-check" name="ca-zone-direction" id="ca-dir-any" value="any" checked autocomplete="off">
+                                    <label class="btn btn-sm btn-outline-secondary w-100 py-1 px-0 fw-bold" for="ca-dir-any" title="{{ trans('Any direction') }}">
+                                        <span>🔄</span>
+                                    </label>
+                                </div>
+                                <div>
+                                    <input type="radio" class="btn-check" name="ca-zone-direction" id="ca-dir-ltr" value="left_to_right" autocomplete="off">
+                                    <label class="btn btn-sm btn-outline-secondary w-100 py-1 px-0" for="ca-dir-ltr" title="{{ trans('Left to right') }}">
+                                        <span>➡️</span>
+                                    </label>
+                                </div>
+
+                                <!-- Row 3: ↙️ ⬇️ ↘️ -->
+                                <div>
+                                    <input type="radio" class="btn-check" name="ca-zone-direction" id="ca-dir-trbl" value="top_right_to_bottom_left" autocomplete="off">
+                                    <label class="btn btn-sm btn-outline-secondary w-100 py-1 px-0" for="ca-dir-trbl" title="{{ trans('Top-right to bottom-left') }}">
+                                        <span>↙️</span>
+                                    </label>
+                                </div>
+                                <div>
+                                    <input type="radio" class="btn-check" name="ca-zone-direction" id="ca-dir-ttb" value="top_to_bottom" autocomplete="off">
+                                    <label class="btn btn-sm btn-outline-secondary w-100 py-1 px-0" for="ca-dir-ttb" title="{{ trans('Top to bottom') }}">
+                                        <span>⬇️</span>
+                                    </label>
+                                </div>
+                                <div>
+                                    <input type="radio" class="btn-check" name="ca-zone-direction" id="ca-dir-tlbr" value="top_left_to_bottom_right" autocomplete="off">
+                                    <label class="btn btn-sm btn-outline-secondary w-100 py-1 px-0" for="ca-dir-tlbr" title="{{ trans('Top-left to bottom-right') }}">
+                                        <span>↘️</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="small text-body-secondary mt-1 font-monospace fs-3xs text-truncate" id="ca-direction-label">
+                                {{ trans('Any direction') }}
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Quick Shortcuts Cheatsheet Card -->

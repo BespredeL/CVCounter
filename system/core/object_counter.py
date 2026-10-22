@@ -27,6 +27,7 @@ from system.core.byte_tracker import BYTETracker
 from system.core.timer import Timer
 from system.utils.counting_area import (
     DEFAULT_COUNTING_AREA_COLOR,
+    DIRECTION_VECTORS,
     areas_to_runtime,
     normalize_counting_areas,
 )
@@ -142,7 +143,7 @@ class ObjectCounter:
     DEFAULT_IOU: float = 0.7
     DEFAULT_VIDEO_QUALITY: int = 50
     DEFAULT_VIDEO_SCALE: int = 50
-    DEFAULT_MAX_AGE: int = 30
+    DEFAULT_MAX_AGE: int = 60
     DEFAULT_MIN_HITS: int = 3
     DEFAULT_TRACKER_IOU: float = 0.3
     DEFAULT_JPEG_QUALITY: int = 90
@@ -174,6 +175,8 @@ class ObjectCounter:
         self.total_objects: set = set()
         self._total_objects_queue: deque = deque()
         self._max_tracked_history: int = 30000
+        self._track_history: dict[int, deque] = {}
+        self._max_track_history_len: int = 15
         self.total_count: int = 0
         self.current_count: int = 0
         self.defect_count: int = 0
@@ -621,6 +624,7 @@ class ObjectCounter:
 
         self.total_objects.clear()
         self._total_objects_queue.clear()
+        self._track_history.clear()
         self.total_count = 0
         self.current_count = 0
         self.defect_count = 0
@@ -790,6 +794,7 @@ class ObjectCounter:
         self.counting_areas = runtime
         self.counting_area = list(runtime[0]['points'])
         self.counting_area_color = tuple(runtime[0]['color'])
+        self.counting_area_direction = str(runtime[0].get('direction', 'any'))
         self._counting_mask = None
 
     def update_counting_area(
@@ -984,6 +989,7 @@ class ObjectCounter:
         self.counting_areas: list[dict] = runtime_areas
         self.counting_area: List[Tuple[int, int]] = list(runtime_areas[0]['points'])
         self.counting_area_color: tuple = tuple(runtime_areas[0]['color'])
+        self.counting_area_direction: str = str(runtime_areas[0].get('direction', 'any'))
         self.video_fps: int = detector_config.get('video_fps', detection_default.get("video_fps", 0)) or 0
         self.video_reconnect_attempts: int = int(detector_config.get('video_reconnect_attempts',
                                                                      detection_default.get('video_reconnect_attempts',
@@ -1230,6 +1236,26 @@ class ObjectCounter:
             color = tuple(zone.get('color') or self.counting_area_color or DEFAULT_COUNTING_AREA_COLOR)
             cv2.fillPoly(overlay, [pts], color)
 
+            # Draw directional arrow on zone if configured
+            direction = zone.get('direction', 'any')
+            if direction != 'any':
+                M = cv2.moments(pts)
+                if M['m00'] != 0:
+                    mcx = int(M['m10'] / M['m00'])
+                    mcy = int(M['m01'] / M['m00'])
+                else:
+                    mcx = int(np.mean(pts[:, 0, 0]))
+                    mcy = int(np.mean(pts[:, 0, 1]))
+
+                arrow_len = 35
+                vec = DIRECTION_VECTORS.get(direction)
+                if vec:
+                    ux, uy = vec
+                    p1 = (int(mcx - arrow_len * ux), int(mcy - arrow_len * uy))
+                    p2 = (int(mcx + arrow_len * ux), int(mcy + arrow_len * uy))
+                    cv2.arrowedLine(overlay, p1, p2, (0, 0, 0), 4, tipLength=0.35, line_type=cv2.LINE_AA)
+                    cv2.arrowedLine(overlay, p1, p2, (255, 255, 255), 2, tipLength=0.35, line_type=cv2.LINE_AA)
+
         return cv2.addWeighted(overlay, self.DEFAULT_POLYGON_ALPHA, image, 1 - self.DEFAULT_POLYGON_ALPHA, 0)
 
     def set_indicator_mode(self, mode: str) -> str:
@@ -1358,20 +1384,21 @@ class ObjectCounter:
             return
 
         height, width = frame_shape[:2]
-        mask: np.ndarray = np.zeros((height, width), dtype=np.uint8)
+        mask: np.ndarray = np.zeros((height, width), dtype=np.int16)
         zones = self.counting_areas or [{
             'points': self.counting_area,
             'color': self.counting_area_color,
+            'direction': getattr(self, 'counting_area_direction', 'any'),
         }]
 
-        for zone in zones:
+        for idx, zone in enumerate(zones):
             points = zone.get('points') or []
             if len(points) < 3:
                 continue
             pts = np.asarray(points, dtype=np.int32).reshape((-1, 1, 2))
-            cv2.fillPoly(mask, [pts], 1)
+            cv2.fillPoly(mask, [pts], idx + 1)
 
-        self._counting_mask = mask.astype(bool)
+        self._counting_mask = mask
 
     def _detect_count(self, image: np.ndarray, boxes: list | np.ndarray) -> np.ndarray:
         """
@@ -1400,6 +1427,11 @@ class ObjectCounter:
             class_id = values[5] if len(values) > 5 else -1
             cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
 
+            # Track trajectory history for motion direction validation
+            if rid not in self._track_history:
+                self._track_history[rid] = deque(maxlen=self._max_track_history_len)
+            self._track_history[rid].append((cx, cy))
+
             # Draw indicator on the image
             self._draw_indicator(image, (cx, cy), rid, box=(x1, y1, x2, y2), class_id=class_id)
 
@@ -1408,17 +1440,53 @@ class ObjectCounter:
                     self._counting_mask is not None
                     and 0 <= cy < self._counting_mask.shape[0]
                     and 0 <= cx < self._counting_mask.shape[1]
-                    and self._counting_mask[cy, cx]
                     and rid not in self.total_objects
             ):
-                self.total_objects.add(rid)
-                self._total_objects_queue.append(rid)
-                self.total_count += 1
-                self.current_count += 1
-                self._increment_class_count(class_id)
-                if len(self._total_objects_queue) > self._max_tracked_history:
-                    old_id = self._total_objects_queue.popleft()
-                    self.total_objects.discard(old_id)
+                zone_code = int(self._counting_mask[cy, cx])
+                if zone_code > 0:
+                    zone_idx = zone_code - 1
+                    zone = self.counting_areas[zone_idx] if zone_idx < len(self.counting_areas) else None
+                    direction = zone.get('direction', 'any') if zone else 'any'
+
+                    is_valid_direction = True
+                    if direction != 'any':
+                        vec = DIRECTION_VECTORS.get(direction)
+                        if vec:
+                            hist = self._track_history[rid]
+                            if len(hist) >= 2:
+                                start_x, start_y = hist[0]
+                                dx = cx - start_x
+                                dy = cy - start_y
+                                dist = (dx * dx + dy * dy) ** 0.5
+                                min_delta = 5.0  # minimum displacement pixels to ignore stationary jitter
+
+                                if dist >= min_delta:
+                                    ux, uy = vec
+                                    # Cosine of angle between motion vector and target direction
+                                    dot = (dx * ux + dy * uy) / dist
+                                    # dot >= 0.5 corresponds to +-60 degree acceptance cone
+                                    is_valid_direction = (dot >= 0.5)
+                                else:
+                                    is_valid_direction = False
+                            else:
+                                is_valid_direction = False
+
+                    if is_valid_direction:
+                        self.total_objects.add(rid)
+                        self._total_objects_queue.append(rid)
+                        self.total_count += 1
+                        self.current_count += 1
+                        self._increment_class_count(class_id)
+                        if len(self._total_objects_queue) > self._max_tracked_history:
+                            old_id = self._total_objects_queue.popleft()
+                            self.total_objects.discard(old_id)
+
+        if len(self._track_history) > 1000:
+            active_rids = {int(b[4]) for b in boxes} if boxes is not None and len(boxes) > 0 else set()
+            self._track_history = {
+                k: v for k, v in self._track_history.items()
+                if k in active_rids or k in self.total_objects
+            }
 
         self.emit_live_counts()
 

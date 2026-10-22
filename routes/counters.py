@@ -460,6 +460,7 @@ def counting_area_data(location: str = None):
         'counting_areas': legacy['counting_areas'],
         'counting_area': legacy['counting_area'],
         'counting_area_color': legacy['counting_area_color'],
+        'counting_area_direction': legacy.get('counting_area_direction', 'any'),
     })
 
 
@@ -625,6 +626,7 @@ def counting_area_save(location: str = None):
     config.set(f'detections.{location}.counting_areas', legacy['counting_areas'])
     config.set(f'detections.{location}.counting_area', legacy['counting_area'])
     config.set(f'detections.{location}.counting_area_color', legacy['counting_area_color'])
+    config.set(f'detections.{location}.counting_area_direction', legacy.get('counting_area_direction', 'any'))
     config.save_config()
 
     if location in object_counters:
@@ -635,6 +637,7 @@ def counting_area_save(location: str = None):
         'counting_areas': legacy['counting_areas'],
         'counting_area': legacy['counting_area'],
         'counting_area_color': legacy['counting_area_color'],
+        'counting_area_direction': legacy.get('counting_area_direction', 'any'),
     })
 
 

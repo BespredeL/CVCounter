@@ -10,6 +10,7 @@ from flask import abort, request
 from werkzeug.exceptions import BadRequest
 
 from system.utils.logger import Logger
+from system.utils.counting_area import _as_direction
 
 
 class ValidationError(Exception):
@@ -456,9 +457,11 @@ def validate_counting_area_payload(data: dict[str, Any]) -> dict[str, Any]:
                 color = item.get('color', data.get('counting_area_color'))
                 if color is None:
                     color = [67, 211, 255]
+                direction = _as_direction(item.get('direction'))
                 validated_areas.append({
                     'points': points,
                     'color': _validate_bgr_color(color, f'{label}.color'),
+                    'direction': direction,
                 })
             else:
                 points = _validate_polygon_points(item, label)
@@ -466,14 +469,17 @@ def validate_counting_area_payload(data: dict[str, Any]) -> dict[str, Any]:
                 validated_areas.append({
                     'points': points,
                     'color': _validate_bgr_color(color, 'counting_area_color'),
+                    'direction': 'any',
                 })
     else:
         area = data.get('counting_area')
         points = _validate_polygon_points(area, 'counting_area')
         color = data.get('counting_area_color', [67, 211, 255])
+        direction = _as_direction(data.get('direction'))
         validated_areas.append({
             'points': points,
             'color': _validate_bgr_color(color, 'counting_area_color'),
+            'direction': direction,
         })
 
     first = validated_areas[0]

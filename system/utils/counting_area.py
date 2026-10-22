@@ -10,6 +10,34 @@ from __future__ import annotations
 from typing import Any, Iterable, Mapping, Sequence
 
 DEFAULT_COUNTING_AREA_COLOR: list[int] = [67, 211, 255]
+VALID_ZONE_DIRECTIONS: set[str] = {
+    'any',
+    'left_to_right',
+    'right_to_left',
+    'top_to_bottom',
+    'bottom_to_top',
+    'top_left_to_bottom_right',
+    'bottom_left_to_top_right',
+    'top_right_to_bottom_left',
+    'bottom_right_to_top_left',
+}
+
+DIRECTION_VECTORS: dict[str, tuple[float, float]] = {
+    'left_to_right': (1.0, 0.0),
+    'right_to_left': (-1.0, 0.0),
+    'top_to_bottom': (0.0, 1.0),
+    'bottom_to_top': (0.0, -1.0),
+    'top_left_to_bottom_right': (0.7071, 0.7071),
+    'bottom_left_to_top_right': (0.7071, -0.7071),
+    'top_right_to_bottom_left': (-0.7071, 0.7071),
+    'bottom_right_to_top_left': (-0.7071, -0.7071),
+}
+
+
+def _as_direction(value: Any) -> str:
+    """Normalize counting direction string."""
+    clean = str(value or 'any').strip().lower()
+    return clean if clean in VALID_ZONE_DIRECTIONS else 'any'
 
 
 def _as_color(value: Any, fallback: Sequence[int] | None = None) -> list[int]:
@@ -82,6 +110,7 @@ def _zone_from_mapping(zone: Mapping[str, Any], fallback_color: Sequence[int]) -
     return {
         'points': points,
         'color': _as_color(zone.get('color', zone.get('counting_area_color')), fallback_color),
+        'direction': _as_direction(zone.get('direction')),
     }
 
 
@@ -107,8 +136,13 @@ def normalize_counting_areas(
     Returns:
         The normalized counting areas. An empty list if the counting areas are invalid.
     """
-    data = source or {}
-    areas_raw = counting_areas if counting_areas is not None else data.get('counting_areas')
+    if isinstance(source, list) and counting_areas is None:
+        areas_raw = source
+        data: Mapping[str, Any] = {}
+    else:
+        data = source if isinstance(source, Mapping) else {}
+        areas_raw = counting_areas if counting_areas is not None else data.get('counting_areas')
+
     legacy_area = counting_area if counting_area is not None else data.get('counting_area')
     legacy_color = (
         counting_area_color
@@ -124,14 +158,14 @@ def normalize_counting_areas(
                 zone = _zone_from_mapping(item, fallback_color)
             else:
                 points = _as_points(item)
-                zone = {'points': points, 'color': list(fallback_color)} if points is not None else None
+                zone = {'points': points, 'color': list(fallback_color), 'direction': 'any'} if points is not None else None
             if zone is not None:
                 zones.append(zone)
 
     if not zones:
         points = _as_points(legacy_area)
         if points is not None:
-            zones.append({'points': points, 'color': list(fallback_color)})
+            zones.append({'points': points, 'color': list(fallback_color), 'direction': 'any'})
 
     return zones
 
@@ -167,10 +201,12 @@ def areas_for_config(areas: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     """
     normalized = normalize_counting_areas({'counting_areas': list(areas)})
     legacy_area, legacy_color = areas_to_legacy_fields(normalized)
+    legacy_direction = normalized[0].get('direction', 'any') if normalized else 'any'
     return {
         'counting_areas': normalized,
         'counting_area': legacy_area,
         'counting_area_color': legacy_color,
+        'counting_area_direction': legacy_direction,
     }
 
 
@@ -194,5 +230,6 @@ def areas_to_runtime(
         runtime.append({
             'points': [(int(x), int(y)) for x, y in points],
             'color': tuple(_as_color(area.get('color'), DEFAULT_COUNTING_AREA_COLOR)),
+            'direction': _as_direction(area.get('direction')),
         })
     return runtime
