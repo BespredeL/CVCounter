@@ -339,7 +339,7 @@ Cameras configured under `detections` inherit missing values from `detection_def
 | `video_show_quality` | JPEG compression quality for stream frames (1–100) | `50` |
 | `video_fps` | Manual frame rate lock (0: match source) | `0` |
 | `video_reconnect_attempts` | Connection retry limit before entering error state | `5` |
-| `counting_areas` | Array of polygonal counting areas with BGR colors | `[{"points": [[0,0],[100,0],[100,100],[0,100]], "color": [67,211,255]}]` |
+| `counting_areas` | Array of polygonal counting areas with BGR colors and motion direction | `[{"points": [[0,0],[100,0],[100,100],[0,100]], "color": [67,211,255], "direction": "top_to_bottom"}]` |
 | `classes` | Class filter and custom labels for per-class counts | `{"0": "Carton", "1": "Pallet"}` |
 | `recording.enable` | Enable event-driven video recording | `false` |
 | `recording.path` | Destination directory for recorded clips | `"storage/saved_recordings"` |
@@ -374,8 +374,10 @@ Unified dashboard monitoring multiple lines simultaneously.
 ### 5. Interactive Zone Editor (`/counter/<location>/counting_area`)
 Visual polygon tool operating directly over a camera freeze-frame:
 - Create multiple polygons with distinct colors.
+- **Motion direction filtering:** 8 directional vectors (cardinal & diagonal) or "Any direction" per zone with $\pm 60^\circ$ angular cone acceptance and dynamic directional arrow overlay at zone center.
 - Add, drag, and delete polygon vertices.
 - Preset templates: "Full Frame", "Centered Rectangle".
+- Layout-independent keyboard shortcuts (RU/EN), Undo/Redo history (`Ctrl+Z`, `Ctrl+Y`).
 - Immediate bidirectional sync with `config.json`.
 
 ### 6. Reports & A4 Printing (`/reports`)
@@ -396,10 +398,11 @@ The `/datasets` suite provides end-to-end tooling for custom vision models:
    - Interval-based frame capture from active video feeds;
    - Extracting frames from event recordings.
 3. **Annotation:**
-   - Bounding box and segmentation polygon tools;
+   - Bounding box (`W`) and segmentation polygon (`P`) tools;
+   - Layout-independent keyboard shortcuts (RU/EN), frame stepping (`A`/`D` or `←`/`→`), Undo/Redo (`Ctrl+Z`, `Ctrl+Y`);
    - Persistent Track IDs and object attribute tags;
    - Quick "copy previous annotations" shortcut for high-frame-rate sequences;
-   - **Autolabeling:** Automated pre-annotation using standard foundation models;
+   - **Autolabeling:** Automated pre-annotation using standard foundation models (`Ctrl+A`);
    - **Active Learning:** Prioritizing uncertain frames to maximize training efficiency.
 4. **Model Training:**
    - Select base models (YOLO11, YOLOv8, etc.);

@@ -14,7 +14,7 @@ CVCounter is a flexible and high-performance web-based computer vision system de
 
 ## ✨ Features
 
-- 🎯 **Detection & Tracking:** Robust ByteTrack object tracking and real-time counting across single or multiple customizable polygon zones.
+- 🎯 **Detection & Tracking:** Robust ByteTrack object tracking and real-time counting across single or multiple customizable polygon zones with motion direction filtering (8 vectors).
 - 🎥 **Video Sources:** Support for RTSP network streams, USB/webcams, and local video files, with automatic event-driven video recording.
 - 🏷️ **Classification:** Object counting broken down by classes with flexible class filtering.
 - 📚 **Dataset Management:** In-browser frame capture (from stream, ZIP upload, recordings), bounding box/polygon annotation, YOLO training, and one-click deployment of trained `best.pt` weights.
@@ -201,7 +201,7 @@ Configure the `model_type` setting per counter (or leave as `"auto"` for automat
 | `input_size` | ONNX, OpenVINO, OpenCV | Model input size (`640` or `[640, 640]`) |
 | `vid_stride` | All | Frame stride (skip frames to reduce CPU/GPU load) |
 | `classes` | All | Class filter and custom labels, e.g. `{"0": "Box"}` |
-| `counting_areas` | All | List of polygon counting zones and their BGR colors |
+| `counting_areas` | All | List of polygon counting zones, BGR colors, and motion direction vectors |
 
 ---
 
