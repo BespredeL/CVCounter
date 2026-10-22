@@ -10,7 +10,7 @@ from pathlib import Path
 import random
 import re
 import time
-from typing import Generator, List, Optional, Tuple
+from typing import Any, Generator, List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -29,6 +29,7 @@ from system.utils.counting_area import (
     areas_to_runtime,
     normalize_counting_areas,
 )
+from system.utils.validators import normalize_color_value
 from system.utils.exception_handler import StreamConnectionError
 from system.utils.i18n import trans
 from system.managers.video_stream_manager import VideoStreamManager
@@ -113,6 +114,8 @@ class ObjectCounter:
     DEFAULT_JPEG_QUALITY: int = 90
     DEFAULT_INDICATOR_SIZE: int = 10
     DEFAULT_INDICATOR_MODE: str = 'circle'
+    DEFAULT_INDICATOR_DETECTED_COLOR: Tuple[int, int, int] = (255, 0, 255)
+    DEFAULT_INDICATOR_COUNTED_COLOR: Tuple[int, int, int] = (0, 255, 0)
     DEFAULT_VID_STRIDE: int = 1
     DEFAULT_RECORDING_PATH: str = "storage/saved_recordings"
     DEFAULT_MJPEG_FPS: float = 15.0
@@ -962,6 +965,29 @@ class ObjectCounter:
         ).strip().lower()
         if self.indicator_mode not in ('circle', 'box'):
             self.indicator_mode = self.DEFAULT_INDICATOR_MODE
+
+        raw_det_color = detector_config.get(
+            'indicator_detected_color',
+            detection_default.get('indicator_detected_color', self.DEFAULT_INDICATOR_DETECTED_COLOR)
+        )
+        try:
+            self.indicator_detected_color: tuple[int, int, int] = tuple(
+                normalize_color_value(raw_det_color, 'indicator_detected_color')
+            )
+        except Exception:
+            self.indicator_detected_color = self.DEFAULT_INDICATOR_DETECTED_COLOR
+
+        raw_cnt_color = detector_config.get(
+            'indicator_counted_color',
+            detection_default.get('indicator_counted_color', self.DEFAULT_INDICATOR_COUNTED_COLOR)
+        )
+        try:
+            self.indicator_counted_color: tuple[int, int, int] = tuple(
+                normalize_color_value(raw_cnt_color, 'indicator_counted_color')
+            )
+        except Exception:
+            self.indicator_counted_color = self.DEFAULT_INDICATOR_COUNTED_COLOR
+
         self.vid_stride: int = detector_config.get('vid_stride',
                                                    detection_default.get("vid_stride", self.DEFAULT_VID_STRIDE))
         self.classes: dict = detector_config.get('classes', {})
@@ -1179,6 +1205,33 @@ class ObjectCounter:
         self.indicator_mode = mode
         return self.indicator_mode
 
+    def set_indicator_colors(
+        self,
+        detected_color: Any = None,
+        counted_color: Any = None,
+    ) -> Tuple[Tuple[int, int, int], Tuple[int, int, int]]:
+        """
+        Dynamically update indicator state colors.
+
+        Args:
+            detected_color: Color for detected uncounted objects (hex str or BGR sequence).
+            counted_color: Color for counted objects (hex str or BGR sequence).
+
+        Returns:
+            Tuple[Tuple[int, int, int], Tuple[int, int, int]]: Active (detected_color, counted_color).
+        """
+        if detected_color is not None:
+            try:
+                self.indicator_detected_color = tuple(normalize_color_value(detected_color, 'indicator_detected_color'))
+            except Exception as e:
+                self.logger.warning(f"Failed to set indicator_detected_color: {e}")
+        if counted_color is not None:
+            try:
+                self.indicator_counted_color = tuple(normalize_color_value(counted_color, 'indicator_counted_color'))
+            except Exception as e:
+                self.logger.warning(f"Failed to set indicator_counted_color: {e}")
+        return self.indicator_detected_color, self.indicator_counted_color
+
     def _draw_indicator(
         self,
         image: np.ndarray,
@@ -1200,7 +1253,7 @@ class ObjectCounter:
         Returns:
             None
         """
-        color = (0, 255, 0) if rid in self.total_objects else (255, 0, 255)
+        color = self.indicator_counted_color if rid in self.total_objects else self.indicator_detected_color
 
         if self.indicator_mode == 'box' and box is not None:
             x1, y1, x2, y2 = box

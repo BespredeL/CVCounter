@@ -250,6 +250,13 @@ class ConfigManager:
                     elif not value:
                         value = ['polling', 'websocket']
 
+                if keys and (keys[-1] in ('indicator_detected_color', 'indicator_counted_color') or keys[-1].endswith('_color')):
+                    try:
+                        from system.utils.validators import normalize_color_value
+                        value = normalize_color_value(value, label=keys[-1])
+                    except Exception:
+                        pass
+
                 if keys and keys[-1] == 'options' and 'custom_fields' in keys:
                     if isinstance(value, str):
                         try:

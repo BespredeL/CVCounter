@@ -61,6 +61,8 @@
         {%- elif key == 'vid_stride' -%}{{ trans('Frame skip interval: 1 processes every frame, 2 processes every second frame') }}
         {%- elif key == 'indicator_mode' -%}{{ trans('Display style for detected objects: dot or bounding box with label') }}
         {%- elif key == 'indicator_size' -%}{{ trans('Size in pixels of bounding boxes and tracking dots on frames') }}
+        {%- elif key == 'indicator_detected_color' -%}{{ trans('Indicator color for detected objects before counting (BGR/Hex)') }}
+        {%- elif key == 'indicator_counted_color' -%}{{ trans('Indicator color for counted objects (BGR/Hex)') }}
         {%- elif key == 'classes' -%}{{ trans('Dictionary of class IDs and object label names') }}
         {%- elif key == 'enable' -%}{{ trans('Enable this module') }}
         {%- elif key == 'probability' -%}{{ trans('Fraction of detected frames to save to training dataset (e.g. 0.1 = 10%)') }}
@@ -505,10 +507,31 @@
                     </select>
                 {% elif key == 'indicator_mode' %}
                     <select id="{{ field_id }}" name="{{ field_id }}"
-                            class="form-select cv-form-control cv-form-select">
+                             class="form-select cv-form-control cv-form-select">
                         <option value="circle" {% if value != 'box' %}selected{% endif %}>{{ trans('Dot') }} (circle)</option>
                         <option value="box" {% if value == 'box' %}selected{% endif %}>{{ trans('Bounding box') }} (box)</option>
                     </select>
+                {% elif key in ('indicator_detected_color', 'indicator_counted_color') or (key.endswith('_color') and key != 'counting_area_color') %}
+                    {% if value is iterable and value is not string and value|length == 3 %}
+                        {% set hex_val = '#%02x%02x%02x' % (value[2]|int, value[1]|int, value[0]|int) %}
+                    {% elif value is string and value.startswith('#') and value|length == 7 %}
+                        {% set hex_val = value %}
+                    {% else %}
+                        {% set hex_val = '#ff00ff' if key == 'indicator_detected_color' else '#00ff00' %}
+                    {% endif %}
+                    <div class="input-group cv-input-group cv-color-picker-group">
+                        <input type="color" class="form-control form-control-color cv-color-swatch"
+                               id="{{ field_id }}_picker"
+                               value="{{ hex_val }}"
+                               aria-label="{{ trans('Color picker') }}"
+                               oninput="document.getElementById('{{ field_id }}').value = this.value">
+                        <input type="text" id="{{ field_id }}" name="{{ field_id }}"
+                               value="{{ hex_val }}"
+                               class="form-control cv-form-control font-monospace"
+                               pattern="^#[0-9a-fA-F]{6}$"
+                               placeholder="#rrggbb"
+                               oninput="if(/^#[0-9a-fA-F]{6}$/.test(this.value)) document.getElementById('{{ field_id }}_picker').value = this.value">
+                    </div>
                 {% elif key == 'socketio_transports' %}
                     {% set val_list = value if (value is iterable and value is not string) else [value|string] %}
                     {% set has_ws = 'websocket' in val_list %}

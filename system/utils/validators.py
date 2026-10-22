@@ -366,6 +366,50 @@ def _validate_polygon_points(area: Any, label: str) -> list[list[int]]:
     return validated_area
 
 
+def normalize_color_value(color: Any, label: str = 'color') -> list[int]:
+    """
+    Normalize and validate a color value into a BGR integer list [B, G, R].
+    Accepts hex strings ('#RRGGBB' or '#RGB') or 3-element BGR sequences.
+
+    Args:
+        color: The color value to normalize (list, tuple, or hex str).
+        label: The field label for error messages.
+
+    Returns:
+        list[int]: [B, G, R] color components (0-255).
+
+    Raises:
+        ValidationError: If format is invalid or values are out of range.
+    """
+    if isinstance(color, str):
+        hex_str = color.strip()
+        if hex_str.startswith('#'):
+            hex_str = hex_str[1:]
+        if len(hex_str) == 3:
+            hex_str = ''.join(c * 2 for c in hex_str)
+        if len(hex_str) == 6:
+            try:
+                r = int(hex_str[0:2], 16)
+                g = int(hex_str[2:4], 16)
+                b = int(hex_str[4:6], 16)
+                return [b, g, r]
+            except ValueError:
+                raise ValidationError(f'{label} contains invalid hex characters')
+        raise ValidationError(f'{label} must be a valid hex color string (e.g. #FF00FF) or 3-element BGR list')
+
+    if not isinstance(color, (list, tuple)) or len(color) != 3:
+        raise ValidationError(f'{label} must be a list of 3 integers (BGR) or hex string')
+
+    try:
+        bgr = [int(color[0]), int(color[1]), int(color[2])]
+    except (TypeError, ValueError):
+        raise ValidationError(f'{label} values must be integers')
+
+    if not all(0 <= c <= 255 for c in bgr):
+        raise ValidationError(f'{label} values must be between 0 and 255')
+    return bgr
+
+
 def _validate_bgr_color(color: Any, label: str = 'counting_area_color') -> list[int]:
     """
     Validate a BGR color list.
@@ -380,17 +424,7 @@ def _validate_bgr_color(color: Any, label: str = 'counting_area_color') -> list[
     Raises:
         ValidationError: If validation fails.
     """
-    if not isinstance(color, (list, tuple)) or len(color) != 3:
-        raise ValidationError(f'{label} must be a list of 3 integers (BGR)')
-
-    try:
-        bgr = [int(color[0]), int(color[1]), int(color[2])]
-    except (TypeError, ValueError):
-        raise ValidationError(f'{label} values must be integers')
-
-    if not all(0 <= c <= 255 for c in bgr):
-        raise ValidationError(f'{label} values must be between 0 and 255')
-    return bgr
+    return normalize_color_value(color, label=label)
 
 
 def validate_counting_area_payload(data: dict[str, Any]) -> dict[str, Any]:

@@ -495,6 +495,18 @@ class ConfigValidator:
             elif not all(isinstance(c, int) and 0 <= c <= 255 for c in color):
                 self.errors.append(f"'{prefix}.counting_area_color' values must be integers between 0 and 255")
 
+        # Validate indicator state colors
+        for color_key in ('indicator_detected_color', 'indicator_counted_color'):
+            if color_key in config:
+                color = config[color_key]
+                if isinstance(color, str):
+                    if not re.match(r'^#[0-9a-fA-F]{6}$|^#[0-9a-fA-F]{3}$', color.strip()):
+                        self.errors.append(f"'{prefix}.{color_key}' must be a valid hex color string or list of 3 integers (BGR)")
+                elif not isinstance(color, list) or len(color) != 3:
+                    self.errors.append(f"'{prefix}.{color_key}' must be a list of 3 integers (BGR) or hex string")
+                elif not all(isinstance(c, int) and 0 <= c <= 255 for c in color):
+                    self.errors.append(f"'{prefix}.{color_key}' values must be integers between 0 and 255")
+
         # Validate counting_areas (multi-zone)
         if 'counting_areas' in config:
             counting_areas = config['counting_areas']

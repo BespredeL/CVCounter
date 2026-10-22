@@ -119,6 +119,8 @@
         "vid_stride": 1,
         "indicator_mode": "circle",
         "indicator_size": 10,
+        "indicator_detected_color": [255, 0, 255],
+        "indicator_counted_color": [0, 255, 0],
         "counting_area": [
             [
                 0,
@@ -201,6 +203,8 @@
             "vid_stride": 1,
             "indicator_mode": "circle",
             "indicator_size": 10,
+            "indicator_detected_color": [255, 0, 255],
+            "indicator_counted_color": [0, 255, 0],
             "counting_area": [
                 [
                     0,

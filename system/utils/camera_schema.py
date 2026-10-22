@@ -33,6 +33,8 @@ CANONICAL_CAMERA_KEYS: List[str] = [
     "vid_stride",
     "indicator_mode",
     "indicator_size",
+    "indicator_detected_color",
+    "indicator_counted_color",
     # 3. Counting Areas (Zones)
     "counting_area",
     "counting_areas",
@@ -68,6 +70,8 @@ CANONICAL_DEFAULTS: Dict[str, Any] = {
     "vid_stride": 1,
     "indicator_mode": "circle",
     "indicator_size": 10,
+    "indicator_detected_color": [255, 0, 255],
+    "indicator_counted_color": [0, 255, 0],
     "counting_area": [
         [0, 0],
         [100, 0],
