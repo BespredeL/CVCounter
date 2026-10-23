@@ -13,15 +13,19 @@ import cv2
 from flask import Response, abort, jsonify, request
 
 from routes.api import api_v1_bp
-from routes.counters import (
-    _ensure_counter_running,
-    _get_editor_snapshot_frame,
-    _live_counter_counts,
-    _require_detection_location,
-)
 from system.auth.api_auth import api_key_required
+from system.services.counter_runtime import (
+    counter_status,
+    ensure_counter_running,
+    get_editor_snapshot_frame,
+    live_counter_counts,
+    require_detection_location,
+    reset_counts,
+    set_pause,
+    start_counting,
+    stop_counter as stop_running_counter,
+)
 from system.utils.app_context import get_app_context
-from system.utils.i18n import trans as translate
 from system.utils.telemetry import get_telemetry
 
 
@@ -30,22 +34,6 @@ def _mask_source_url(url: str | None) -> str:
     if not url:
         return ""
     return re.sub(r'://([^:]+):([^@]+)@', r'://\1:••••••••@', str(url))
-
-
-def _get_counter_status(location: str) -> str:
-    """Determine runtime status of counter."""
-    context = get_app_context()
-    thread_manager = context['thread_manager']
-    object_counters = context['object_counters']
-
-    if location not in thread_manager.threads or location not in object_counters:
-        return 'stopped'
-    counter = object_counters[location]
-    if getattr(counter, 'preview_mode', False):
-        return 'collection'
-    if counter.is_pause():
-        return 'paused'
-    return 'running'
 
 
 @api_v1_bp.route('/counters', methods=['GET'])
@@ -62,8 +50,8 @@ def list_counters():
     items = []
     for loc in locations:
         det_config = config.get(f'detections.{loc}', {}) or {}
-        status = _get_counter_status(loc)
-        counts = _live_counter_counts(loc)
+        status = counter_status(loc)
+        counts = live_counter_counts(loc)
 
         items.append({
             'id': loc,
@@ -87,7 +75,7 @@ def get_counter_detail(location: str):
     Get detailed runtime metrics and configuration for a specific counter.
     """
     location = str(location).strip()
-    _require_detection_location(location)
+    require_detection_location(location)
 
     context = get_app_context()
     config = context['config']
@@ -95,8 +83,8 @@ def get_counter_detail(location: str):
     object_counters = context['object_counters']
 
     det_config = config.get(f'detections.{location}', {}) or {}
-    status = _get_counter_status(location)
-    counts = _live_counter_counts(location)
+    status = counter_status(location)
+    counts = live_counter_counts(location)
     counter = object_counters.get(location)
 
     perf_info = {}
@@ -125,10 +113,10 @@ def start_counter(location: str):
     Start the counter worker thread and inference loop.
     """
     location = str(location).strip()
-    _require_detection_location(location)
+    require_detection_location(location)
 
     context = get_app_context()
-    _ensure_counter_running(location)
+    ensure_counter_running(location)
     object_counters = context['object_counters']
     counter = object_counters.get(location)
 
@@ -141,14 +129,13 @@ def start_counter(location: str):
             }
         }), 500
 
-    counter.start()
-    get_telemetry().track('counter_started', {'location': location})
+    start_counting(location)
 
     return jsonify({
         'success': True,
         'data': {
             'id': location,
-            'status': _get_counter_status(location),
+            'status': counter_status(location),
         }
     })
 
@@ -160,22 +147,9 @@ def stop_counter(location: str):
     Stop the counter worker thread and clean up resources.
     """
     location = str(location).strip()
-    _require_detection_location(location)
+    require_detection_location(location)
 
-    context = get_app_context()
-    object_counters = context['object_counters']
-    thread_manager = context['thread_manager']
-    lock = context['lock']
-
-    counter = object_counters.get(location)
-    if counter:
-        thread_manager.stop_thread(location, counter)
-
-    with lock:
-        if location in object_counters:
-            del object_counters[location]
-
-    get_telemetry().track('counter_stopped', {'location': location})
+    stop_running_counter(location)
 
     return jsonify({
         'success': True,
@@ -194,7 +168,7 @@ def pause_counter(location: str):
     Payload (optional): {"action": "pause" | "resume"}
     """
     location = str(location).strip()
-    _require_detection_location(location)
+    require_detection_location(location)
 
     context = get_app_context()
     object_counters = context['object_counters']
@@ -210,23 +184,14 @@ def pause_counter(location: str):
 
     counter = object_counters[location]
     body = request.get_json(silent=True) or {}
-    action = (body.get('action') or '').strip().lower()
-
-    if action == 'pause':
-        if not counter.is_pause():
-            counter.pause()
-    elif action == 'resume':
-        if counter.is_pause():
-            counter.pause()
-    else:
-        counter.pause()
+    is_paused = set_pause(counter, body.get('action'))
 
     return jsonify({
         'success': True,
         'data': {
             'id': location,
-            'is_paused': counter.is_pause(),
-            'status': _get_counter_status(location),
+            'is_paused': is_paused,
+            'status': counter_status(location),
         }
     })
 
@@ -238,7 +203,7 @@ def reset_counter(location: str):
     Reset counts to 0 for a running counter.
     """
     location = str(location).strip()
-    _require_detection_location(location)
+    require_detection_location(location)
 
     context = get_app_context()
     object_counters = context['object_counters']
@@ -252,15 +217,11 @@ def reset_counter(location: str):
             }
         }), 400
 
-    counter = object_counters[location]
-    counter.reset_count(location=location)
-    get_telemetry().track('counter_reset', {'location': location})
-
     return jsonify({
         'success': True,
         'data': {
             'id': location,
-            'counts': counter.get_live_counts(),
+            'counts': reset_counts(location),
         }
     })
 
@@ -278,7 +239,7 @@ def save_counter_report(location: str):
     }
     """
     location = str(location).strip()
-    _require_detection_location(location)
+    require_detection_location(location)
 
     context = get_app_context()
     object_counters = context['object_counters']
@@ -327,7 +288,7 @@ def get_counter_snapshot(location: str):
         annotated: bool (default false; if true and counter running, returns frame with boxes)
     """
     location = str(location).strip()
-    _require_detection_location(location)
+    require_detection_location(location)
 
     context = get_app_context()
     object_counters = context['object_counters']
@@ -345,7 +306,7 @@ def get_counter_snapshot(location: str):
 
     if frame is None:
         try:
-            frame = _get_editor_snapshot_frame(location)
+            frame = get_editor_snapshot_frame(location)
         except Exception:
             frame = None
 
