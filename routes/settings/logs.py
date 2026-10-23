@@ -11,6 +11,7 @@ from flask import jsonify, request, send_file
 
 from routes.settings import settings_bp
 from system.auth import login_required
+from system.utils.bytesize import format_bytes
 from system.utils.i18n import trans as translate
 
 
@@ -31,18 +32,6 @@ def _resolve_app_log_path() -> str:
         if resolved:
             path = resolved
     return path
-
-
-def _format_file_size(size_bytes: int) -> str:
-    """
-    Format a byte count into a human-readable size string.
-    """
-    if size_bytes < 1024:
-        return f"{size_bytes} B"
-    elif size_bytes < 1024 * 1024:
-        return f"{size_bytes / 1024:.1f} KB"
-    else:
-        return f"{size_bytes / (1024 * 1024):.2f} MB"
 
 
 @settings_bp.route('/settings/api/logs', methods=['GET'])
@@ -104,7 +93,11 @@ def api_get_logs():
             'full_path': log_path,
             'exists': True,
             'file_size': file_size,
-            'file_size_formatted': _format_file_size(file_size),
+            'file_size_formatted': format_bytes(
+                file_size,
+                places={'B': 0, 'KB': 1, 'MB': 2},
+                units=('B', 'KB', 'MB'),
+            ),
             'mtime': mtime_str,
             'total_lines': total_lines,
             'filtered_count': len(filtered),
