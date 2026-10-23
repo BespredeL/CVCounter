@@ -5,13 +5,122 @@
 # Website: https://bespredel.name
 
 import os
+import threading
 import time
+from collections import deque
 
 import cv2
 from imutils.video import VideoStream
 
 from system.utils.exception_handler import StreamConnectionError, StreamSourceError
 from system.utils.logger import Logger
+
+
+class _TimedLatestReader:
+    """Playout ring for RTSP. Capture is not queried from any other thread."""
+
+    _RING = 12
+
+    def __init__(self, src: str) -> None:
+        self.stream = cv2.VideoCapture(src)
+        self.frame = None
+        self.stopped = False
+        self._slots: list | None = None
+        self._free: deque = deque()
+        self._queued: deque = deque()
+        self._current: int | None = None
+        self._shown_seq = 0
+        self.follow_shown = False
+        self.capture_fps = 0.0
+        self._cap_count = 0
+        self._cap_tick = time.monotonic()
+        self._lock = threading.Lock()
+        try:
+            self.stream.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        except Exception:
+            pass
+        ok, frame = self.stream.read()
+        if ok and frame is not None:
+            self._store(frame)
+        self._thread = threading.Thread(target=self._loop, name="rtsp-read", daemon=True)
+        self._thread.start()
+
+    def _ensure_slots(self, frame) -> None:
+        if self._slots is not None and self._slots[0].shape == frame.shape:
+            return
+        self._slots = [frame.copy() for _ in range(self._RING)]
+        self._free = deque(range(1, self._RING))
+        self._queued = deque()
+        self._current = 0
+        self.frame = self._slots[0]
+
+    def _store(self, frame) -> None:
+        self._ensure_slots(frame)
+        with self._lock:
+            if not self._free and self._queued:
+                self._free.append(self._queued.popleft())
+            if not self._free:
+                return
+            idx = self._free.popleft()
+        self._slots[idx][:] = frame
+        with self._lock:
+            self._queued.append(idx)
+        self._cap_count += 1
+        now = time.monotonic()
+        span = now - self._cap_tick
+        if span >= 0.5:
+            self.capture_fps = self._cap_count / span
+            self._cap_count = 0
+            self._cap_tick = now
+
+    def _loop(self) -> None:
+        while not self.stopped:
+            ok, frame = self.stream.read()
+            if not ok or frame is None:
+                time.sleep(0.05)
+                continue
+            self._store(frame)
+
+    def read(self):
+        with self._lock:
+            if self._current is not None:
+                self._free.append(self._current)
+                self._current = None
+            if self._queued:
+                self._current = self._queued.popleft()
+                self.frame = self._slots[self._current]
+            return self.frame
+
+    def pop(self):
+        """Next queued frame, or None when playout has caught up. Does not repeat the last frame."""
+        with self._lock:
+            if not self._queued:
+                return None
+            if self._current is not None:
+                self._free.append(self._current)
+            self._current = self._queued.popleft()
+            self.frame = self._slots[self._current]
+            self._shown_seq += 1
+            return self.frame
+
+    def latest_copy(self):
+        """Copy of the frame detection should use. While playout is active this is the frame on screen."""
+        with self._lock:
+            if self.follow_shown and self._current is not None:
+                idx = self._current
+            else:
+                idx = self._queued[-1] if self._queued else self._current
+            if idx is None:
+                src = self.frame
+                return None if src is None else src.copy()
+            return self._slots[idx].copy()
+
+    def stop(self) -> None:
+        self.stopped = True
+        try:
+            self.stream.release()
+        except Exception:
+            pass
 
 
 class VideoStreamManager:
@@ -154,7 +263,7 @@ class VideoStreamManager:
             elif self.is_stream():
                 if self.__cap is not None:
                     self.__cap.stop()
-                self.__cap = VideoStream(self.__video_stream).start()
+                self.__cap = self._open_live_stream()
                 if self.__cap is None:
                     self.__logger.error(f"Cannot open video stream: {self.__video_stream}")
                     raise StreamConnectionError(f"Cannot open video stream: {self.__video_stream}")
@@ -209,7 +318,10 @@ class VideoStreamManager:
             if self.is_hls():
                 frame = self._read_hls_frame()
             elif self.is_stream():
-                frame = self.__cap.read()
+                if isinstance(self.__cap, _TimedLatestReader):
+                    frame = self.__cap.latest_copy()
+                else:
+                    frame = self.__cap.read()
             else:
                 ret, frame = self.__cap.read()
                 if not ret:
@@ -228,6 +340,24 @@ class VideoStreamManager:
                 time.sleep(self.__frame_interval)
 
         return frame
+
+    def uses_live_queue(self) -> bool:
+        return isinstance(self.__cap, _TimedLatestReader)
+
+    def set_follow_shown(self, enabled: bool) -> None:
+        if isinstance(self.__cap, _TimedLatestReader):
+            self.__cap.follow_shown = enabled
+
+    def shown_seq(self) -> int:
+        if isinstance(self.__cap, _TimedLatestReader):
+            return self.__cap._shown_seq
+        return -1
+
+    def pop_live_frame(self):
+        """Pop the next RTSP playout frame. None when the queue is empty or this source has no queue."""
+        if isinstance(self.__cap, _TimedLatestReader):
+            return self.__cap.pop()
+        return None
 
     def reconnect(self) -> None:
         """
@@ -294,6 +424,16 @@ class VideoStreamManager:
         if isinstance(self.__video_stream, str) and self.__video_stream.isdigit():
             return True
         return False
+
+    def _open_live_stream(self):
+        """
+        Open a network stream. RTSP keeps a small playout queue so a short network pause
+        does not freeze the picture. FFmpeg options stay at defaults.
+        """
+        source = str(self.__video_stream).lower()
+        if source.startswith('rtsp://') or '/rtsp/' in source:
+            return _TimedLatestReader(self.__video_stream)
+        return VideoStream(self.__video_stream).start()
 
     def _open_hls_capture(self) -> cv2.VideoCapture:
         """
@@ -400,6 +540,18 @@ class VideoStreamManager:
             float: The actual calculated FPS
         """
         return self.__actual_fps
+
+    def capture_fps(self) -> float:
+        """
+        Frames per second arriving from the camera.
+
+        RTSP counts frames stored by the capture thread. Other sources use the
+        rate at which frames are read.
+        """
+        cap = self.__cap
+        if isinstance(cap, _TimedLatestReader):
+            return float(cap.capture_fps)
+        return float(self.__actual_fps)
 
     def get_fps(self) -> float:
         """

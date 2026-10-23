@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import random
 import re
+import threading
 import time
 from typing import Any, Generator, List, Optional, Tuple
 
@@ -153,7 +154,7 @@ class ObjectCounter:
     DEFAULT_INDICATOR_COUNTED_COLOR: Tuple[int, int, int] = (0, 255, 0)
     DEFAULT_VID_STRIDE: int = 1
     DEFAULT_RECORDING_PATH: str = "storage/saved_recordings"
-    DEFAULT_MJPEG_FPS: float = 15.0
+    DEFAULT_MJPEG_FPS: float = 25.0
     DEFAULT_PAUSED_SLEEP_TIME: float = 0.1
     DEFAULT_VIDEO_RECONNECT_ATTEMPTS: int = 5
 
@@ -189,6 +190,11 @@ class ObjectCounter:
         self._mjpeg_chunk: bytes | None = None
         self._mjpeg_viewers: int = 0
         self._last_mjpeg_encode_time: float = 0.0
+        self._playout_thread: threading.Thread | None = None
+        self._playout_stop = False
+        self._playout_active = False
+        self._playout_boxes: list = []
+        self._last_det_seq = -1
         self._last_count_payload: dict | None = None
         self._cached_source_frame: np.ndarray | None = None
         self.get_frames_running: bool = False
@@ -211,6 +217,11 @@ class ObjectCounter:
         self._perf_total_inference_time: float = 0.0
         self._perf_last_report_time: float = time.monotonic()
         self._perf_report_interval: float = 300.0
+        self._hud_cam_fps = 0.0
+        self._hud_out_fps = 0.0
+        self._hud_inf_ms = 0.0
+        self._out_count = 0
+        self._out_tick = time.monotonic()
 
         # Load and initialize config
         self.__initialize_config(location, config_manager, kwargs)
@@ -314,6 +325,12 @@ class ObjectCounter:
 
         while self.running:
             try:
+                if self._playout_active:
+                    shown_seq = self.vsm.shown_seq()
+                    if shown_seq == self._last_det_seq:
+                        time.sleep(0.004)
+                        continue
+
                 reconnect_count = self.vsm.get_reconnect_count()
                 frame = self.vsm.get_frame()
                 if frame is None:
@@ -340,6 +357,8 @@ class ObjectCounter:
                     self.notif_manager.event('counter_status', {'status': 'started', 'location': self.location})
 
                 self._cached_source_frame = frame
+                if self._playout_active:
+                    self._last_det_seq = self.vsm.shown_seq()
 
                 if self.get_frames_running:
                     self.frame = self._process_frame(frame)
@@ -361,8 +380,8 @@ class ObjectCounter:
         """
         Generator that yields frames in the form of JPEG images.
 
-        JPEG encoding runs in the counter thread; this generator only forwards
-        the latest chunk so the HTTP worker thread stays mostly idle.
+        JPEG for an RTSP queue is encoded on a playout thread. This generator only
+        forwards the latest chunk so the HTTP worker stays mostly idle.
 
         Always yields at least one chunk so Werkzeug calls start_response
         before the client disconnects (e.g. quick navigation away from /video).
@@ -372,6 +391,8 @@ class ObjectCounter:
         """
         self._mjpeg_viewers += 1
         self.get_frames_running = True
+        if self.vsm.uses_live_queue():
+            self._start_playout()
         sent = False
         last_chunk: bytes | None = None
         try:
@@ -395,6 +416,7 @@ class ObjectCounter:
             if self._mjpeg_viewers == 0:
                 self.get_frames_running = False
                 self._mjpeg_chunk = None
+                self._stop_playout()
 
     def _class_label(self, class_id: int) -> str:
         """
@@ -963,6 +985,7 @@ class ObjectCounter:
         self.config_manager: ConfigManager = config_manager
         self.location: str = location
         self.debug: bool = kwargs.get('debug', config_manager.get('general.debug', False))
+        self.show_fps: bool = bool(config_manager.get('general.show_fps', False))
         self.model_type: str = str(kwargs.get(
             'model_type',
             detector_config.get('model_type', detection_default.get('model_type', 'auto'))
@@ -1518,6 +1541,110 @@ class ObjectCounter:
             return 1.0 / float(self.video_fps)
         return 1.0 / self.DEFAULT_MJPEG_FPS
 
+    def _snapshot_boxes(self, boxes) -> list:
+        if boxes is None:
+            return []
+        snapped = []
+        for result in boxes:
+            try:
+                snapped.append(tuple(int(v) for v in list(result)[:6]))
+            except Exception:
+                continue
+        return snapped
+
+    def _start_playout(self) -> None:
+        thread = self._playout_thread
+        if thread is not None and thread.is_alive():
+            self._playout_stop = False
+            self._playout_active = True
+            self.vsm.set_follow_shown(True)
+            return
+        self._playout_stop = False
+        self._playout_active = True
+        self.vsm.set_follow_shown(True)
+        self._playout_thread = threading.Thread(target=self._playout_loop, name="mjpeg-playout", daemon=True)
+        self._playout_thread.start()
+
+    def _stop_playout(self) -> None:
+        self._playout_stop = True
+        self._playout_active = False
+        self.vsm.set_follow_shown(False)
+        self._last_det_seq = -1
+
+    def _playout_loop(self) -> None:
+        """Send queued RTSP frames at capture speed. Detection reads the newest frame and does not drain this queue."""
+        while not self._playout_stop:
+            frame = self.vsm.pop_live_frame()
+            if frame is None:
+                time.sleep(0.004)
+                continue
+            try:
+                display = self._draw_counting_area(frame)
+                for values in self._playout_boxes:
+                    x1, y1, x2, y2, rid = values[:5]
+                    class_id = values[5] if len(values) > 5 else -1
+                    self._draw_indicator(
+                        display,
+                        ((x1 + x2) // 2, (y1 + y2) // 2),
+                        rid,
+                        box=(x1, y1, x2, y2),
+                        class_id=class_id,
+                    )
+                self._draw_fps_hud(display)
+                chunk = self._encode_mjpeg_chunk(display)
+                if chunk is not None:
+                    self._note_output_frame()
+                    self._mjpeg_chunk = chunk
+            except Exception as exc:
+                self.logger.error(f"MJPEG playout error | {self.location}: {exc}")
+                time.sleep(0.02)
+
+    def _note_output_frame(self) -> None:
+        self._out_count += 1
+        now = time.monotonic()
+        span = now - self._out_tick
+        if span >= 0.5:
+            self._hud_out_fps = self._out_count / span
+            self._out_count = 0
+            self._out_tick = now
+
+    def _draw_fps_hud(self, image: np.ndarray) -> None:
+        """
+        Draw camera FPS, output FPS, and inference time in the top-left corner.
+
+        Shown when general.show_fps is enabled. Drawn on the frame that is encoded
+        for the browser, including the RTSP playout path.
+        """
+        if not self.show_fps or image is None or image.size == 0:
+            return
+        try:
+            self._hud_cam_fps = float(self.vsm.capture_fps())
+        except Exception:
+            pass
+
+        height, width = image.shape[:2]
+        panel_w, panel_h = 188, 84
+        if width < panel_w + 24 or height < panel_h + 24:
+            return
+        x, y = 16, 16
+        roi = image[y:y + panel_h, x:x + panel_w]
+        tint = np.empty_like(roi)
+        tint[:] = (28, 30, 34)
+        cv2.addWeighted(tint, 0.82, roi, 0.18, 0, roi)
+        cv2.rectangle(image, (x, y), (x + panel_w - 1, y + panel_h - 1), (90, 96, 104), 1, cv2.LINE_AA)
+
+        rows = (
+            ("CAM", f"{self._hud_cam_fps:4.1f}", "fps"),
+            ("OUT", f"{self._hud_out_fps:4.1f}", "fps"),
+            ("INF", f"{self._hud_inf_ms:4.1f}", "ms"),
+        )
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        for index, (label, value, unit) in enumerate(rows):
+            baseline = y + 24 + index * 24
+            cv2.putText(image, label, (x + 12, baseline), font, 0.52, (168, 174, 182), 1, cv2.LINE_AA)
+            cv2.putText(image, value, (x + 68, baseline), font, 0.58, (248, 248, 248), 1, cv2.LINE_AA)
+            cv2.putText(image, unit, (x + 138, baseline), font, 0.42, (148, 154, 162), 1, cv2.LINE_AA)
+
     def _maybe_encode_mjpeg(self, frame: np.ndarray) -> None:
         """
         Encode MJPEG only when the stream interval has elapsed.
@@ -1534,6 +1661,7 @@ class ObjectCounter:
 
         chunk = self._encode_mjpeg_chunk(frame)
         if chunk is not None:
+            self._note_output_frame()
             self._mjpeg_chunk = chunk
             self._last_mjpeg_encode_time = now
 
@@ -1553,8 +1681,9 @@ class ObjectCounter:
         with Timer() as timer:
             if self.paused:
                 display_frame = self._work_frame(frame)
-                if self.get_frames_running:
+                if self.get_frames_running and not self._playout_active:
                     display_frame = self._draw_counting_area(display_frame)
+                    self._draw_fps_hud(display_frame)
                     self._maybe_encode_mjpeg(display_frame)
                 return display_frame
 
@@ -1565,6 +1694,9 @@ class ObjectCounter:
             inf_start = time.monotonic()
             boxes = self._detect(work_frame)
             inf_duration = time.monotonic() - inf_start
+            inf_ms = inf_duration * 1000.0
+            self._hud_inf_ms = inf_ms if self._hud_inf_ms <= 0 else (self._hud_inf_ms * 0.8 + inf_ms * 0.2)
+            self._playout_boxes = self._snapshot_boxes(boxes)
 
             if boxes is not None and len(boxes) > 0:
                 self._on_detection_activity()
@@ -1596,7 +1728,9 @@ class ObjectCounter:
                         if self.interval_capture_count >= self.interval_capture_max:
                             self.interval_capture_active = False
 
-            if self.debug and timer.elapsed > 0:
+            if self.show_fps:
+                self._draw_fps_hud(display_frame)
+            elif self.debug and timer.elapsed > 0:
                 fps = int(round(1 / timer.elapsed))
                 cv2.putText(display_frame, f'FPS: {fps}',
                             self.DEFAULT_FPS_POSITION, cv2.FONT_HERSHEY_SIMPLEX,
@@ -1614,7 +1748,7 @@ class ObjectCounter:
             self._perf_total_frame_time += timer.elapsed
             self._maybe_report_performance()
 
-            if self.get_frames_running:
+            if self.get_frames_running and not self._playout_active:
                 self._maybe_encode_mjpeg(display_frame)
 
             return display_frame
