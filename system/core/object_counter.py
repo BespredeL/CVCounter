@@ -1235,12 +1235,31 @@ class ObjectCounter:
         # Tracked boxes: [x1, y1, x2, y2, track_id, class_id]
         return self.tracker.update(detections)
 
-    def _draw_counting_area(self, image: np.ndarray) -> np.ndarray:
+    def _preview_frame(self, frame: np.ndarray) -> tuple[np.ndarray, float]:
+        """
+        Shrink a frame for the browser preview.
+
+        Full resolution is kept for detection and recording. Only the picture
+        sent to the page is scaled, and 100% skips the resize entirely.
+
+        Returns:
+            tuple: Scaled frame and the factor used for overlay coordinates.
+        """
+        try:
+            scale = int(self.video_scale or 0)
+        except (TypeError, ValueError):
+            scale = 0
+        if scale <= 0 or scale >= 100:
+            return frame, 1.0
+        return FrameUtils.resize_frame(frame, scale), scale / 100.0
+
+    def _draw_counting_area(self, image: np.ndarray, scale: float = 1.0) -> np.ndarray:
         """
         Draws all counting zones on the given image.
 
         Args:
             image (numpy.ndarray): The image on which the counting area should be drawn.
+            scale (float): Multiply zone points when the image was already resized.
 
         Returns:
             numpy.ndarray: The image with the counting area drawn on it.
@@ -1255,7 +1274,10 @@ class ObjectCounter:
             points = zone.get('points') or []
             if len(points) < 3:
                 continue
-            pts = np.array(points, np.int32).reshape((-1, 1, 2))
+            pts = np.asarray(points, dtype=np.float32)
+            if scale != 1.0:
+                pts = pts * scale
+            pts = pts.astype(np.int32).reshape((-1, 1, 2))
             color = tuple(zone.get('color') or self.counting_area_color or DEFAULT_COUNTING_AREA_COLOR)
             cv2.fillPoly(overlay, [pts], color)
 
@@ -1270,7 +1292,7 @@ class ObjectCounter:
                     mcx = int(np.mean(pts[:, 0, 0]))
                     mcy = int(np.mean(pts[:, 0, 1]))
 
-                arrow_len = 35
+                arrow_len = 35 if scale == 1.0 else max(12, int(35 * scale))
                 vec = DIRECTION_VECTORS.get(direction)
                 if vec:
                     ux, uy = vec
@@ -1331,6 +1353,7 @@ class ObjectCounter:
         rid: int,
         box: tuple[int, int, int, int] | None = None,
         class_id: int = -1,
+        scale: float = 1.0,
     ) -> None:
         """
         Draws an indicator on the given image (in place).
@@ -1341,19 +1364,26 @@ class ObjectCounter:
             rid (int): The ID of the indicator.
             box (tuple[int, int, int, int], optional): (x1, y1, x2, y2) bounding box.
             class_id (int, optional): The class ID of the object.
+            scale (float): Multiply coordinates when the image was already resized.
 
         Returns:
             None
         """
+        if scale != 1.0:
+            center = (int(center[0] * scale), int(center[1] * scale))
+            if box is not None:
+                box = tuple(int(value * scale) for value in box)
+
         color = self.indicator_counted_color if rid in self.total_objects else self.indicator_detected_color
+        indicator_size = self.indicator_size if scale == 1.0 else max(2, int(round(self.indicator_size * scale)))
 
         if self.indicator_mode == 'box' and box is not None:
             x1, y1, x2, y2 = box
             # Draw bounding box rectangle
-            cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
+            cv2.rectangle(image, (x1, y1), (x2, y2), color, 2 if scale == 1.0 else 1)
 
             # Center tracking dot (subtle, so users see the point triggering the counting zone)
-            dot_radius = max(3, min(self.indicator_size // 2, 6))
+            dot_radius = max(2, min(indicator_size // 2, 6))
             cv2.circle(image, center, dot_radius, color, cv2.FILLED)
 
             # Prepare text badge: Class name + track ID
@@ -1391,7 +1421,7 @@ class ObjectCounter:
                 cv2.rectangle(image, (x1, badge_y1), (badge_x2, badge_y2), color, cv2.FILLED)
                 cv2.putText(image, label, (x1 + 3, badge_y2 - baseline - 2), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
         else:
-            cv2.circle(image, center, self.indicator_size, color, cv2.FILLED)
+            cv2.circle(image, center, indicator_size, color, cv2.FILLED)
 
     def _ensure_counting_mask(self, frame_shape: Tuple[int, int]) -> None:
         """
@@ -1579,7 +1609,8 @@ class ObjectCounter:
                 time.sleep(0.004)
                 continue
             try:
-                display = self._draw_counting_area(frame)
+                display, scale = self._preview_frame(frame)
+                display = self._draw_counting_area(display, scale)
                 for values in self._playout_boxes:
                     x1, y1, x2, y2, rid = values[:5]
                     class_id = values[5] if len(values) > 5 else -1
@@ -1589,9 +1620,10 @@ class ObjectCounter:
                         rid,
                         box=(x1, y1, x2, y2),
                         class_id=class_id,
+                        scale=scale,
                     )
                 self._draw_fps_hud(display)
-                chunk = self._encode_mjpeg_chunk(display)
+                chunk = self._encode_mjpeg_chunk(display, scaled=scale < 1.0)
                 if chunk is not None:
                     self._note_output_frame()
                     self._mjpeg_chunk = chunk
@@ -1783,12 +1815,13 @@ class ObjectCounter:
             self._perf_total_inference_time = 0.0
             self._perf_last_report_time = now
 
-    def _encode_mjpeg_chunk(self, frame: np.ndarray) -> bytes | None:
+    def _encode_mjpeg_chunk(self, frame: np.ndarray, scaled: bool = False) -> bytes | None:
         """
         Build one multipart JPEG chunk for the browser MJPEG stream.
 
         Args:
             frame (numpy.ndarray): BGR frame to encode.
+            scaled (bool): Frame is already at video_show_scale.
 
         Returns:
             bytes | None: Encoded multipart chunk or None on failure.
@@ -1798,8 +1831,13 @@ class ObjectCounter:
 
         try:
             stream_frame = frame
-            if self.video_scale > 0:
-                stream_frame = FrameUtils.resize_frame(stream_frame, int(self.video_scale))
+            if not scaled:
+                try:
+                    scale = int(self.video_scale or 0)
+                except (TypeError, ValueError):
+                    scale = 0
+                if 0 < scale < 100:
+                    stream_frame = FrameUtils.resize_frame(stream_frame, scale)
 
             encoded_frame = FrameUtils.encoding_frame(stream_frame, int(self.video_quality), 'jpeg')
             return (

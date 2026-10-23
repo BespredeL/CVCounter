@@ -54,6 +54,12 @@ class FrameUtils:
         Returns:
             cv2.Mat: Resized image frame.
         """
-        width = int(frame.shape[1] * scale_percent / 100)
-        height = int(frame.shape[0] * scale_percent / 100)
-        return cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
+        if scale_percent >= 100:
+            return frame
+
+        width = max(1, int(frame.shape[1] * scale_percent / 100))
+        height = max(1, int(frame.shape[0] * scale_percent / 100))
+        if width == frame.shape[1] and height == frame.shape[0]:
+            return frame
+        # INTER_LINEAR is much cheaper than INTER_AREA on a live preview.
+        return cv2.resize(frame, (width, height), interpolation=cv2.INTER_LINEAR)
