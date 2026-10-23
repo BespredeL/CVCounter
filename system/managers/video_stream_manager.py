@@ -25,6 +25,14 @@ class _TimedLatestReader:
         self.stream = cv2.VideoCapture(src)
         self.frame = None
         self.stopped = False
+        for prop_name in ('CAP_PROP_OPEN_TIMEOUT_MSEC', 'CAP_PROP_READ_TIMEOUT_MSEC'):
+            prop = getattr(cv2, prop_name, None)
+            if prop is None:
+                continue
+            try:
+                self.stream.set(prop, 2000)
+            except Exception:
+                pass
         self._slots: list | None = None
         self._free: deque = deque()
         self._queued: deque = deque()
@@ -73,13 +81,34 @@ class _TimedLatestReader:
             self._cap_count = 0
             self._cap_tick = now
 
+    def _release_stream(self) -> None:
+        stream = self.stream
+        self.stream = None
+        if stream is None:
+            return
+        try:
+            stream.release()
+        except Exception:
+            pass
+
     def _loop(self) -> None:
-        while not self.stopped:
-            ok, frame = self.stream.read()
-            if not ok or frame is None:
-                time.sleep(0.05)
-                continue
-            self._store(frame)
+        try:
+            while not self.stopped:
+                stream = self.stream
+                if stream is None:
+                    break
+                try:
+                    ok, frame = stream.read()
+                except cv2.error:
+                    break
+                if self.stopped:
+                    break
+                if not ok or frame is None:
+                    time.sleep(0.05)
+                    continue
+                self._store(frame)
+        finally:
+            self._release_stream()
 
     def read(self):
         with self._lock:
@@ -117,10 +146,14 @@ class _TimedLatestReader:
 
     def stop(self) -> None:
         self.stopped = True
-        try:
-            self.stream.release()
-        except Exception:
-            pass
+        thread = getattr(self, '_thread', None)
+        if thread is None or thread is threading.current_thread():
+            self._release_stream()
+            return
+        # The reader releases the capture after read() returns. Releasing it
+        # from this thread while read() is blocked deadlocks OpenCV, so the
+        # next start cannot open the camera.
+        thread.join(timeout=2.5)
 
 
 class VideoStreamManager:
