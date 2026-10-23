@@ -15,6 +15,7 @@ from typing import Any, Optional
 
 import cv2
 
+from system.utils.bytesize import format_bytes
 from system.utils.logger import Logger
 from system.utils.paths import get_project_root, resolve_project_path
 
@@ -64,26 +65,6 @@ def _is_safe_filename(filename: str) -> bool:
     return True
 
 
-def _format_size(num_bytes: int) -> str:
-    """
-    Format the size.
-    
-    Args:
-        num_bytes (int): The number of bytes
-    
-    Returns:
-        str: The formatted size
-    """
-    value = float(num_bytes)
-    for unit in ('B', 'KB', 'MB', 'GB'):
-        if value < 1024 or unit == 'GB':
-            if unit == 'B':
-                return f'{int(value)} {unit}'
-            return f'{value:.1f} {unit}'
-        value /= 1024.0
-    return f'{num_bytes} B'
-
-
 def _file_meta(path: Path) -> dict[str, Any]:
     """
     Get the file metadata.
@@ -99,7 +80,11 @@ def _file_meta(path: Path) -> dict[str, Any]:
     return {
         'name': path.name,
         'size': stat.st_size,
-        'size_label': _format_size(stat.st_size),
+        'size_label': format_bytes(
+            stat.st_size,
+            places={'B': 0, 'KB': 1, 'MB': 1, 'GB': 1},
+            units=('B', 'KB', 'MB', 'GB'),
+        ),
         'mtime': mtime,
         'mtime_label': mtime.strftime('%d.%m.%Y %H:%M:%S'),
     }
@@ -114,7 +99,11 @@ def _file_meta_from_entry(entry: os.DirEntry) -> dict[str, Any]:
     return {
         'name': entry.name,
         'size': stat.st_size,
-        'size_label': _format_size(stat.st_size),
+        'size_label': format_bytes(
+            stat.st_size,
+            places={'B': 0, 'KB': 1, 'MB': 1, 'GB': 1},
+            units=('B', 'KB', 'MB', 'GB'),
+        ),
         'mtime': mtime,
         'mtime_label': mtime.strftime('%d.%m.%Y %H:%M:%S'),
     }

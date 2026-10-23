@@ -8,19 +8,28 @@ from __future__ import annotations
 
 import time
 from functools import wraps
-from threading import Thread
 from typing import Any
 
-from flask import Blueprint, Response, abort, current_app, jsonify, redirect, render_template, request, send_file, \
+from flask import Blueprint, Response, abort, jsonify, redirect, render_template, request, send_file, \
     stream_with_context, url_for
 from markupsafe import escape
 
 from system.auth import login_required
-from system.core.object_counter import ObjectCounter
-from system.managers.video_stream_manager import VideoStreamManager
+from system.services.counter_runtime import (
+    ensure_counter_running,
+    get_editor_snapshot_frame,
+    live_counter_counts,
+    process_custom_fields,
+    require_detection_location,
+    reset_counts,
+    set_pause,
+    start_counting,
+    start_counters_for_locations,
+    stop_counter,
+)
 from system.utils.app_context import get_app_context
-from system.utils.counting_area import DEFAULT_COUNTING_AREA_COLOR, areas_for_config, normalize_counting_areas
-from system.utils.counter_preview import get_preview_path, save_counter_preview
+from system.utils.counting_area import areas_for_config, normalize_counting_areas
+from system.utils.counter_preview import get_preview_path
 from system.utils.frame_utils import FrameUtils
 from system.utils.i18n import trans as translate
 from system.utils.logger import Logger
@@ -64,298 +73,6 @@ def require_location(f):
     return decorated_function
 
 
-def object_detector_init(location: str):
-    """
-    Initialize an object detector for a specific location.
-    
-    Args:
-        location (str): The identifier for the detection location
-    
-    Returns:
-        dict: Dictionary containing initialized object counters
-    
-    Note:
-        This function is thread-safe and uses a lock for synchronization
-    """
-    context = get_app_context()
-    config = context['config']
-    object_counters = context['object_counters']
-    db_manager = context['db_manager']
-    socketio = context['socketio']
-    lock = context['lock']
-
-    if location in object_counters:
-        return object_counters
-
-    detector_config = config.get("detections." + location)
-    counter = None
-    try:
-        counter = ObjectCounter(
-            location=location,
-            config_manager=config,
-            socketio=socketio,
-            video_path=detector_config['video_path'],
-            db_manager=db_manager,
-            weights=detector_config.get('weights_path'),
-            counting_areas=detector_config.get('counting_areas'),
-            counting_area=detector_config.get('counting_area'),
-            counting_area_color=tuple(
-                detector_config.get('counting_area_color', DEFAULT_COUNTING_AREA_COLOR)
-            ),
-        )
-    except Exception:
-        if counter is not None:
-            counter.cleanup()
-        raise
-
-    with lock:
-        if location not in object_counters:
-            object_counters[location] = counter
-        else:
-            counter.cleanup()
-
-    return object_counters
-
-
-def _require_detection_location(location: str) -> None:
-    """
-    Abort if location is not configured in detections.
-    
-    Args:
-        location (str): The identifier for the detection location
-    
-    Returns:
-        None
-    """
-    context = get_app_context()
-    if location not in context['locations']:
-        abort(400, translate('Detection config not found'))
-
-
-def _get_editor_snapshot_frame(location: str):
-    """
-    Return one BGR frame for the zone editor without loading the YOLO model.
-
-    Reuses an already running counter stream when available.
-
-    Args:
-        location (str): The identifier for the detection location
-
-    Returns:
-        numpy.ndarray: The frame
-    """
-    context = get_app_context()
-    config = context['config']
-    object_counters = context['object_counters']
-
-    if location in object_counters:
-        frame = object_counters[location].get_source_frame()
-        if frame is not None:
-            return frame
-
-    detector_config = config.get(f'detections.{location}', {})
-    detection_default = config.get('detection_default', {})
-    video_path = detector_config.get('video_path')
-    video_fps = detector_config.get('video_fps', detection_default.get('video_fps', 0))
-    max_reconnect_attempts = detector_config.get(
-        'video_reconnect_attempts',
-        detection_default.get('video_reconnect_attempts', VideoStreamManager.DEFAULT_MAX_RECONNECT_ATTEMPTS),
-    )
-
-    vsm = VideoStreamManager(video_path, video_fps, max_reconnect_attempts=max_reconnect_attempts)
-    try:
-        if not vsm.connect_with_retries():
-            return None
-        return vsm.get_frame()
-    finally:
-        vsm.stop()
-
-
-def _capture_counter_preview_on_start(location: str) -> int | None:
-    """
-    Grab one frame after thread start and store a dashboard thumbnail.
-
-    Args:
-        location: Detection location identifier.
-
-    Returns:
-        int | None: Unix timestamp when saved, else None.
-    """
-    context = get_app_context()
-    object_counters = context['object_counters']
-    counter = object_counters.get(location)
-    frame = None
-
-    if counter:
-        for _ in range(40):
-            cached = counter._cached_source_frame
-            if cached is not None:
-                frame = cached.copy()
-                break
-            time.sleep(0.1)
-
-    if frame is None:
-        try:
-            frame = _get_editor_snapshot_frame(location)
-        except Exception:
-            frame = None
-
-    if save_counter_preview(location, frame):
-        return int(time.time())
-    return None
-
-
-def _schedule_counter_preview_capture(location: str) -> None:
-    """Capture dashboard preview in the background (must not block HTTP)."""
-    app = current_app._get_current_object()
-
-    def _worker() -> None:
-        try:
-            with app.app_context():
-                _capture_counter_preview_on_start(location)
-        except Exception as e:
-            Logger().error(f'Preview capture failed for {location}: {e}')
-            Logger().log_exception()
-
-    Thread(
-        target=_worker,
-        daemon=True,
-        name=f'PreviewCapture-{location}',
-    ).start()
-
-
-def _ensure_counter_running(location: str) -> dict:
-    """
-    Initialize ObjectCounter and start its thread when not already running.
-
-    Dashboard preview is refreshed only on the first start (new thread).
-
-    Args:
-        location: Detection location identifier.
-
-    Returns:
-        dict: Keys started_new (bool), preview_ts (int | None).
-    """
-    context = get_app_context()
-    thread_manager = context['thread_manager']
-    started_new = not thread_manager.has_thread(location)
-
-    object_counters = object_detector_init(location)
-    if location in object_counters:
-        thread_manager.start_thread(location, object_counters[location].run_frames)
-
-    preview_ts = None
-    if started_new:
-        _schedule_counter_preview_capture(location)
-
-    return {'started_new': started_new, 'preview_ts': preview_ts}
-
-
-def _init_counter_for_location(location: str) -> ObjectCounter:
-    """
-    Ensure ObjectCounter exists and video source is open.
-    
-    Args:
-        location (str): The identifier for the detection location
-    
-    Returns:
-        ObjectCounter: The ObjectCounter instance
-    """
-    _require_detection_location(location)
-    counters = object_detector_init(location)
-    return counters[location]
-
-
-def process_custom_fields(form_config: dict, current_count: dict, detection_config: dict = None) -> list:
-    """
-    Process custom fields for a specific location, combining global fields
-    from form_config with detection-specific fields.
-    
-    Args:
-        form_config (dict): The global form configuration
-        current_count (dict): The current count data
-        detection_config (dict, optional): The detection configuration for this specific camera
-    
-    Returns:
-        list: List of processed custom fields
-    """
-    merged_fields: dict[str, dict] = {}
-
-    # 1. Global fields from form.custom_fields
-    for field in (form_config.get('custom_fields') or {}).values():
-        if isinstance(field, dict) and field.get('name'):
-            field_copy = field.copy()
-            field_copy['is_global'] = True
-            merged_fields[field['name']] = field_copy
-
-    # 2. Detection-specific fields from detections.<location>.custom_fields
-    if detection_config and isinstance(detection_config.get('custom_fields'), dict):
-        for field in detection_config['custom_fields'].values():
-            if isinstance(field, dict) and field.get('name'):
-                field_copy = field.copy()
-                field_copy['is_detection_specific'] = True
-                merged_fields[field['name']] = field_copy
-
-    # 3. Populate current session values or defaults
-    result = []
-    current_values = current_count.get('custom_fields', {}) if (current_count and isinstance(current_count.get('custom_fields'), dict)) else {}
-
-    for field in merged_fields.values():
-        field_name = field['name']
-        if field_name in current_values:
-            field['value'] = current_values[field_name]
-        else:
-            field['value'] = field.get('default_value', form_config.get('default_value', ""))
-        result.append(field)
-
-    return result
-
-
-def _live_counter_counts(location: str) -> dict:
-    """
-    Counts for the counter UI: running in-memory state, else last DB record.
-
-    Args:
-        location: Detection location identifier.
-
-    Returns:
-        dict: Keys total, current, defect, correct, by_class.
-    """
-    context = get_app_context()
-    counter = context['object_counters'].get(location)
-    if counter is not None:
-        return counter.get_live_counts()
-
-    zeros = {
-        'total': 0,
-        'current': 0,
-        'defect': 0,
-        'correct': 0,
-        'pending_defect': 0,
-        'pending_correct': 0,
-        'by_class': [],
-    }
-    row = context['db_manager'].get_current_count(location)
-    if row is None:
-        return zeros
-
-    def _as_int(value, default: int = 0) -> int:
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            return default
-
-    return {
-        'total': _as_int(row.total_count),
-        'current': 0,
-        'defect': _as_int(row.defects_count),
-        'correct': _as_int(row.correct_count),
-        'pending_defect': 0,
-        'pending_correct': 0,
-        'by_class': [],
-    }
-
-
 @counters_bp.route('/counter/<string:location>')
 @counters_bp.route('/counter/<string:location>/video')
 def counter_video(location: str = None):
@@ -381,7 +98,7 @@ def counter_video(location: str = None):
     if location not in locations:
         abort(400, translate('Detection config not found'))
 
-    _ensure_counter_running(location)
+    ensure_counter_running(location)
 
     # Get form and detection config
     form_config = config.get('form', {})
@@ -406,7 +123,7 @@ def counter_video(location: str = None):
         form_config=form_config,
         custom_fields=custom_fields,
         counter_on_sidebar=True,
-        initial_counts=_live_counter_counts(location),
+        initial_counts=live_counter_counts(location),
     )
 
 
@@ -426,7 +143,7 @@ def counting_area_edit(location: str = None) -> str:
     locations_dict = context['locations_dict']
 
     location = str(location).strip()
-    _require_detection_location(location)
+    require_detection_location(location)
 
     return render_template(
         'counters/counting_area_edit.html',
@@ -451,7 +168,7 @@ def counting_area_data(location: str = None):
     config = context['config']
 
     location = str(location).strip()
-    _require_detection_location(location)
+    require_detection_location(location)
 
     detector_config = config.get(f'detections.{location}', {})
     areas = normalize_counting_areas(detector_config)
@@ -472,7 +189,7 @@ def counter_preview_image(location: str = None) -> Response:
     Preview files are written only when the counter thread is first started.
     """
     location = str(location).strip()
-    _require_detection_location(location)
+    require_detection_location(location)
 
     path = get_preview_path(location)
     if not path.is_file():
@@ -498,7 +215,7 @@ def counter_settings_form(location: str = None) -> str:
     locations_dict = context['locations_dict']
 
     location = str(location).strip()
-    _require_detection_location(location)
+    require_detection_location(location)
 
     detection = config.get(f'detections.{location}', {})
 
@@ -527,7 +244,7 @@ def counter_settings_save(location: str = None):
     object_counters = context['object_counters']
 
     location = str(location).strip()
-    _require_detection_location(location)
+    require_detection_location(location)
 
     prefix = f'detections-{location}-'
     zone_field_suffixes = ('counting_area', 'counting_area_color', 'counting_areas')
@@ -571,10 +288,10 @@ def counting_area_snapshot(location: str = None) -> Response:
         Response: MIME type response containing the JPEG frame
     """
     location = str(location).strip()
-    _require_detection_location(location)
+    require_detection_location(location)
 
     try:
-        frame = _get_editor_snapshot_frame(location)
+        frame = get_editor_snapshot_frame(location)
     except Exception as e:
         from system.utils.logger import Logger
         Logger().error(f'counting_area_snapshot({location}): {e}')
@@ -611,7 +328,7 @@ def counting_area_save(location: str = None):
     object_counters = context['object_counters']
 
     location = str(location).strip()
-    _require_detection_location(location)
+    require_detection_location(location)
 
     if not request.is_json:
         abort(400, translate('Request must be JSON'))
@@ -658,7 +375,7 @@ def toggle_indicator_mode(location: str = None):
     object_counters = context['object_counters']
 
     location = str(location).strip()
-    _require_detection_location(location)
+    require_detection_location(location)
 
     counter = object_counters.get(location)
     current_mode = getattr(counter, 'indicator_mode', 'circle') if counter else 'circle'
@@ -746,7 +463,7 @@ def counter_text(location: str = None) -> str:
     if location not in locations:
         abort(400, translate('Detection config not found'))
 
-    _ensure_counter_running(location)
+    ensure_counter_running(location)
 
     # Get form and detection config
     form_config = config.get('form', {})
@@ -766,7 +483,7 @@ def counter_text(location: str = None) -> str:
         is_paused=object_counters[location].is_pause(),
         form_config=form_config,
         custom_fields=custom_fields,
-        initial_counts=_live_counter_counts(location),
+        initial_counts=live_counter_counts(location),
     )
 
 
@@ -795,18 +512,6 @@ def _parse_multi_locations_param(raw: str | None) -> list[str]:
     return result
 
 
-def _start_counters_for_locations(locations_list: list[str]) -> None:
-    """Initialize ObjectCounter instances and start threads for each location."""
-    context = get_app_context()
-    object_counters = context['object_counters']
-    thread_manager = context['thread_manager']
-
-    for location in locations_list:
-        object_detector_init(location)
-        if location in object_counters:
-            thread_manager.start_thread(location, object_counters[location].run_frames)
-
-
 @counters_bp.route('/counter_multi/text')
 def counter_multi_text() -> str:
     """
@@ -831,14 +536,14 @@ def counter_multi_text() -> str:
         if location not in locations:
             abort(400, translate('Detection config not found'))
 
-    _start_counters_for_locations(locations_list)
+    start_counters_for_locations(locations_list)
 
     counters = [
         {
             'location': loc,
             'slug': slug(loc),
             'label': locations_dict.get(loc, loc),
-            'counts': _live_counter_counts(loc),
+            'counts': live_counter_counts(loc),
         }
         for loc in locations_list
     ]
@@ -934,12 +639,7 @@ def reset_count(location: str = None) -> dict:
     Returns:
         dict: Dictionary with reset counts (all set to 0)
     """
-    context = get_app_context()
-    object_counters = context['object_counters']
-
-    object_counters[location].reset_count(location=location)
-    get_telemetry().track('counter_reset', {'location': location})
-    return object_counters[location].get_live_counts()
+    return reset_counts(location)
 
 
 @counters_bp.route('/reset_count_current/<string:location>', methods=['POST'])
@@ -995,7 +695,7 @@ def save_capture(location: str = None) -> dict[str, Any] | Response:
     from system.utils.paths import get_project_root
 
     location = str(location).strip() if location else ""
-    _require_detection_location(location)
+    require_detection_location(location)
 
     data = (request.get_json(silent=True) or request.values) if request else {}
     target_dataset = (data.get('dataset') or '').strip() or None
@@ -1009,7 +709,7 @@ def save_capture(location: str = None) -> dict[str, Any] | Response:
         saved_path = object_counters[location].save_capture(target_dataset=target_dataset, split=split)
     else:
         # Fallback to direct snapshot if counter is not running
-        frame = _get_editor_snapshot_frame(location)
+        frame = get_editor_snapshot_frame(location)
         if frame is not None:
             root = Path(get_project_root())
             if target_dataset:
@@ -1046,7 +746,7 @@ def counter_interval_capture(location: str = None):
     Control or check periodic frame capture for a camera.
     """
     location = str(location).strip() if location else ""
-    _require_detection_location(location)
+    require_detection_location(location)
 
     context = get_app_context()
     object_counters = context['object_counters']
@@ -1055,7 +755,7 @@ def counter_interval_capture(location: str = None):
         data = request.get_json(silent=True) or request.values or {}
         action = (data.get('action') or 'start').strip().lower()
 
-        _ensure_counter_running(location)
+        ensure_counter_running(location)
         counter = object_counters.get(location)
         if not counter:
             return jsonify({'status': 'error', 'message': 'Counter could not be started'}), 500
@@ -1106,10 +806,10 @@ def counter_bootstrap(location: str = None):
         JSON status response.
     """
     location = str(location).strip()
-    _require_detection_location(location)
+    require_detection_location(location)
 
     try:
-        result = _ensure_counter_running(location)
+        result = ensure_counter_running(location)
     except Exception as e:
         Logger().error(f'counter_bootstrap({location}): {e}')
         Logger().log_exception()
@@ -1145,8 +845,7 @@ def start_count(location: str = None) -> dict[str, str] | Response:
     context = get_app_context()
     object_counters = context['object_counters']
 
-    object_counters[location].start()
-    get_telemetry().track('counter_started', {'location': location})
+    start_counting(location)
 
     if is_ajax():
         is_coll = getattr(object_counters[location], 'preview_mode', False)
@@ -1169,7 +868,7 @@ def pause_count(location: str = None) -> dict[str, str] | Response:
     context = get_app_context()
     object_counters = context['object_counters']
 
-    object_counters[location].pause()
+    set_pause(object_counters[location])
 
     if is_ajax():
         return jsonify({'status': 'paused'})
@@ -1188,20 +887,7 @@ def stop_count(location: str = None) -> dict[str, str] | Response:
     Returns:
         dict[str, str] | Response: Status response or redirect
     """
-    context = get_app_context()
-    object_counters = context['object_counters']
-    thread_manager = context['thread_manager']
-    lock = context['lock']
-
-    object_counter = object_counters.get(location)
-    if object_counter:
-        thread_manager.stop_thread(location, object_counter)
-
-    with lock:
-        if location in object_counters:
-            del object_counters[location]
-
-    get_telemetry().track('counter_stopped', {'location': location})
+    stop_counter(location)
 
     if is_ajax():
         return jsonify({'status': 'stopped'})

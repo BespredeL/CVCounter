@@ -773,7 +773,7 @@ def api_capture_camera(name: str):
     import cv2
     import re
     import time
-    from routes.counters import _get_editor_snapshot_frame
+    from system.services.counter_runtime import get_editor_snapshot_frame
 
     data = request.get_json(silent=True) or request.form or {}
     location = (data.get('location') or '').strip()
@@ -794,7 +794,7 @@ def api_capture_camera(name: str):
     if location in object_counters:
         saved_path = object_counters[location].save_capture(target_dataset=name, split=split)
     else:
-        frame = _get_editor_snapshot_frame(location)
+        frame = get_editor_snapshot_frame(location)
         if frame is not None:
             dest_dir = svc.root(name) / 'images' / split
             dest_dir.mkdir(parents=True, exist_ok=True)
@@ -823,7 +823,7 @@ def api_interval_camera(name: str):
     """
     Control periodic interval frame capturing from camera into dataset inbox.
     """
-    from routes.counters import _ensure_counter_running
+    from system.services.counter_runtime import ensure_counter_running
 
     data = request.get_json(silent=True) or request.form or {}
     location = (data.get('location') or '').strip()
@@ -884,7 +884,7 @@ def api_interval_camera(name: str):
 
     # Start action: ensure counter is running
     try:
-        _ensure_counter_running(location)
+        ensure_counter_running(location)
     except Exception as exc:
         return _json_error(f"Cannot start camera stream: {exc}")
 

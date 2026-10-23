@@ -10,7 +10,7 @@ from flask import abort, request
 from werkzeug.exceptions import BadRequest
 
 from system.utils.logger import Logger
-from system.utils.counting_area import _as_direction
+from system.utils.counting_area import ZoneShapeError, _as_direction, parse_bgr_channels, parse_polygon_points
 
 
 class ValidationError(Exception):
@@ -347,24 +347,18 @@ def _validate_polygon_points(area: Any, label: str) -> list[list[int]]:
     Returns:
         The validated area.
     """
-    if not isinstance(area, list) or len(area) < 3:
+    if not isinstance(area, list):
         raise ValidationError(f'{label} must be a list of at least 3 points')
-
-    validated_area: list[list[int]] = []
-    for i, point in enumerate(area):
-        if not isinstance(point, (list, tuple)) or len(point) != 2:
-            raise ValidationError(f'{label}[{i}] must be [x, y]')
-
-        try:
-            x, y = int(point[0]), int(point[1])
-        except (TypeError, ValueError):
-            raise ValidationError(f'{label}[{i}] coordinates must be integers')
-
-        if x < 0 or y < 0:
-            raise ValidationError(f'{label}[{i}] coordinates must be non-negative')
-
-        validated_area.append([x, y])
-    return validated_area
+    try:
+        return parse_polygon_points(area)
+    except ZoneShapeError as exc:
+        if exc.reason == 'length':
+            raise ValidationError(f'{label} must be a list of at least 3 points')
+        if exc.reason == 'point':
+            raise ValidationError(f'{label}[{exc.index}] must be [x, y]')
+        if exc.reason == 'type':
+            raise ValidationError(f'{label}[{exc.index}] coordinates must be integers')
+        raise ValidationError(f'{label}[{exc.index}] coordinates must be non-negative')
 
 
 def normalize_color_value(color: Any, label: str = 'color') -> list[int]:
@@ -398,34 +392,14 @@ def normalize_color_value(color: Any, label: str = 'color') -> list[int]:
                 raise ValidationError(f'{label} contains invalid hex characters')
         raise ValidationError(f'{label} must be a valid hex color string (e.g. #FF00FF) or 3-element BGR list')
 
-    if not isinstance(color, (list, tuple)) or len(color) != 3:
-        raise ValidationError(f'{label} must be a list of 3 integers (BGR) or hex string')
-
     try:
-        bgr = [int(color[0]), int(color[1]), int(color[2])]
-    except (TypeError, ValueError):
-        raise ValidationError(f'{label} values must be integers')
-
-    if not all(0 <= c <= 255 for c in bgr):
+        return parse_bgr_channels(color)
+    except ZoneShapeError as exc:
+        if exc.reason == 'shape':
+            raise ValidationError(f'{label} must be a list of 3 integers (BGR) or hex string')
+        if exc.reason == 'type':
+            raise ValidationError(f'{label} values must be integers')
         raise ValidationError(f'{label} values must be between 0 and 255')
-    return bgr
-
-
-def _validate_bgr_color(color: Any, label: str = 'counting_area_color') -> list[int]:
-    """
-    Validate a BGR color list.
-
-    Args:
-        color: The color to validate.
-        label: The label to use for error messages.
-
-    Returns:
-        The validated color.
-
-    Raises:
-        ValidationError: If validation fails.
-    """
-    return normalize_color_value(color, label=label)
 
 
 def validate_counting_area_payload(data: dict[str, Any]) -> dict[str, Any]:
@@ -460,7 +434,7 @@ def validate_counting_area_payload(data: dict[str, Any]) -> dict[str, Any]:
                 direction = _as_direction(item.get('direction'))
                 validated_areas.append({
                     'points': points,
-                    'color': _validate_bgr_color(color, f'{label}.color'),
+                    'color': normalize_color_value(color, f'{label}.color'),
                     'direction': direction,
                 })
             else:
@@ -468,7 +442,7 @@ def validate_counting_area_payload(data: dict[str, Any]) -> dict[str, Any]:
                 color = data.get('counting_area_color', [67, 211, 255])
                 validated_areas.append({
                     'points': points,
-                    'color': _validate_bgr_color(color, 'counting_area_color'),
+                    'color': normalize_color_value(color, 'counting_area_color'),
                     'direction': 'any',
                 })
     else:
@@ -478,7 +452,7 @@ def validate_counting_area_payload(data: dict[str, Any]) -> dict[str, Any]:
         direction = _as_direction(data.get('direction'))
         validated_areas.append({
             'points': points,
-            'color': _validate_bgr_color(color, 'counting_area_color'),
+            'color': normalize_color_value(color, 'counting_area_color'),
             'direction': direction,
         })
 

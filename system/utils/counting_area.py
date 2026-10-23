@@ -34,10 +34,73 @@ DIRECTION_VECTORS: dict[str, tuple[float, float]] = {
 }
 
 
+class ZoneShapeError(ValueError):
+    """A polygon or BGR color could not be parsed. ``index`` is the bad point."""
+
+    def __init__(self, reason: str, index: int | None = None) -> None:
+        self.reason = reason
+        self.index = index
+        super().__init__(reason)
+
+
 def _as_direction(value: Any) -> str:
     """Normalize counting direction string."""
     clean = str(value or 'any').strip().lower()
     return clean if clean in VALID_ZONE_DIRECTIONS else 'any'
+
+
+def parse_bgr_channels(value: Any) -> list[int]:
+    """
+    Parse a 3-channel BGR sequence.
+
+    Args:
+        value: Candidate color.
+
+    Returns:
+        list[int]: Channels in 0..255.
+
+    Raises:
+        ZoneShapeError: ``shape``, ``type``, or ``range``.
+    """
+    if not isinstance(value, (list, tuple)) or len(value) != 3:
+        raise ZoneShapeError('shape')
+    try:
+        color = [int(value[0]), int(value[1]), int(value[2])]
+    except (TypeError, ValueError):
+        raise ZoneShapeError('type')
+    if not all(0 <= channel <= 255 for channel in color):
+        raise ZoneShapeError('range')
+    return color
+
+
+def parse_polygon_points(value: Any) -> list[list[int]]:
+    """
+    Parse a polygon of at least three non-negative [x, y] points.
+
+    Args:
+        value: Candidate point list.
+
+    Returns:
+        list[list[int]]: Validated points.
+
+    Raises:
+        ZoneShapeError: ``length``, ``point``, ``type``, or ``range``.
+    """
+    if not isinstance(value, (list, tuple)) or len(value) < 3:
+        raise ZoneShapeError('length')
+
+    points: list[list[int]] = []
+    for index, point in enumerate(value):
+        if not isinstance(point, (list, tuple)) or len(point) != 2:
+            raise ZoneShapeError('point', index)
+        try:
+            x, y = int(point[0]), int(point[1])
+        except (TypeError, ValueError):
+            raise ZoneShapeError('type', index)
+        if x < 0 or y < 0:
+            raise ZoneShapeError('range', index)
+        points.append([x, y])
+    return points
 
 
 def _as_color(value: Any, fallback: Sequence[int] | None = None) -> list[int]:
@@ -52,17 +115,10 @@ def _as_color(value: Any, fallback: Sequence[int] | None = None) -> list[int]:
         The normalized color.
     """
     base = list(fallback) if fallback is not None else list(DEFAULT_COUNTING_AREA_COLOR)
-    if not isinstance(value, (list, tuple)) or len(value) != 3:
-        return [int(base[0]), int(base[1]), int(base[2])]
-
     try:
-        color = [int(value[0]), int(value[1]), int(value[2])]
-    except (TypeError, ValueError):
+        return parse_bgr_channels(value)
+    except ZoneShapeError:
         return [int(base[0]), int(base[1]), int(base[2])]
-
-    if not all(0 <= channel <= 255 for channel in color):
-        return [int(base[0]), int(base[1]), int(base[2])]
-    return color
 
 
 def _as_points(value: Any) -> list[list[int]] | None:
@@ -76,21 +132,10 @@ def _as_points(value: Any) -> list[list[int]] | None:
         The normalized points.
         None if the points are invalid.
     """
-    if not isinstance(value, (list, tuple)) or len(value) < 3:
+    try:
+        return parse_polygon_points(value)
+    except ZoneShapeError:
         return None
-
-    points: list[list[int]] = []
-    for point in value:
-        if not isinstance(point, (list, tuple)) or len(point) != 2:
-            return None
-        try:
-            x, y = int(point[0]), int(point[1])
-        except (TypeError, ValueError):
-            return None
-        if x < 0 or y < 0:
-            return None
-        points.append([x, y])
-    return points
 
 
 def _zone_from_mapping(zone: Mapping[str, Any], fallback_color: Sequence[int]) -> dict[str, Any] | None:
