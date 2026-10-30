@@ -9,10 +9,12 @@
 from __future__ import annotations
 
 import time
+from collections import deque
 from typing import TYPE_CHECKING
 
 import numpy as np
 
+from system.core.count_kernel import direction_matches
 from system.core.timer import Timer
 from system.utils.i18n import trans
 from system.utils.telemetry import get_telemetry
@@ -25,10 +27,10 @@ class CounterLoop:
     """
     Drives one counter from the camera frame to the encoded preview.
 
-    The loop owns only what belongs to iterating: the sleep timings and the inference
-    latency shown on the FPS overlay. Everything else — settings, model, tracker and the
-    renderer/stream/recorder/capture collaborators — is read from the counter on each
-    frame, so a zone change or a restart is picked up without touching this class.
+    The loop owns the iteration: pulling frames, the sleep timings, the inference latency
+    shown on the FPS overlay and the pipeline stages between them. Settings, model,
+    tracker and the renderer/stream/recorder/capture collaborators are read from the
+    counter on each frame, so a zone change or a restart is picked up here.
     """
 
     DEFAULT_SLEEP_TIME: float = 0.01
@@ -142,7 +144,7 @@ class CounterLoop:
         counter = self.counter
         with Timer() as timer:
             if counter.paused:
-                display_frame = counter._work_frame(frame)
+                display_frame = self.work_frame(frame)
                 if counter.stream.watching:
                     display_frame = counter.renderer.draw_zones(display_frame)
                     counter.renderer.draw_fps_hud(
@@ -153,9 +155,9 @@ class CounterLoop:
             dataset_enabled = counter.capture.dataset_enabled
             last_total_count = counter.counts.total_count
 
-            work_frame = counter._work_frame(frame)
+            work_frame = self.work_frame(frame)
             inf_start = time.monotonic()
-            boxes = counter._detect(work_frame)
+            boxes = self.detect(work_frame)
             inf_duration = time.monotonic() - inf_start
             inf_ms = inf_duration * 1000.0
             self.hud_inference_ms = (
@@ -171,7 +173,7 @@ class CounterLoop:
             else:
                 display_frame = work_frame.copy() if dataset_enabled else work_frame
 
-            display_frame = counter._detect_count(display_frame, boxes)
+            display_frame = self.count_and_draw(display_frame, boxes)
 
             if dataset_enabled and last_total_count != counter.counts.total_count:
                 counter.capture.save_sample(work_frame, boxes)
@@ -196,3 +198,127 @@ class CounterLoop:
                 counter.stream.maybe_encode(display_frame)
 
             return display_frame
+
+    def work_frame(self, frame: np.ndarray) -> np.ndarray:
+        """
+        One owned contiguous frame per iteration (safe for async recorder/encode).
+
+        Args:
+            frame (numpy.ndarray): The frame to process.
+
+        Returns:
+            numpy.ndarray: The processed frame.
+        """
+        return np.ascontiguousarray(frame).copy()
+
+    def detect(self, image: np.ndarray) -> np.ndarray:
+        """
+        Detects objects in an image using a pre-trained model.
+
+        Args:
+            image (ndarray): The input image as a numpy array.
+
+        Returns:
+            ndarray: An array of updated results after tracking the detected objects.
+                     Each row has the following structure:
+                     [x1, y1, x2, y2, track_id, (optional) class_id]
+        """
+        counter = self.counter
+        if counter.model is None or counter.preview_mode:
+            return counter.tracker.update(np.empty((0, 6)))
+
+        xyxy, conf, cls = counter.model.detect(image=image)
+
+        if xyxy is None or len(xyxy) == 0:
+            return counter.tracker.update(np.empty((0, 6)))
+
+        # Prepare detections for the tracker: [x1, y1, x2, y2, conf, class]
+        n_dets = len(xyxy)
+        detections = np.empty((n_dets, 6), dtype=np.float32)
+        detections[:, :4] = xyxy
+        detections[:, 4] = conf
+        detections[:, 5] = cls
+
+        # Tracked boxes: [x1, y1, x2, y2, track_id, class_id]
+        return counter.tracker.update(detections)
+
+    def count_and_draw(self, image: np.ndarray, boxes: list | np.ndarray) -> np.ndarray:
+        """
+        Counts objects in the given image and draws indicators on the image.
+
+        Args:
+            image (numpy.ndarray): The image on which the boxes will be drawn.
+            boxes (List[Tuple[int]] | numpy.ndarray): A list of boxes, where each box is represented by a tuple of (x1, y1, x2, y2, rid),
+                                      where x1, y1 are the top-left coordinates, x2, y2 are the bottom-right coordinates,
+                                      and rid is the ID of the box.
+
+        Returns:
+            numpy.ndarray: The modified image with the boxes drawn on it.
+        """
+        counter = self.counter
+        if counter.paused:
+            return image
+
+        # Ensure mask for fast point-in-polygon
+        if boxes is not None and len(boxes) > 0:
+            h, w = image.shape[:2]
+            counter.renderer.ensure_mask((h, w))
+        counting_mask = counter.renderer.mask
+        counting_areas = counter.settings.counting_areas
+
+        for result in boxes:
+            values = list(map(int, result[:6]))
+            x1, y1, x2, y2, rid = values[:5]
+            class_id = values[5] if len(values) > 5 else -1
+            cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+
+            # Track trajectory history for motion direction validation
+            if rid not in counter._track_history:
+                counter._track_history[rid] = deque(maxlen=counter._max_track_history_len)
+            counter._track_history[rid].append((cx, cy))
+
+            # Draw indicator on the image
+            counter.renderer.draw_indicator(
+                image, (cx, cy), rid,
+                counted=rid in counter.total_objects,
+                box=(x1, y1, x2, y2),
+                class_id=class_id,
+            )
+
+            # Check if the object is within the counting area using mask
+            if (
+                    counting_mask is not None
+                    and 0 <= cy < counting_mask.shape[0]
+                    and 0 <= cx < counting_mask.shape[1]
+                    and rid not in counter.total_objects
+            ):
+                zone_code = int(counting_mask[cy, cx])
+                if zone_code > 0:
+                    zone_idx = zone_code - 1
+                    zone = counting_areas[zone_idx] if zone_idx < len(counting_areas) else None
+                    direction = zone.get('direction', 'any') if zone else 'any'
+
+                    is_valid_direction = direction_matches(
+                        (cx, cy), counter._track_history[rid], direction
+                    )
+
+                    if is_valid_direction:
+                        counter.total_objects.add(rid)
+                        counter._total_objects_queue.append(rid)
+                        counter.counts.total_count += 1
+                        counter.counts.current_count += 1
+                        counter.counts.increment_class_count(class_id)
+                        if len(counter._total_objects_queue) > counter._max_tracked_history:
+                            old_id = counter._total_objects_queue.popleft()
+                            counter.total_objects.discard(old_id)
+
+        if len(counter._track_history) > 1000:
+            active_rids = {int(b[4]) for b in boxes} if boxes is not None and len(boxes) > 0 else set()
+            counter._track_history = {
+                k: v for k, v in counter._track_history.items()
+                if k in active_rids or k in counter.total_objects
+            }
+
+        counter.emit_live_counts()
+
+        return image

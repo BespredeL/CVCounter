@@ -13,7 +13,6 @@ from system.managers.config_manager import ConfigManager
 from system.utils.logger import Logger
 from system.object_detection import load_detector
 from system.core.byte_tracker import BYTETracker
-from system.core.count_kernel import direction_matches
 from system.core.count_state import CountState
 from system.core.counter_config import CounterSettings
 from system.core.counter_loop import CounterLoop
@@ -509,6 +508,21 @@ class ObjectCounter:
             self.logger.error(f'Error reading source frame: {e}')
             return None
 
+    def debug_detect(self, frame: np.ndarray) -> np.ndarray:
+        """
+        Run one detection-and-tracking pass for diagnostics.
+
+        The telemetry doctor times this against a dummy frame to check the model is
+        responsive; the counting loop runs the same pass for every real frame.
+
+        Args:
+            frame (numpy.ndarray): The frame to detect in.
+
+        Returns:
+            ndarray: Tracked boxes [x1, y1, x2, y2, track_id, (optional) class_id].
+        """
+        return self.loop.detect(frame)
+
     def update_counting_areas(self, counting_areas: list | None) -> None:
         """
         Replace all counting zones and invalidate the point-in-polygon mask.
@@ -701,36 +715,6 @@ class ObjectCounter:
             iou_threshold=self.tracker_iou,
         )
 
-    def _detect(self, image: np.ndarray) -> np.ndarray:
-        """
-        Detects objects in an image using a pre-trained model.
-
-        Args:
-            image (ndarray): The input image as a numpy array.
-
-        Returns:
-            ndarray: An array of updated results after tracking the detected objects.
-                     Each row has the following structure:
-                     [x1, y1, x2, y2, track_id, (optional) class_id]
-        """
-        if self.model is None or self.preview_mode:
-            return self.tracker.update(np.empty((0, 6)))
-
-        xyxy, conf, cls = self.model.detect(image=image)
-
-        if xyxy is None or len(xyxy) == 0:
-            return self.tracker.update(np.empty((0, 6)))
-
-        # Prepare detections for the tracker: [x1, y1, x2, y2, conf, class]
-        n_dets = len(xyxy)
-        detections = np.empty((n_dets, 6), dtype=np.float32)
-        detections[:, :4] = xyxy
-        detections[:, 4] = conf
-        detections[:, 5] = cls
-
-        # Tracked boxes: [x1, y1, x2, y2, track_id, class_id]
-        return self.tracker.update(detections)
-
     @property
     def indicator_mode(self) -> str:
         """Indicator style currently drawn — the live setting, not a copy."""
@@ -781,95 +765,3 @@ class ObjectCounter:
             except Exception as e:
                 self.logger.warning(f"Failed to set indicator_counted_color: {e}")
         return settings.indicator_detected_color, settings.indicator_counted_color
-
-    def _detect_count(self, image: np.ndarray, boxes: list | np.ndarray) -> np.ndarray:
-        """
-        Counts objects in the given image and draws indicators on the image.
-
-        Args:
-            image (numpy.ndarray): The image on which the boxes will be drawn.
-            boxes (List[Tuple[int]] | numpy.ndarray): A list of boxes, where each box is represented by a tuple of (x1, y1, x2, y2, rid),
-                                      where x1, y1 are the top-left coordinates, x2, y2 are the bottom-right coordinates,
-                                      and rid is the ID of the box.
-
-        Returns:
-            numpy.ndarray: The modified image with the boxes drawn on it.
-        """
-        if self.paused:
-            return image
-
-        # Ensure mask for fast point-in-polygon
-        if boxes is not None and len(boxes) > 0:
-            h, w = image.shape[:2]
-            self.renderer.ensure_mask((h, w))
-        counting_mask = self.renderer.mask
-        counting_areas = self.settings.counting_areas
-
-        for result in boxes:
-            values = list(map(int, result[:6]))
-            x1, y1, x2, y2, rid = values[:5]
-            class_id = values[5] if len(values) > 5 else -1
-            cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
-
-            # Track trajectory history for motion direction validation
-            if rid not in self._track_history:
-                self._track_history[rid] = deque(maxlen=self._max_track_history_len)
-            self._track_history[rid].append((cx, cy))
-
-            # Draw indicator on the image
-            self.renderer.draw_indicator(
-                image, (cx, cy), rid,
-                counted=rid in self.total_objects,
-                box=(x1, y1, x2, y2),
-                class_id=class_id,
-            )
-
-            # Check if the object is within the counting area using mask
-            if (
-                    counting_mask is not None
-                    and 0 <= cy < counting_mask.shape[0]
-                    and 0 <= cx < counting_mask.shape[1]
-                    and rid not in self.total_objects
-            ):
-                zone_code = int(counting_mask[cy, cx])
-                if zone_code > 0:
-                    zone_idx = zone_code - 1
-                    zone = counting_areas[zone_idx] if zone_idx < len(counting_areas) else None
-                    direction = zone.get('direction', 'any') if zone else 'any'
-
-                    is_valid_direction = direction_matches(
-                        (cx, cy), self._track_history[rid], direction
-                    )
-
-                    if is_valid_direction:
-                        self.total_objects.add(rid)
-                        self._total_objects_queue.append(rid)
-                        self.counts.total_count += 1
-                        self.counts.current_count += 1
-                        self.counts.increment_class_count(class_id)
-                        if len(self._total_objects_queue) > self._max_tracked_history:
-                            old_id = self._total_objects_queue.popleft()
-                            self.total_objects.discard(old_id)
-
-        if len(self._track_history) > 1000:
-            active_rids = {int(b[4]) for b in boxes} if boxes is not None and len(boxes) > 0 else set()
-            self._track_history = {
-                k: v for k, v in self._track_history.items()
-                if k in active_rids or k in self.total_objects
-            }
-
-        self.emit_live_counts()
-
-        return image
-
-    def _work_frame(self, frame: np.ndarray) -> np.ndarray:
-        """
-        One owned contiguous frame per iteration (safe for async recorder/encode).
-        
-        Args:
-            frame (numpy.ndarray): The frame to process.
-
-        Returns:
-            numpy.ndarray: The processed frame.
-        """
-        return np.ascontiguousarray(frame).copy()

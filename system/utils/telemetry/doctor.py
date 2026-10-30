@@ -220,11 +220,11 @@ class DoctorMixin:
         try:
             import numpy as np
             object_counters = (runtime_context or {}).get('object_counters') or (self._runtime_context or {}).get('object_counters') or {}
-            active_counter = next((c for c in object_counters.values() if getattr(c, 'running', False) and hasattr(c, '_detect')), None)
+            active_counter = next((c for c in object_counters.values() if getattr(c, 'running', False) and hasattr(c, 'debug_detect')), None)
             if active_counter is not None:
                 t0 = time.monotonic()
                 dummy_frame = np.zeros((640, 640, 3), dtype=np.uint8)
-                active_counter._detect(dummy_frame)
+                active_counter.debug_detect(dummy_frame)
                 elapsed_ms = round((time.monotonic() - t0) * 1000, 1)
                 benchmark_detail = f'Active counter dry-run: {elapsed_ms} ms'
             else:
