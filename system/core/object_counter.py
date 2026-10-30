@@ -6,11 +6,9 @@
 
 from collections import deque
 import os
-import time
 from typing import Any, Generator, List, Optional, Tuple
 
 import numpy as np
-from numpy import ndarray
 from system.managers.config_manager import ConfigManager
 from system.utils.logger import Logger
 from system.object_detection import load_detector
@@ -18,6 +16,7 @@ from system.core.byte_tracker import BYTETracker
 from system.core.count_kernel import direction_matches
 from system.core.count_state import CountState
 from system.core.counter_config import CounterSettings
+from system.core.counter_loop import CounterLoop
 from system.core.dataset_capture import DatasetCapture
 from system.core.frame_renderer import FrameRenderer
 from system.core.mjpeg_stream import MjpegBroadcaster
@@ -25,7 +24,6 @@ from system.core.perf_reporter import PerfReporter
 from system.core.ports import CountingEventSink, CountStore
 from system.core.recording_control import RecordingControl
 from system.core.sort import Sort
-from system.core.timer import Timer
 from system.utils.counting_area import (
     DEFAULT_COUNTING_AREA_COLOR,
     areas_to_runtime,
@@ -35,16 +33,9 @@ from system.utils.validators import normalize_color_value
 from system.utils.exception_handler import StreamConnectionError
 from system.utils.i18n import trans
 from system.managers.video_stream_manager import VideoStreamManager
-from system.utils.telemetry import get_telemetry
 
 
 class ObjectCounter:
-    # Defaults of the counting loop; config defaults live in CounterSettings, drawing
-    # defaults in FrameRenderer, stream defaults in MjpegBroadcaster and capture
-    # defaults in DatasetCapture.
-    DEFAULT_SLEEP_TIME: float = 0.01
-    DEFAULT_PAUSED_SLEEP_TIME: float = 0.1
-
     def __init__(self, location: str, config_manager: ConfigManager, socketio: Any,
                  event_sink: CountingEventSink | None = None,
                  store: CountStore | None = None, **kwargs: any) -> None:
@@ -75,9 +66,6 @@ class ObjectCounter:
         self._cached_source_frame: np.ndarray | None = None
         self.running: bool = True
         self.paused = False
-
-        # Smoothed inference latency shown by the FPS overlay
-        self._hud_inf_ms = 0.0
 
         # Load and initialize config
         self.__initialize_config(location, config_manager, kwargs)
@@ -173,6 +161,10 @@ class ObjectCounter:
 
         self.tracker = self._new_tracker()
 
+        # Per-frame pipeline; run_frames() hands the thread to it and it reads back
+        # through this counter, so there is one copy of every value.
+        self.loop: CounterLoop = CounterLoop(self)
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -184,77 +176,7 @@ class ObjectCounter:
         Returns:
             None
         """
-        status_evt = 'collection' if self.preview_mode else 'started'
-        self.events.status(status_evt)
-
-        while self.running:
-            try:
-                reconnect_count = self.vsm.get_reconnect_count()
-                iter_started = time.monotonic()
-                frame = self.vsm.get_frame()
-                if frame is None:
-                    if self.vsm.reconnect_limit_reached():
-                        self.logger.error(
-                            f"Camera connection failed after {self.video_reconnect_attempts} attempts | {self.location}"
-                        )
-                        get_telemetry().track('stream_lost', {'location': self.location, 'reason': 'reconnect_limit'})
-                        self.events.notify(trans('Lost connection to camera!'), 'danger')
-                        self.events.status('error')
-                        self.stop()
-                        break
-
-                    get_telemetry().track('stream_lost', {'location': self.location, 'reason': 'frame_none'})
-                    self.events.notify(trans('Lost connection to camera!'), 'danger')
-                    self.events.status('error')
-                    time.sleep(self.DEFAULT_SLEEP_TIME)
-                    continue  # Skip the iteration if the frame is not received
-
-                if reconnect_count > 0:
-                    self.vsm.reset_reconnect_count()
-                    get_telemetry().track('stream_reconnected', {'location': self.location})
-                    self.events.notify(trans('Connection to camera restored!'), 'success')
-                    self.events.status('started')
-
-                # The grabber keeps one buffer and replaces it only when a new
-                # camera frame arrives. Re-running inference and JPEG on that same
-                # object freezes the picture and starves the decoder.
-                if frame is self._cached_source_frame:
-                    sleep_time = 0.005
-                else:
-                    self._cached_source_frame = frame
-
-                    if self.stream.watching:
-                        self.frame = self._process_frame(frame)
-                    else:
-                        self.frame = None
-                        self._process_frame(frame)
-
-                    # Live RTSP already returns the newest frame, so a fixed pause is
-                    # unnecessary while a viewer is connected: JPEG encode keeps the
-                    # loop near the output rate. With no viewer that encode is skipped
-                    # and inference would run as fast as the GPU allows.
-                    if self.paused:
-                        sleep_time = self.DEFAULT_PAUSED_SLEEP_TIME
-                    elif self.vsm.is_stream() and not self.vsm.is_hls() and self.video_fps <= 0:
-                        if self.stream.watching:
-                            sleep_time = 0.0
-                        else:
-                            spent = time.monotonic() - iter_started
-                            sleep_time = self.stream.encode_interval() - spent
-                            if sleep_time < 0.0:
-                                sleep_time = 0.0
-                    else:
-                        sleep_time = self.DEFAULT_SLEEP_TIME
-                if sleep_time > 0:
-                    time.sleep(sleep_time)
-            except Exception as e:
-                self.logger.error(f"Error processing frame | {self.location}: {e}")
-                self.logger.log_exception()
-                get_telemetry().track('stream_lost',
-                                      {'location': self.location, 'reason': 'exception', 'error': str(e)})
-                self.events.notify(trans(f"Counter processing error: {e}"), 'danger')
-                self.events.status('error')
-                time.sleep(self.DEFAULT_PAUSED_SLEEP_TIME)
+        self.loop.run()
 
     def get_frames(self) -> Generator:
         """
@@ -951,70 +873,3 @@ class ObjectCounter:
             numpy.ndarray: The processed frame.
         """
         return np.ascontiguousarray(frame).copy()
-
-    def _process_frame(self, frame: np.ndarray) -> ndarray | None:
-        """
-        Process the frame.
-
-        Args:
-            frame (numpy.ndarray): The frame to process.
-
-        Returns:
-            numpy.ndarray: The processed frame.
-        """
-        if frame is None:
-            return None
-
-        with Timer() as timer:
-            if self.paused:
-                display_frame = self._work_frame(frame)
-                if self.stream.watching:
-                    display_frame = self.renderer.draw_zones(display_frame)
-                    self.renderer.draw_fps_hud(display_frame, self.stream.out_fps, self._hud_inf_ms)
-                    self.stream.maybe_encode(display_frame)
-                return display_frame
-
-            dataset_enabled = self.capture.dataset_enabled
-            last_total_count = self.counts.total_count
-
-            work_frame = self._work_frame(frame)
-            inf_start = time.monotonic()
-            boxes = self._detect(work_frame)
-            inf_duration = time.monotonic() - inf_start
-            inf_ms = inf_duration * 1000.0
-            self._hud_inf_ms = inf_ms if self._hud_inf_ms <= 0 else (self._hud_inf_ms * 0.8 + inf_ms * 0.2)
-
-            if boxes is not None and len(boxes) > 0:
-                self.rec.note_detection()
-
-            if self.stream.watching:
-                area_source = work_frame.copy() if dataset_enabled else work_frame
-                display_frame = self.renderer.draw_zones(area_source)
-            else:
-                display_frame = work_frame.copy() if dataset_enabled else work_frame
-
-            display_frame = self._detect_count(display_frame, boxes)
-
-            if dataset_enabled and last_total_count != self.counts.total_count:
-                self.capture.save_sample(work_frame, boxes)
-
-            # Periodic interval capture
-            self.capture.maybe_capture_interval(work_frame)
-
-            if self.settings.show_fps:
-                self.renderer.draw_fps_hud(display_frame, self.stream.out_fps, self._hud_inf_ms)
-            elif self.debug and timer.elapsed > 0:
-                self.renderer.draw_debug_fps(display_frame, int(round(1 / timer.elapsed)))
-
-            # Sending a frame to an asynchronous recorder while an active session is running
-            self.rec.push_frame(display_frame)
-
-            self.rec.stop_if_idle()
-
-            # Record performance metrics
-            self.perf.note_frame(timer.elapsed, inf_duration)
-
-            if self.stream.watching:
-                self.stream.maybe_encode(display_frame)
-
-            return display_frame
