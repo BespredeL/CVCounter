@@ -2,6 +2,8 @@
 # ! python3
 
 # Developed by: Aleksandr Kireev
+# Created: 26.03.2024
+# Updated: 25.06.2026
 # Website: https://bespredel.name
 
 import os
@@ -16,150 +18,122 @@ from system.utils.exception_handler import StreamConnectionError, StreamSourceEr
 from system.utils.logger import Logger
 
 
-class _TimedLatestReader:
-    """Playout ring for RTSP. Capture is not queried from any other thread."""
+class _HlsFrameGrabber:
+    """Read a live HLS playlist ahead of playback and release frames at the stream rate.
 
-    _RING = 12
+    The playlist starts with several ready segments. Reading them as fast as they
+    decode dumps that buffer at once, then the next read waits for a new segment.
+    """
 
-    def __init__(self, src: str) -> None:
-        self.stream = cv2.VideoCapture(src)
-        self.frame = None
-        self.stopped = False
-        for prop_name in ('CAP_PROP_OPEN_TIMEOUT_MSEC', 'CAP_PROP_READ_TIMEOUT_MSEC'):
-            prop = getattr(cv2, prop_name, None)
-            if prop is None:
-                continue
-            try:
-                self.stream.set(prop, 2000)
-            except Exception:
-                pass
-        self._slots: list | None = None
-        self._free: deque = deque()
-        self._queued: deque = deque()
-        self._current: int | None = None
-        self._shown_seq = 0
-        self.follow_shown = False
-        self.capture_fps = 0.0
-        self._cap_count = 0
-        self._cap_tick = time.monotonic()
-        self._lock = threading.Lock()
-        try:
-            self.stream.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-        except Exception:
-            pass
-        ok, frame = self.stream.read()
-        if ok and frame is not None:
-            self._store(frame)
-        self._thread = threading.Thread(target=self._loop, name="rtsp-read", daemon=True)
+    def __init__(
+            self,
+            capture: cv2.VideoCapture,
+            frame: cv2.Mat | None,
+            open_capture,
+            fps: float,
+    ) -> None:
+        self._cap: cv2.VideoCapture | None = capture
+        self._open_capture = open_capture
+        self.frame = frame
+        self.stopped: bool = False
+        if fps < 1 or fps > 120:
+            fps = 25.0
+        self._fps = fps
+        self._interval = 1.0 / fps
+        self._next_emit = 0.0
+        self._queue: deque = deque()
+        self._max_queue = max(15, min(60, int(fps * 2)))
+        self._space = threading.Condition()
+        self._thread = threading.Thread(target=self._update, name="hls-grab", daemon=True)
         self._thread.start()
 
-    def _ensure_slots(self, frame) -> None:
-        if self._slots is not None and self._slots[0].shape == frame.shape:
-            return
-        self._slots = [frame.copy() for _ in range(self._RING)]
-        self._free = deque(range(1, self._RING))
-        self._queued = deque()
-        self._current = 0
-        self.frame = self._slots[0]
-
-    def _store(self, frame) -> None:
-        self._ensure_slots(frame)
-        with self._lock:
-            if not self._free and self._queued:
-                self._free.append(self._queued.popleft())
-            if not self._free:
+    def _update(self) -> None:
+        empty_run = 0
+        while not self.stopped:
+            cap = self._cap
+            if cap is None:
+                time.sleep(0.2)
+                self._reopen()
+                continue
+            try:
+                grabbed, frame = cap.read()
+            except Exception:
+                grabbed, frame = False, None
+            if self.stopped:
                 return
-            idx = self._free.popleft()
-        self._slots[idx][:] = frame
-        with self._lock:
-            self._queued.append(idx)
-        self._cap_count += 1
-        now = time.monotonic()
-        span = now - self._cap_tick
-        if span >= 0.5:
-            self.capture_fps = self._cap_count / span
-            self._cap_count = 0
-            self._cap_tick = now
+            if grabbed and frame is not None:
+                with self._space:
+                    while not self.stopped and len(self._queue) >= self._max_queue:
+                        self._space.wait(0.05)
+                    if self.stopped:
+                        return
+                    self._queue.append(frame)
+                empty_run = 0
+                continue
+            empty_run += 1
+            self._reopen()
+            if empty_run >= 3:
+                time.sleep(1.0)
 
-    def _release_stream(self) -> None:
-        stream = self.stream
-        self.stream = None
-        if stream is None:
+    def _reopen(self) -> None:
+        old = self._cap
+        self._cap = None
+        if old is not None:
+            try:
+                old.release()
+            except Exception:
+                pass
+        if self.stopped:
             return
+        cap = None
         try:
-            stream.release()
+            cap = self._open_capture()
         except Exception:
-            pass
-
-    def _loop(self) -> None:
-        try:
-            while not self.stopped:
-                stream = self.stream
-                if stream is None:
-                    break
+            cap = None
+        opened = cap is not None and cap.isOpened()
+        if not opened:
+            if cap is not None:
                 try:
-                    ok, frame = stream.read()
-                except cv2.error:
-                    break
-                if self.stopped:
-                    break
-                if not ok or frame is None:
-                    time.sleep(0.05)
-                    continue
-                self._store(frame)
-        finally:
-            self._release_stream()
+                    cap.release()
+                except Exception:
+                    pass
+            return
+        self._cap = cap
 
     def read(self):
-        with self._lock:
-            if self._current is not None:
-                self._free.append(self._current)
-                self._current = None
-            if self._queued:
-                self._current = self._queued.popleft()
-                self.frame = self._slots[self._current]
-            return self.frame
+        now = time.monotonic()
+        with self._space:
+            if self._queue and now >= self._next_emit:
+                self.frame = self._queue.popleft()
+                self._next_emit = now + self._interval
+                self._space.notify()
+        return self.frame
 
-    def pop(self):
-        """Next queued frame, or None when playout has caught up. Does not repeat the last frame."""
-        with self._lock:
-            if not self._queued:
-                return None
-            if self._current is not None:
-                self._free.append(self._current)
-            self._current = self._queued.popleft()
-            self.frame = self._slots[self._current]
-            self._shown_seq += 1
-            return self.frame
+    def isOpened(self) -> bool:
+        cap = self._cap
+        return cap is not None and cap.isOpened()
 
-    def latest_copy(self):
-        """Copy of the frame detection should use. While playout is active this is the frame on screen."""
-        with self._lock:
-            if self.follow_shown and self._current is not None:
-                idx = self._current
-            else:
-                idx = self._queued[-1] if self._queued else self._current
-            if idx is None:
-                src = self.frame
-                return None if src is None else src.copy()
-            return self._slots[idx].copy()
+    def release(self) -> None:
+        self.stopped = True
+        with self._space:
+            self._space.notify_all()
+        cap = self._cap
+        self._cap = None
+        if cap is not None:
+            cap.release()
 
     def stop(self) -> None:
-        self.stopped = True
-        thread = getattr(self, '_thread', None)
-        if thread is None or thread is threading.current_thread():
-            self._release_stream()
-            return
-        # The reader releases the capture after read() returns. Releasing it
-        # from this thread while read() is blocked deadlocks OpenCV, so the
-        # next start cannot open the camera.
-        thread.join(timeout=2.5)
+        self.release()
 
 
 class VideoStreamManager:
     DEFAULT_MAX_RECONNECT_ATTEMPTS: int = 10
     DEFAULT_RECONNECT_DELAY_SEC: float = 1.0
     _HLS_FFMPEG_OPTIONS: str = 'reconnect;1|reconnect_streamed;1|reconnect_delay_max;5'
+    _HLS_OPEN_TIMEOUT_MSEC: int = 15000
+    # read() blocks 0.5–1.2s inside FFmpeg while the next call starts within 1ms.
+    # HTTPS source: do not force rtsp_transport or a 1-frame queue (that combo stalled longer).
+    _LIVE_FFMPEG_OPTIONS: str = 'fflags;nobuffer|flags;low_delay|max_delay;0'
     _HLS_WARMUP_TIMEOUT_SEC: float = 15.0
     _HLS_READ_RETRIES: int = 5
     _HLS_READ_RETRY_DELAY_SEC: float = 0.2
@@ -182,8 +156,10 @@ class VideoStreamManager:
         self.__cap: cv2.VideoCapture | VideoStream = None
         self.__fps: float = video_fps  # Default FPS
         self.__actual_fps: float = 0  # Calculated FPS based on frame intervals
-        self.__last_frame_time: float = time.time()  # Time of the last frame capture
-        self.__frame_interval: float = 1 / self.__fps if video_fps > 0 else 0  # Interval between frames based on FPS
+        self.__last_frame_time: float = time.monotonic()
+        self.__fps_frame = None
+        self.__fps_count: int = 0
+        self.__frame_interval: float = 1 / self.__fps if video_fps > 0 else 0
         self.__reconnect_count: int = 0
         self.__max_reconnect_attempts: int = max(
             1,
@@ -195,9 +171,6 @@ class VideoStreamManager:
         """
         Get the video stream source.
 
-        Args:
-            None
-
         Returns:
             str: The video stream source
         """
@@ -208,9 +181,6 @@ class VideoStreamManager:
         """
         Get the video capture object.
 
-        Args:
-            None
-
         Returns:
             cv2.VideoCapture: The video capture object
         """
@@ -219,9 +189,6 @@ class VideoStreamManager:
     def connect(self) -> bool:
         """
         Open the video stream once.
-
-        Args:
-            None
 
         Returns:
             bool: True when the capture is ready, False on failure.
@@ -264,23 +231,12 @@ class VideoStreamManager:
         return False
 
     def reconnect_limit_reached(self) -> bool:
-        """
-        Whether the configured connection attempt limit has been exhausted.
-        
-        Args:
-            None
-
-        Returns:
-            bool: True if the reconnect limit has been reached, False otherwise
-        """
+        """Whether the configured connection attempt limit has been exhausted."""
         return self.__reconnect_count >= self.__max_reconnect_attempts
 
     def start(self) -> None:
         """
         Starts the video stream.
-
-        Args:
-            None
 
         Returns:
             None
@@ -288,15 +244,29 @@ class VideoStreamManager:
         try:
             if self.is_hls():
                 self._release_capture()
-                self.__cap = self._open_hls_capture()
-                if not self.__cap.isOpened():
+                capture = self._open_hls_capture()
+                if not capture.isOpened():
                     self.__logger.error(f"Cannot open HLS stream: {self.__video_stream}")
                     raise StreamConnectionError(f"Cannot open video stream: {self.__video_stream}")
-                self._warmup_hls_capture()
+                self.__cap = capture
+                first_frame = self._warmup_hls_capture()
+                try:
+                    source_fps = float(capture.get(cv2.CAP_PROP_FPS) or 0)
+                except (TypeError, ValueError):
+                    source_fps = 0.0
+                self.__cap = _HlsFrameGrabber(capture, first_frame, self._open_hls_capture, source_fps)
             elif self.is_stream():
                 if self.__cap is not None:
                     self.__cap.stop()
-                self.__cap = self._open_live_stream()
+                previous_options = os.environ.get('OPENCV_FFMPEG_CAPTURE_OPTIONS')
+                os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = self._LIVE_FFMPEG_OPTIONS
+                try:
+                    self.__cap = VideoStream(self.__video_stream).start()
+                finally:
+                    if previous_options is None:
+                        os.environ.pop('OPENCV_FFMPEG_CAPTURE_OPTIONS', None)
+                    else:
+                        os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = previous_options
                 if self.__cap is None:
                     self.__logger.error(f"Cannot open video stream: {self.__video_stream}")
                     raise StreamConnectionError(f"Cannot open video stream: {self.__video_stream}")
@@ -315,9 +285,6 @@ class VideoStreamManager:
         """
         A method to stop the video capture, if it's currently active.
 
-        Args:
-            None
-
         Returns:
             None
         """
@@ -334,9 +301,6 @@ class VideoStreamManager:
         """
         A method to retrieve a frame using the 'cap' attribute.
 
-        Args:
-            None
-
         Returns:
             frame: A frame from the video stream
         """
@@ -348,13 +312,8 @@ class VideoStreamManager:
             self.reconnect()
 
         if self.__cap is not None:
-            if self.is_hls():
-                frame = self._read_hls_frame()
-            elif self.is_stream():
-                if isinstance(self.__cap, _TimedLatestReader):
-                    frame = self.__cap.latest_copy()
-                else:
-                    frame = self.__cap.read()
+            if self.is_hls() or self.is_stream():
+                frame = self.__cap.read()
             else:
                 ret, frame = self.__cap.read()
                 if not ret:
@@ -364,40 +323,18 @@ class VideoStreamManager:
                 self.__logger.error("Failed to grab frame or frame is None")
                 self.reconnect()
 
-            self.calculate_fps()  # Calculate actual FPS
+            if frame is not None and frame is not self.__fps_frame:
+                self.__fps_frame = frame
+                self.calculate_fps()
 
-            # Only rate limit offline video files to emulate target FPS.
-            # Live streams (RTSP/HLS/webcam) deliver frames in real-time;
-            # sleeping on them causes buffer accumulation and growing delay.
-            if self.__frame_interval > 0 and not self.is_live_source():
-                time.sleep(self.__frame_interval)
+            if self.__frame_interval > 0:
+                time.sleep(self.__frame_interval)  # Add delay to control FPS
 
         return frame
-
-    def uses_live_queue(self) -> bool:
-        return isinstance(self.__cap, _TimedLatestReader)
-
-    def set_follow_shown(self, enabled: bool) -> None:
-        if isinstance(self.__cap, _TimedLatestReader):
-            self.__cap.follow_shown = enabled
-
-    def shown_seq(self) -> int:
-        if isinstance(self.__cap, _TimedLatestReader):
-            return self.__cap._shown_seq
-        return -1
-
-    def pop_live_frame(self):
-        """Pop the next RTSP playout frame. None when the queue is empty or this source has no queue."""
-        if isinstance(self.__cap, _TimedLatestReader):
-            return self.__cap.pop()
-        return None
 
     def reconnect(self) -> None:
         """
         Reconnects to the video stream
-
-        Args:
-            None
 
         Returns:
             None
@@ -417,9 +354,6 @@ class VideoStreamManager:
         """
         Check if the source is an HTTP Live Streaming playlist (.m3u8).
 
-        Args:
-            None
-
         Returns:
             bool: True for HLS URLs, False otherwise
         """
@@ -434,90 +368,39 @@ class VideoStreamManager:
         """
         Check if the video stream is a valid stream by verifying if it starts with common protocols.
 
-        Args:
-            None
-
         Returns:
             bool: True if the video stream is a valid stream, False otherwise
         """
         return isinstance(self.__video_stream, str) and self.__video_stream.lower().startswith(
             ('rtsp://', 'rtmp://', 'http://', 'https://', 'tcp://'))
 
-    def is_live_source(self) -> bool:
-        """
-        Check if the video stream is a real-time live source (network stream or local device).
-
-        Returns:
-            bool: True for RTSP/HTTP/HLS or camera index, False for offline files.
-        """
-        if self.is_hls() or self.is_stream():
-            return True
-        if isinstance(self.__video_stream, int):
-            return True
-        if isinstance(self.__video_stream, str) and self.__video_stream.isdigit():
-            return True
-        return False
-
-    def _open_live_stream(self):
-        """
-        Open a network stream. RTSP keeps a small playout queue so a short network pause
-        does not freeze the picture. FFmpeg options stay at defaults.
-        """
-        source = str(self.__video_stream).lower()
-        if source.startswith('rtsp://') or '/rtsp/' in source:
-            return _TimedLatestReader(self.__video_stream)
-        return VideoStream(self.__video_stream).start()
-
     def _open_hls_capture(self) -> cv2.VideoCapture:
-        """
-        Open an HLS capture.
-        
-        Args:
-            None
-
-        Returns:
-            cv2.VideoCapture: The HLS capture
-        """
         previous_options = os.environ.get('OPENCV_FFMPEG_CAPTURE_OPTIONS')
         os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = self._HLS_FFMPEG_OPTIONS
         try:
-            return cv2.VideoCapture(self.__video_stream, cv2.CAP_FFMPEG)
+            return cv2.VideoCapture(
+                self.__video_stream,
+                cv2.CAP_FFMPEG,
+                [cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, self._HLS_OPEN_TIMEOUT_MSEC],
+            )
         finally:
             if previous_options is None:
                 os.environ.pop('OPENCV_FFMPEG_CAPTURE_OPTIONS', None)
             else:
                 os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = previous_options
 
-    def _warmup_hls_capture(self) -> None:
-        """
-        Warm up the HLS capture.
-        
-        Args:
-            None
-
-        Returns:
-            None
-        """
+    def _warmup_hls_capture(self):
         deadline = time.time() + self._HLS_WARMUP_TIMEOUT_SEC
         while time.time() < deadline:
             ret, frame = self.__cap.read()
             if ret and frame is not None:
-                return
+                return frame
             time.sleep(self._HLS_READ_RETRY_DELAY_SEC)
 
         self.__logger.error(f"HLS warmup timed out: {self.__video_stream}")
         raise StreamConnectionError(f"Cannot open video stream: {self.__video_stream}")
 
     def _read_hls_frame(self):
-        """
-        Read an HLS frame.
-        
-        Args:
-            None
-
-        Returns:
-            cv2.Mat: The HLS frame
-        """
         for _ in range(self._HLS_READ_RETRIES):
             ret, frame = self.__cap.read()
             if ret and frame is not None:
@@ -526,15 +409,6 @@ class VideoStreamManager:
         return None
 
     def _release_capture(self) -> None:
-        """
-        Release the capture.
-        
-        Args:
-            None
-
-        Returns:
-            None
-        """
         if self.__cap is None:
             return
 
@@ -547,15 +421,6 @@ class VideoStreamManager:
         self.__cap = None
 
     def _capture_is_ready(self) -> bool:
-        """
-        Check if the capture is ready.
-        
-        Args:
-            None
-
-        Returns:
-            bool: True if the capture is ready, False otherwise
-        """
         if self.__cap is None:
             return False
         if self.is_hls() or not self.is_stream():
@@ -566,32 +431,14 @@ class VideoStreamManager:
         """
         A method to get the actual calculated FPS.
 
-        Args:
-            None
-
         Returns:
             float: The actual calculated FPS
         """
         return self.__actual_fps
 
-    def capture_fps(self) -> float:
-        """
-        Frames per second arriving from the camera.
-
-        RTSP counts frames stored by the capture thread. Other sources use the
-        rate at which frames are read.
-        """
-        cap = self.__cap
-        if isinstance(cap, _TimedLatestReader):
-            return float(cap.capture_fps)
-        return float(self.__actual_fps)
-
     def get_fps(self) -> float:
         """
         A method to get the FPS of the video stream.
-
-        Args:
-            None
 
         Returns:
             float: The FPS of the video stream
@@ -600,39 +447,28 @@ class VideoStreamManager:
 
     def calculate_fps(self) -> None:
         """
-        A method to calculate the actual FPS based on time intervals between frames.
+        Update camera FPS from new source frames only.
 
-        Args:
-            None
-
-        Returns:
-            None
+        The counting loop polls the latest buffer many times per frame. Counting
+        every poll reports the poll rate, not the camera rate.
         """
-        current_time = time.time()
-        time_difference = current_time - self.__last_frame_time
-        self.__actual_fps = 1 / time_difference if time_difference > 0 else 0
-        self.__last_frame_time = current_time
+        self.__fps_count += 1
+        now = time.monotonic()
+        span = now - self.__last_frame_time
+        if span < 0.5:
+            return
+        self.__actual_fps = self.__fps_count / span
+        self.__fps_count = 0
+        self.__last_frame_time = now
 
     def get_reconnect_count(self) -> int:
         """
         Returns the number of reconnect attempts.
-
-        Args:
-            None
-
-        Returns:
-            int: The number of reconnect attempts
         """
         return self.__reconnect_count
 
     def reset_reconnect_count(self) -> None:
         """
         Resets the reconnect attempt count after a successful connection.
-        
-        Args:
-            None
-
-        Returns:
-            None
         """
         self.__reconnect_count = 0

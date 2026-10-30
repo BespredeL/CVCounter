@@ -433,10 +433,17 @@ def counter_get_frames(location: str = None) -> Response:
     def generate():
         yield from counter.get_frames()
 
-    return Response(
+    response = Response(
         generate(),
         mimetype='multipart/x-mixed-replace; boundary=frame',
+        headers={
+            'Cache-Control': 'no-cache, no-store, must-revalidate, pre-check=0, post-check-0, max-age=0',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+            'X-Accel-Buffering': 'no',
+        }
     )
+    return response
 
 
 @counters_bp.route('/counter/<string:location>/text')

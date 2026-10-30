@@ -59,6 +59,12 @@
         {%- elif key == 'iou' -%}{{ trans('Intersection-Over-Union threshold for Non-Maximum Suppression (NMS)') }}
         {%- elif key == 'device' -%}{{ trans('Inference compute device: 0 for first GPU, or "cpu" for processor') }}
         {%- elif key == 'vid_stride' -%}{{ trans('Frame skip interval: 1 processes every frame, 2 processes every second frame') }}
+        {%- elif key == 'tracker' -%}{{ trans('Object id tracker. SORT associates confident detections. ByteTrack also keeps weak detections, so an id may change.') }}
+        {%- elif key == 'tracker_iou' -%}{{ trans('Minimum box overlap used to keep the same object id. The model has its own IoU threshold.') }}
+        {%- elif key == 'tracker_max_age' -%}{{ trans('How many frames to keep an id when the object is missed.') }}
+        {%- elif key == 'tracker_min_hits' -%}{{ trans('How many frames in a row an object must be seen before its id becomes stable.') }}
+        {%- elif key == 'tracker_track_thresh' -%}{{ trans('ByteTrack only. Detections at or above this score are matched first. 0 follows the model confidence.') }}
+        {%- elif key == 'tracker_low_thresh' -%}{{ trans('ByteTrack only. Detections below this score are ignored. Scores between this and the confident threshold can still keep an id.') }}
         {%- elif key == 'indicator_mode' -%}{{ trans('Display style for detected objects: dot or bounding box with label') }}
         {%- elif key == 'indicator_size' -%}{{ trans('Size in pixels of bounding boxes and tracking dots on frames') }}
         {%- elif key == 'indicator_detected_color' -%}{{ trans('Indicator color for detected objects before counting (BGR/Hex)') }}
@@ -505,6 +511,12 @@
                             <option value="{{ mode }}" {% if value == mode %}selected{% endif %}>{{ mode }}</option>
                         {% endfor %}
                     </select>
+                {% elif key == 'tracker' %}
+                    <select id="{{ field_id }}" name="{{ field_id }}"
+                            class="form-select cv-form-control cv-form-select">
+                        <option value="sort" {% if value != 'bytetrack' %}selected{% endif %}>SORT</option>
+                        <option value="bytetrack" {% if value == 'bytetrack' %}selected{% endif %}>ByteTrack</option>
+                    </select>
                 {% elif key == 'indicator_mode' %}
                     <select id="{{ field_id }}" name="{{ field_id }}"
                              class="form-select cv-form-control cv-form-select">
@@ -596,7 +608,7 @@
                         </label>
                     </div>
                 {% elif value is number %}
-                    {% if key in ('confidence', 'iou', 'probability') %}
+                    {% if key in ('confidence', 'iou', 'probability', 'tracker_iou', 'tracker_track_thresh', 'tracker_low_thresh') %}
                         <div class="input-group cv-input-group">
                             <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
                                    class="form-control cv-form-control cv-rate-input font-monospace" min="0" max="1"
@@ -623,6 +635,15 @@
                                    class="form-control cv-form-control font-monospace" min="1" step="1">
                             <span class="input-group-text cv-input-addon font-monospace">{{ trans('MB') }}</span>
                         </div>
+                    {% elif key == 'tracker_max_age' %}
+                        <div class="input-group cv-input-group">
+                            <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                                   class="form-control cv-form-control font-monospace" min="1" step="1">
+                            <span class="input-group-text cv-input-addon font-monospace">{{ trans('frames') }}</span>
+                        </div>
+                    {% elif key == 'tracker_min_hits' %}
+                        <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                               class="form-control cv-form-control font-monospace" min="1" step="1">
                     {% elif key == 'indicator_size' %}
                         <div class="input-group cv-input-group">
                             <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"

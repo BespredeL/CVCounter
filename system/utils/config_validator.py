@@ -412,6 +412,24 @@ class ConfigValidator:
             # Validate detection-specific config
             self._validate_detection_config(detection_config, f"detections.{location}", config_path)
 
+    def _validate_unit_interval(self, config: Dict[str, Any], prefix: str, key: str) -> None:
+        """Require a tracker score or overlap threshold in the range 0..1."""
+        if key not in config:
+            return
+        value = config[key]
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            self.errors.append(f"'{prefix}.{key}' must be a number")
+        elif not (0.0 <= float(value) <= 1.0):
+            self.errors.append(f"'{prefix}.{key}' must be between 0.0 and 1.0")
+
+    def _validate_positive_int(self, config: Dict[str, Any], prefix: str, key: str) -> None:
+        """Require a tracker frame count of at least 1."""
+        if key not in config:
+            return
+        value = config[key]
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            self.errors.append(f"'{prefix}.{key}' must be an integer of at least 1")
+
     def _validate_detection_config(self, config: Dict[str, Any], prefix: str,
                                    config_path: Optional[str] = None) -> None:
         """
@@ -464,6 +482,12 @@ class ConfigValidator:
                 self.errors.append(f"'{prefix}.iou' must be a number")
             elif not (0.0 <= iou <= 1.0):
                 self.errors.append(f"'{prefix}.iou' must be between 0.0 and 1.0")
+
+        self._validate_unit_interval(config, prefix, 'tracker_iou')
+        self._validate_unit_interval(config, prefix, 'tracker_track_thresh')
+        self._validate_unit_interval(config, prefix, 'tracker_low_thresh')
+        self._validate_positive_int(config, prefix, 'tracker_max_age')
+        self._validate_positive_int(config, prefix, 'tracker_min_hits')
 
         # Validate device
         if 'device' in config:

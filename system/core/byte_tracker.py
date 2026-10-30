@@ -154,9 +154,11 @@ class BYTETracker:
             iou_threshold: Optional[float] = None,
             max_age: int = 30,
             min_hits: int = 3,
+            low_thresh: float = 0.1,
             **kwargs,
     ):
         self.track_thresh = float(track_thresh)
+        self.low_thresh = float(low_thresh)
         # Support both min_iou style (e.g. 0.3) and distance cost style (e.g. 0.7/0.8):
         if iou_threshold is not None:
             self.min_iou = float(iou_threshold)
@@ -217,7 +219,7 @@ class BYTETracker:
         # 2. Split detections into high-score and low-score (ByteTrack Core)
         scores = dets[:, 4] if dets.shape[1] > 4 else np.ones(len(dets), dtype=np.float32)
         high_mask = scores >= self.track_thresh
-        low_mask = (scores < self.track_thresh) & (scores >= 0.1)
+        low_mask = (scores < self.track_thresh) & (scores >= self.low_thresh)
 
         dets_high = dets[high_mask]
         dets_low = dets[low_mask]
@@ -272,8 +274,6 @@ class BYTETracker:
         return np.empty((0, 6), dtype=np.float32)
 
 
-# Backwards compatibility aliases
 ByteTrack = BYTETracker
-Sort = BYTETracker
 
-__all__ = ['BYTETracker', 'ByteTrack', 'Sort', 'KalmanBoxTracker']
+__all__ = ['BYTETracker', 'ByteTrack', 'KalmanBoxTracker']

@@ -8,6 +8,7 @@ from collections import deque
 import json
 import os
 from pathlib import Path
+import queue
 import random
 import re
 import threading
@@ -25,6 +26,7 @@ from system.utils.logger import Logger
 from system.managers.notification_manager import NotificationManager
 from system.object_detection import load_detector
 from system.core.byte_tracker import BYTETracker
+from system.core.sort import Sort
 from system.core.timer import Timer
 from system.utils.counting_area import (
     DEFAULT_COUNTING_AREA_COLOR,
@@ -109,7 +111,6 @@ def _render_cached_badge(label: str, color: tuple[int, int, int], font: ImageFon
     return badge_np
 
 
-
 def _placeholder_mjpeg_chunk() -> bytes:
     """
     Minimal multipart JPEG chunk so Werkzeug commits headers before the first real frame.
@@ -147,6 +148,9 @@ class ObjectCounter:
     DEFAULT_MAX_AGE: int = 60
     DEFAULT_MIN_HITS: int = 3
     DEFAULT_TRACKER_IOU: float = 0.3
+    DEFAULT_TRACK_THRESH: float = 0.0
+    DEFAULT_LOW_THRESH: float = 0.1
+    DEFAULT_TRACKER: str = 'sort'
     DEFAULT_JPEG_QUALITY: int = 90
     DEFAULT_INDICATOR_SIZE: int = 10
     DEFAULT_INDICATOR_MODE: str = 'circle'
@@ -190,11 +194,6 @@ class ObjectCounter:
         self._mjpeg_chunk: bytes | None = None
         self._mjpeg_viewers: int = 0
         self._last_mjpeg_encode_time: float = 0.0
-        self._playout_thread: threading.Thread | None = None
-        self._playout_stop = False
-        self._playout_active = False
-        self._playout_boxes: list = []
-        self._last_det_seq = -1
         self._last_count_payload: dict | None = None
         self._cached_source_frame: np.ndarray | None = None
         self.get_frames_running: bool = False
@@ -298,13 +297,7 @@ class ObjectCounter:
                 self.model = None
                 self.preview_mode = True
 
-        # Init tracker (ByteTrack)
-        self.tracker: BYTETracker = BYTETracker(
-            track_thresh=max(0.2, self.confidence * 0.7),
-            iou_threshold=self.DEFAULT_TRACKER_IOU,
-            max_age=self.DEFAULT_MAX_AGE,
-            min_hits=self.DEFAULT_MIN_HITS,
-        )
+        self.tracker = self._new_tracker()
 
         # Init Database manager
         self.db_manager: any = kwargs.get('db_manager', None)
@@ -325,13 +318,8 @@ class ObjectCounter:
 
         while self.running:
             try:
-                if self._playout_active:
-                    shown_seq = self.vsm.shown_seq()
-                    if shown_seq == self._last_det_seq:
-                        time.sleep(0.004)
-                        continue
-
                 reconnect_count = self.vsm.get_reconnect_count()
+                iter_started = time.monotonic()
                 frame = self.vsm.get_frame()
                 if frame is None:
                     if self.vsm.reconnect_limit_reached():
@@ -356,22 +344,43 @@ class ObjectCounter:
                     self.notif_manager.notify(trans('Connection to camera restored!'), 'success')
                     self.notif_manager.event('counter_status', {'status': 'started', 'location': self.location})
 
-                self._cached_source_frame = frame
-                if self._playout_active:
-                    self._last_det_seq = self.vsm.shown_seq()
-
-                if self.get_frames_running:
-                    self.frame = self._process_frame(frame)
+                # The grabber keeps one buffer and replaces it only when a new
+                # camera frame arrives. Re-running inference and JPEG on that same
+                # object freezes the picture and starves the decoder.
+                if frame is self._cached_source_frame:
+                    sleep_time = 0.005
                 else:
-                    self.frame = None
-                    self._process_frame(frame)
+                    self._cached_source_frame = frame
 
-                sleep_time = self.DEFAULT_PAUSED_SLEEP_TIME if self.paused else self.DEFAULT_SLEEP_TIME
-                time.sleep(sleep_time)
+                    if self.get_frames_running:
+                        self.frame = self._process_frame(frame)
+                    else:
+                        self.frame = None
+                        self._process_frame(frame)
+
+                    # Live RTSP already returns the newest frame, so a fixed pause is
+                    # unnecessary while a viewer is connected: JPEG encode keeps the
+                    # loop near the output rate. With no viewer that encode is skipped
+                    # and inference would run as fast as the GPU allows.
+                    if self.paused:
+                        sleep_time = self.DEFAULT_PAUSED_SLEEP_TIME
+                    elif self.vsm.is_stream() and not self.vsm.is_hls() and self.video_fps <= 0:
+                        if self.get_frames_running:
+                            sleep_time = 0.0
+                        else:
+                            spent = time.monotonic() - iter_started
+                            sleep_time = self._mjpeg_encode_interval() - spent
+                            if sleep_time < 0.0:
+                                sleep_time = 0.0
+                    else:
+                        sleep_time = self.DEFAULT_SLEEP_TIME
+                if sleep_time > 0:
+                    time.sleep(sleep_time)
             except Exception as e:
                 self.logger.error(f"Error processing frame | {self.location}: {e}")
                 self.logger.log_exception()
-                get_telemetry().track('stream_lost', {'location': self.location, 'reason': 'exception', 'error': str(e)})
+                get_telemetry().track('stream_lost',
+                                      {'location': self.location, 'reason': 'exception', 'error': str(e)})
                 self.notif_manager.notify(trans(f"Counter processing error: {e}"), 'danger')
                 self.notif_manager.event('counter_status', {'status': 'error', 'location': self.location})
                 time.sleep(self.DEFAULT_PAUSED_SLEEP_TIME)
@@ -380,8 +389,8 @@ class ObjectCounter:
         """
         Generator that yields frames in the form of JPEG images.
 
-        JPEG for an RTSP queue is encoded on a playout thread. This generator only
-        forwards the latest chunk so the HTTP worker stays mostly idle.
+        JPEG is encoded on the frame loop. This generator only forwards the latest
+        chunk so the HTTP worker stays mostly idle.
 
         Always yields at least one chunk so Werkzeug calls start_response
         before the client disconnects (e.g. quick navigation away from /video).
@@ -391,8 +400,6 @@ class ObjectCounter:
         """
         self._mjpeg_viewers += 1
         self.get_frames_running = True
-        if self.vsm.uses_live_queue():
-            self._start_playout()
         sent = False
         last_chunk: bytes | None = None
         try:
@@ -416,7 +423,6 @@ class ObjectCounter:
             if self._mjpeg_viewers == 0:
                 self.get_frames_running = False
                 self._mjpeg_chunk = None
-                self._stop_playout()
 
     def _class_label(self, class_id: int) -> str:
         """
@@ -602,8 +608,10 @@ class ObjectCounter:
             dict: The total count.
         """
         total_count = int(self.total_count)
-        defect_count = int(defect_count if defect_count is not None and defect_count != 0 else self.pending_defect_count)
-        correct_count = int(correct_count if correct_count is not None and correct_count != 0 else self.pending_correct_count)
+        defect_count = int(
+            defect_count if defect_count is not None and defect_count != 0 else self.pending_defect_count)
+        correct_count = int(
+            correct_count if correct_count is not None and correct_count != 0 else self.pending_correct_count)
 
         self.defect_count += defect_count
         self.correct_count += correct_count
@@ -657,12 +665,7 @@ class ObjectCounter:
         self._last_count_payload = None
 
         # Reset active tracker state so old tracks don't instantly re-trigger
-        self.tracker = BYTETracker(
-            track_thresh=max(0.2, self.confidence * 0.7),
-            iou_threshold=self.DEFAULT_TRACKER_IOU,
-            max_age=self.DEFAULT_MAX_AGE,
-            min_hits=self.DEFAULT_MIN_HITS,
-        )
+        self.tracker = self._new_tracker()
 
         self.db_manager.close_current_count(location, class_counts=final_class_counts)
 
@@ -686,8 +689,10 @@ class ObjectCounter:
         """
         current_count = int(self.current_count)
         total_count = int(self.total_count)
-        defect_count = int(defect_count if defect_count is not None and defect_count != 0 else self.pending_defect_count)
-        correct_count = int(correct_count if correct_count is not None and correct_count != 0 else self.pending_correct_count)
+        defect_count = int(
+            defect_count if defect_count is not None and defect_count != 0 else self.pending_defect_count)
+        correct_count = int(
+            correct_count if correct_count is not None and correct_count != 0 else self.pending_correct_count)
         by_class = self._by_class_payload()
         try:
             self.db_manager.save_part_result(
@@ -744,6 +749,12 @@ class ObjectCounter:
             self.notif_manager.notify(trans('Counting has stopped!'), 'primary')
             self.notif_manager.event('counter_status', {'status': 'stopped', 'location': self.location})
         self.running = False
+        encode_queue = getattr(self, "_encode_queue", None)
+        if encode_queue is not None:
+            try:
+                encode_queue.put_nowait(None)
+            except queue.Full:
+                pass
 
         # Stop the current recording video
         self._stop_recording()
@@ -1023,6 +1034,30 @@ class ObjectCounter:
                                                                                                   self.DEFAULT_VIDEO_QUALITY))
         self.indicator_size: int = detector_config.get('indicator_size', detection_default.get("indicator_size",
                                                                                                self.DEFAULT_INDICATOR_SIZE))
+        self.tracker_name: str = str(
+            detector_config.get(
+                'tracker',
+                detection_default.get('tracker', self.DEFAULT_TRACKER),
+            )
+        ).strip().lower()
+        if self.tracker_name not in ('sort', 'bytetrack'):
+            self.tracker_name = self.DEFAULT_TRACKER
+        self.tracker_iou: float = self._config_unit(
+            detector_config, detection_default, 'tracker_iou', self.DEFAULT_TRACKER_IOU
+        )
+        self.tracker_max_age: int = self._config_positive_int(
+            detector_config, detection_default, 'tracker_max_age', self.DEFAULT_MAX_AGE
+        )
+        self.tracker_min_hits: int = self._config_positive_int(
+            detector_config, detection_default, 'tracker_min_hits', self.DEFAULT_MIN_HITS
+        )
+        self.tracker_track_thresh: float = self._config_unit(
+            detector_config, detection_default, 'tracker_track_thresh', self.DEFAULT_TRACK_THRESH
+        )
+        self.tracker_low_thresh: float = self._config_unit(
+            detector_config, detection_default, 'tracker_low_thresh', self.DEFAULT_LOW_THRESH
+        )
+
         self.indicator_mode: str = str(
             detector_config.get(
                 'indicator_mode',
@@ -1205,6 +1240,54 @@ class ObjectCounter:
         if time.monotonic() - self._last_recording_activity >= self.recording_idle_timeout:
             self._stop_recording()
 
+    @staticmethod
+    def _config_unit(primary: dict, fallback: dict, key: str, default: float) -> float:
+        """Read a 0..1 tracker threshold, falling back when the value is unusable."""
+        raw = primary.get(key, fallback.get(key, default))
+        try:
+            value = float(raw)
+        except (TypeError, ValueError):
+            value = float(default)
+        if value < 0.0 or value > 1.0:
+            value = float(default)
+        return value
+
+    @staticmethod
+    def _config_positive_int(primary: dict, fallback: dict, key: str, default: int) -> int:
+        """Read a tracker frame count of at least 1."""
+        raw = primary.get(key, fallback.get(key, default))
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            value = int(default)
+        if value < 1:
+            value = int(default)
+        return value
+
+    def _new_tracker(self) -> Sort | BYTETracker:
+        """
+        Build the tracker selected for this camera.
+
+        A track threshold of 0 follows the model confidence. ByteTrack also
+        associates boxes between the low threshold and that confident threshold.
+        """
+        if self.tracker_name == 'bytetrack':
+            track_thresh = self.tracker_track_thresh
+            if track_thresh <= 0:
+                track_thresh = max(0.2, float(self.confidence) * 0.7)
+            return BYTETracker(
+                track_thresh=track_thresh,
+                iou_threshold=self.tracker_iou,
+                max_age=self.tracker_max_age,
+                min_hits=self.tracker_min_hits,
+                low_thresh=self.tracker_low_thresh,
+            )
+        return Sort(
+            max_age=self.tracker_max_age,
+            min_hits=self.tracker_min_hits,
+            iou_threshold=self.tracker_iou,
+        )
+
     def _detect(self, image: np.ndarray) -> np.ndarray:
         """
         Detects objects in an image using a pre-trained model.
@@ -1234,24 +1317,6 @@ class ObjectCounter:
 
         # Tracked boxes: [x1, y1, x2, y2, track_id, class_id]
         return self.tracker.update(detections)
-
-    def _preview_frame(self, frame: np.ndarray) -> tuple[np.ndarray, float]:
-        """
-        Shrink a frame for the browser preview.
-
-        Full resolution is kept for detection and recording. Only the picture
-        sent to the page is scaled, and 100% skips the resize entirely.
-
-        Returns:
-            tuple: Scaled frame and the factor used for overlay coordinates.
-        """
-        try:
-            scale = int(self.video_scale or 0)
-        except (TypeError, ValueError):
-            scale = 0
-        if scale <= 0 or scale >= 100:
-            return frame, 1.0
-        return FrameUtils.resize_frame(frame, scale), scale / 100.0
 
     def _draw_counting_area(self, image: np.ndarray, scale: float = 1.0) -> np.ndarray:
         """
@@ -1320,9 +1385,9 @@ class ObjectCounter:
         return self.indicator_mode
 
     def set_indicator_colors(
-        self,
-        detected_color: Any = None,
-        counted_color: Any = None,
+            self,
+            detected_color: Any = None,
+            counted_color: Any = None,
     ) -> Tuple[Tuple[int, int, int], Tuple[int, int, int]]:
         """
         Dynamically update indicator state colors.
@@ -1347,13 +1412,13 @@ class ObjectCounter:
         return self.indicator_detected_color, self.indicator_counted_color
 
     def _draw_indicator(
-        self,
-        image: np.ndarray,
-        center: tuple[int, int],
-        rid: int,
-        box: tuple[int, int, int, int] | None = None,
-        class_id: int = -1,
-        scale: float = 1.0,
+            self,
+            image: np.ndarray,
+            center: tuple[int, int],
+            rid: int,
+            box: tuple[int, int, int, int] | None = None,
+            class_id: int = -1,
+            scale: float = 1.0,
     ) -> None:
         """
         Draws an indicator on the given image (in place).
@@ -1419,7 +1484,8 @@ class ObjectCounter:
                 badge_y2 = badge_y1 + badge_h
                 badge_x2 = min(img_w, x1 + text_w + 6)
                 cv2.rectangle(image, (x1, badge_y1), (badge_x2, badge_y2), color, cv2.FILLED)
-                cv2.putText(image, label, (x1 + 3, badge_y2 - baseline - 2), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+                cv2.putText(image, label, (x1 + 3, badge_y2 - baseline - 2), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0),
+                            1, cv2.LINE_AA)
         else:
             cv2.circle(image, center, indicator_size, color, cv2.FILLED)
 
@@ -1560,9 +1626,6 @@ class ObjectCounter:
     def _mjpeg_encode_interval(self) -> float:
         """
         Minimum seconds between MJPEG encodes for the browser stream.
-        
-        Args:
-            None
 
         Returns:
             float: The minimum seconds between MJPEG encodes
@@ -1570,66 +1633,6 @@ class ObjectCounter:
         if self.video_fps and self.video_fps > 0:
             return 1.0 / float(self.video_fps)
         return 1.0 / self.DEFAULT_MJPEG_FPS
-
-    def _snapshot_boxes(self, boxes) -> list:
-        if boxes is None:
-            return []
-        snapped = []
-        for result in boxes:
-            try:
-                snapped.append(tuple(int(v) for v in list(result)[:6]))
-            except Exception:
-                continue
-        return snapped
-
-    def _start_playout(self) -> None:
-        thread = self._playout_thread
-        if thread is not None and thread.is_alive():
-            self._playout_stop = False
-            self._playout_active = True
-            self.vsm.set_follow_shown(True)
-            return
-        self._playout_stop = False
-        self._playout_active = True
-        self.vsm.set_follow_shown(True)
-        self._playout_thread = threading.Thread(target=self._playout_loop, name="mjpeg-playout", daemon=True)
-        self._playout_thread.start()
-
-    def _stop_playout(self) -> None:
-        self._playout_stop = True
-        self._playout_active = False
-        self.vsm.set_follow_shown(False)
-        self._last_det_seq = -1
-
-    def _playout_loop(self) -> None:
-        """Send queued RTSP frames at capture speed. Detection reads the newest frame and does not drain this queue."""
-        while not self._playout_stop:
-            frame = self.vsm.pop_live_frame()
-            if frame is None:
-                time.sleep(0.004)
-                continue
-            try:
-                display, scale = self._preview_frame(frame)
-                display = self._draw_counting_area(display, scale)
-                for values in self._playout_boxes:
-                    x1, y1, x2, y2, rid = values[:5]
-                    class_id = values[5] if len(values) > 5 else -1
-                    self._draw_indicator(
-                        display,
-                        ((x1 + x2) // 2, (y1 + y2) // 2),
-                        rid,
-                        box=(x1, y1, x2, y2),
-                        class_id=class_id,
-                        scale=scale,
-                    )
-                self._draw_fps_hud(display)
-                chunk = self._encode_mjpeg_chunk(display, scaled=scale < 1.0)
-                if chunk is not None:
-                    self._note_output_frame()
-                    self._mjpeg_chunk = chunk
-            except Exception as exc:
-                self.logger.error(f"MJPEG playout error | {self.location}: {exc}")
-                time.sleep(0.02)
 
     def _note_output_frame(self) -> None:
         self._out_count += 1
@@ -1645,12 +1648,12 @@ class ObjectCounter:
         Draw camera FPS, output FPS, and inference time in the top-left corner.
 
         Shown when general.show_fps is enabled. Drawn on the frame that is encoded
-        for the browser, including the RTSP playout path.
+        for the browser.
         """
         if not self.show_fps or image is None or image.size == 0:
             return
         try:
-            self._hud_cam_fps = float(self.vsm.capture_fps())
+            self._hud_cam_fps = float(self.vsm.get_actual_fps())
         except Exception:
             pass
 
@@ -1680,7 +1683,7 @@ class ObjectCounter:
     def _maybe_encode_mjpeg(self, frame: np.ndarray) -> None:
         """
         Encode MJPEG only when the stream interval has elapsed.
-        
+
         Args:
             frame (numpy.ndarray): The frame to process.
 
@@ -1691,11 +1694,44 @@ class ObjectCounter:
         if now - self._last_mjpeg_encode_time < self._mjpeg_encode_interval():
             return
 
-        chunk = self._encode_mjpeg_chunk(frame)
-        if chunk is not None:
-            self._note_output_frame()
-            self._mjpeg_chunk = chunk
-            self._last_mjpeg_encode_time = now
+        self._ensure_encode_worker()
+        try:
+            # Copy so the grabber can reuse its buffer while JPEG runs elsewhere.
+            self._encode_queue.put_nowait(frame.copy())
+        except queue.Full:
+            return
+        self._last_mjpeg_encode_time = now
+
+    def _ensure_encode_worker(self) -> None:
+        """
+        Start the preview encoder once.
+
+        JPEG of a 1080p frame takes 30–50 ms. Doing that on the counting thread
+        keeps the camera reader from publishing the next picture.
+        """
+        if getattr(self, "_encode_thread", None) is not None:
+            return
+        self._encode_queue = queue.Queue(maxsize=1)
+        self._encode_thread = threading.Thread(
+            target=self._encode_worker,
+            name=f"mjpeg-{self.location}",
+            daemon=True,
+        )
+        self._encode_thread.start()
+
+    def _encode_worker(self) -> None:
+        """Encode the latest queued preview frame without blocking detection."""
+        while self.running:
+            try:
+                frame = self._encode_queue.get(timeout=0.2)
+            except queue.Empty:
+                continue
+            if frame is None:
+                return
+            chunk = self._encode_mjpeg_chunk(frame)
+            if chunk is not None:
+                self._note_output_frame()
+                self._mjpeg_chunk = chunk
 
     def _process_frame(self, frame: np.ndarray) -> ndarray | None:
         """
@@ -1713,7 +1749,7 @@ class ObjectCounter:
         with Timer() as timer:
             if self.paused:
                 display_frame = self._work_frame(frame)
-                if self.get_frames_running and not self._playout_active:
+                if self.get_frames_running:
                     display_frame = self._draw_counting_area(display_frame)
                     self._draw_fps_hud(display_frame)
                     self._maybe_encode_mjpeg(display_frame)
@@ -1728,7 +1764,6 @@ class ObjectCounter:
             inf_duration = time.monotonic() - inf_start
             inf_ms = inf_duration * 1000.0
             self._hud_inf_ms = inf_ms if self._hud_inf_ms <= 0 else (self._hud_inf_ms * 0.8 + inf_ms * 0.2)
-            self._playout_boxes = self._snapshot_boxes(boxes)
 
             if boxes is not None and len(boxes) > 0:
                 self._on_detection_activity()
@@ -1780,7 +1815,7 @@ class ObjectCounter:
             self._perf_total_frame_time += timer.elapsed
             self._maybe_report_performance()
 
-            if self.get_frames_running and not self._playout_active:
+            if self.get_frames_running:
                 self._maybe_encode_mjpeg(display_frame)
 
             return display_frame
@@ -1797,7 +1832,8 @@ class ObjectCounter:
         """
         now = time.monotonic()
         elapsed = now - self._perf_last_report_time
-        if (elapsed >= self._perf_report_interval and self._perf_frame_count >= 20) or (force and self._perf_frame_count >= 5):
+        if (elapsed >= self._perf_report_interval and self._perf_frame_count >= 20) or (
+                force and self._perf_frame_count >= 5):
             avg_fps = self._perf_frame_count / max(0.001, elapsed)
             avg_inf_ms = (self._perf_total_inference_time / max(1, self._perf_frame_count)) * 1000.0
             avg_frame_ms = (self._perf_total_frame_time / max(1, self._perf_frame_count)) * 1000.0
@@ -1880,10 +1916,12 @@ class ObjectCounter:
                 root_path = Path(get_project_root())
                 dataset_path = str(root_path / 'storage' / 'datasets' / target_dataset / 'images' / split)
             else:
-                raw_path = self.dataset.get('path') if hasattr(self, 'dataset') and isinstance(self.dataset, dict) else None
+                raw_path = self.dataset.get('path') if hasattr(self, 'dataset') and isinstance(self.dataset,
+                                                                                               dict) else None
                 if not raw_path:
                     raw_path = f'storage/saved_images/{self.location}'
-                if hasattr(self, 'config_manager') and self.config_manager and hasattr(self.config_manager, 'resolve_path'):
+                if hasattr(self, 'config_manager') and self.config_manager and hasattr(self.config_manager,
+                                                                                       'resolve_path'):
                     dataset_path = self.config_manager.resolve_path(raw_path)
                 else:
                     dataset_path = str(resolve_project_path(raw_path))
