@@ -14,7 +14,10 @@ from threading import Thread
 from flask import abort, current_app
 
 from system.core.object_counter import ObjectCounter
+from system.managers.notification_manager import NotificationManager
 from system.managers.video_stream_manager import VideoStreamManager
+from system.services.count_store import DatabaseCountStore
+from system.services.counter_events import NotificationEventSink
 from system.utils.app_context import get_app_context
 from system.utils.counting_area import DEFAULT_COUNTING_AREA_COLOR
 from system.utils.counter_preview import save_counter_preview
@@ -68,8 +71,9 @@ def init_object_detector(location: str):
             location=location,
             config_manager=config,
             socketio=socketio,
+            event_sink=NotificationEventSink(NotificationManager(socketio=socketio, location=location)),
+            store=DatabaseCountStore(db_manager),
             video_path=detector_config['video_path'],
-            db_manager=db_manager,
             weights=detector_config.get('weights_path'),
             counting_areas=detector_config.get('counting_areas'),
             counting_area=detector_config.get('counting_area'),

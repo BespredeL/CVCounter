@@ -5,7 +5,6 @@
 # Website: https://bespredel.name
 
 from collections import deque
-import json
 import os
 from pathlib import Path
 import queue
@@ -17,17 +16,16 @@ from typing import Any, Generator, List, Optional, Tuple
 
 import cv2
 import numpy as np
-from flask_socketio import SocketIO
 from numpy import ndarray
 from system.managers.config_manager import ConfigManager
 from system.utils.frame_utils import FrameUtils
 from system.utils.logger import Logger
-from system.managers.notification_manager import NotificationManager
 from system.object_detection import load_detector
 from system.core.byte_tracker import BYTETracker
 from system.core.count_kernel import build_zone_mask, direction_matches
 from system.core.counter_config import CounterSettings
 from system.core.label_render import placeholder_mjpeg_chunk, render_cached_badge, get_label_font
+from system.core.ports import CountingEventSink, CountStore
 from system.core.sort import Sort
 from system.core.timer import Timer
 from system.utils.counting_area import (
@@ -56,14 +54,18 @@ class ObjectCounter:
     DEFAULT_MJPEG_FPS: float = 25.0
     DEFAULT_JPEG_QUALITY: int = 90
 
-    def __init__(self, location: str, config_manager: ConfigManager, socketio: SocketIO, **kwargs: any) -> None:
+    def __init__(self, location: str, config_manager: ConfigManager, socketio: Any,
+                 event_sink: CountingEventSink | None = None,
+                 store: CountStore | None = None, **kwargs: any) -> None:
         """
         Initialize the ObjectCounter.
         
         Args:
             location (str): The location of the object.
             config_manager (ConfigManager): The config manager.
-            socketio (SocketIO): The socketio instance.
+            socketio (Any): The socketio instance, used only when no event sink is given.
+            event_sink (CountingEventSink, optional): Outward events; defaults to Socket.IO.
+            store (CountStore, optional): Count persistence; defaults to the `db_manager` kwarg.
             **kwargs: Arbitrary keyword arguments
 
         Returns:
@@ -84,7 +86,7 @@ class ObjectCounter:
         self.pending_correct_count: int = 0
         self.class_counts: dict[int, int] = {}
         self.current_class_counts: dict[int, int] = {}
-        self.frame: Optional[np.ndarray] = None
+        self.frame: np.ndarray | None = None
         self._mjpeg_chunk: bytes | None = None
         self._mjpeg_viewers: int = 0
         self._last_mjpeg_encode_time: float = 0.0
@@ -122,8 +124,20 @@ class ObjectCounter:
         # Init logger
         self.logger: Logger = Logger()
 
-        # Init notification manager
-        self.notif_manager: NotificationManager = NotificationManager(socketio=socketio, location=location)
+        # Outward events: an injected sink, or Socket.IO through NotificationManager.
+        if event_sink is None:
+            from system.managers.notification_manager import NotificationManager
+            from system.services.counter_events import NotificationEventSink
+            event_sink = NotificationEventSink(NotificationManager(socketio=socketio, location=location))
+        self.events: CountingEventSink = event_sink
+
+        # Count persistence: an injected store, or the shared DatabaseManager.
+        if store is None:
+            db_manager = kwargs.get('db_manager')
+            if db_manager:
+                from system.services.count_store import DatabaseCountStore
+                store = DatabaseCountStore(db_manager)
+        self.store: CountStore | None = store
 
         # Initialize video stream manager
         self.vsm: VideoStreamManager = VideoStreamManager(
@@ -183,9 +197,6 @@ class ObjectCounter:
 
         self.tracker = self._new_tracker()
 
-        # Init Database manager
-        self.db_manager: any = kwargs.get('db_manager', None)
-
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -198,7 +209,7 @@ class ObjectCounter:
             None
         """
         status_evt = 'collection' if self.preview_mode else 'started'
-        self.notif_manager.event('counter_status', {'status': status_evt, 'location': self.location})
+        self.events.status(status_evt)
 
         while self.running:
             try:
@@ -211,22 +222,22 @@ class ObjectCounter:
                             f"Camera connection failed after {self.video_reconnect_attempts} attempts | {self.location}"
                         )
                         get_telemetry().track('stream_lost', {'location': self.location, 'reason': 'reconnect_limit'})
-                        self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
-                        self.notif_manager.event('counter_status', {'status': 'error', 'location': self.location})
+                        self.events.notify(trans('Lost connection to camera!'), 'danger')
+                        self.events.status('error')
                         self.stop()
                         break
 
                     get_telemetry().track('stream_lost', {'location': self.location, 'reason': 'frame_none'})
-                    self.notif_manager.notify(trans('Lost connection to camera!'), 'danger')
-                    self.notif_manager.event('counter_status', {'status': 'error', 'location': self.location})
+                    self.events.notify(trans('Lost connection to camera!'), 'danger')
+                    self.events.status('error')
                     time.sleep(self.DEFAULT_SLEEP_TIME)
                     continue  # Skip the iteration if the frame is not received
 
                 if reconnect_count > 0:
                     self.vsm.reset_reconnect_count()
                     get_telemetry().track('stream_reconnected', {'location': self.location})
-                    self.notif_manager.notify(trans('Connection to camera restored!'), 'success')
-                    self.notif_manager.event('counter_status', {'status': 'started', 'location': self.location})
+                    self.events.notify(trans('Connection to camera restored!'), 'success')
+                    self.events.status('started')
 
                 # The grabber keeps one buffer and replaces it only when a new
                 # camera frame arrives. Re-running inference and JPEG on that same
@@ -265,8 +276,8 @@ class ObjectCounter:
                 self.logger.log_exception()
                 get_telemetry().track('stream_lost',
                                       {'location': self.location, 'reason': 'exception', 'error': str(e)})
-                self.notif_manager.notify(trans(f"Counter processing error: {e}"), 'danger')
-                self.notif_manager.event('counter_status', {'status': 'error', 'location': self.location})
+                self.events.notify(trans(f"Counter processing error: {e}"), 'danger')
+                self.events.status('error')
                 time.sleep(self.DEFAULT_PAUSED_SLEEP_TIME)
 
     def get_frames(self) -> Generator:
@@ -422,7 +433,7 @@ class ObjectCounter:
         """
         payload = self.get_live_counts()
         if force or payload != self._last_count_payload:
-            self.notif_manager.emit(f'{self.location}_count', payload)
+            self.events.counts(payload)
             self._last_count_payload = payload
 
     def set_pending_counts(self, pending_defect: int, pending_correct: int) -> dict:
@@ -458,23 +469,7 @@ class ObjectCounter:
         Returns:
             dict: The current count.
         """
-        result = self.db_manager.get_current_count(self.location)
-        if result is None:
-            return {}
-
-        return {
-            'active': result.active,
-            'location': result.location,
-            'total_count': result.total_count,
-            'source_count': result.source_count,
-            'defects_count': result.defects_count,
-            'correct_count': result.correct_count,
-            'parts': json.loads(result.parts) if result.parts else [],
-            'custom_fields': json.loads(result.custom_fields) if result.custom_fields else [],
-            'class_counts': json.loads(result.class_counts) if result.class_counts else [],
-            'created_at': result.created_at.strftime("%Y-%m-%d %H:%M:%S") if result.created_at else None,
-            'updated_at': result.updated_at.strftime("%Y-%m-%d %H:%M:%S") if result.updated_at else None
-        }
+        return self.store.get_current(self.location) or {}
 
     def save_count(self, location: str, correct_count: int, defect_count: int, custom_fields: str,
                    active: int = 1) -> dict:
@@ -502,7 +497,7 @@ class ObjectCounter:
         self.current_count = self.current_count - defect_count + correct_count
         current_total_count = str(total_count - self.defect_count + self.correct_count)
 
-        result = self.db_manager.save_result(
+        result = self.store.save_result(
             location=location,
             total_count=current_total_count,
             source_count=total_count,
@@ -514,9 +509,9 @@ class ObjectCounter:
         )
 
         if result:
-            self.notif_manager.notify(trans('Saved successfully!'), 'success')
+            self.events.notify(trans('Saved successfully!'), 'success')
         else:
-            self.notif_manager.notify(trans('Save error!'), 'danger')
+            self.events.notify(trans('Save error!'), 'danger')
 
         self.clear_pending_counts()
         self.emit_live_counts(force=True)
@@ -551,12 +546,12 @@ class ObjectCounter:
         # Reset active tracker state so old tracks don't instantly re-trigger
         self.tracker = self._new_tracker()
 
-        self.db_manager.close_current_count(location, class_counts=final_class_counts)
+        self.store.close_current(location, class_counts=final_class_counts)
 
         # Stop the current recording video
         self._stop_recording()
 
-        self.notif_manager.notify(trans('Counting completed successfully!'), 'primary')
+        self.events.notify(trans('Counting completed successfully!'), 'primary')
         self.emit_live_counts(force=True)
 
     def reset_count_current(self, location: str, correct_count: int, defect_count: int) -> None:
@@ -579,7 +574,7 @@ class ObjectCounter:
             correct_count if correct_count is not None and correct_count != 0 else self.pending_correct_count)
         by_class = self._by_class_payload()
         try:
-            self.db_manager.save_part_result(
+            self.store.save_part_result(
                 location=location,
                 current_count=current_count,
                 total_count=total_count,
@@ -599,7 +594,7 @@ class ObjectCounter:
         self.clear_pending_counts()
         self.emit_live_counts(force=True)
 
-        self.notif_manager.notify(trans('The counter has been reset!'), 'primary')
+        self.events.notify(trans('The counter has been reset!'), 'primary')
 
     def start(self) -> None:
         """
@@ -613,9 +608,9 @@ class ObjectCounter:
         """
         # self.running = True
         if self.paused:
-            self.notif_manager.notify(trans('Counting has started!'), 'success')
+            self.events.notify(trans('Counting has started!'), 'success')
             status_evt = 'collection' if self.preview_mode else 'started'
-            self.notif_manager.event('counter_status', {'status': status_evt, 'location': self.location})
+            self.events.status(status_evt)
         self.paused = False
 
     def stop(self) -> None:
@@ -630,8 +625,8 @@ class ObjectCounter:
         """
         if self.running:
             self._maybe_report_performance(force=True)
-            self.notif_manager.notify(trans('Counting has stopped!'), 'primary')
-            self.notif_manager.event('counter_status', {'status': 'stopped', 'location': self.location})
+            self.events.notify(trans('Counting has stopped!'), 'primary')
+            self.events.status('stopped')
         self.running = False
         encode_queue = getattr(self, "_encode_queue", None)
         if encode_queue is not None:
@@ -654,8 +649,8 @@ class ObjectCounter:
             None
         """
         if not self.paused:
-            self.notif_manager.notify(trans('Counting has paused!'), 'warning')
-            self.notif_manager.event('counter_status', {'status': 'paused', 'location': self.location})
+            self.events.notify(trans('Counting has paused!'), 'warning')
+            self.events.status('paused')
         self.paused = True
 
     def is_pause(self) -> bool:
@@ -822,8 +817,8 @@ class ObjectCounter:
             self.vsm.stop()
         if hasattr(self, 'model') and self.model is not None:
             self.model.cleanup()
-        if hasattr(self, 'db_manager') and self.db_manager is not None:
-            self.db_manager.close()
+        if getattr(self, 'store', None) is not None:
+            self.store.close()
 
     # ------------------------------------------------------------------
     # Internal helpers
