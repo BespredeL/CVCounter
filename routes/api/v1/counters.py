@@ -80,16 +80,13 @@ def get_counter_detail(location: str):
     context = get_app_context()
     config = context['config']
     locations_dict = context['locations_dict']
-    object_counters = context['object_counters']
 
     det_config = config.get(f'detections.{location}', {}) or {}
     status = counter_status(location)
     counts = live_counter_counts(location)
-    counter = object_counters.get(location)
 
-    perf_info = {}
-    if counter and hasattr(counter, 'get_performance_stats'):
-        perf_info = counter.get_performance_stats()
+    # `performance` остаётся пустым: счётчик не экспортирует метрики инференса
+    perf_info: dict = {}
 
     return jsonify({
         'success': True,
