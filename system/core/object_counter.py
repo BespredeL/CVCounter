@@ -22,16 +22,16 @@ from system.utils.frame_utils import FrameUtils
 from system.utils.logger import Logger
 from system.object_detection import load_detector
 from system.core.byte_tracker import BYTETracker
-from system.core.count_kernel import build_zone_mask, direction_matches
+from system.core.count_kernel import direction_matches
 from system.core.count_state import CountState
 from system.core.counter_config import CounterSettings
-from system.core.label_render import placeholder_mjpeg_chunk, render_cached_badge, get_label_font
+from system.core.frame_renderer import FrameRenderer
+from system.core.label_render import placeholder_mjpeg_chunk
 from system.core.ports import CountingEventSink, CountStore
 from system.core.sort import Sort
 from system.core.timer import Timer
 from system.utils.counting_area import (
     DEFAULT_COUNTING_AREA_COLOR,
-    DIRECTION_VECTORS,
     areas_to_runtime,
     normalize_counting_areas,
 )
@@ -44,12 +44,8 @@ from system.utils.telemetry import get_telemetry
 
 
 class ObjectCounter:
-    # Defaults of the drawing/streaming layer; config defaults live in CounterSettings.
-    DEFAULT_FPS_POSITION: tuple = (20, 70)
-    DEFAULT_FPS_FONT_SCALE: float = 1.5
-    DEFAULT_FPS_COLOR: tuple = (0, 0, 255)
-    DEFAULT_FPS_THICKNESS: int = 2
-    DEFAULT_POLYGON_ALPHA: float = 0.4
+    # Defaults of the streaming layer; config defaults live in CounterSettings,
+    # drawing defaults in FrameRenderer.
     DEFAULT_SLEEP_TIME: float = 0.01
     DEFAULT_PAUSED_SLEEP_TIME: float = 0.1
     DEFAULT_MJPEG_FPS: float = 25.0
@@ -97,16 +93,12 @@ class ObjectCounter:
         self._last_recording_activity: float = 0.0
         self.recorder: VideoRecorderManager | None = None
 
-        # Mask for fast point-in-polygon check (generated on first frame)
-        self._counting_mask: Optional[np.ndarray] = None
-
         # Stream performance diagnostics
         self._perf_frame_count: int = 0
         self._perf_total_frame_time: float = 0.0
         self._perf_total_inference_time: float = 0.0
         self._perf_last_report_time: float = time.monotonic()
         self._perf_report_interval: float = 300.0
-        self._hud_cam_fps = 0.0
         self._hud_out_fps = 0.0
         self._hud_inf_ms = 0.0
         self._out_count = 0
@@ -141,6 +133,13 @@ class ObjectCounter:
         )
         if not self.vsm.connect_with_retries():
             raise StreamConnectionError(f"Cannot open video stream: {self.video_path}")
+
+        # Overlay drawing: reads settings live, so a zone change redraws on the next frame.
+        # The camera FPS lookup is lazy — a stream that cannot report it must not break
+        # construction, and the HUD already swallows that failure per frame.
+        self.renderer: FrameRenderer = FrameRenderer(
+            self.settings, self._class_label, lambda: self.vsm.get_actual_fps(),
+        )
 
         # Init recorder (async video writer) if enabled for this detection
         self._init_recorder()
@@ -655,11 +654,12 @@ class ObjectCounter:
         if not runtime:
             raise ValueError('counting_areas must contain at least one zone with 3+ points')
 
-        self.counting_areas = runtime
-        self.counting_area = list(runtime[0]['points'])
-        self.counting_area_color = tuple(runtime[0]['color'])
-        self.counting_area_direction = str(runtime[0].get('direction', 'any'))
-        self._counting_mask = None
+        settings = self.settings
+        settings.counting_areas = runtime
+        settings.counting_area = list(runtime[0]['points'])
+        settings.counting_area_color = tuple(runtime[0]['color'])
+        settings.counting_area_direction = str(runtime[0].get('direction', 'any'))
+        self.renderer.invalidate_zones()
 
     def update_counting_area(
             self,
@@ -688,7 +688,7 @@ class ObjectCounter:
         color = (
             tuple(int(c) for c in counting_area_color)
             if counting_area_color is not None
-            else tuple(self.counting_area_color or DEFAULT_COUNTING_AREA_COLOR)
+            else tuple(self.settings.counting_area_color or DEFAULT_COUNTING_AREA_COLOR)
         )
         self.update_counting_areas([{
             'points': [(int(p[0]), int(p[1])) for p in counting_area],
@@ -798,12 +798,8 @@ class ObjectCounter:
             - self.confidence (float): The confidence threshold for object detection.
             - self.iou (float): The IoU threshold for object detection.
             - self.video_fps (int): The frame rate of the video.
-            - self.counting_areas (list): Counting zones with points and colors.
-            - self.counting_area (list): Legacy alias of the first zone points.
-            - self.counting_area_color (tuple): Legacy alias of the first zone color.
             - self.video_scale (int): The scale of the video.
             - self.video_quality (int): The quality of the video.
-            - self.indicator_size (int): The size of the indicator.
             - self.vid_stride (int): The stride for video processing.
             - self.classes (dict): The classes for object detection.
             - self.dataset (dict): The dataset for creating the object counter.
@@ -815,6 +811,9 @@ class ObjectCounter:
             - self.recording_idle_timeout (float): Seconds without detections before stopping recording (0 = until reset).
             - self.counts.total_count (int): The total count of objects.
             - self.total_objects (set): The set of total objects.
+
+        Zone and indicator appearance is not copied onto the counter: FrameRenderer
+        reads it from self.settings, so a settings change is live on the next frame.
 
         If the 'start_total_count' key in the detector_config is greater than 0,
         seeds the counting state and updates the configuration file.
@@ -990,55 +989,10 @@ class ObjectCounter:
         # Tracked boxes: [x1, y1, x2, y2, track_id, class_id]
         return self.tracker.update(detections)
 
-    def _draw_counting_area(self, image: np.ndarray, scale: float = 1.0) -> np.ndarray:
-        """
-        Draws all counting zones on the given image.
-
-        Args:
-            image (numpy.ndarray): The image on which the counting area should be drawn.
-            scale (float): Multiply zone points when the image was already resized.
-
-        Returns:
-            numpy.ndarray: The image with the counting area drawn on it.
-        """
-        overlay = image.copy()
-        zones = self.counting_areas or [{
-            'points': self.counting_area,
-            'color': self.counting_area_color,
-        }]
-
-        for zone in zones:
-            points = zone.get('points') or []
-            if len(points) < 3:
-                continue
-            pts = np.asarray(points, dtype=np.float32)
-            if scale != 1.0:
-                pts = pts * scale
-            pts = pts.astype(np.int32).reshape((-1, 1, 2))
-            color = tuple(zone.get('color') or self.counting_area_color or DEFAULT_COUNTING_AREA_COLOR)
-            cv2.fillPoly(overlay, [pts], color)
-
-            # Draw directional arrow on zone if configured
-            direction = zone.get('direction', 'any')
-            if direction != 'any':
-                M = cv2.moments(pts)
-                if M['m00'] != 0:
-                    mcx = int(M['m10'] / M['m00'])
-                    mcy = int(M['m01'] / M['m00'])
-                else:
-                    mcx = int(np.mean(pts[:, 0, 0]))
-                    mcy = int(np.mean(pts[:, 0, 1]))
-
-                arrow_len = 35 if scale == 1.0 else max(12, int(35 * scale))
-                vec = DIRECTION_VECTORS.get(direction)
-                if vec:
-                    ux, uy = vec
-                    p1 = (int(mcx - arrow_len * ux), int(mcy - arrow_len * uy))
-                    p2 = (int(mcx + arrow_len * ux), int(mcy + arrow_len * uy))
-                    cv2.arrowedLine(overlay, p1, p2, (0, 0, 0), 4, tipLength=0.35, line_type=cv2.LINE_AA)
-                    cv2.arrowedLine(overlay, p1, p2, (255, 255, 255), 2, tipLength=0.35, line_type=cv2.LINE_AA)
-
-        return cv2.addWeighted(overlay, self.DEFAULT_POLYGON_ALPHA, image, 1 - self.DEFAULT_POLYGON_ALPHA, 0)
+    @property
+    def indicator_mode(self) -> str:
+        """Indicator style currently drawn — the live setting, not a copy."""
+        return self.settings.indicator_mode
 
     def set_indicator_mode(self, mode: str) -> str:
         """
@@ -1052,9 +1006,9 @@ class ObjectCounter:
         """
         mode = str(mode).strip().lower()
         if mode not in ('circle', 'box'):
-            mode = self.DEFAULT_INDICATOR_MODE
-        self.indicator_mode = mode
-        return self.indicator_mode
+            mode = CounterSettings.DEFAULT_INDICATOR_MODE
+        self.settings.indicator_mode = mode
+        return self.settings.indicator_mode
 
     def set_indicator_colors(
             self,
@@ -1071,115 +1025,20 @@ class ObjectCounter:
         Returns:
             Tuple[Tuple[int, int, int], Tuple[int, int, int]]: Active (detected_color, counted_color).
         """
+        settings = self.settings
         if detected_color is not None:
             try:
-                self.indicator_detected_color = tuple(normalize_color_value(detected_color, 'indicator_detected_color'))
+                settings.indicator_detected_color = tuple(
+                    normalize_color_value(detected_color, 'indicator_detected_color'))
             except Exception as e:
                 self.logger.warning(f"Failed to set indicator_detected_color: {e}")
         if counted_color is not None:
             try:
-                self.indicator_counted_color = tuple(normalize_color_value(counted_color, 'indicator_counted_color'))
+                settings.indicator_counted_color = tuple(
+                    normalize_color_value(counted_color, 'indicator_counted_color'))
             except Exception as e:
                 self.logger.warning(f"Failed to set indicator_counted_color: {e}")
-        return self.indicator_detected_color, self.indicator_counted_color
-
-    def _draw_indicator(
-            self,
-            image: np.ndarray,
-            center: tuple[int, int],
-            rid: int,
-            box: tuple[int, int, int, int] | None = None,
-            class_id: int = -1,
-            scale: float = 1.0,
-    ) -> None:
-        """
-        Draws an indicator on the given image (in place).
-
-        Args:
-            image (numpy.ndarray): The image on which the indicator should be drawn.
-            center (tuple[int, int]): The center coordinates of the indicator.
-            rid (int): The ID of the indicator.
-            box (tuple[int, int, int, int], optional): (x1, y1, x2, y2) bounding box.
-            class_id (int, optional): The class ID of the object.
-            scale (float): Multiply coordinates when the image was already resized.
-
-        Returns:
-            None
-        """
-        if scale != 1.0:
-            center = (int(center[0] * scale), int(center[1] * scale))
-            if box is not None:
-                box = tuple(int(value * scale) for value in box)
-
-        color = self.indicator_counted_color if rid in self.total_objects else self.indicator_detected_color
-        indicator_size = self.indicator_size if scale == 1.0 else max(2, int(round(self.indicator_size * scale)))
-
-        if self.indicator_mode == 'box' and box is not None:
-            x1, y1, x2, y2 = box
-            # Draw bounding box rectangle
-            cv2.rectangle(image, (x1, y1), (x2, y2), color, 2 if scale == 1.0 else 1)
-
-            # Center tracking dot (subtle, so users see the point triggering the counting zone)
-            dot_radius = max(2, min(indicator_size // 2, 6))
-            cv2.circle(image, center, dot_radius, color, cv2.FILLED)
-
-            # Prepare text badge: Class name + track ID
-            cls_name = self._class_label(class_id)
-            label = f"{cls_name} #{rid}" if rid is not None and rid >= 0 else cls_name
-
-            font = get_label_font(13)
-            img_h, img_w = image.shape[:2]
-
-            if font is not None:
-                badge = render_cached_badge(label, color, font)
-                badge_h, badge_w = badge.shape[:2]
-
-                badge_x1 = max(0, min(x1, img_w - badge_w))
-                badge_x2 = min(img_w, badge_x1 + badge_w)
-
-                if y1 - badge_h >= 0:
-                    badge_y1 = y1 - badge_h
-                    badge_y2 = y1
-                else:
-                    badge_y1 = min(img_h - 1, max(0, y1))
-                    badge_y2 = min(img_h, badge_y1 + badge_h)
-
-                bw = badge_x2 - badge_x1
-                bh = badge_y2 - badge_y1
-
-                if bw > 0 and bh > 0:
-                    image[badge_y1:badge_y2, badge_x1:badge_x2] = badge[:bh, :bw]
-            else:
-                (text_w, text_h), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-                badge_h = text_h + baseline + 4
-                badge_y1 = max(0, y1 - badge_h) if y1 - badge_h >= 0 else min(img_h - badge_h, y1)
-                badge_y2 = badge_y1 + badge_h
-                badge_x2 = min(img_w, x1 + text_w + 6)
-                cv2.rectangle(image, (x1, badge_y1), (badge_x2, badge_y2), color, cv2.FILLED)
-                cv2.putText(image, label, (x1 + 3, badge_y2 - baseline - 2), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0),
-                            1, cv2.LINE_AA)
-        else:
-            cv2.circle(image, center, indicator_size, color, cv2.FILLED)
-
-    def _ensure_counting_mask(self, frame_shape: Tuple[int, int]) -> None:
-        """
-        Lazily builds a boolean mask of the counting area for fast point checks.
-
-        Args:
-            frame_shape (Tuple[int, int]): The shape of the frame.
-
-        Returns:
-            None
-        """
-        if self._counting_mask is not None:
-            return
-
-        zones = self.counting_areas or [{
-            'points': self.counting_area,
-            'color': self.counting_area_color,
-            'direction': getattr(self, 'counting_area_direction', 'any'),
-        }]
-        self._counting_mask = build_zone_mask(frame_shape, zones)
+        return settings.indicator_detected_color, settings.indicator_counted_color
 
     def _detect_count(self, image: np.ndarray, boxes: list | np.ndarray) -> np.ndarray:
         """
@@ -1200,7 +1059,9 @@ class ObjectCounter:
         # Ensure mask for fast point-in-polygon
         if boxes is not None and len(boxes) > 0:
             h, w = image.shape[:2]
-            self._ensure_counting_mask((h, w))
+            self.renderer.ensure_mask((h, w))
+        counting_mask = self.renderer.mask
+        counting_areas = self.settings.counting_areas
 
         for result in boxes:
             values = list(map(int, result[:6]))
@@ -1214,19 +1075,24 @@ class ObjectCounter:
             self._track_history[rid].append((cx, cy))
 
             # Draw indicator on the image
-            self._draw_indicator(image, (cx, cy), rid, box=(x1, y1, x2, y2), class_id=class_id)
+            self.renderer.draw_indicator(
+                image, (cx, cy), rid,
+                counted=rid in self.total_objects,
+                box=(x1, y1, x2, y2),
+                class_id=class_id,
+            )
 
             # Check if the object is within the counting area using mask
             if (
-                    self._counting_mask is not None
-                    and 0 <= cy < self._counting_mask.shape[0]
-                    and 0 <= cx < self._counting_mask.shape[1]
+                    counting_mask is not None
+                    and 0 <= cy < counting_mask.shape[0]
+                    and 0 <= cx < counting_mask.shape[1]
                     and rid not in self.total_objects
             ):
-                zone_code = int(self._counting_mask[cy, cx])
+                zone_code = int(counting_mask[cy, cx])
                 if zone_code > 0:
                     zone_idx = zone_code - 1
-                    zone = self.counting_areas[zone_idx] if zone_idx < len(self.counting_areas) else None
+                    zone = counting_areas[zone_idx] if zone_idx < len(counting_areas) else None
                     direction = zone.get('direction', 'any') if zone else 'any'
 
                     is_valid_direction = direction_matches(
@@ -1285,43 +1151,6 @@ class ObjectCounter:
             self._hud_out_fps = self._out_count / span
             self._out_count = 0
             self._out_tick = now
-
-    def _draw_fps_hud(self, image: np.ndarray) -> None:
-        """
-        Draw camera FPS, output FPS, and inference time in the top-left corner.
-
-        Shown when general.show_fps is enabled. Drawn on the frame that is encoded
-        for the browser.
-        """
-        if not self.show_fps or image is None or image.size == 0:
-            return
-        try:
-            self._hud_cam_fps = float(self.vsm.get_actual_fps())
-        except Exception:
-            pass
-
-        height, width = image.shape[:2]
-        panel_w, panel_h = 188, 84
-        if width < panel_w + 24 or height < panel_h + 24:
-            return
-        x, y = 16, 16
-        roi = image[y:y + panel_h, x:x + panel_w]
-        tint = np.empty_like(roi)
-        tint[:] = (28, 30, 34)
-        cv2.addWeighted(tint, 0.82, roi, 0.18, 0, roi)
-        cv2.rectangle(image, (x, y), (x + panel_w - 1, y + panel_h - 1), (90, 96, 104), 1, cv2.LINE_AA)
-
-        rows = (
-            ("CAM", f"{self._hud_cam_fps:4.1f}", "fps"),
-            ("OUT", f"{self._hud_out_fps:4.1f}", "fps"),
-            ("INF", f"{self._hud_inf_ms:4.1f}", "ms"),
-        )
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        for index, (label, value, unit) in enumerate(rows):
-            baseline = y + 24 + index * 24
-            cv2.putText(image, label, (x + 12, baseline), font, 0.52, (168, 174, 182), 1, cv2.LINE_AA)
-            cv2.putText(image, value, (x + 68, baseline), font, 0.58, (248, 248, 248), 1, cv2.LINE_AA)
-            cv2.putText(image, unit, (x + 138, baseline), font, 0.42, (148, 154, 162), 1, cv2.LINE_AA)
 
     def _maybe_encode_mjpeg(self, frame: np.ndarray) -> None:
         """
@@ -1393,8 +1222,8 @@ class ObjectCounter:
             if self.paused:
                 display_frame = self._work_frame(frame)
                 if self.get_frames_running:
-                    display_frame = self._draw_counting_area(display_frame)
-                    self._draw_fps_hud(display_frame)
+                    display_frame = self.renderer.draw_zones(display_frame)
+                    self.renderer.draw_fps_hud(display_frame, self._hud_out_fps, self._hud_inf_ms)
                     self._maybe_encode_mjpeg(display_frame)
                 return display_frame
 
@@ -1413,7 +1242,7 @@ class ObjectCounter:
 
             if self.get_frames_running:
                 area_source = work_frame.copy() if dataset_enabled else work_frame
-                display_frame = self._draw_counting_area(area_source)
+                display_frame = self.renderer.draw_zones(area_source)
             else:
                 display_frame = work_frame.copy() if dataset_enabled else work_frame
 
@@ -1438,13 +1267,10 @@ class ObjectCounter:
                         if self.interval_capture_count >= self.interval_capture_max:
                             self.interval_capture_active = False
 
-            if self.show_fps:
-                self._draw_fps_hud(display_frame)
+            if self.settings.show_fps:
+                self.renderer.draw_fps_hud(display_frame, self._hud_out_fps, self._hud_inf_ms)
             elif self.debug and timer.elapsed > 0:
-                fps = int(round(1 / timer.elapsed))
-                cv2.putText(display_frame, f'FPS: {fps}',
-                            self.DEFAULT_FPS_POSITION, cv2.FONT_HERSHEY_SIMPLEX,
-                            self.DEFAULT_FPS_FONT_SCALE, self.DEFAULT_FPS_COLOR, self.DEFAULT_FPS_THICKNESS)
+                self.renderer.draw_debug_fps(display_frame, int(round(1 / timer.elapsed)))
 
             # Sending a frame to an asynchronous recorder while an active session is running
             if self.recording_enabled and self.recorder is not None and self.recorder.is_recording():

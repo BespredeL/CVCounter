@@ -267,6 +267,10 @@ class CounterSettings:
         """
         Assign every setting onto the counter, under its legacy attribute name.
 
+        The drawing parameters (zones, indicator style, FPS overlay) are left out on
+        purpose: FrameRenderer reads them from this settings object, so copying them
+        would create a second value that goes stale on a zone or colour change.
+
         Args:
             target (Any): ObjectCounter instance being configured.
 
@@ -275,30 +279,21 @@ class CounterSettings:
         """
         target.location = self.location
         target.debug = self.debug
-        target.show_fps = self.show_fps
         target.model_type = self.model_type
         target.weights = self.weights
         target.device = self.device
         target.confidence = self.confidence
         target.iou = self.iou
-        target.counting_areas = self.counting_areas
-        target.counting_area = self.counting_area
-        target.counting_area_color = self.counting_area_color
-        target.counting_area_direction = self.counting_area_direction
         target.video_fps = self.video_fps
         target.video_reconnect_attempts = self.video_reconnect_attempts
         target.video_scale = self.video_scale
         target.video_quality = self.video_quality
-        target.indicator_size = self.indicator_size
         target.tracker_name = self.tracker_name
         target.tracker_iou = self.tracker_iou
         target.tracker_max_age = self.tracker_max_age
         target.tracker_min_hits = self.tracker_min_hits
         target.tracker_track_thresh = self.tracker_track_thresh
         target.tracker_low_thresh = self.tracker_low_thresh
-        target.indicator_mode = self.indicator_mode
-        target.indicator_detected_color = self.indicator_detected_color
-        target.indicator_counted_color = self.indicator_counted_color
         target.vid_stride = self.vid_stride
         target.classes = self.classes
         target.dataset = self.dataset
