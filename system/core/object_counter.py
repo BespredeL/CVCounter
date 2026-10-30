@@ -25,6 +25,7 @@ from system.core.counter_config import CounterSettings
 from system.core.frame_renderer import FrameRenderer
 from system.core.mjpeg_stream import MjpegBroadcaster
 from system.core.ports import CountingEventSink, CountStore
+from system.core.recording_control import RecordingControl
 from system.core.sort import Sort
 from system.core.timer import Timer
 from system.utils.counting_area import (
@@ -36,7 +37,6 @@ from system.utils.validators import normalize_color_value
 from system.utils.exception_handler import StreamConnectionError
 from system.utils.i18n import trans
 from system.managers.video_stream_manager import VideoStreamManager
-from system.managers.video_recorder_manager import VideoRecorderManager
 from system.utils.telemetry import get_telemetry
 
 
@@ -77,13 +77,6 @@ class ObjectCounter:
         self._cached_source_frame: np.ndarray | None = None
         self.running: bool = True
         self.paused = False
-        self.recording_enabled: bool = False
-        self.recording_base_path: str | None = None
-        self.recording_scale: int = 100
-        self.recording_quality: int = 80
-        self.recording_idle_timeout: float = 0.0
-        self._last_recording_activity: float = 0.0
-        self.recorder: VideoRecorderManager | None = None
 
         # Stream performance diagnostics
         self._perf_frame_count: int = 0
@@ -136,7 +129,8 @@ class ObjectCounter:
         )
 
         # Init recorder (async video writer) if enabled for this detection
-        self._init_recorder()
+        self.rec: RecordingControl = RecordingControl(self.settings, self.logger)
+        self.rec.init_recorder()
 
         # Model and preview / data collection mode state
         self.preview_mode: bool = False
@@ -470,7 +464,7 @@ class ObjectCounter:
         self.store.close_current(location, class_counts=final_class_counts)
 
         # Stop the current recording video
-        self._stop_recording()
+        self.rec.stop()
 
         self.events.notify(trans('Counting completed successfully!'), 'primary')
         self.emit_live_counts(force=True)
@@ -546,7 +540,7 @@ class ObjectCounter:
         self.stream.shutdown()
 
         # Stop the current recording video
-        self._stop_recording()
+        self.rec.stop()
 
     def pause(self) -> None:
         """
@@ -723,7 +717,7 @@ class ObjectCounter:
             None
         """
         self.stop()
-        self._stop_recording()
+        self.rec.stop()
         if hasattr(self, 'vsm') and self.vsm is not None:
             self.vsm.stop()
         if hasattr(self, 'model') and self.model is not None:
@@ -761,17 +755,12 @@ class ObjectCounter:
             - self.classes (dict): The classes for object detection.
             - self.dataset (dict): The dataset for creating the object counter.
             - self.video_path (str): The path to the video.
-            - self.recording_enabled (bool): The recording enabled flag.
-            - self.recording_base_path (str): The base path for recording.
-            - self.recording_scale (int): The scale of the recording video.
-            - self.recording_quality (int): The quality of the recording video.
-            - self.recording_idle_timeout (float): Seconds without detections before stopping recording (0 = until reset).
             - self.counts.total_count (int): The total count of objects.
             - self.total_objects (set): The set of total objects.
 
-        Appearance and preview quality are not copied onto the counter either:
-        FrameRenderer and MjpegBroadcaster read them from self.settings, so a settings
-        change is live on the next frame.
+        Appearance, preview quality and recording parameters are not copied onto the counter
+        either: FrameRenderer, MjpegBroadcaster and RecordingControl read them from
+        self.settings, so a settings change is live on the next frame.
 
         If the 'start_total_count' key in the detector_config is greater than 0,
         seeds the counting state and updates the configuration file.
@@ -791,107 +780,6 @@ class ObjectCounter:
             self._total_objects_queue = deque(start_ids, maxlen=self._max_tracked_history)
             config_manager.set(f"detections.{self.location}.start_total_count", 0)
             config_manager.save_config()
-
-    def _init_recorder(self) -> None:
-        """
-        Initializing the asynchronous recorder for current recognition.
-
-        Args:
-            None
-
-        Returns:
-            None
-        """
-        if not self.recording_enabled:
-            return
-
-        try:
-            self.recorder = VideoRecorderManager(
-                location=self.location,
-                base_path=self.recording_base_path,
-                fps=self.video_fps,
-                scale=self.recording_scale,
-                quality=self.recording_quality,
-            )
-        except Exception as e:
-            # If it was not possible to initialize the record, log it and continue the operation of the counter without recording
-            self.logger.error(f"Error initializing VideoRecorderManager: {e}")
-            self.recording_enabled = False
-
-    def _start_recording_if_needed(self) -> None:
-        """
-        Start recording if it is enabled and not yet started.
-        This method is safe to call multiple times.
-
-        Args:
-            None
-
-        Returns:
-            None
-        """
-        if not self.recording_enabled or self.recorder is None:
-            return
-        try:
-            self.recorder.start()
-        except Exception as e:
-            self.logger.error(f"Error starting VideoRecorderManager: {e}")
-            self.recording_enabled = False
-
-    def _stop_recording(self) -> None:
-        """
-        Stop the current recording session and clear idle activity tracking.
-
-        Args:
-            None
-
-        Returns:
-            None
-        """
-        self._last_recording_activity = 0.0
-        if self.recorder is None:
-            return
-        try:
-            self.recorder.stop()
-        except Exception as e:
-            self.logger.error(f"Error stopping VideoRecorderManager: {e}")
-
-    def _on_detection_activity(self) -> None:
-        """
-        Mark detection activity and start recording when objects are present in the frame.
-
-        Args:
-            None
-
-        Returns:
-            None
-        """
-        if not self.recording_enabled or self.recorder is None:
-            return
-        self._last_recording_activity = time.monotonic()
-        self._start_recording_if_needed()
-
-    def _stop_recording_if_idle(self) -> None:
-        """
-        Stop recording when no objects were detected for recording_idle_timeout seconds.
-        When idle_timeout is 0 or less, recording continues until reset/stop.
-
-        Args:
-            None
-
-        Returns:
-            None
-        """
-        if (
-                not self.recording_enabled
-                or self.recorder is None
-                or self.recording_idle_timeout <= 0
-                or not self.recorder.is_recording()
-                or self._last_recording_activity <= 0
-        ):
-            return
-
-        if time.monotonic() - self._last_recording_activity >= self.recording_idle_timeout:
-            self._stop_recording()
 
     def _new_tracker(self) -> Sort | BYTETracker:
         """
@@ -1123,7 +1011,7 @@ class ObjectCounter:
             self._hud_inf_ms = inf_ms if self._hud_inf_ms <= 0 else (self._hud_inf_ms * 0.8 + inf_ms * 0.2)
 
             if boxes is not None and len(boxes) > 0:
-                self._on_detection_activity()
+                self.rec.note_detection()
 
             if self.stream.watching:
                 area_source = work_frame.copy() if dataset_enabled else work_frame
@@ -1158,10 +1046,9 @@ class ObjectCounter:
                 self.renderer.draw_debug_fps(display_frame, int(round(1 / timer.elapsed)))
 
             # Sending a frame to an asynchronous recorder while an active session is running
-            if self.recording_enabled and self.recorder is not None and self.recorder.is_recording():
-                self.recorder.push_frame(display_frame)
+            self.rec.push_frame(display_frame)
 
-            self._stop_recording_if_idle()
+            self.rec.stop_if_idle()
 
             # Record performance metrics
             self._perf_frame_count += 1

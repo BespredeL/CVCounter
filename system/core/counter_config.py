@@ -267,10 +267,10 @@ class CounterSettings:
         """
         Assign every setting onto the counter, under its legacy attribute name.
 
-        The drawing parameters (zones, indicator style, FPS overlay) and the preview
-        scale/quality are left out on purpose: FrameRenderer and MjpegBroadcaster read
-        them from this settings object, so copying them would create a second value
-        that goes stale on a zone or colour change.
+        The drawing parameters (zones, indicator style, FPS overlay), the preview
+        scale/quality and the recording block are left out on purpose: FrameRenderer,
+        MjpegBroadcaster and RecordingControl read them from this settings object, so
+        copying them would create a second value that goes stale on a settings change.
 
         Args:
             target (Any): ObjectCounter instance being configured.
@@ -302,11 +302,6 @@ class CounterSettings:
         target.target = self.target
         target.providers = self.providers
         target.video_path = self.video_path
-        target.recording_enabled = self.recording_enabled
-        target.recording_base_path = self.recording_base_path
-        target.recording_scale = self.recording_scale
-        target.recording_quality = self.recording_quality
-        target.recording_idle_timeout = self.recording_idle_timeout
 
     def active_class_ids(self) -> list[int]:
         """
