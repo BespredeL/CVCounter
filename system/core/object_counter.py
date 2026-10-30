@@ -6,13 +6,9 @@
 
 from collections import deque
 import os
-from pathlib import Path
-import random
-import re
 import time
 from typing import Any, Generator, List, Optional, Tuple
 
-import cv2
 import numpy as np
 from numpy import ndarray
 from system.managers.config_manager import ConfigManager
@@ -22,6 +18,7 @@ from system.core.byte_tracker import BYTETracker
 from system.core.count_kernel import direction_matches
 from system.core.count_state import CountState
 from system.core.counter_config import CounterSettings
+from system.core.dataset_capture import DatasetCapture
 from system.core.frame_renderer import FrameRenderer
 from system.core.mjpeg_stream import MjpegBroadcaster
 from system.core.ports import CountingEventSink, CountStore
@@ -41,11 +38,11 @@ from system.utils.telemetry import get_telemetry
 
 
 class ObjectCounter:
-    # Defaults of the counting loop; config defaults live in CounterSettings,
-    # drawing defaults in FrameRenderer and stream defaults in MjpegBroadcaster.
+    # Defaults of the counting loop; config defaults live in CounterSettings, drawing
+    # defaults in FrameRenderer, stream defaults in MjpegBroadcaster and capture
+    # defaults in DatasetCapture.
     DEFAULT_SLEEP_TIME: float = 0.01
     DEFAULT_PAUSED_SLEEP_TIME: float = 0.1
-    DEFAULT_JPEG_QUALITY: int = 90
 
     def __init__(self, location: str, config_manager: ConfigManager, socketio: Any,
                  event_sink: CountingEventSink | None = None,
@@ -132,15 +129,14 @@ class ObjectCounter:
         self.rec: RecordingControl = RecordingControl(self.settings, self.logger)
         self.rec.init_recorder()
 
-        # Model and preview / data collection mode state
+        # Dataset frame saving: instant capture, probability samples and interval capture.
+        # The source-frame lookup is lazy so a capture request always sees the newest frame.
+        self.capture: DatasetCapture = DatasetCapture(
+            self.settings, self.logger, config_manager, lambda: self.get_source_frame(),
+        )
+
+        # Model and preview mode state
         self.preview_mode: bool = False
-        self.interval_capture_active: bool = False
-        self.interval_capture_interval: float = 3.0
-        self.interval_capture_max: int = 50
-        self.interval_capture_count: int = 0
-        self.interval_capture_dataset: str | None = None
-        self.interval_capture_split: str = 'inbox'
-        self._last_interval_capture_time: float = 0.0
 
         weights_exist = bool(self.weights and os.path.isfile(self.weights))
         model_type_str = str(getattr(self, 'model_type', 'auto') or 'auto').lower()
@@ -659,13 +655,7 @@ class ObjectCounter:
         Returns:
             Optional[str]: Saved file path or None on failure.
         """
-        try:
-            frame = self.get_source_frame()
-            if frame is not None:
-                return self._save_dataset_image(frame, target_dataset=target_dataset, split=split)
-        except Exception as e:
-            self.logger.error(f'Error saving captured image: {e}')
-        return None
+        return self.capture.save_capture(target_dataset=target_dataset, split=split)
 
     def start_interval_capture(
             self,
@@ -677,34 +667,19 @@ class ObjectCounter:
         """
         Start periodic background frame capturing.
         """
-        self.interval_capture_interval = max(0.2, float(interval_sec))
-        self.interval_capture_max = max(1, int(max_frames))
-        self.interval_capture_dataset = target_dataset
-        self.interval_capture_split = split
-        self.interval_capture_count = 0
-        self._last_interval_capture_time = time.monotonic()
-        self.interval_capture_active = True
-        return self.get_interval_capture_status()
+        return self.capture.start_interval(interval_sec, max_frames, target_dataset, split)
 
     def stop_interval_capture(self) -> dict:
         """
         Stop periodic background frame capturing.
         """
-        self.interval_capture_active = False
-        return self.get_interval_capture_status()
+        return self.capture.stop_interval()
 
     def get_interval_capture_status(self) -> dict:
         """
         Get status of periodic background frame capturing.
         """
-        return {
-            'active': bool(self.interval_capture_active),
-            'count': int(self.interval_capture_count),
-            'max_frames': int(self.interval_capture_max),
-            'interval': float(self.interval_capture_interval),
-            'dataset': self.interval_capture_dataset,
-            'split': self.interval_capture_split,
-        }
+        return self.capture.status()
 
     def cleanup(self) -> None:
         """
@@ -1000,7 +975,7 @@ class ObjectCounter:
                     self.stream.maybe_encode(display_frame)
                 return display_frame
 
-            dataset_enabled = self.dataset.get('enable', False)
+            dataset_enabled = self.capture.dataset_enabled
             last_total_count = self.counts.total_count
 
             work_frame = self._work_frame(frame)
@@ -1022,23 +997,10 @@ class ObjectCounter:
             display_frame = self._detect_count(display_frame, boxes)
 
             if dataset_enabled and last_total_count != self.counts.total_count:
-                if random.random() < float(self.dataset.get('probability', 0.1)):
-                    self._save_dataset_image(work_frame, boxes, self.dataset.get('classes', None))
+                self.capture.save_sample(work_frame, boxes)
 
             # Periodic interval capture
-            if self.interval_capture_active:
-                now_m = time.monotonic()
-                if now_m - self._last_interval_capture_time >= self.interval_capture_interval:
-                    self._last_interval_capture_time = now_m
-                    saved = self._save_dataset_image(
-                        work_frame,
-                        target_dataset=self.interval_capture_dataset,
-                        split=self.interval_capture_split,
-                    )
-                    if saved:
-                        self.interval_capture_count += 1
-                        if self.interval_capture_count >= self.interval_capture_max:
-                            self.interval_capture_active = False
+            self.capture.maybe_capture_interval(work_frame)
 
             if self.settings.show_fps:
                 self.renderer.draw_fps_hud(display_frame, self.stream.out_fps, self._hud_inf_ms)
@@ -1091,70 +1053,3 @@ class ObjectCounter:
             self._perf_total_frame_time = 0.0
             self._perf_total_inference_time = 0.0
             self._perf_last_report_time = now
-
-    def _save_dataset_image(
-            self,
-            frame: np.ndarray,
-            boxes: list | np.ndarray = None,
-            classes_to_save: dict = None,
-            target_dataset: Optional[str] = None,
-            split: str = 'inbox',
-    ) -> Optional[str]:
-        """
-        Saves a raw image frame to the dataset or storage path (without overlays or detection marks).
-
-        Args:
-            frame (numpy.ndarray): Original BGR frame to be saved.
-            boxes: Detected objects used only for optional class filtering.
-            classes_to_save: Optional class filter from dataset config.
-            target_dataset: Optional dataset name to save into storage/datasets/<name>/images/<split>.
-            split: Dataset split ('inbox', 'train', 'val').
-
-        Returns:
-            Optional[str]: Saved file path or None on failure.
-        """
-        if frame is None:
-            return None
-
-        try:
-            from system.utils.paths import get_project_root, resolve_project_path
-            if target_dataset:
-                root_path = Path(get_project_root())
-                dataset_path = str(root_path / 'storage' / 'datasets' / target_dataset / 'images' / split)
-            else:
-                raw_path = self.dataset.get('path') if hasattr(self, 'dataset') and isinstance(self.dataset,
-                                                                                               dict) else None
-                if not raw_path:
-                    raw_path = f'storage/saved_images/{self.location}'
-                if hasattr(self, 'config_manager') and self.config_manager and hasattr(self.config_manager,
-                                                                                       'resolve_path'):
-                    dataset_path = self.config_manager.resolve_path(raw_path)
-                else:
-                    dataset_path = str(resolve_project_path(raw_path))
-
-            if classes_to_save and boxes is not None and len(boxes) > 0:
-                detected_classes = [int(result[-1]) for result in boxes]
-                if not any(str(cls) in classes_to_save for cls in detected_classes):
-                    return None
-
-            os.makedirs(dataset_path, exist_ok=True)
-
-            location_clean = re.sub(r'[^A-Za-z0-9-_]+', '', self.location)
-            create_time = int(time.time() * 1000)
-
-            image_path = f'{dataset_path}/{location_clean}_{create_time}.jpg'
-            success = cv2.imwrite(
-                image_path,
-                np.ascontiguousarray(frame),
-                [cv2.IMWRITE_JPEG_QUALITY, self.DEFAULT_JPEG_QUALITY],
-            )
-
-            if not success:
-                self.logger.error(f'Failed to save image to {image_path}')
-                return None
-
-            return image_path
-
-        except Exception as e:
-            self.logger.error(f'Error saving dataset image: {e}')
-            return None

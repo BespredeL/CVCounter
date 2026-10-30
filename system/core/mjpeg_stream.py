@@ -32,7 +32,6 @@ class MjpegBroadcaster:
 
     POLL_SLEEP: float = 0.01
     DEFAULT_MJPEG_FPS: float = 25.0
-    DEFAULT_JPEG_QUALITY: int = 90
     ENCODE_QUEUE_SIZE: int = 1
     ENCODE_POLL_TIMEOUT: float = 0.2
 
