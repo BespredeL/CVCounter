@@ -17,7 +17,6 @@ from typing import Any, Generator, List, Optional, Tuple
 
 import cv2
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
 from flask_socketio import SocketIO
 from numpy import ndarray
 from system.managers.config_manager import ConfigManager
@@ -26,6 +25,9 @@ from system.utils.logger import Logger
 from system.managers.notification_manager import NotificationManager
 from system.object_detection import load_detector
 from system.core.byte_tracker import BYTETracker
+from system.core.count_kernel import build_zone_mask, direction_matches
+from system.core.counter_config import CounterSettings
+from system.core.label_render import placeholder_mjpeg_chunk, render_cached_badge, get_label_font
 from system.core.sort import Sort
 from system.core.timer import Timer
 from system.utils.counting_area import (
@@ -41,126 +43,18 @@ from system.managers.video_stream_manager import VideoStreamManager
 from system.managers.video_recorder_manager import VideoRecorderManager
 from system.utils.telemetry import get_telemetry
 
-_PLACEHOLDER_MJPEG_CHUNK: bytes | None = None
-_LABEL_FONT: ImageFont.ImageFont | None = None
-_LABEL_FONT_SIZE: int = 13
-
-
-def _get_label_font(size: int = 13) -> ImageFont.ImageFont | None:
-    """
-    Get a cached TrueType font that supports Unicode / Cyrillic, falling back to default.
-    """
-    global _LABEL_FONT, _LABEL_FONT_SIZE
-    if _LABEL_FONT is not None and _LABEL_FONT_SIZE == size:
-        return _LABEL_FONT
-
-    font_candidates = [
-        "arial.ttf",
-        "segoeui.ttf",
-        "tahoma.ttf",
-        "calibri.ttf",
-        "DejaVuSans.ttf",
-        "LiberationSans-Regular.ttf",
-        "FreeSans.ttf",
-    ]
-    for font_name in font_candidates:
-        try:
-            _LABEL_FONT = ImageFont.truetype(font_name, size)
-            _LABEL_FONT_SIZE = size
-            return _LABEL_FONT
-        except Exception:
-            continue
-
-    try:
-        _LABEL_FONT = ImageFont.load_default()
-        _LABEL_FONT_SIZE = size
-    except Exception:
-        _LABEL_FONT = None
-    return _LABEL_FONT
-
-
-_BADGE_CACHE: dict[tuple[str, tuple[int, int, int]], np.ndarray] = {}
-_MAX_BADGE_CACHE_SIZE: int = 500
-
-
-def _render_cached_badge(label: str, color: tuple[int, int, int], font: ImageFont.ImageFont) -> np.ndarray:
-    """
-    Renders or fetches a cached text badge image for bounding box indicators.
-    """
-    global _BADGE_CACHE
-    key = (label, color)
-    cached = _BADGE_CACHE.get(key)
-    if cached is not None:
-        return cached
-
-    mask_w, mask_h = font.getmask(label).size
-    pad_x, pad_y = 5, 3
-    badge_w = mask_w + pad_x * 2
-    badge_h = mask_h + pad_y * 2 + 2
-
-    # BGR to RGB for PIL
-    rgb_color = (int(color[2]), int(color[1]), int(color[0]))
-    img = Image.new('RGB', (badge_w, badge_h), color=rgb_color)
-    draw = ImageDraw.Draw(img)
-    draw.text((pad_x, pad_y), label, font=font, fill=(0, 0, 0))
-    badge_np = cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2BGR)
-
-    if len(_BADGE_CACHE) >= _MAX_BADGE_CACHE_SIZE:
-        _BADGE_CACHE.clear()
-    _BADGE_CACHE[key] = badge_np
-    return badge_np
-
-
-def _placeholder_mjpeg_chunk() -> bytes:
-    """
-    Minimal multipart JPEG chunk so Werkzeug commits headers before the first real frame.
-    
-    Args:
-        None
-
-    Returns:
-        bytes: The placeholder JPEG chunk
-    """
-    global _PLACEHOLDER_MJPEG_CHUNK
-    if _PLACEHOLDER_MJPEG_CHUNK is None:
-        frame = np.zeros((2, 2, 3), dtype=np.uint8)
-        encoded = FrameUtils.encoding_frame(frame, 60, 'jpeg')
-        _PLACEHOLDER_MJPEG_CHUNK = (
-                b'--frame\r\n'
-                b'Content-Type: image/jpeg\r\n\r\n'
-                + encoded.tobytes()
-                + b'\r\n'
-        )
-    return _PLACEHOLDER_MJPEG_CHUNK
-
 
 class ObjectCounter:
+    # Defaults of the drawing/streaming layer; config defaults live in CounterSettings.
     DEFAULT_FPS_POSITION: tuple = (20, 70)
     DEFAULT_FPS_FONT_SCALE: float = 1.5
     DEFAULT_FPS_COLOR: tuple = (0, 0, 255)
     DEFAULT_FPS_THICKNESS: int = 2
     DEFAULT_POLYGON_ALPHA: float = 0.4
     DEFAULT_SLEEP_TIME: float = 0.01
-    DEFAULT_CONFIDENCE: float = 0.5
-    DEFAULT_IOU: float = 0.7
-    DEFAULT_VIDEO_QUALITY: int = 50
-    DEFAULT_VIDEO_SCALE: int = 50
-    DEFAULT_MAX_AGE: int = 60
-    DEFAULT_MIN_HITS: int = 3
-    DEFAULT_TRACKER_IOU: float = 0.3
-    DEFAULT_TRACK_THRESH: float = 0.0
-    DEFAULT_LOW_THRESH: float = 0.1
-    DEFAULT_TRACKER: str = 'sort'
-    DEFAULT_JPEG_QUALITY: int = 90
-    DEFAULT_INDICATOR_SIZE: int = 10
-    DEFAULT_INDICATOR_MODE: str = 'circle'
-    DEFAULT_INDICATOR_DETECTED_COLOR: Tuple[int, int, int] = (255, 0, 255)
-    DEFAULT_INDICATOR_COUNTED_COLOR: Tuple[int, int, int] = (0, 255, 0)
-    DEFAULT_VID_STRIDE: int = 1
-    DEFAULT_RECORDING_PATH: str = "storage/saved_recordings"
-    DEFAULT_MJPEG_FPS: float = 25.0
     DEFAULT_PAUSED_SLEEP_TIME: float = 0.1
-    DEFAULT_VIDEO_RECONNECT_ATTEMPTS: int = 5
+    DEFAULT_MJPEG_FPS: float = 25.0
+    DEFAULT_JPEG_QUALITY: int = 90
 
     def __init__(self, location: str, config_manager: ConfigManager, socketio: SocketIO, **kwargs: any) -> None:
         """
@@ -263,18 +157,8 @@ class ObjectCounter:
             )
         else:
             try:
-                active_classes = []
-                for cls_id, cls_entry in (self.classes or {}).items():
-                    try:
-                        cid = int(cls_id)
-                    except (ValueError, TypeError):
-                        continue
-                    if isinstance(cls_entry, dict):
-                        if cls_entry.get('enabled', True):
-                            active_classes.append(cid)
-                    else:
-                        active_classes.append(cid)
-                classes_list = active_classes if (self.classes and active_classes) else None
+                active_class_ids = self.settings.active_class_ids()
+                classes_list = active_class_ids or None
                 self.model = load_detector(
                     model_type=self.model_type,
                     weights=self.weights,
@@ -411,7 +295,7 @@ class ObjectCounter:
                         last_chunk = chunk
                         sent = True
                 elif not sent:
-                    yield _placeholder_mjpeg_chunk()
+                    yield placeholder_mjpeg_chunk()
                     sent = True
                 time.sleep(self.DEFAULT_SLEEP_TIME)
         except GeneratorExit:
@@ -989,139 +873,13 @@ class ObjectCounter:
         sets the total_count and total_objects attributes and updates the configuration file.
         """
 
-        config_manager.reload_config()
-        detector_config = config_manager.get(f"detections.{location}") or {}
-        detection_default = config_manager.get("detection_default", {}) or {}
-
+        settings = CounterSettings.from_config(config_manager, location, kwargs)
+        self.settings = settings
+        settings.apply_to(self)
         self.config_manager: ConfigManager = config_manager
-        self.location: str = location
-        self.debug: bool = kwargs.get('debug', config_manager.get('general.debug', False))
-        self.show_fps: bool = bool(config_manager.get('general.show_fps', False))
-        self.model_type: str = str(kwargs.get(
-            'model_type',
-            detector_config.get('model_type', detection_default.get('model_type', 'auto'))
-        ) or 'auto')
-        raw_weights = kwargs.get('weights', detector_config.get('weights_path'))
-        self.weights: str = config_manager.resolve_path(raw_weights) if raw_weights else ""
-        self.device: str = kwargs.get('device', detector_config.get('device', 'cpu'))
-        self.confidence: float = kwargs.get('confidence', detector_config.get('confidence',
-                                                                              detection_default.get('confidence',
-                                                                                                    self.DEFAULT_CONFIDENCE)))
-        self.iou: float = kwargs.get('iou', detector_config.get('iou', detection_default.get('iou', self.DEFAULT_IOU)))
-        counting_areas = normalize_counting_areas(
-            detector_config,
-            counting_areas=kwargs.get('counting_areas'),
-            counting_area=kwargs.get('counting_area'),
-            counting_area_color=kwargs.get('counting_area_color'),
-        )
-        runtime_areas = areas_to_runtime(counting_areas)
-        if not runtime_areas:
-            runtime_areas = [{
-                'points': [(0, 0), (100, 0), (100, 100), (0, 100)],
-                'color': tuple(DEFAULT_COUNTING_AREA_COLOR),
-            }]
-        self.counting_areas: list[dict] = runtime_areas
-        self.counting_area: List[Tuple[int, int]] = list(runtime_areas[0]['points'])
-        self.counting_area_color: tuple = tuple(runtime_areas[0]['color'])
-        self.counting_area_direction: str = str(runtime_areas[0].get('direction', 'any'))
-        self.video_fps: int = detector_config.get('video_fps', detection_default.get("video_fps", 0)) or 0
-        self.video_reconnect_attempts: int = int(detector_config.get('video_reconnect_attempts',
-                                                                     detection_default.get('video_reconnect_attempts',
-                                                                                           self.DEFAULT_VIDEO_RECONNECT_ATTEMPTS), ))
-        self.video_scale: int = detector_config.get('video_show_scale',
-                                                    detection_default.get("video_show_scale", self.DEFAULT_VIDEO_SCALE))
-        self.video_quality: int = detector_config.get('video_show_quality', detection_default.get("video_show_quality",
-                                                                                                  self.DEFAULT_VIDEO_QUALITY))
-        self.indicator_size: int = detector_config.get('indicator_size', detection_default.get("indicator_size",
-                                                                                               self.DEFAULT_INDICATOR_SIZE))
-        self.tracker_name: str = str(
-            detector_config.get(
-                'tracker',
-                detection_default.get('tracker', self.DEFAULT_TRACKER),
-            )
-        ).strip().lower()
-        if self.tracker_name not in ('sort', 'bytetrack'):
-            self.tracker_name = self.DEFAULT_TRACKER
-        self.tracker_iou: float = self._config_unit(
-            detector_config, detection_default, 'tracker_iou', self.DEFAULT_TRACKER_IOU
-        )
-        self.tracker_max_age: int = self._config_positive_int(
-            detector_config, detection_default, 'tracker_max_age', self.DEFAULT_MAX_AGE
-        )
-        self.tracker_min_hits: int = self._config_positive_int(
-            detector_config, detection_default, 'tracker_min_hits', self.DEFAULT_MIN_HITS
-        )
-        self.tracker_track_thresh: float = self._config_unit(
-            detector_config, detection_default, 'tracker_track_thresh', self.DEFAULT_TRACK_THRESH
-        )
-        self.tracker_low_thresh: float = self._config_unit(
-            detector_config, detection_default, 'tracker_low_thresh', self.DEFAULT_LOW_THRESH
-        )
-
-        self.indicator_mode: str = str(
-            detector_config.get(
-                'indicator_mode',
-                detection_default.get("indicator_mode", self.DEFAULT_INDICATOR_MODE)
-            )
-        ).strip().lower()
-        if self.indicator_mode not in ('circle', 'box'):
-            self.indicator_mode = self.DEFAULT_INDICATOR_MODE
-
-        raw_det_color = detector_config.get(
-            'indicator_detected_color',
-            detection_default.get('indicator_detected_color', self.DEFAULT_INDICATOR_DETECTED_COLOR)
-        )
-        try:
-            self.indicator_detected_color: tuple[int, int, int] = tuple(
-                normalize_color_value(raw_det_color, 'indicator_detected_color')
-            )
-        except Exception:
-            self.indicator_detected_color = self.DEFAULT_INDICATOR_DETECTED_COLOR
-
-        raw_cnt_color = detector_config.get(
-            'indicator_counted_color',
-            detection_default.get('indicator_counted_color', self.DEFAULT_INDICATOR_COUNTED_COLOR)
-        )
-        try:
-            self.indicator_counted_color: tuple[int, int, int] = tuple(
-                normalize_color_value(raw_cnt_color, 'indicator_counted_color')
-            )
-        except Exception:
-            self.indicator_counted_color = self.DEFAULT_INDICATOR_COUNTED_COLOR
-
-        self.vid_stride: int = detector_config.get('vid_stride',
-                                                   detection_default.get("vid_stride", self.DEFAULT_VID_STRIDE))
-        self.classes: dict = detector_config.get('classes', {})
-        dataset_config = dict(detector_config.get('dataset_create', {}))
-        if dataset_config.get('path'):
-            dataset_config['path'] = config_manager.resolve_path(dataset_config['path'])
-        self.dataset: dict = dataset_config
-        model_config_path = detector_config.get('model_config_path') or detection_default.get('model_config_path')
-        self.model_config_path: str | None = config_manager.resolve_path(model_config_path)
-        self.input_size: int | list = detector_config.get('input_size', detection_default.get('input_size', 640))
-        self.backend: str | None = detector_config.get('backend', detection_default.get('backend'))
-        self.target: str | None = detector_config.get('target', detection_default.get('target'))
-        self.providers: list | None = detector_config.get('providers', detection_default.get('providers'))
-
-        # Video
-        self.video_path: str = kwargs.get('video_path', detector_config.get('video_path', ''))
-
-        # Recording
-        recording_default = detection_default.get('recording', {})
-        recording_config = detector_config.get('recording', {})
-        self.recording_enabled: bool = bool(recording_config.get('enable', recording_default.get('enable', False)))
-        self.recording_base_path = config_manager.resolve_path(
-            recording_config.get('path', recording_default.get('path', self.DEFAULT_RECORDING_PATH)))
-        self.recording_scale: int = int(recording_config.get('scale', recording_default.get('scale', 100)))
-        self.recording_quality: int = int(recording_config.get('quality', recording_default.get('quality', 80)))
-        self.recording_idle_timeout: float = float(
-            recording_config.get('idle_timeout', recording_default.get('idle_timeout', 0))
-        )
-        if self.recording_idle_timeout < 0:
-            self.recording_idle_timeout = 0.0
 
         # Started counter value from config
-        start_count: int = int(detector_config.get('start_total_count', 0))
+        start_count: int = settings.start_total_count
         if start_count > 0:
             self.total_count = start_count
             start_ids = range(-start_count, 0)
@@ -1129,15 +887,6 @@ class ObjectCounter:
             self._total_objects_queue = deque(start_ids, maxlen=self._max_tracked_history)
             config_manager.set(f"detections.{self.location}.start_total_count", 0)
             config_manager.save_config()
-
-        # Periodic interval frame capture attributes
-        self.interval_capture_active: bool = False
-        self.interval_capture_interval: float = 2.0
-        self.interval_capture_max: int = 30
-        self.interval_capture_dataset: Optional[str] = None
-        self.interval_capture_split: str = 'inbox'
-        self.interval_capture_count: int = 0
-        self._last_interval_capture_time: float = 0.0
 
     def _init_recorder(self) -> None:
         """
@@ -1239,30 +988,6 @@ class ObjectCounter:
 
         if time.monotonic() - self._last_recording_activity >= self.recording_idle_timeout:
             self._stop_recording()
-
-    @staticmethod
-    def _config_unit(primary: dict, fallback: dict, key: str, default: float) -> float:
-        """Read a 0..1 tracker threshold, falling back when the value is unusable."""
-        raw = primary.get(key, fallback.get(key, default))
-        try:
-            value = float(raw)
-        except (TypeError, ValueError):
-            value = float(default)
-        if value < 0.0 or value > 1.0:
-            value = float(default)
-        return value
-
-    @staticmethod
-    def _config_positive_int(primary: dict, fallback: dict, key: str, default: int) -> int:
-        """Read a tracker frame count of at least 1."""
-        raw = primary.get(key, fallback.get(key, default))
-        try:
-            value = int(raw)
-        except (TypeError, ValueError):
-            value = int(default)
-        if value < 1:
-            value = int(default)
-        return value
 
     def _new_tracker(self) -> Sort | BYTETracker:
         """
@@ -1455,11 +1180,11 @@ class ObjectCounter:
             cls_name = self._class_label(class_id)
             label = f"{cls_name} #{rid}" if rid is not None and rid >= 0 else cls_name
 
-            font = _get_label_font(13)
+            font = get_label_font(13)
             img_h, img_w = image.shape[:2]
 
             if font is not None:
-                badge = _render_cached_badge(label, color, font)
+                badge = render_cached_badge(label, color, font)
                 badge_h, badge_w = badge.shape[:2]
 
                 badge_x1 = max(0, min(x1, img_w - badge_w))
@@ -1502,22 +1227,12 @@ class ObjectCounter:
         if self._counting_mask is not None:
             return
 
-        height, width = frame_shape[:2]
-        mask: np.ndarray = np.zeros((height, width), dtype=np.int16)
         zones = self.counting_areas or [{
             'points': self.counting_area,
             'color': self.counting_area_color,
             'direction': getattr(self, 'counting_area_direction', 'any'),
         }]
-
-        for idx, zone in enumerate(zones):
-            points = zone.get('points') or []
-            if len(points) < 3:
-                continue
-            pts = np.asarray(points, dtype=np.int32).reshape((-1, 1, 2))
-            cv2.fillPoly(mask, [pts], idx + 1)
-
-        self._counting_mask = mask
+        self._counting_mask = build_zone_mask(frame_shape, zones)
 
     def _detect_count(self, image: np.ndarray, boxes: list | np.ndarray) -> np.ndarray:
         """
@@ -1567,28 +1282,9 @@ class ObjectCounter:
                     zone = self.counting_areas[zone_idx] if zone_idx < len(self.counting_areas) else None
                     direction = zone.get('direction', 'any') if zone else 'any'
 
-                    is_valid_direction = True
-                    if direction != 'any':
-                        vec = DIRECTION_VECTORS.get(direction)
-                        if vec:
-                            hist = self._track_history[rid]
-                            if len(hist) >= 2:
-                                start_x, start_y = hist[0]
-                                dx = cx - start_x
-                                dy = cy - start_y
-                                dist = (dx * dx + dy * dy) ** 0.5
-                                min_delta = 5.0  # minimum displacement pixels to ignore stationary jitter
-
-                                if dist >= min_delta:
-                                    ux, uy = vec
-                                    # Cosine of angle between motion vector and target direction
-                                    dot = (dx * ux + dy * uy) / dist
-                                    # dot >= 0.5 corresponds to +-60 degree acceptance cone
-                                    is_valid_direction = (dot >= 0.5)
-                                else:
-                                    is_valid_direction = False
-                            else:
-                                is_valid_direction = False
+                    is_valid_direction = direction_matches(
+                        (cx, cy), self._track_history[rid], direction
+                    )
 
                     if is_valid_direction:
                         self.total_objects.add(rid)
