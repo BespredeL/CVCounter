@@ -21,6 +21,7 @@ from system.core.counter_config import CounterSettings
 from system.core.dataset_capture import DatasetCapture
 from system.core.frame_renderer import FrameRenderer
 from system.core.mjpeg_stream import MjpegBroadcaster
+from system.core.perf_reporter import PerfReporter
 from system.core.ports import CountingEventSink, CountStore
 from system.core.recording_control import RecordingControl
 from system.core.sort import Sort
@@ -75,12 +76,7 @@ class ObjectCounter:
         self.running: bool = True
         self.paused = False
 
-        # Stream performance diagnostics
-        self._perf_frame_count: int = 0
-        self._perf_total_frame_time: float = 0.0
-        self._perf_total_inference_time: float = 0.0
-        self._perf_last_report_time: float = time.monotonic()
-        self._perf_report_interval: float = 300.0
+        # Smoothed inference latency shown by the FPS overlay
         self._hud_inf_ms = 0.0
 
         # Load and initialize config
@@ -88,6 +84,9 @@ class ObjectCounter:
 
         # Init logger
         self.logger: Logger = Logger()
+
+        # Aggregate frame and inference timings of the counting loop, per telemetry window
+        self.perf: PerfReporter = PerfReporter(self.settings)
 
         # Outward events: an injected sink, or Socket.IO through NotificationManager.
         if event_sink is None:
@@ -529,7 +528,7 @@ class ObjectCounter:
             None
         """
         if self.running:
-            self._maybe_report_performance(force=True)
+            self.perf.maybe_report(force=True)
             self.events.notify(trans('Counting has stopped!'), 'primary')
             self.events.status('stopped')
         self.running = False
@@ -1013,43 +1012,9 @@ class ObjectCounter:
             self.rec.stop_if_idle()
 
             # Record performance metrics
-            self._perf_frame_count += 1
-            self._perf_total_inference_time += inf_duration
-            self._perf_total_frame_time += timer.elapsed
-            self._maybe_report_performance()
+            self.perf.note_frame(timer.elapsed, inf_duration)
 
             if self.stream.watching:
                 self.stream.maybe_encode(display_frame)
 
             return display_frame
-
-    def _maybe_report_performance(self, force: bool = False) -> None:
-        """
-        Record and report aggregate FPS and inference performance metrics.
-        
-        Args:
-            force: Force metric dispatch regardless of interval window.
-            
-        Returns:
-            None
-        """
-        now = time.monotonic()
-        elapsed = now - self._perf_last_report_time
-        if (elapsed >= self._perf_report_interval and self._perf_frame_count >= 20) or (
-                force and self._perf_frame_count >= 5):
-            avg_fps = self._perf_frame_count / max(0.001, elapsed)
-            avg_inf_ms = (self._perf_total_inference_time / max(1, self._perf_frame_count)) * 1000.0
-            avg_frame_ms = (self._perf_total_frame_time / max(1, self._perf_frame_count)) * 1000.0
-            get_telemetry().track('stream_performance', {
-                'location': self.location,
-                'model_type': str(getattr(self, 'model_type', 'unknown')),
-                'backend': str(getattr(self, 'backend', 'unknown')),
-                'fps': round(avg_fps, 1),
-                'inference_ms': round(avg_inf_ms, 1),
-                'frame_ms': round(avg_frame_ms, 1),
-                'frames_count': self._perf_frame_count,
-            })
-            self._perf_frame_count = 0
-            self._perf_total_frame_time = 0.0
-            self._perf_total_inference_time = 0.0
-            self._perf_last_report_time = now
