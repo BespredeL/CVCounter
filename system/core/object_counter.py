@@ -23,6 +23,7 @@ from system.utils.logger import Logger
 from system.object_detection import load_detector
 from system.core.byte_tracker import BYTETracker
 from system.core.count_kernel import build_zone_mask, direction_matches
+from system.core.count_state import CountState
 from system.core.counter_config import CounterSettings
 from system.core.label_render import placeholder_mjpeg_chunk, render_cached_badge, get_label_font
 from system.core.ports import CountingEventSink, CountStore
@@ -73,19 +74,12 @@ class ObjectCounter:
         """
 
         # Init variables
+        self.counts: CountState = CountState()
         self.total_objects: set = set()
         self._total_objects_queue: deque = deque()
         self._max_tracked_history: int = 30000
         self._track_history: dict[int, deque] = {}
         self._max_track_history_len: int = 15
-        self.total_count: int = 0
-        self.current_count: int = 0
-        self.defect_count: int = 0
-        self.correct_count: int = 0
-        self.pending_defect_count: int = 0
-        self.pending_correct_count: int = 0
-        self.class_counts: dict[int, int] = {}
-        self.current_class_counts: dict[int, int] = {}
         self.frame: np.ndarray | None = None
         self._mjpeg_chunk: bytes | None = None
         self._mjpeg_viewers: int = 0
@@ -379,33 +373,19 @@ class ObjectCounter:
             list[dict]: The list of class payloads
         """
         class_ids = (
-                set(self.class_counts.keys())
-                | set(self.current_class_counts.keys())
+                set(self.counts.class_counts.keys())
+                | set(self.counts.current_class_counts.keys())
                 | self._configured_class_ids()
         )
         return [
             {
                 'id': class_id,
                 'name': self._class_label(class_id),
-                'total': int(self.class_counts.get(class_id, 0)),
-                'current': int(self.current_class_counts.get(class_id, 0)),
+                'total': int(self.counts.class_counts.get(class_id, 0)),
+                'current': int(self.counts.current_class_counts.get(class_id, 0)),
             }
             for class_id in sorted(class_ids)
         ]
-
-    def _increment_class_count(self, class_id: int) -> None:
-        """
-        Increment total and current-batch counts for a class.
-        
-        Args:
-            class_id (int): The class id.
-
-        Returns:
-            None
-        """
-        key = int(class_id)
-        self.class_counts[key] = self.class_counts.get(key, 0) + 1
-        self.current_class_counts[key] = self.current_class_counts.get(key, 0) + 1
 
     def get_live_counts(self) -> dict:
         """
@@ -414,13 +394,14 @@ class ObjectCounter:
         Returns:
             dict: total, current, defect, correct, pending_defect, pending_correct, by_class
         """
+        counts = self.counts
         return {
-            'total': self.total_count - self.defect_count + self.correct_count,
-            'current': self.current_count,
-            'defect': self.defect_count,
-            'correct': self.correct_count,
-            'pending_defect': self.pending_defect_count,
-            'pending_correct': self.pending_correct_count,
+            'total': counts.total_count - counts.defect_count + counts.correct_count,
+            'current': counts.current_count,
+            'defect': counts.defect_count,
+            'correct': counts.correct_count,
+            'pending_defect': counts.pending_defect_count,
+            'pending_correct': counts.pending_correct_count,
             'by_class': self._by_class_payload(),
         }
 
@@ -447,20 +428,9 @@ class ObjectCounter:
         Returns:
             dict: Current live counts payload.
         """
-        self.pending_defect_count = max(int(pending_defect), 0)
-        self.pending_correct_count = int(pending_correct)
+        self.counts.set_pending(pending_defect, pending_correct)
         self.emit_live_counts(force=True)
         return self.get_live_counts()
-
-    def clear_pending_counts(self) -> None:
-        """
-        Reset pending keyboard values to zero.
-        
-        Returns:
-            None
-        """
-        self.pending_defect_count = 0
-        self.pending_correct_count = 0
 
     def get_current_count(self) -> dict:
         """
@@ -486,23 +456,16 @@ class ObjectCounter:
         Returns:
             dict: The total count.
         """
-        total_count = int(self.total_count)
-        defect_count = int(
-            defect_count if defect_count is not None and defect_count != 0 else self.pending_defect_count)
-        correct_count = int(
-            correct_count if correct_count is not None and correct_count != 0 else self.pending_correct_count)
-
-        self.defect_count += defect_count
-        self.correct_count += correct_count
-        self.current_count = self.current_count - defect_count + correct_count
-        current_total_count = str(total_count - self.defect_count + self.correct_count)
+        total_count = int(self.counts.total_count)
+        correct_count, defect_count = self.counts.resolve_adjustment(correct_count, defect_count)
+        current_total_count = self.counts.apply_save(correct_count, defect_count)
 
         result = self.store.save_result(
             location=location,
             total_count=current_total_count,
             source_count=total_count,
-            correct_count=self.correct_count,
-            defects_count=self.defect_count,
+            correct_count=self.counts.correct_count,
+            defects_count=self.counts.defect_count,
             custom_fields=custom_fields,
             active=active,
             class_counts=self._by_class_payload(),
@@ -513,7 +476,7 @@ class ObjectCounter:
         else:
             self.events.notify(trans('Save error!'), 'danger')
 
-        self.clear_pending_counts()
+        self.counts.clear_pending()
         self.emit_live_counts(force=True)
 
         return dict(total=total_count, defect=defect_count, correct=correct_count)
@@ -534,13 +497,8 @@ class ObjectCounter:
         self.total_objects.clear()
         self._total_objects_queue.clear()
         self._track_history.clear()
-        self.total_count = 0
-        self.current_count = 0
-        self.defect_count = 0
-        self.correct_count = 0
-        self.class_counts.clear()
-        self.current_class_counts.clear()
-        self.clear_pending_counts()
+        self.counts.reset_counts()
+        self.counts.clear_pending()
         self._last_count_payload = None
 
         # Reset active tracker state so old tracks don't instantly re-trigger
@@ -566,12 +524,9 @@ class ObjectCounter:
         Returns:
             None
         """
-        current_count = int(self.current_count)
-        total_count = int(self.total_count)
-        defect_count = int(
-            defect_count if defect_count is not None and defect_count != 0 else self.pending_defect_count)
-        correct_count = int(
-            correct_count if correct_count is not None and correct_count != 0 else self.pending_correct_count)
+        current_count = int(self.counts.current_count)
+        total_count = int(self.counts.total_count)
+        correct_count, defect_count = self.counts.resolve_adjustment(correct_count, defect_count)
         by_class = self._by_class_payload()
         try:
             self.store.save_part_result(
@@ -587,11 +542,8 @@ class ObjectCounter:
             print(e)
             self.logger.error(e)
 
-        self.current_count = 0
-        self.current_class_counts.clear()
-        self.defect_count += defect_count
-        self.correct_count += correct_count
-        self.clear_pending_counts()
+        self.counts.apply_current_reset(correct_count, defect_count)
+        self.counts.clear_pending()
         self.emit_live_counts(force=True)
 
         self.events.notify(trans('The counter has been reset!'), 'primary')
@@ -861,11 +813,11 @@ class ObjectCounter:
             - self.recording_scale (int): The scale of the recording video.
             - self.recording_quality (int): The quality of the recording video.
             - self.recording_idle_timeout (float): Seconds without detections before stopping recording (0 = until reset).
-            - self.total_count (int): The total count of objects.
+            - self.counts.total_count (int): The total count of objects.
             - self.total_objects (set): The set of total objects.
 
         If the 'start_total_count' key in the detector_config is greater than 0,
-        sets the total_count and total_objects attributes and updates the configuration file.
+        seeds the counting state and updates the configuration file.
         """
 
         settings = CounterSettings.from_config(config_manager, location, kwargs)
@@ -876,7 +828,7 @@ class ObjectCounter:
         # Started counter value from config
         start_count: int = settings.start_total_count
         if start_count > 0:
-            self.total_count = start_count
+            self.counts.total_count = start_count
             start_ids = range(-start_count, 0)
             self.total_objects = set(start_ids)
             self._total_objects_queue = deque(start_ids, maxlen=self._max_tracked_history)
@@ -1284,9 +1236,9 @@ class ObjectCounter:
                     if is_valid_direction:
                         self.total_objects.add(rid)
                         self._total_objects_queue.append(rid)
-                        self.total_count += 1
-                        self.current_count += 1
-                        self._increment_class_count(class_id)
+                        self.counts.total_count += 1
+                        self.counts.current_count += 1
+                        self.counts.increment_class_count(class_id)
                         if len(self._total_objects_queue) > self._max_tracked_history:
                             old_id = self._total_objects_queue.popleft()
                             self.total_objects.discard(old_id)
@@ -1447,7 +1399,7 @@ class ObjectCounter:
                 return display_frame
 
             dataset_enabled = self.dataset.get('enable', False)
-            last_total_count = self.total_count
+            last_total_count = self.counts.total_count
 
             work_frame = self._work_frame(frame)
             inf_start = time.monotonic()
@@ -1467,7 +1419,7 @@ class ObjectCounter:
 
             display_frame = self._detect_count(display_frame, boxes)
 
-            if dataset_enabled and last_total_count != self.total_count:
+            if dataset_enabled and last_total_count != self.counts.total_count:
                 if random.random() < float(self.dataset.get('probability', 0.1)):
                     self._save_dataset_image(work_frame, boxes, self.dataset.get('classes', None))
 
