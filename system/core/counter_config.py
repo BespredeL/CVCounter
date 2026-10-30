@@ -267,9 +267,10 @@ class CounterSettings:
         """
         Assign every setting onto the counter, under its legacy attribute name.
 
-        The drawing parameters (zones, indicator style, FPS overlay) are left out on
-        purpose: FrameRenderer reads them from this settings object, so copying them
-        would create a second value that goes stale on a zone or colour change.
+        The drawing parameters (zones, indicator style, FPS overlay) and the preview
+        scale/quality are left out on purpose: FrameRenderer and MjpegBroadcaster read
+        them from this settings object, so copying them would create a second value
+        that goes stale on a zone or colour change.
 
         Args:
             target (Any): ObjectCounter instance being configured.
@@ -286,8 +287,6 @@ class CounterSettings:
         target.iou = self.iou
         target.video_fps = self.video_fps
         target.video_reconnect_attempts = self.video_reconnect_attempts
-        target.video_scale = self.video_scale
-        target.video_quality = self.video_quality
         target.tracker_name = self.tracker_name
         target.tracker_iou = self.tracker_iou
         target.tracker_max_age = self.tracker_max_age

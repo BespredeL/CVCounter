@@ -7,10 +7,8 @@
 from collections import deque
 import os
 from pathlib import Path
-import queue
 import random
 import re
-import threading
 import time
 from typing import Any, Generator, List, Optional, Tuple
 
@@ -18,7 +16,6 @@ import cv2
 import numpy as np
 from numpy import ndarray
 from system.managers.config_manager import ConfigManager
-from system.utils.frame_utils import FrameUtils
 from system.utils.logger import Logger
 from system.object_detection import load_detector
 from system.core.byte_tracker import BYTETracker
@@ -26,7 +23,7 @@ from system.core.count_kernel import direction_matches
 from system.core.count_state import CountState
 from system.core.counter_config import CounterSettings
 from system.core.frame_renderer import FrameRenderer
-from system.core.label_render import placeholder_mjpeg_chunk
+from system.core.mjpeg_stream import MjpegBroadcaster
 from system.core.ports import CountingEventSink, CountStore
 from system.core.sort import Sort
 from system.core.timer import Timer
@@ -44,11 +41,10 @@ from system.utils.telemetry import get_telemetry
 
 
 class ObjectCounter:
-    # Defaults of the streaming layer; config defaults live in CounterSettings,
-    # drawing defaults in FrameRenderer.
+    # Defaults of the counting loop; config defaults live in CounterSettings,
+    # drawing defaults in FrameRenderer and stream defaults in MjpegBroadcaster.
     DEFAULT_SLEEP_TIME: float = 0.01
     DEFAULT_PAUSED_SLEEP_TIME: float = 0.1
-    DEFAULT_MJPEG_FPS: float = 25.0
     DEFAULT_JPEG_QUALITY: int = 90
 
     def __init__(self, location: str, config_manager: ConfigManager, socketio: Any,
@@ -77,12 +73,8 @@ class ObjectCounter:
         self._track_history: dict[int, deque] = {}
         self._max_track_history_len: int = 15
         self.frame: np.ndarray | None = None
-        self._mjpeg_chunk: bytes | None = None
-        self._mjpeg_viewers: int = 0
-        self._last_mjpeg_encode_time: float = 0.0
         self._last_count_payload: dict | None = None
         self._cached_source_frame: np.ndarray | None = None
-        self.get_frames_running: bool = False
         self.running: bool = True
         self.paused = False
         self.recording_enabled: bool = False
@@ -99,10 +91,7 @@ class ObjectCounter:
         self._perf_total_inference_time: float = 0.0
         self._perf_last_report_time: float = time.monotonic()
         self._perf_report_interval: float = 300.0
-        self._hud_out_fps = 0.0
         self._hud_inf_ms = 0.0
-        self._out_count = 0
-        self._out_tick = time.monotonic()
 
         # Load and initialize config
         self.__initialize_config(location, config_manager, kwargs)
@@ -139,6 +128,11 @@ class ObjectCounter:
         # construction, and the HUD already swallows that failure per frame.
         self.renderer: FrameRenderer = FrameRenderer(
             self.settings, self._class_label, lambda: self.vsm.get_actual_fps(),
+        )
+
+        # Preview stream for the browser; it reads the running flag to know when to wind down.
+        self.stream: MjpegBroadcaster = MjpegBroadcaster(
+            self.settings, self.logger, lambda: self.running,
         )
 
         # Init recorder (async video writer) if enabled for this detection
@@ -240,7 +234,7 @@ class ObjectCounter:
                 else:
                     self._cached_source_frame = frame
 
-                    if self.get_frames_running:
+                    if self.stream.watching:
                         self.frame = self._process_frame(frame)
                     else:
                         self.frame = None
@@ -253,11 +247,11 @@ class ObjectCounter:
                     if self.paused:
                         sleep_time = self.DEFAULT_PAUSED_SLEEP_TIME
                     elif self.vsm.is_stream() and not self.vsm.is_hls() and self.video_fps <= 0:
-                        if self.get_frames_running:
+                        if self.stream.watching:
                             sleep_time = 0.0
                         else:
                             spent = time.monotonic() - iter_started
-                            sleep_time = self._mjpeg_encode_interval() - spent
+                            sleep_time = self.stream.encode_interval() - spent
                             if sleep_time < 0.0:
                                 sleep_time = 0.0
                     else:
@@ -277,40 +271,10 @@ class ObjectCounter:
         """
         Generator that yields frames in the form of JPEG images.
 
-        JPEG is encoded on the frame loop. This generator only forwards the latest
-        chunk so the HTTP worker stays mostly idle.
-
-        Always yields at least one chunk so Werkzeug calls start_response
-        before the client disconnects (e.g. quick navigation away from /video).
-
         Returns:
             A generator that yields frames in the form of JPEG images.
         """
-        self._mjpeg_viewers += 1
-        self.get_frames_running = True
-        sent = False
-        last_chunk: bytes | None = None
-        try:
-            while self.running or not sent:
-                chunk = self._mjpeg_chunk
-                if chunk is not None:
-                    if chunk is not last_chunk:
-                        yield chunk
-                        last_chunk = chunk
-                        sent = True
-                elif not sent:
-                    yield placeholder_mjpeg_chunk()
-                    sent = True
-                time.sleep(self.DEFAULT_SLEEP_TIME)
-        except GeneratorExit:
-            pass
-        except Exception as e:
-            self.logger.error(f'Error in get_frames: {e}')
-        finally:
-            self._mjpeg_viewers = max(0, self._mjpeg_viewers - 1)
-            if self._mjpeg_viewers == 0:
-                self.get_frames_running = False
-                self._mjpeg_chunk = None
+        return self.stream.frame_stream()
 
     def _class_label(self, class_id: int) -> str:
         """
@@ -579,12 +543,7 @@ class ObjectCounter:
             self.events.notify(trans('Counting has stopped!'), 'primary')
             self.events.status('stopped')
         self.running = False
-        encode_queue = getattr(self, "_encode_queue", None)
-        if encode_queue is not None:
-            try:
-                encode_queue.put_nowait(None)
-            except queue.Full:
-                pass
+        self.stream.shutdown()
 
         # Stop the current recording video
         self._stop_recording()
@@ -798,8 +757,6 @@ class ObjectCounter:
             - self.confidence (float): The confidence threshold for object detection.
             - self.iou (float): The IoU threshold for object detection.
             - self.video_fps (int): The frame rate of the video.
-            - self.video_scale (int): The scale of the video.
-            - self.video_quality (int): The quality of the video.
             - self.vid_stride (int): The stride for video processing.
             - self.classes (dict): The classes for object detection.
             - self.dataset (dict): The dataset for creating the object counter.
@@ -812,8 +769,9 @@ class ObjectCounter:
             - self.counts.total_count (int): The total count of objects.
             - self.total_objects (set): The set of total objects.
 
-        Zone and indicator appearance is not copied onto the counter: FrameRenderer
-        reads it from self.settings, so a settings change is live on the next frame.
+        Appearance and preview quality are not copied onto the counter either:
+        FrameRenderer and MjpegBroadcaster read them from self.settings, so a settings
+        change is live on the next frame.
 
         If the 'start_total_count' key in the detector_config is greater than 0,
         seeds the counting state and updates the configuration file.
@@ -1132,79 +1090,6 @@ class ObjectCounter:
         """
         return np.ascontiguousarray(frame).copy()
 
-    def _mjpeg_encode_interval(self) -> float:
-        """
-        Minimum seconds between MJPEG encodes for the browser stream.
-
-        Returns:
-            float: The minimum seconds between MJPEG encodes
-        """
-        if self.video_fps and self.video_fps > 0:
-            return 1.0 / float(self.video_fps)
-        return 1.0 / self.DEFAULT_MJPEG_FPS
-
-    def _note_output_frame(self) -> None:
-        self._out_count += 1
-        now = time.monotonic()
-        span = now - self._out_tick
-        if span >= 0.5:
-            self._hud_out_fps = self._out_count / span
-            self._out_count = 0
-            self._out_tick = now
-
-    def _maybe_encode_mjpeg(self, frame: np.ndarray) -> None:
-        """
-        Encode MJPEG only when the stream interval has elapsed.
-
-        Args:
-            frame (numpy.ndarray): The frame to process.
-
-        Returns:
-            None
-        """
-        now = time.monotonic()
-        if now - self._last_mjpeg_encode_time < self._mjpeg_encode_interval():
-            return
-
-        self._ensure_encode_worker()
-        try:
-            # Copy so the grabber can reuse its buffer while JPEG runs elsewhere.
-            self._encode_queue.put_nowait(frame.copy())
-        except queue.Full:
-            return
-        self._last_mjpeg_encode_time = now
-
-    def _ensure_encode_worker(self) -> None:
-        """
-        Start the preview encoder once.
-
-        JPEG of a 1080p frame takes 30–50 ms. Doing that on the counting thread
-        keeps the camera reader from publishing the next picture.
-        """
-        if getattr(self, "_encode_thread", None) is not None:
-            return
-        self._encode_queue = queue.Queue(maxsize=1)
-        self._encode_thread = threading.Thread(
-            target=self._encode_worker,
-            name=f"mjpeg-{self.location}",
-            daemon=True,
-        )
-        self._encode_thread.start()
-
-    def _encode_worker(self) -> None:
-        """Encode the latest queued preview frame without blocking detection."""
-        while self.running:
-            try:
-                frame = self._encode_queue.get(timeout=0.2)
-            except queue.Empty:
-                continue
-            if frame is None:
-                return
-            chunk = self._encode_mjpeg_chunk(frame)
-            if chunk is not None:
-                self._note_output_frame()
-                self._mjpeg_chunk = chunk
-
     def _process_frame(self, frame: np.ndarray) -> ndarray | None:
         """
         Process the frame.
@@ -1221,10 +1106,10 @@ class ObjectCounter:
         with Timer() as timer:
             if self.paused:
                 display_frame = self._work_frame(frame)
-                if self.get_frames_running:
+                if self.stream.watching:
                     display_frame = self.renderer.draw_zones(display_frame)
-                    self.renderer.draw_fps_hud(display_frame, self._hud_out_fps, self._hud_inf_ms)
-                    self._maybe_encode_mjpeg(display_frame)
+                    self.renderer.draw_fps_hud(display_frame, self.stream.out_fps, self._hud_inf_ms)
+                    self.stream.maybe_encode(display_frame)
                 return display_frame
 
             dataset_enabled = self.dataset.get('enable', False)
@@ -1240,7 +1125,7 @@ class ObjectCounter:
             if boxes is not None and len(boxes) > 0:
                 self._on_detection_activity()
 
-            if self.get_frames_running:
+            if self.stream.watching:
                 area_source = work_frame.copy() if dataset_enabled else work_frame
                 display_frame = self.renderer.draw_zones(area_source)
             else:
@@ -1268,7 +1153,7 @@ class ObjectCounter:
                             self.interval_capture_active = False
 
             if self.settings.show_fps:
-                self.renderer.draw_fps_hud(display_frame, self._hud_out_fps, self._hud_inf_ms)
+                self.renderer.draw_fps_hud(display_frame, self.stream.out_fps, self._hud_inf_ms)
             elif self.debug and timer.elapsed > 0:
                 self.renderer.draw_debug_fps(display_frame, int(round(1 / timer.elapsed)))
 
@@ -1284,8 +1169,8 @@ class ObjectCounter:
             self._perf_total_frame_time += timer.elapsed
             self._maybe_report_performance()
 
-            if self.get_frames_running:
-                self._maybe_encode_mjpeg(display_frame)
+            if self.stream.watching:
+                self.stream.maybe_encode(display_frame)
 
             return display_frame
 
@@ -1319,41 +1204,6 @@ class ObjectCounter:
             self._perf_total_frame_time = 0.0
             self._perf_total_inference_time = 0.0
             self._perf_last_report_time = now
-
-    def _encode_mjpeg_chunk(self, frame: np.ndarray, scaled: bool = False) -> bytes | None:
-        """
-        Build one multipart JPEG chunk for the browser MJPEG stream.
-
-        Args:
-            frame (numpy.ndarray): BGR frame to encode.
-            scaled (bool): Frame is already at video_show_scale.
-
-        Returns:
-            bytes | None: Encoded multipart chunk or None on failure.
-        """
-        if frame is None:
-            return None
-
-        try:
-            stream_frame = frame
-            if not scaled:
-                try:
-                    scale = int(self.video_scale or 0)
-                except (TypeError, ValueError):
-                    scale = 0
-                if 0 < scale < 100:
-                    stream_frame = FrameUtils.resize_frame(stream_frame, scale)
-
-            encoded_frame = FrameUtils.encoding_frame(stream_frame, int(self.video_quality), 'jpeg')
-            return (
-                    b'--frame\r\n'
-                    b'Content-Type: image/jpeg\r\n\r\n'
-                    + encoded_frame.tobytes()
-                    + b'\r\n'
-            )
-        except Exception as e:
-            self.logger.error(f'Error encoding MJPEG chunk: {e}')
-            return None
 
     def _save_dataset_image(
             self,
