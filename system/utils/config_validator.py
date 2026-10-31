@@ -5,9 +5,9 @@
 # Website: https://bespredel.name
 
 import os
+from collections.abc import Callable
 from typing import Any, Dict, List, Optional
 
-from system.object_detection import supported_model_types
 from system.utils.exception_handler import InvalidConfigError
 from system.utils.paths import project_root_from_config_path
 
@@ -15,7 +15,17 @@ from system.utils.paths import project_root_from_config_path
 class ConfigValidator:
     """Validator for application configuration."""
 
-    def __init__(self):
+    def __init__(self, supported_model_types: Callable[[], list[str]]):
+        """
+        Args:
+            supported_model_types (Callable[[], list[str]]): Returns the model_type
+                names the runtime accepts, so this module stays free of the detection
+                backends it validates against
+
+        Returns:
+            None
+        """
+        self.supported_model_types = supported_model_types
         self.errors: List[str] = []
         self.warnings: List[str] = []
 
@@ -446,7 +456,7 @@ class ConfigValidator:
 
         # Validate model_type
         if 'model_type' in config:
-            supported = supported_model_types()
+            supported = self.supported_model_types()
             if config['model_type'] not in supported:
                 self.warnings.append(
                     f"'{prefix}.model_type' is '{config['model_type']}', "
@@ -600,8 +610,8 @@ class ConfigValidator:
             self._validate_custom_fields(config['custom_fields'], f"{prefix}.custom_fields")
 
 
-def validate_config(config: Dict[str, Any], config_path: Optional[str] = None, raise_on_error: bool = True) -> tuple[
-    bool, List[str], List[str]]:
+def validate_config(config: Dict[str, Any], config_path: Optional[str] = None, raise_on_error: bool = True, *,
+                    supported_model_types: Callable[[], list[str]]) -> tuple[bool, List[str], List[str]]:
     """
     Validate configuration and optionally raise exception on errors.
 
@@ -609,6 +619,8 @@ def validate_config(config: Dict[str, Any], config_path: Optional[str] = None, r
         config (dict): Configuration dictionary to validate
         config_path (str, optional): Path to config file for relative path validation
         raise_on_error (bool): If True, raise InvalidConfigError on validation errors
+        supported_model_types (Callable[[], list[str]]): Returns the model_type names
+            the runtime accepts, passed in so this module does not import the backends
 
     Returns:
         tuple: (is_valid, errors, warnings)
@@ -617,7 +629,7 @@ def validate_config(config: Dict[str, Any], config_path: Optional[str] = None, r
         InvalidConfigError: If validation fails and raise_on_error is True
     """
 
-    validator = ConfigValidator()
+    validator = ConfigValidator(supported_model_types)
     is_valid, errors, warnings = validator.validate(config, config_path)
 
     # Try to log warnings, but don't fail if logger is not available

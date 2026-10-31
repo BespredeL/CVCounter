@@ -13,6 +13,7 @@ from pathlib import Path
 import re
 from typing import Any, Dict, Optional, Union
 
+from system.object_detection import supported_model_types
 from system.utils.config_validator import validate_config
 from system.utils.exception_handler import ConfigError, ConfigNotFoundError, InvalidConfigError
 from system.utils.paths import project_root_from_config_path, resolve_project_path, set_project_root, \
@@ -73,7 +74,8 @@ class ConfigManager:
                     config_data = aligned_data
 
                 # Validate configuration
-                validate_config(config_data, self._config_path, raise_on_error=True)
+                validate_config(config_data, self._config_path, raise_on_error=True,
+                                supported_model_types=supported_model_types)
 
                 return config_data
         except FileNotFoundError:
@@ -305,7 +307,8 @@ class ConfigManager:
             from system.utils.camera_schema import align_full_config
             current_config, _ = align_full_config(current_config)
 
-            validate_config(current_config, self._config_path, raise_on_error=True)
+            validate_config(current_config, self._config_path, raise_on_error=True,
+                            supported_model_types=supported_model_types)
             self._config = current_config
             try:
                 self.save_config()
