@@ -220,13 +220,8 @@ class MjpegBroadcaster:
                 if 0 < scale < 100:
                     stream_frame = FrameUtils.resize_frame(stream_frame, scale)
 
-            encoded_frame = FrameUtils.encoding_frame(stream_frame, int(self.settings.video_quality), 'jpeg')
-            return (
-                    b'--frame\r\n'
-                    b'Content-Type: image/jpeg\r\n\r\n'
-                    + encoded_frame.tobytes()
-                    + b'\r\n'
-            )
+            jpeg = FrameUtils.encode_jpeg(stream_frame, int(self.settings.video_quality))
+            return FrameUtils.multipart_chunk(jpeg)
         except Exception as e:
             self.logger.error(f'Error encoding MJPEG chunk: {e}')
             return None

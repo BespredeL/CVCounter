@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
 # ! python3
-from typing import Any
 
 # Developed by: Aleksandr Kireev
 # Website: https://bespredel.name
 
 import cv2
-from numpy import dtype, ndarray, unsignedinteger
+from numpy import ndarray
 
-from numpy._typing import _8Bit
 from system.utils.exception_handler import FrameEncodingError
 
 
@@ -16,19 +14,19 @@ class FrameUtils:
     """
     Utility class for various frame (image) operations such as encoding and resizing.
 
-    This class provides static methods to encode image frames into different formats
-    and to resize frames by a given scale percentage.
+    This class provides static methods to encode image frames into the bytes the
+    HTTP responses and the MJPEG stream are built from, and to resize frames by a
+    given scale percentage.
     """
 
     @staticmethod
-    def encoding_frame(frame: cv2.Mat | ndarray, quality: int = 95, ext: str = "jpg") -> bytes:
+    def encode_jpeg(frame: cv2.Mat | ndarray, quality: int) -> bytes:
         """
-        Encodes the frame in the specified format.
+        Encodes the frame as a JPEG image.
 
         Args:
-            frame (cv2.Mat): Image frame to encode.
-            quality (int): Compression quality (default is 95).
-            ext (str): Output file extension/format (e.g., 'jpg', 'png').
+            frame (cv2.Mat | ndarray): Image frame to encode.
+            quality (int): JPEG compression quality (1-100).
 
         Returns:
             bytes: Encoded frame as a byte string.
@@ -36,11 +34,28 @@ class FrameUtils:
         Raises:
             FrameEncodingError: If the frame could not be encoded.
         """
-        ext = ext if ext.startswith(".") else "." + ext
-        ret, frame_encoded = cv2.imencode(ext, frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
+        ret, frame_encoded = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
         if not ret:
             raise FrameEncodingError("Failed to encode frame")
-        return frame_encoded
+        return frame_encoded.tobytes()
+
+    @staticmethod
+    def multipart_chunk(jpeg: bytes) -> bytes:
+        """
+        Wraps an encoded JPEG as one part of a multipart MJPEG stream.
+
+        Args:
+            jpeg (bytes): Encoded JPEG image.
+
+        Returns:
+            bytes: Chunk to yield from the stream generator.
+        """
+        return (
+                b'--frame\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n'
+                + jpeg
+                + b'\r\n'
+        )
 
     @staticmethod
     def resize_frame(frame: cv2.Mat | ndarray, scale_percent: int = 70) -> cv2.Mat:

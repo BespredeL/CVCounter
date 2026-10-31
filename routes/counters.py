@@ -45,6 +45,8 @@ from system.utils.validators import (
 
 counters_bp = Blueprint('counters', __name__)
 
+EDITOR_SNAPSHOT_JPEG_QUALITY: int = 90
+
 
 def require_location(f):
     """
@@ -301,8 +303,7 @@ def counting_area_snapshot(location: str = None) -> Response:
         abort(503, translate('No video frame available. Check camera or video_path.'))
 
     try:
-        encoded = FrameUtils.encoding_frame(frame, 90, 'jpeg')
-        payload = encoded.tobytes() if hasattr(encoded, 'tobytes') else bytes(encoded)
+        payload = FrameUtils.encode_jpeg(frame, EDITOR_SNAPSHOT_JPEG_QUALITY)
     except Exception:
         abort(500, translate('Failed to encode video frame'))
 

@@ -89,11 +89,5 @@ def placeholder_mjpeg_chunk() -> bytes:
     global _PLACEHOLDER_MJPEG_CHUNK
     if _PLACEHOLDER_MJPEG_CHUNK is None:
         frame = np.zeros((2, 2, 3), dtype=np.uint8)
-        encoded = FrameUtils.encoding_frame(frame, 60, 'jpeg')
-        _PLACEHOLDER_MJPEG_CHUNK = (
-                b'--frame\r\n'
-                b'Content-Type: image/jpeg\r\n\r\n'
-                + encoded.tobytes()
-                + b'\r\n'
-        )
+        _PLACEHOLDER_MJPEG_CHUNK = FrameUtils.multipart_chunk(FrameUtils.encode_jpeg(frame, 60))
     return _PLACEHOLDER_MJPEG_CHUNK

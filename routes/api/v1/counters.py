@@ -9,7 +9,6 @@ from __future__ import annotations
 import re
 from typing import Any, Dict
 
-import cv2
 from flask import Response, abort, jsonify, request
 
 from routes.api import api_v1_bp
@@ -26,7 +25,11 @@ from system.services.counter_runtime import (
     stop_counter as stop_running_counter,
 )
 from system.utils.app_context import get_app_context
+from system.utils.exception_handler import FrameEncodingError
+from system.utils.frame_utils import FrameUtils
 from system.utils.telemetry import get_telemetry
+
+SNAPSHOT_JPEG_QUALITY: int = 85
 
 
 def _mask_source_url(url: str | None) -> str:
@@ -317,8 +320,9 @@ def get_counter_snapshot(location: str):
             }
         }), 503
 
-    success, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
-    if not success:
+    try:
+        payload = FrameUtils.encode_jpeg(frame, SNAPSHOT_JPEG_QUALITY)
+    except FrameEncodingError:
         return jsonify({
             'success': False,
             'error': {
@@ -327,4 +331,4 @@ def get_counter_snapshot(location: str):
             }
         }), 500
 
-    return Response(buffer.tobytes(), mimetype='image/jpeg')
+    return Response(payload, mimetype='image/jpeg')
