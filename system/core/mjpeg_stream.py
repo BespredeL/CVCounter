@@ -130,8 +130,9 @@ class MjpegBroadcaster:
 
         self._ensure_encode_worker()
         try:
-            # Copy so the grabber can reuse its buffer while JPEG runs elsewhere.
-            self._encode_queue.put_nowait(frame.copy())
+            # The loop owns this frame until the next iteration, so the worker can
+            # encode it without a second full-size copy.
+            self._encode_queue.put_nowait(frame)
         except queue.Full:
             return
         self._last_encode_time = now
