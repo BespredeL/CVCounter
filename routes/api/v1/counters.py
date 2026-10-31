@@ -10,7 +10,7 @@ from typing import Any, Dict
 
 from flask import Response, abort, jsonify, request
 
-from routes.api import api_v1_bp
+from routes.api.v1.blueprint import api_v1_bp
 from system.auth.api_auth import api_key_required
 from system.services.counter_runtime import (
     counter_status,

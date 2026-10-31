@@ -11,7 +11,7 @@ import time
 
 from flask import jsonify
 
-from routes.api import api_v1_bp
+from routes.api.v1.blueprint import api_v1_bp
 from system.auth.api_auth import api_key_required
 from system.utils.app_context import get_app_context
 from system.utils.utils import get_system_info

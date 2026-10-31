@@ -11,7 +11,7 @@ from typing import Any, Dict
 
 from flask import abort, jsonify, request
 
-from routes.api import api_v1_bp
+from routes.api.v1.blueprint import api_v1_bp
 from system.auth.api_auth import api_key_required
 from system.db.models.cvcounter import CVCounter
 from system.utils.app_context import get_app_context
