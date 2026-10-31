@@ -101,7 +101,14 @@ def telemetry_client_event():
         Response: JSON status
     """
     try:
+        # Enforce max body size to avoid flooding memory
+        if request.content_length and request.content_length > 65536:
+            return jsonify({'ok': False, 'error': 'payload_too_large'}), 413
+
         data = request.get_json(silent=True) or {}
+        if not isinstance(data, dict):
+            return jsonify({'ok': False, 'error': 'invalid_payload'}), 400
+
         event_type = data.get('type', 'usage')
         telemetry = get_telemetry()
         if event_type == 'error':

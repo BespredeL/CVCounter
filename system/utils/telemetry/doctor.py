@@ -5,6 +5,7 @@
 # Website: https://bespredel.name
 
 from .constants import *  # noqa: F401,F403
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 class DoctorMixin:
@@ -220,13 +221,22 @@ class DoctorMixin:
         try:
             import numpy as np
             object_counters = (runtime_context or {}).get('object_counters') or (self._runtime_context or {}).get('object_counters') or {}
-            active_counter = next((c for c in object_counters.values() if getattr(c, 'running', False) and hasattr(c, 'debug_detect')), None)
+            active_counter = next((c for c in object_counters.values() if getattr(c, 'running', False)), None)
             if active_counter is not None:
-                t0 = time.monotonic()
-                dummy_frame = np.zeros((640, 640, 3), dtype=np.uint8)
-                active_counter.debug_detect(dummy_frame)
-                elapsed_ms = round((time.monotonic() - t0) * 1000, 1)
-                benchmark_detail = f'Active counter dry-run: {elapsed_ms} ms'
+                # Prefer reading live performance from PerfReporter to avoid interfering with tracker
+                perf = getattr(active_counter, 'perf_reporter', None)
+                if perf is not None and getattr(perf, 'frame_count', 0) > 0:
+                    avg_ms = round((perf.total_inference_time / max(1, perf.frame_count)) * 1000, 1)
+                    benchmark_detail = f'Active counter live latency: {avg_ms} ms (avg over {perf.frame_count} frames)'
+                elif getattr(active_counter, 'model', None) is not None and hasattr(active_counter.model, 'detect'):
+                    # Isolated detector test: run only the model's forward pass, bypassing tracker update
+                    t0 = time.monotonic()
+                    dummy_frame = np.zeros((640, 640, 3), dtype=np.uint8)
+                    active_counter.model.detect(image=dummy_frame)
+                    elapsed_ms = round((time.monotonic() - t0) * 1000, 1)
+                    benchmark_detail = f'Active model dry-run: {elapsed_ms} ms'
+                else:
+                    benchmark_detail = 'Active counter running'
             else:
                 first_model = 'yolo26n.pt'
                 if cfg:
@@ -256,39 +266,49 @@ class DoctorMixin:
         # 8. Camera network reachability
         cam_status = 'ok'
         cam_details = []
+
+        def _check_camera(loc_id: str, loc_cfg: dict) -> tuple[str, bool]:
+            vpath = str(loc_cfg.get('video_path') or '').strip()
+            if vpath.lower().startswith(('rtsp://', 'rtsps://', 'http://', 'https://')):
+                try:
+                    parsed = urllib_parse.urlparse(vpath)
+                    host = parsed.hostname
+                    port = parsed.port or (443 if parsed.scheme == 'https' else (80 if parsed.scheme == 'http' else 554))
+                    if host:
+                        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        sock.settimeout(1.0)
+                        code = sock.connect_ex((host, port))
+                        sock.close()
+                        if code == 0:
+                            return f'{loc_id} ({host}:{port}): OK', True
+                        return f'{loc_id} ({host}:{port}): Unreachable', False
+                except Exception as ce:
+                    return f'{loc_id}: {ce}', False
+            elif vpath.isdigit():
+                return f'{loc_id}: USB Camera #{vpath}', True
+            elif vpath:
+                resolved_v = resolve_project_path(vpath) or vpath
+                if os.path.exists(resolved_v):
+                    return f'{loc_id}: File OK', True
+                return f'{loc_id}: File missing', False
+            return f'{loc_id}: Not configured', True
+
         if cfg:
             detections = cfg.get('detections') or {}
             if isinstance(detections, dict) and detections:
-                for loc_id, loc_cfg in detections.items():
-                    if isinstance(loc_cfg, dict):
-                        vpath = str(loc_cfg.get('video_path') or '').strip()
-                        if vpath.lower().startswith(('rtsp://', 'rtsps://', 'http://', 'https://')):
+                cam_items = [(loc_id, loc_cfg) for loc_id, loc_cfg in detections.items() if isinstance(loc_cfg, dict)]
+                if cam_items:
+                    with ThreadPoolExecutor(max_workers=min(8, len(cam_items))) as pool:
+                        futures = [pool.submit(_check_camera, loc_id, loc_cfg) for loc_id, loc_cfg in cam_items]
+                        for f in futures:
                             try:
-                                parsed = urllib_parse.urlparse(vpath)
-                                host = parsed.hostname
-                                port = parsed.port or (443 if parsed.scheme == 'https' else (80 if parsed.scheme == 'http' else 554))
-                                if host:
-                                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                                    sock.settimeout(1.0)
-                                    code = sock.connect_ex((host, port))
-                                    sock.close()
-                                    if code == 0:
-                                        cam_details.append(f'{loc_id} ({host}:{port}): OK')
-                                    else:
-                                        cam_status = 'warning'
-                                        cam_details.append(f'{loc_id} ({host}:{port}): Unreachable')
+                                detail, is_ok = f.result(timeout=1.5)
+                                cam_details.append(detail)
+                                if not is_ok:
+                                    cam_status = 'warning'
                             except Exception as ce:
                                 cam_status = 'warning'
-                                cam_details.append(f'{loc_id}: {ce}')
-                        elif vpath.isdigit():
-                            cam_details.append(f'{loc_id}: USB Camera #{vpath}')
-                        elif vpath:
-                            resolved_v = resolve_project_path(vpath) or vpath
-                            if os.path.exists(resolved_v):
-                                cam_details.append(f'{loc_id}: File OK')
-                            else:
-                                cam_status = 'warning'
-                                cam_details.append(f'{loc_id}: File missing')
+                                cam_details.append(f'Camera check error: {ce}')
             if not cam_details:
                 cam_status = 'info'
                 cam_details.append('No cameras configured')
@@ -464,14 +484,14 @@ class DoctorMixin:
                 except Exception:
                     counters_count = 0
             object_counters = context.get('object_counters') or {}
-            object_counters_lock = context.get('object_counters_lock')
+            lock = context.get('lock') or context.get('object_counters_lock')
             try:
-                if object_counters_lock:
-                    with object_counters_lock:
+                if lock:
+                    with lock:
                         counters_list = list(object_counters.values())
                 else:
                     counters_list = list(object_counters.values())
-                counters_running = len(counters_list)
+                counters_running = sum(1 for counter in counters_list if getattr(counter, 'running', False))
                 for counter in counters_list:
                     model_type = getattr(counter, 'model_type', None)
                     if model_type and model_type not in backends:
@@ -526,12 +546,16 @@ class DoctorMixin:
         except Exception:
             info['openvino_version'] = None
 
-        # System memory via psutil if available
+        # System memory and process memory via psutil if available
         try:
             import psutil
             mem = psutil.virtual_memory()
             info['ram_total_mb'] = int(mem.total / (1024 * 1024))
             info['ram_available_mb'] = int(mem.available / (1024 * 1024))
+            try:
+                info['process_rss_mb'] = int(psutil.Process().memory_info().rss / (1024 * 1024))
+            except Exception:
+                pass
         except Exception:
             pass
 

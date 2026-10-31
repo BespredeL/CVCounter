@@ -592,7 +592,11 @@ def save_count(location: str = None) -> dict:
             custom_fields=validated_data['custom_fields'],
             active=1
         )
-        get_telemetry().track('report_created', {'location': location})
+        get_telemetry().track('report_created', {
+            'location': location,
+            'has_correction': bool(validated_data.get('correct_count')),
+            'has_defect': bool(validated_data.get('defect_count')),
+        })
 
         return object_counters[location].get_live_counts()
     except ValidationError as e:

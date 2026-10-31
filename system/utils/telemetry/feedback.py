@@ -68,8 +68,8 @@ class FeedbackMixin:
         ok, message, status_code = self._post_batch(report)
         self._write_last_send(ok=ok, message=message, status_code=status_code, mode='feedback')
         if not ok:
-            # Spill if endpoint is offline
+            # Spill if endpoint is offline so feedback is never lost
             self._spill_events([normalized])
-            return False, message
+            return True, 'Feedback recorded locally and will be delivered once connection is restored'
         return True, 'Feedback submitted successfully'
 

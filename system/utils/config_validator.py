@@ -235,7 +235,7 @@ class ConfigValidator:
             elif endpoint and not endpoint.startswith(('http://', 'https://')):
                 self.errors.append("'telemetry.endpoint' must start with http:// or https://")
 
-        for bool_key in ('send_errors', 'send_usage'):
+        for bool_key in ('send_errors', 'send_usage', 'compress'):
             if bool_key in telemetry and not isinstance(telemetry[bool_key], bool):
                 self.errors.append(f"'telemetry.{bool_key}' must be a boolean")
 

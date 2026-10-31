@@ -86,11 +86,20 @@ class TransportMixin:
         Returns:
             None
         """
-        report = self.build_diagnostic_report(mode='manual')
         with self._lock:
-            self._pending.clear()
+            pending_events = list(self._pending)
+        report = self.build_diagnostic_report(mode='manual')
         ok, message, status_code = self._post_batch(report)
         self._write_last_send(ok=ok, message=message, status_code=status_code, mode='manual')
+        if ok:
+            with self._lock:
+                self._pending = [e for e in self._pending if e not in pending_events]
+        else:
+            # If manual post failed and there were pending events, spill them so they are not lost
+            if pending_events:
+                self._spill_events(pending_events)
+                with self._lock:
+                    self._pending = [e for e in self._pending if e not in pending_events]
 
     def _post_batch(self, report: dict[str, Any]) -> tuple[bool, str, Optional[int]]:
         """
@@ -109,6 +118,12 @@ class TransportMixin:
             'X-CVCounter-App-Version': APP_VERSION,
             'X-CVCounter-Install-Id': self._install_id,
         }
+        if getattr(self, '_compress', False):
+            compressed_body = gzip.compress(body)
+            if len(compressed_body) < len(body):
+                body = compressed_body
+                headers['Content-Encoding'] = 'gzip'
+
         if self._hmac_secret:
             digest = hmac.new(
                 self._hmac_secret.encode('utf-8'),
@@ -130,7 +145,14 @@ class TransportMixin:
                     return True, 'ok', int(status)
                 return False, f'HTTP {status}', int(status)
         except urllib_error.HTTPError as exc:
-            return False, f'HTTP {exc.code}', int(exc.code)
+            err_msg = f'HTTP {exc.code}'
+            try:
+                err_detail = exc.read(300).decode('utf-8', errors='replace').strip()
+                if err_detail:
+                    err_msg = f'{err_msg}: {err_detail}'
+            except Exception:
+                pass
+            return False, err_msg, int(exc.code)
         except Exception as exc:
             self._log_local(f'Telemetry POST failed: {exc}')
             return False, str(exc), None

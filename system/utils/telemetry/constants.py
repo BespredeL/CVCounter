@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from collections import deque
+import gzip
 import hashlib
 import hmac
 import json

@@ -51,6 +51,7 @@ class TelemetryManager(
         self._error_dedup_sec = 120
         self._timeout_sec = 5
         self._hmac_secret = ''
+        self._compress = False
         self._queue: queue.Queue = queue.Queue(maxsize=200)
         self._worker: Optional[threading.Thread] = None
         self._wake = threading.Event()
@@ -99,6 +100,7 @@ class TelemetryManager(
             self._error_dedup_sec = _safe_int(telemetry.get('error_dedup_sec'), 120)
             self._timeout_sec = _safe_int(telemetry.get('timeout_sec'), 5)
             self._hmac_secret = str(telemetry.get('hmac_secret') or '')
+            self._compress = bool(telemetry.get('compress', False))
             if self._worker is None or not self._worker.is_alive():
                 self._queue = queue.Queue(maxsize=self._max_queue_size)
 

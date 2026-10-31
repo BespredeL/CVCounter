@@ -72,6 +72,7 @@ class QueueWorkerMixin:
             None
         """
         last_flush = time.monotonic()
+        last_heartbeat = time.monotonic()
         while not self._stop.is_set():
             self._wake.wait(timeout=min(5.0, float(self._flush_interval_sec)))
             self._wake.clear()
@@ -99,9 +100,15 @@ class QueueWorkerMixin:
                         self._flush_pending(mode='auto')
                         last_flush = time.monotonic()
 
-            if (time.monotonic() - last_flush) >= self._flush_interval_sec:
+            now = time.monotonic()
+            if (now - last_heartbeat) >= 86400:
+                if hasattr(self, 'track_heartbeat'):
+                    self.track_heartbeat()
+                last_heartbeat = now
+
+            if (now - last_flush) >= self._flush_interval_sec:
                 self._flush_pending(mode='auto')
-                last_flush = time.monotonic()
+                last_flush = now
 
             if shutdown_requested:
                 # Shorten timeout for final flush so shutdown does not block
@@ -130,11 +137,15 @@ class QueueWorkerMixin:
             None
         """
         with self._lock:
-            if not self._pending:
-                return
             if mode == 'auto' and not self._enabled:
                 self._pending.clear()
                 return
+            has_pending = bool(self._pending)
+
+        if not has_pending:
+            if mode == 'auto' and self._enabled:
+                self._replay_spilled_events()
+            return
 
         batches_sent = 0
         while batches_sent < max_batches:
@@ -246,7 +257,15 @@ class QueueWorkerMixin:
         try:
             ensure_parent_dir(path)
             if os.path.exists(path) and os.path.getsize(path) > MAX_QUEUE_DISK_BYTES:
-                with open(path, 'w', encoding='utf-8'):
+                try:
+                    with open(path, 'r', encoding='utf-8', errors='replace') as handle:
+                        lines = handle.readlines()
+                    # Retain the most recent 60% of events (FIFO eviction of oldest 40%)
+                    keep_count = int(len(lines) * 0.6)
+                    lines_to_keep = lines[-keep_count:] if keep_count > 0 else []
+                    with open(path, 'w', encoding='utf-8') as handle:
+                        handle.writelines(lines_to_keep)
+                except Exception:
                     pass
             with open(path, 'a', encoding='utf-8') as handle:
                 for event in events:

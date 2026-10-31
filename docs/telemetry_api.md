@@ -13,6 +13,7 @@ Automatic sending is **off** by default (`telemetry.enabled: false`). Manual sen
 - **Body:** JSON (UTF-8), batch payload below
 - **Headers:**
   - `Content-Type: application/json`
+  - `Content-Encoding: gzip` (optional, when `telemetry.compress` is true)
   - `User-Agent: CVCounter/{app_version}`
   - `X-CVCounter-App-Version: {app_version}`
   - `X-CVCounter-Install-Id: {install_id}`
@@ -73,6 +74,7 @@ Automatic sending is **off** by default (`telemetry.enabled: false`). Manual sen
 |------|------|------|
 | `app_started` | usage | Application factory finished |
 | `app_stopped` | usage | Shutdown signal |
+| `app_heartbeat` | usage | Periodic 24h keep-alive / uptime signal |
 | `counter_started` | usage | Counter started |
 | `counter_stopped` | usage | Counter stopped |
 | `counter_reset` | usage | Full counter reset |
@@ -80,8 +82,10 @@ Automatic sending is **off** by default (`telemetry.enabled: false`). Manual sen
 | `report_created` | usage | Count/report saved |
 | `stream_lost` | usage | Camera frame/reconnect failure (rate-limited) |
 | `stream_reconnected` | usage | Camera restored (rate-limited) |
+| `stream_performance` | usage | Aggregate FPS and inference latency report |
 | `uncaught_exception` | error | Logged exception / Flask 500 / sys.exc_info |
 | `logged_error` | error | Unhandled logger.error message |
+| `client_javascript_error` | error | Unhandled frontend browser exception or rejection |
 
 ## Expected responses
 
@@ -140,7 +144,8 @@ def verify_signature(body: bytes, secret: str, header_value: str) -> bool:
   "max_stack_chars": 8000,
   "error_dedup_sec": 120,
   "timeout_sec": 5,
-  "hmac_secret": ""
+  "hmac_secret": "",
+  "compress": false
 }
 ```
 

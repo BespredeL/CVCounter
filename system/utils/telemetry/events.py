@@ -5,10 +5,28 @@
 # Website: https://bespredel.name
 
 from .constants import *  # noqa: F401,F403
+import re
 
 
 class EventCaptureMixin:
     """Usage and error events kept in memory and queued for delivery."""
+
+    def track_heartbeat(self, props: Optional[dict[str, Any]] = None) -> None:
+        """
+        Record a periodic heartbeat / keep-alive metric event.
+
+        Args:
+            props: Optional additional metrics to include.
+
+        Returns:
+            None
+        """
+        base_props = {
+            'uptime_sec': int(time.monotonic() - getattr(self, '_started_at', time.monotonic())),
+        }
+        if props:
+            base_props.update(props)
+        self.track('app_heartbeat', base_props)
 
     def track(self, event: str, props: Optional[dict[str, Any]] = None) -> None:
         """
@@ -118,7 +136,25 @@ class EventCaptureMixin:
         if not message:
             message = exc_type
 
-        dedup_key = f'error:{exc_type}:{_message_hash(message)}'
+        last_callsite = ''
+        if resolved_exc_info is not None and resolved_exc_info[2] is not None:
+            extracted = traceback.extract_tb(resolved_exc_info[2])
+            if extracted:
+                last = extracted[-1]
+                last_callsite = f'{os.path.basename(last.filename)}:{last.name}'
+        elif exc is not None and getattr(exc, '__traceback__', None) is not None:
+            extracted = traceback.extract_tb(exc.__traceback__)
+            if extracted:
+                last = extracted[-1]
+                last_callsite = f'{os.path.basename(last.filename)}:{last.name}'
+
+        norm_msg = re.sub(r'\b(?:0x[0-9a-fA-F]+|\d+)\b', '#', message)
+        norm_msg = re.sub(r'\d{2}:\d{2}:\d{2}', 'TIME', norm_msg)
+        if last_callsite:
+            dedup_key = f'error:{exc_type}:{last_callsite}:{_message_hash(norm_msg)}'
+        else:
+            dedup_key = f'error:{exc_type}:{_message_hash(norm_msg)}'
+
         if not self._allow_dedup(dedup_key, window_sec=float(self._error_dedup_sec)):
             return
 
@@ -166,7 +202,9 @@ class EventCaptureMixin:
         if not msg:
             return
 
-        dedup_key = f'error:logged_error:{_message_hash(msg)}'
+        norm_msg = re.sub(r'\b(?:0x[0-9a-fA-F]+|\d+)\b', '#', msg)
+        norm_msg = re.sub(r'\d{2}:\d{2}:\d{2}', 'TIME', norm_msg)
+        dedup_key = f'error:logged_error:{_message_hash(norm_msg)}'
         if not self._allow_dedup(dedup_key, window_sec=float(self._error_dedup_sec)):
             return
 

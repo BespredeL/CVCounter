@@ -711,10 +711,12 @@ function renderDoctorResults(container, data, t) {
     }).join("");
 
     container.innerHTML = `
-        <div class="alert ${alertClass} mb-3 py-2 px-3 fw-semibold">
-            ${headerTitle}
+        <div class="alert ${alertClass} mb-3 py-2 px-3 fw-semibold d-flex align-items-center justify-content-between">
+            <span>${headerTitle}</span>
+            <button type="button" class="btn-close" id="btn-close-doctor" aria-label="Close"></button>
         </div>
         <ul class="list-group mb-0">
             ${listHtml}
         </ul>`;
+    container.querySelector("#btn-close-doctor")?.addEventListener("click", () => container.classList.add("d-none"));
 }

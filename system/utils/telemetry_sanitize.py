@@ -13,10 +13,10 @@ _URL_RE = re.compile(
     r'[^\s\'"<>]+'
 )
 _CREDENTIAL_RE = re.compile(
-    r'(?i)\b(password|passwd|pwd|secret_key|hmac_secret|api[_-]?key)\s*[=:]\s*\S+'
+    r'(?i)\b(password|passwd|pwd|secret_key|hmac_secret|api[_-]?key|bearer|token|auth|authorization|jwt|access[_-]?token|refresh[_-]?token)\s*[=:]\s*\S+'
 )
 _PATH_HINT_RE = re.compile(
-    r'(?i)(?:[A-Za-z]:\\|/)(?:Users|home|var|opt|storage|config)[^\s\'"]{0,200}'
+    r'(?i)(?:[A-Za-z]:[\\/]|/)(?:Users|home|var|opt|storage|config)[^\s\'"]{0,200}'
 )
 
 
@@ -59,7 +59,10 @@ def sanitize_props(props: Optional[dict[str, Any]], depth: int = 0) -> dict[str,
     safe: dict[str, Any] = {}
     for key, value in props.items():
         key_l = str(key).lower()
-        if any(token in key_l for token in ('password', 'secret', 'token', 'video_path', 'uri', 'url')):
+        if any(token in key_l for token in (
+            'password', 'passwd', 'secret', 'token', 'video_path', 'uri', 'url',
+            'auth', 'bearer', 'cookie', 'jwt', 'api_key', 'apikey', 'credential',
+        )):
             continue
         if isinstance(value, str):
             safe[key] = sanitize_text(value, max_chars=500)

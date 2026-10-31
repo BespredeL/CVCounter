@@ -16,7 +16,8 @@
         runtimesInstall: '/settings/api/runtimes/install',
         runtimesInstallStatus: '/settings/api/runtimes/install/status',
         logs: '/settings/api/logs',
-        logsClear: '/settings/api/logs/clear'
+        logsClear: '/settings/api/logs/clear',
+        systemDoctor: '/settings/system_doctor'
     }, window.SYSTEM_INFO_ENDPOINTS || {});
 
     function escapeHtml(str) {
