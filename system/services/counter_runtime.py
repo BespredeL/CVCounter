@@ -151,7 +151,7 @@ def _capture_counter_preview_on_start(location: str) -> int | None:
 
     if counter:
         for _ in range(40):
-            cached = counter._cached_source_frame
+            cached = counter.cached_source_frame()
             if cached is not None:
                 frame = cached.copy()
                 break

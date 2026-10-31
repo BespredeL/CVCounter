@@ -294,10 +294,11 @@ def get_counter_snapshot(location: str):
     frame = None
     if location in object_counters:
         counter = object_counters[location]
+        cached_source = counter.cached_source_frame()
         if annotated and counter.frame is not None:
             frame = counter.frame.copy()
-        elif counter._cached_source_frame is not None:
-            frame = counter._cached_source_frame.copy()
+        elif cached_source is not None:
+            frame = cached_source.copy()
         elif hasattr(counter, 'get_source_frame'):
             frame = counter.get_source_frame()
 

@@ -44,6 +44,10 @@ class CounterLoop:
         """
         self.counter = counter
 
+        # The last frame taken from the source: the identity marker of the dedupe below
+        # and the raw frame readers get through ObjectCounter.cached_source_frame().
+        self.cached_frame: np.ndarray | None = None
+
         # Smoothed inference latency shown by the FPS overlay
         self.hud_inference_ms: float = 0.0
 
@@ -90,10 +94,10 @@ class CounterLoop:
                 # The grabber keeps one buffer and replaces it only when a new
                 # camera frame arrives. Re-running inference and JPEG on that same
                 # object freezes the picture and starves the decoder.
-                if frame is counter._cached_source_frame:
+                if frame is self.cached_frame:
                     sleep_time = 0.005
                 else:
-                    counter._cached_source_frame = frame
+                    self.cached_frame = frame
 
                     if counter.stream.watching:
                         counter.frame = self.process(frame)

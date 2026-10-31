@@ -62,7 +62,6 @@ class ObjectCounter:
         self._max_track_history_len: int = 15
         self.frame: np.ndarray | None = None
         self._last_count_payload: dict | None = None
-        self._cached_source_frame: np.ndarray | None = None
         self.running: bool = True
         self.paused = False
 
@@ -485,6 +484,15 @@ class ObjectCounter:
         """
         return self.paused
 
+    def cached_source_frame(self) -> np.ndarray | None:
+        """
+        The raw frame the loop is currently working on, without a copy.
+
+        Returns:
+            numpy.ndarray | None: None until the loop has read its first frame.
+        """
+        return self.loop.cached_frame
+
     def get_source_frame(self) -> Optional[np.ndarray]:
         """
         Return a raw frame from the video source (without overlays).
@@ -498,7 +506,7 @@ class ObjectCounter:
         Returns:
             Optional[np.ndarray]: BGR frame or None if unavailable.
         """
-        cached = self._cached_source_frame
+        cached = self.cached_source_frame()
         if cached is not None:
             return cached.copy()
 
