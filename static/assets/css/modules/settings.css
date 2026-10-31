@@ -710,6 +710,15 @@
     border-bottom-right-radius: 0;
 }
 
+.cv-device-group .cv-device-select {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.cv-device-group .cv-device-value {
+    flex: 0 0 7.5rem;
+}
+
 .cv-input-group .cv-input-addon {
     border-color: var(--cv-border-strong);
     background-color: var(--cv-surface);

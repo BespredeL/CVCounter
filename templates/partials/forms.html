@@ -504,6 +504,12 @@
                             <option value="{{ value }}" selected>{{ value }} ({{ trans('Custom') }})</option>
                         {% endif %}
                     </select>
+                {% elif key == 'device' %}
+                    <div class="input-group cv-input-group cv-device-group">
+                        <input type="text" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
+                               class="form-control cv-form-control cv-device-value font-monospace"
+                               data-device-input autocomplete="off" spellcheck="false">
+                    </div>
                 {% elif key == 'socketio_async_mode' %}
                     <select id="{{ field_id }}" name="{{ field_id }}"
                             class="form-select cv-form-control cv-form-select font-monospace">
