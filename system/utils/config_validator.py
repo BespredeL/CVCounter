@@ -11,6 +11,11 @@ from typing import Any, Dict, List, Optional
 from system.utils.exception_handler import InvalidConfigError
 from system.utils.inference_devices import normalize_device
 from system.utils.paths import project_root_from_config_path
+from system.utils.preview_settings import (
+    normalize_preview_fps,
+    normalize_preview_quality,
+    normalize_preview_scale,
+)
 
 
 class ConfigValidator:
@@ -441,6 +446,16 @@ class ConfigValidator:
         if isinstance(value, bool) or not isinstance(value, int) or value < 1:
             self.errors.append(f"'{prefix}.{key}' must be an integer of at least 1")
 
+    def _validate_preview(self, config: Dict[str, Any], prefix: str, key: str,
+                          normalize: Callable[[Any], int]) -> None:
+        """Require a browser preview parameter inside the range the counter reads it in."""
+        if key not in config:
+            return
+        try:
+            normalize(config[key])
+        except ValueError as exc:
+            self.errors.append(f"'{prefix}.{key}' {exc}")
+
     def _validate_detection_config(self, config: Dict[str, Any], prefix: str,
                                    config_path: Optional[str] = None) -> None:
         """
@@ -499,6 +514,10 @@ class ConfigValidator:
         self._validate_unit_interval(config, prefix, 'tracker_low_thresh')
         self._validate_positive_int(config, prefix, 'tracker_max_age')
         self._validate_positive_int(config, prefix, 'tracker_min_hits')
+
+        self._validate_preview(config, prefix, 'video_show_scale', normalize_preview_scale)
+        self._validate_preview(config, prefix, 'video_show_quality', normalize_preview_quality)
+        self._validate_preview(config, prefix, 'video_fps', normalize_preview_fps)
 
         # Validate device
         if 'device' in config:

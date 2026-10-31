@@ -58,13 +58,13 @@ class FrameUtils:
         )
 
     @staticmethod
-    def resize_frame(frame: cv2.Mat | ndarray, scale_percent: int = 70) -> cv2.Mat:
+    def resize_frame(frame: cv2.Mat | ndarray, scale_percent: int) -> cv2.Mat:
         """
         Resizes the frame according to the specified scale percentage.
 
         Args:
             frame (cv2.Mat or ndarray): Image frame to resize.
-            scale_percent (int): Percentage of the original size (default is 70).
+            scale_percent (int): Percentage of the original size.
 
         Returns:
             cv2.Mat: Resized image frame.

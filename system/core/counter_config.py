@@ -8,10 +8,19 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from system.utils.counting_area import DEFAULT_COUNTING_AREA_COLOR, areas_to_runtime, normalize_counting_areas
+from system.utils.preview_settings import (
+    DEFAULT_PREVIEW_FPS,
+    DEFAULT_PREVIEW_QUALITY,
+    DEFAULT_PREVIEW_SCALE,
+    normalize_preview_fps,
+    normalize_preview_quality,
+    normalize_preview_scale,
+)
 from system.utils.validators import normalize_color_value
 
 if TYPE_CHECKING:
@@ -45,6 +54,20 @@ def config_positive_int(primary: dict, fallback: dict, key: str, default: int) -
     return value
 
 
+def config_preview(
+        primary: dict,
+        fallback: dict,
+        key: str,
+        default: int,
+        normalize: Callable[[Any], int],
+) -> int:
+    """Read a browser preview parameter through its value contract, falling back when unusable."""
+    try:
+        return normalize(primary.get(key, fallback.get(key, default)))
+    except ValueError:
+        return int(default)
+
+
 @dataclass
 class CounterSettings:
     """
@@ -56,8 +79,9 @@ class CounterSettings:
 
     DEFAULT_CONFIDENCE: float = 0.5
     DEFAULT_IOU: float = 0.7
-    DEFAULT_VIDEO_QUALITY: int = 50
-    DEFAULT_VIDEO_SCALE: int = 50
+    DEFAULT_VIDEO_QUALITY: int = DEFAULT_PREVIEW_QUALITY
+    DEFAULT_VIDEO_SCALE: int = DEFAULT_PREVIEW_SCALE
+    DEFAULT_VIDEO_FPS: int = DEFAULT_PREVIEW_FPS
     DEFAULT_MAX_AGE: int = 60
     DEFAULT_MIN_HITS: int = 3
     DEFAULT_TRACKER_IOU: float = 0.3
@@ -84,7 +108,7 @@ class CounterSettings:
     counting_area: list[tuple[int, int]] = field(default_factory=list)
     counting_area_color: tuple = tuple(DEFAULT_COUNTING_AREA_COLOR)
     counting_area_direction: str = 'any'
-    video_fps: int = 0
+    video_fps: int = DEFAULT_VIDEO_FPS
     video_reconnect_attempts: int = DEFAULT_VIDEO_RECONNECT_ATTEMPTS
     video_scale: int = DEFAULT_VIDEO_SCALE
     video_quality: int = DEFAULT_VIDEO_QUALITY
@@ -216,15 +240,21 @@ class CounterSettings:
             counting_area=list(runtime_areas[0]['points']),
             counting_area_color=tuple(runtime_areas[0]['color']),
             counting_area_direction=str(runtime_areas[0].get('direction', 'any')),
-            video_fps=detector_config.get('video_fps', detection_default.get("video_fps", 0)) or 0,
+            video_fps=config_preview(
+                detector_config, detection_default, 'video_fps', cls.DEFAULT_VIDEO_FPS, normalize_preview_fps,
+            ),
             video_reconnect_attempts=int(detector_config.get(
                 'video_reconnect_attempts',
                 detection_default.get('video_reconnect_attempts', cls.DEFAULT_VIDEO_RECONNECT_ATTEMPTS),
             )),
-            video_scale=detector_config.get('video_show_scale',
-                                            detection_default.get("video_show_scale", cls.DEFAULT_VIDEO_SCALE)),
-            video_quality=detector_config.get('video_show_quality',
-                                              detection_default.get("video_show_quality", cls.DEFAULT_VIDEO_QUALITY)),
+            video_scale=config_preview(
+                detector_config, detection_default, 'video_show_scale', cls.DEFAULT_VIDEO_SCALE,
+                normalize_preview_scale,
+            ),
+            video_quality=config_preview(
+                detector_config, detection_default, 'video_show_quality', cls.DEFAULT_VIDEO_QUALITY,
+                normalize_preview_quality,
+            ),
             indicator_size=detector_config.get('indicator_size',
                                                detection_default.get("indicator_size", cls.DEFAULT_INDICATOR_SIZE)),
             tracker_name=tracker_name,

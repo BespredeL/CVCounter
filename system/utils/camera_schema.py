@@ -13,6 +13,12 @@ and preservation of custom user keys.
 import copy
 from typing import Any, Dict, List, Optional, Tuple
 
+from system.utils.preview_settings import (
+    DEFAULT_PREVIEW_FPS,
+    DEFAULT_PREVIEW_QUALITY,
+    DEFAULT_PREVIEW_SCALE,
+)
+
 
 # Master canonical sequence of known camera settings keys
 CANONICAL_CAMERA_KEYS: List[str] = [
@@ -64,9 +70,9 @@ CANONICAL_CAMERA_KEYS: List[str] = [
 CANONICAL_DEFAULTS: Dict[str, Any] = {
     "start_total_count": 0,
     "video_path": "",
-    "video_show_scale": 70,
-    "video_show_quality": 50,
-    "video_fps": 0,
+    "video_show_scale": DEFAULT_PREVIEW_SCALE,
+    "video_show_quality": DEFAULT_PREVIEW_QUALITY,
+    "video_fps": DEFAULT_PREVIEW_FPS,
     "video_reconnect_attempts": 5,
     "model_type": "yolo",
     "weights_path": "config/ultralytics/models/yolov8n.pt",

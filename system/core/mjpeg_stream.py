@@ -71,7 +71,7 @@ class MjpegBroadcaster:
             float: The minimum seconds between MJPEG encodes
         """
         video_fps = self.settings.video_fps
-        if video_fps and video_fps > 0:
+        if video_fps > 0:
             return 1.0 / float(video_fps)
         return 1.0 / self.DEFAULT_MJPEG_FPS
 
@@ -212,16 +212,12 @@ class MjpegBroadcaster:
             return None
 
         try:
-            stream_frame = frame
-            if not scaled:
-                try:
-                    scale = int(self.settings.video_scale or 0)
-                except (TypeError, ValueError):
-                    scale = 0
-                if 0 < scale < 100:
-                    stream_frame = FrameUtils.resize_frame(stream_frame, scale)
+            if scaled:
+                stream_frame = frame
+            else:
+                stream_frame = FrameUtils.resize_frame(frame, self.settings.video_scale)
 
-            jpeg = FrameUtils.encode_jpeg(stream_frame, int(self.settings.video_quality))
+            jpeg = FrameUtils.encode_jpeg(stream_frame, self.settings.video_quality)
             return FrameUtils.multipart_chunk(jpeg)
         except Exception as e:
             self.logger.error(f'Error encoding MJPEG chunk: {e}')
