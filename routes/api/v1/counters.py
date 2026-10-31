@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-import re
 from typing import Any, Dict
 
 from flask import Response, abort, jsonify, request
@@ -27,16 +26,10 @@ from system.services.counter_runtime import (
 from system.utils.app_context import get_app_context
 from system.utils.exception_handler import FrameEncodingError
 from system.utils.frame_utils import FrameUtils
+from system.utils.redact import mask_url
 from system.utils.telemetry import get_telemetry
 
 SNAPSHOT_JPEG_QUALITY: int = 85
-
-
-def _mask_source_url(url: str | None) -> str:
-    """Mask credentials in RTSP or HTTP URLs for safe API output."""
-    if not url:
-        return ""
-    return re.sub(r'://([^:]+):([^@]+)@', r'://\1:••••••••@', str(url))
 
 
 @api_v1_bp.route('/counters', methods=['GET'])
@@ -60,7 +53,7 @@ def list_counters():
             'id': loc,
             'name': locations_dict.get(loc, loc),
             'status': status,
-            'video_source': _mask_source_url(det_config.get('video_path')),
+            'video_source': mask_url(det_config.get('video_path')),
             'weights': det_config.get('weights_path', ''),
             'counts': counts,
         })
@@ -97,7 +90,7 @@ def get_counter_detail(location: str):
             'id': location,
             'name': locations_dict.get(location, location),
             'status': status,
-            'video_source': _mask_source_url(det_config.get('video_path')),
+            'video_source': mask_url(det_config.get('video_path')),
             'weights': det_config.get('weights_path', ''),
             'counting_areas': det_config.get('counting_areas') or det_config.get('counting_area'),
             'counts': counts,
