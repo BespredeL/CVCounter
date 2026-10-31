@@ -32,6 +32,7 @@ except ImportError:
 from system.object_detection.base_object_detection import BaseObjectDetectionService, DetectionResult
 from system.object_detection.registry import register
 from system.utils.exception_handler import ModelLoadingError, ModelNotFoundError
+from system.utils.inference_devices import DEVICE_AUTO, normalize_device
 from system.utils.utils import pr_color
 
 
@@ -129,6 +130,23 @@ class ObjectDetectionYOLO(BaseObjectDetectionService):
 
         return boxes_xyxy, confidences, classes
 
+    @staticmethod
+    def _resolve_device(device_val: object) -> int | str:
+        """
+        Normalize the configured device for ultralytics, which has no 'auto' keyword.
+
+        Args:
+            device_val: The configured device value.
+
+        Returns:
+            int | str: The GPU index or 'cpu'; '' when auto was asked for or nothing was
+                configured, which makes ultralytics take the default CUDA device or CPU.
+        """
+        if device_val is None or str(device_val).strip() == '':
+            return ''
+        normalized = normalize_device(device_val, 'yolo')
+        return '' if normalized == DEVICE_AUTO else normalized
+
     def load_model(self, weights: str, **kwargs) -> None:
         """
         Load a model from a weights file.
@@ -146,7 +164,7 @@ class ObjectDetectionYOLO(BaseObjectDetectionService):
         self.weights = weights
         self.confidence = kwargs.get('confidence', 0.5)
         self.iou = kwargs.get('iou', 0.7)
-        self.device = kwargs.get('device', 'cpu')
+        self.device = self._resolve_device(kwargs.get('device', 'cpu'))
         self.vid_stride = kwargs.get('vid_stride', 1)
         self.classes_list = kwargs.get('classes_list', None)
         self.verbose = bool(kwargs.get('verbose', kwargs.get('debug', False)))

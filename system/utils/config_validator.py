@@ -9,6 +9,7 @@ from collections.abc import Callable
 from typing import Any, Dict, List, Optional
 
 from system.utils.exception_handler import InvalidConfigError
+from system.utils.inference_devices import normalize_device
 from system.utils.paths import project_root_from_config_path
 
 
@@ -501,11 +502,13 @@ class ConfigValidator:
 
         # Validate device
         if 'device' in config:
-            device = config['device']
-            if not isinstance(device, int):
-                self.errors.append(f"'{prefix}.device' must be an integer")
-            elif device < 0:
-                self.warnings.append(f"'{prefix}.device' is {device}, negative values may cause issues")
+            try:
+                device = normalize_device(config['device'], config.get('model_type'))
+            except ValueError as exc:
+                self.errors.append(f"'{prefix}.device' {exc}")
+            else:
+                if isinstance(device, int) and device < 0:
+                    self.warnings.append(f"'{prefix}.device' is {device}, negative values may cause issues")
 
         # Validate counting_area (legacy single polygon)
         if 'counting_area' in config:
