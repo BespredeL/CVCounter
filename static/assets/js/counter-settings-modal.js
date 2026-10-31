@@ -107,6 +107,9 @@ const CounterSettingsModal = {
                 const saveBtn = document.getElementById("counterSettingsSaveBtn");
                 if (body) {
                     body.innerHTML = html;
+                    if (window.DevicePicker) {
+                        window.DevicePicker.init(body);
+                    }
                 }
                 if (saveBtn) {
                     saveBtn.disabled = false;

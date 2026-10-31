@@ -33,9 +33,14 @@
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         gap: 0.35rem;
+        margin-bottom: 1.5rem;
         padding: 0.35rem 0.5rem;
         border-radius: var(--cv-radius);
         scrollbar-width: none;
+    }
+
+    #pills-tab .list-group-item {
+        margin-bottom: 0;
     }
 
     .settings-layout__nav::-webkit-scrollbar {
@@ -43,7 +48,7 @@
     }
 
     .settings-layout__nav .list-group-item {
-        flex: 0 0 auto;
+        flex: 0 1 auto;
         white-space: nowrap;
         border-radius: 999px !important;
         padding: 0.4rem 0.85rem !important;
