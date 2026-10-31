@@ -19,26 +19,16 @@ except Exception:
 from system.app_factory import create_app
 
 # --------------------------------------------------------------------------------
-# Create application instance for Flask CLI compatibility
-# --------------------------------------------------------------------------------
-_app_instance = create_app()
-app = _app_instance[0]  # Flask app instance
-socketio = _app_instance[1]  # SocketIO instance
-app_context = _app_instance[2]  # Application context
-
-# Make app_context available globally for backward compatibility if needed
-config = app_context['config']
-
-
-# --------------------------------------------------------------------------------
 # Server run
 # --------------------------------------------------------------------------------
 
 def main():
     """
     Main entry point for the application.
-    Starts the Flask server with configured settings.
+    Builds the app through system.app_factory and starts the server with configured settings.
     """
+    app, socketio, app_context = create_app()
+    config = app_context['config']
     try:
         server_host = config.get('server.host', '0.0.0.0')
         server_port = int(config.get('server.port', 8080))
