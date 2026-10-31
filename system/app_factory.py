@@ -19,6 +19,7 @@ from system.managers.config_manager import init_config
 from system.managers.database_manager import DatabaseManager
 from system.core.object_counter import ObjectCounter
 from system.managers.thread_manager import ThreadManager
+from system.runtime import AppRuntime
 from system.utils.i18n import load_translations, trans as translate
 from system.utils.paths import resolve_sqlite_uri
 from system.utils.utils import slug, system_check, should_run_startup_system_check
@@ -155,22 +156,24 @@ def create_app(config_path: str = "config/config.json", test_config: dict = None
     _thread_manager: ThreadManager = ThreadManager()
     _lock: Lock = Lock()
 
-    # Store in application context (accessible via current_app.config['APP_CONTEXT'])
-    app_context = {
-        'config': _config,
-        'locations': locations,
-        'locations_dict': locations_dict,
-        'db_manager': _db_manager,
-        'object_counters': _object_counters,
-        'thread_manager': _thread_manager,
-        'lock': _lock,
-        'users': users,
-        'socketio': _socketio,
-        'socketio_transports': socketio_transports,
-        'socketio_upgrade': socketio_upgrade,
-    }
+    # Store in application context (accessible via current_app.extensions['runtime'])
+    app_context = AppRuntime(
+        config=_config,
+        locations=locations,
+        locations_dict=locations_dict,
+        db_manager=_db_manager,
+        object_counters=_object_counters,
+        thread_manager=_thread_manager,
+        lock=_lock,
+        users=users,
+        socketio=_socketio,
+        socketio_transports=socketio_transports,
+        socketio_upgrade=socketio_upgrade,
+    )
 
-    # Store app_context in app config for access in blueprints
+    # Readers still reach it as current_app.config['APP_CONTEXT'] until they are
+    # moved onto the typed object; both names point at the same instance.
+    _app.extensions['runtime'] = app_context
     _app.config['APP_CONTEXT'] = app_context
 
     # Telemetry (opt-in; no-op when disabled)
