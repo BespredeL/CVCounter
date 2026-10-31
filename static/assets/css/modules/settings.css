@@ -705,9 +705,24 @@
     border-radius: 10px;
 }
 
-.cv-input-group .cv-form-control {
+.cv-input-group .cv-form-control:not(:last-child) {
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
+}
+
+.cv-input-group .cv-form-control:not(:first-child) {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+/* The native swatch has its own fixed height, so it is stretched to the hex field instead */
+.cv-color-picker-group .cv-color-swatch {
+    flex: 0 0 3rem;
+    height: auto;
+    align-self: stretch;
+    padding: 0.3rem;
+    border-color: var(--cv-border-strong);
+    border-radius: 10px 0 0 10px;
 }
 
 .cv-device-group .cv-device-select {
