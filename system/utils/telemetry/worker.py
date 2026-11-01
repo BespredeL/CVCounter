@@ -73,8 +73,10 @@ class QueueWorkerMixin:
         """
         last_flush = time.monotonic()
         last_heartbeat = time.monotonic()
+        if self._enabled:
+            self._replay_spilled_events(max_batches=1)
         while not self._stop.is_set():
-            self._wake.wait(timeout=min(5.0, float(self._flush_interval_sec)))
+            self._wake.wait(timeout=min(30.0, float(self._flush_interval_sec)))
             self._wake.clear()
             shutdown_requested = False
 
@@ -115,7 +117,7 @@ class QueueWorkerMixin:
                 old_timeout = self._timeout_sec
                 self._timeout_sec = min(2, self._timeout_sec)
                 try:
-                    self._flush_pending(mode='auto', max_batches=2)
+                    self._flush_pending(mode='auto', max_batches=2, replay_batches=1)
                 finally:
                     self._timeout_sec = old_timeout
                 with self._lock:
@@ -125,13 +127,14 @@ class QueueWorkerMixin:
                 self._stop.set()
                 break
 
-    def _flush_pending(self, mode: str = 'auto', max_batches: int = 5) -> None:
+    def _flush_pending(self, mode: str = 'auto', max_batches: int = 5, replay_batches: int = 10) -> None:
         """
         Flush pending events in batches.
         
         Args:
             mode: The mode of the flush ('auto', 'manual').
             max_batches: Maximum number of batches to send in one run.
+            replay_batches: Maximum number of spilled batches to send in this run.
             
         Returns:
             None
@@ -144,7 +147,7 @@ class QueueWorkerMixin:
 
         if not has_pending:
             if mode == 'auto' and self._enabled:
-                self._replay_spilled_events()
+                self._replay_spilled_events(max_batches=replay_batches)
             return
 
         batches_sent = 0
@@ -165,11 +168,17 @@ class QueueWorkerMixin:
                 break
             else:
                 # Connection is healthy, replay any previously spilled events
-                self._replay_spilled_events()
+                self._replay_spilled_events(max_batches=replay_batches)
 
-    def _replay_spilled_events(self) -> None:
+    def _replay_spilled_events(self, max_batches: int = 10) -> None:
         """
         Replay events previously spilled to QUEUE_FILE when network was down.
+
+        Args:
+            max_batches: Maximum number of batches sent in one replay pass.
+
+        Returns:
+            None
         """
         path = resolve_project_path(QUEUE_FILE) or QUEUE_FILE
         try:
@@ -180,34 +189,33 @@ class QueueWorkerMixin:
         except OSError:
             return
 
-        if not lines:
-            return
-
-        replayed_events: list[dict[str, Any]] = []
-        remaining_lines: list[str] = []
-        for line in lines:
-            line_str = line.strip()
-            if not line_str:
-                continue
-            if len(replayed_events) < self._max_batch_size:
-                try:
-                    replayed_events.append(json.loads(line_str))
-                except Exception:
+        for _ in range(max_batches):
+            replayed_events: list[dict[str, Any]] = []
+            remaining_lines: list[str] = []
+            for line in lines:
+                line_str = line.strip()
+                if not line_str:
                     continue
-            else:
-                remaining_lines.append(line)
+                if len(replayed_events) < self._max_batch_size:
+                    try:
+                        replayed_events.append(json.loads(line_str))
+                    except Exception:
+                        continue
+                else:
+                    remaining_lines.append(line)
 
-        if not replayed_events:
-            try:
-                with open(path, 'w', encoding='utf-8'):
+            if not replayed_events:
+                try:
+                    with open(path, 'w', encoding='utf-8'):
+                        pass
+                except OSError:
                     pass
-            except OSError:
-                pass
-            return
+                return
 
-        report = self._build_batch(replayed_events, mode='replay')
-        ok, message, status_code = self._post_batch(report)
-        if ok:
+            report = self._build_batch(replayed_events, mode='replay')
+            ok, message, status_code = self._post_batch(report)
+            if not ok:
+                return
             try:
                 ensure_parent_dir(path)
                 tmp_path = f"{path}.tmp"
@@ -216,7 +224,11 @@ class QueueWorkerMixin:
                         handle.write(rem if rem.endswith('\n') else rem + '\n')
                 os.replace(tmp_path, path)
             except OSError:
-                pass
+                return
+
+            if not remaining_lines:
+                return
+            lines = remaining_lines
 
     def _build_batch(self, events: list[dict[str, Any]], mode: str) -> dict[str, Any]:
         """

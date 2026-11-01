@@ -26,8 +26,8 @@ CVCounter is a flexible and high-performance web-based computer vision system de
 - 🔐 **Web Interface:** User authentication, visual zone editor, dynamic batch form fields, event logs, and real-time system diagnostics.
 
 > [!TIP]
-> **Optional Telemetry:**  
-> You can enable anonymous error and usage reporting (`telemetry.enabled: true` in settings) to help improve the project.  
+> **Anonymous Telemetry:**  
+> The application includes anonymous error and stability diagnostics to help improve the project (enabled by default; can be disabled anytime in settings: `telemetry.enabled: false`).  
 > Video frames, camera URLs, and passwords are **never sent**.  
 > Read more: [`docs/telemetry_api.md`](docs/telemetry_api.md).
 

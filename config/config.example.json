@@ -52,17 +52,18 @@
         "prefix": ""
     },
     "telemetry": {
-        "enabled": false,
+        "enabled": true,
         "endpoint": "https://bespredel.name/api/cvcounter/telemetry",
         "send_errors": true,
         "send_usage": true,
-        "flush_interval_sec": 300,
-        "max_batch_size": 50,
-        "max_queue_size": 200,
+        "flush_interval_sec": 3600,
+        "max_batch_size": 200,
+        "max_queue_size": 400,
         "max_stack_chars": 8000,
-        "error_dedup_sec": 120,
-        "timeout_sec": 5,
-        "hmac_secret": ""
+        "error_dedup_sec": 600,
+        "timeout_sec": 10,
+        "hmac_secret": "",
+        "compress": true
     },
     "form": {
         "defect_show": true,

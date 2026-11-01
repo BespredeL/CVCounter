@@ -40,19 +40,19 @@ class TelemetryManager(
             return
         self._initialized = True
         self._lock = threading.RLock()
-        self._enabled = False
+        self._enabled = True
         self._send_errors = True
         self._send_usage = True
         self._endpoint = DEFAULT_ENDPOINT
-        self._flush_interval_sec = 300
-        self._max_batch_size = 50
-        self._max_queue_size = 200
+        self._flush_interval_sec = 3600
+        self._max_batch_size = 200
+        self._max_queue_size = 400
         self._max_stack_chars = 8000
-        self._error_dedup_sec = 120
-        self._timeout_sec = 5
+        self._error_dedup_sec = 600
+        self._timeout_sec = 10
         self._hmac_secret = ''
-        self._compress = False
-        self._queue: queue.Queue = queue.Queue(maxsize=200)
+        self._compress = True
+        self._queue: queue.Queue = queue.Queue(maxsize=400)
         self._worker: Optional[threading.Thread] = None
         self._wake = threading.Event()
         self._stop = threading.Event()
@@ -88,19 +88,19 @@ class TelemetryManager(
 
         with self._lock:
             self._runtime_context = runtime_context
-            self._enabled = bool(telemetry.get('enabled', False))
+            self._enabled = bool(telemetry.get('enabled', True))
             self._send_errors = bool(telemetry.get('send_errors', True))
             self._send_usage = bool(telemetry.get('send_usage', True))
             endpoint = telemetry.get('endpoint') or DEFAULT_ENDPOINT
             self._endpoint = str(endpoint).strip() or DEFAULT_ENDPOINT
-            self._flush_interval_sec = _safe_int(telemetry.get('flush_interval_sec'), 300)
-            self._max_batch_size = _safe_int(telemetry.get('max_batch_size'), 50)
-            self._max_queue_size = _safe_int(telemetry.get('max_queue_size'), 200)
+            self._flush_interval_sec = _safe_int(telemetry.get('flush_interval_sec'), 3600)
+            self._max_batch_size = _safe_int(telemetry.get('max_batch_size'), 200)
+            self._max_queue_size = _safe_int(telemetry.get('max_queue_size'), 400)
             self._max_stack_chars = _safe_int(telemetry.get('max_stack_chars'), 8000)
-            self._error_dedup_sec = _safe_int(telemetry.get('error_dedup_sec'), 120)
-            self._timeout_sec = _safe_int(telemetry.get('timeout_sec'), 5)
+            self._error_dedup_sec = _safe_int(telemetry.get('error_dedup_sec'), 600)
+            self._timeout_sec = _safe_int(telemetry.get('timeout_sec'), 10)
             self._hmac_secret = str(telemetry.get('hmac_secret') or '')
-            self._compress = bool(telemetry.get('compress', False))
+            self._compress = bool(telemetry.get('compress', True))
             if self._worker is None or not self._worker.is_alive():
                 self._queue = queue.Queue(maxsize=self._max_queue_size)
 

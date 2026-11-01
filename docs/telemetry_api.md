@@ -4,7 +4,7 @@ Client module in CVCounter sends anonymized diagnostics to your HTTP endpoint. N
 
 Default client endpoint: `https://bespredel.name/api/cvcounter/telemetry`
 
-Automatic sending is **off** by default (`telemetry.enabled: false`). Manual send and JSON download are always available on `/system_info` (session login required when `users` is configured).
+Automatic sending is **on** by default (`telemetry.enabled: true`). You can disable it at any time in settings or `config.json`. Manual send and JSON download are always available on `/system_info` (session login required when `users` is configured).
 
 ## Request
 
@@ -95,7 +95,7 @@ Automatic sending is **off** by default (`telemetry.enabled: false`). Manual sen
 | `400` / `401` / `413` | Treat as failure; may spill to local `queue.jsonl` |
 | `429` / `5xx` / network error | Failure; short timeout; backoff via next flush interval; spill to `queue.jsonl` |
 
-Client timeout defaults to `telemetry.timeout_sec` (5 seconds). Failed auto batches append to `storage/telemetry/queue.jsonl` (capped size) and are automatically replayed when the connection is restored. Telemetry maintains an in-memory ring buffer of recent events for manual export even when auto-reporting is disabled. Telemetry never raises into the detection loop.
+Client timeout defaults to `telemetry.timeout_sec` (10 seconds). Failed auto batches append to `storage/telemetry/queue.jsonl` (capped size) and are replayed on the next flush or right after a restart — up to 10 batches of `max_batch_size` events per replay pass, stopping at the first failed POST. Telemetry maintains an in-memory ring buffer of recent events for manual export even when auto-reporting is disabled. Telemetry never raises into the detection loop.
 
 ## Privacy (client guarantees)
 
@@ -134,18 +134,18 @@ def verify_signature(body: bytes, secret: str, header_value: str) -> bool:
 
 ```json
 "telemetry": {
-  "enabled": false,
+  "enabled": true,
   "endpoint": "https://bespredel.name/api/cvcounter/telemetry",
   "send_errors": true,
   "send_usage": true,
-  "flush_interval_sec": 300,
-  "max_batch_size": 50,
-  "max_queue_size": 200,
+  "flush_interval_sec": 3600,
+  "max_batch_size": 200,
+  "max_queue_size": 400,
   "max_stack_chars": 8000,
-  "error_dedup_sec": 120,
-  "timeout_sec": 5,
+  "error_dedup_sec": 600,
+  "timeout_sec": 10,
   "hmac_secret": "",
-  "compress": false
+  "compress": true
 }
 ```
 

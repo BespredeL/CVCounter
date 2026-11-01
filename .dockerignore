@@ -1,6 +1,7 @@
 .git
 .gitignore
 __pycache__
+**/__pycache__
 *.pyc
 *.pyo
 *.pyd
@@ -14,8 +15,13 @@ venv/
 *.db
 *.sqlite*
 storage/
-*.pt
-*.onnx
-*.engine
+config/config.json
+config/database.sqlite
+config/ultralytics/
+**/*.db
+**/*.sqlite*
+**/*.pt
+**/*.onnx
+**/*.engine
 *.bin
 *.xml

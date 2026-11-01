@@ -301,17 +301,21 @@ Passwords are stored as scrypt hashes:
 | `uri` | SQLAlchemy database connection URI | `"sqlite:///config/database.sqlite"` |
 | `prefix` | Table prefix for database tables | `""` |
 
-### 6. `telemetry` — Optional Diagnostics
+### 6. `telemetry` — Diagnostics and Telemetry
 
 | Key | Description | Default |
 |---|---|---|
-| `enabled` | Automatic transmission of anonymized error reports | `false` |
+| `enabled` | Automatic transmission of anonymized error reports | `true` |
 | `endpoint` | HTTPS receiver endpoint URL | `"https://bespredel.name/api/cvcounter/telemetry"` |
 | `send_errors` | Send unhandled exceptions | `true` |
 | `send_usage` | Send anonymized system usage events | `true` |
-| `flush_interval_sec`| Interval for sending background telemetry batches (sec) | `300` |
-| `timeout_sec` | HTTP timeout for telemetry requests | `5` |
+| `flush_interval_sec`| Interval for sending background telemetry batches (sec) | `3600` |
+| `max_batch_size` | Maximum events per HTTP request; also flushes early when the buffer fills | `200` |
+| `max_queue_size` | Maximum in-memory command queue size | `400` |
+| `error_dedup_sec` | Window that suppresses identical error reports (sec) | `600` |
+| `timeout_sec` | HTTP timeout for telemetry requests | `10` |
 | `hmac_secret` | Secret key for signing requests (`X-CVCounter-Signature`) | `""` |
+| `compress` | Gzip compression for telemetry batches | `true` |
 
 ### 7. `form` — Batch Form Custom Fields
 
