@@ -58,6 +58,12 @@ class TelemetryManager(
         self._stop = threading.Event()
         self._dedup: dict[str, float] = {}
         self._dropped = 0
+        self._dropped_window = 0
+        self._loop_errors = 0
+        self._restarts = 0
+        self._restart_streak = 0
+        self._restart_streak_at: Optional[float] = None
+        self._restart_blocked_until = 0.0
         self._pending: list[dict[str, Any]] = []
         self._recent_events: deque[dict[str, Any]] = deque(maxlen=100)
         self._system_cache: Optional[dict[str, Any]] = None
@@ -105,6 +111,8 @@ class TelemetryManager(
                 self._queue = queue.Queue(maxsize=self._max_queue_size)
 
         if self._enabled:
+            with self._lock:
+                self._stop.clear()
             self._ensure_worker()
 
     def set_runtime_context(self, runtime_context: Optional[dict[str, Any]]) -> None:
@@ -177,17 +185,36 @@ class TelemetryManager(
         except OSError:
             pass
 
+        quarantine_path = resolve_project_path(QUARANTINE_FILE) or QUARANTINE_FILE
+        quarantine_count = 0
+        try:
+            if os.path.isfile(quarantine_path):
+                with open(quarantine_path, 'r', encoding='utf-8') as handle:
+                    quarantine_count = sum(1 for line in handle if line.strip())
+        except OSError:
+            pass
+
         with self._lock:
             pending_count = len(self._pending)
             recent_count = len(self._recent_events)
+            dropped_count = self._dropped
+            dropped_window = self._dropped_window
+            loop_errors = self._loop_errors
+            restarts = self._restarts
 
+        worker = self._worker
         return {
             'enabled': self._enabled,
             'pending_count': pending_count,
             'recent_count': recent_count,
             'disk_events_count': disk_events_count,
             'disk_bytes': disk_bytes,
-            'dropped_count': self._dropped,
+            'quarantine_count': quarantine_count,
+            'dropped_count': dropped_count,
+            'dropped_window': dropped_window,
+            'worker_alive': bool(worker is not None and worker.is_alive()),
+            'loop_errors': loop_errors,
+            'restarts': restarts,
             'last_send': self.get_last_send_status(),
         }
 

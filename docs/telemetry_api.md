@@ -63,10 +63,13 @@ Automatic sending is **on** by default (`telemetry.enabled: true`). You can disa
   ],
   "meta": {
     "dropped": 0,
+    "dropped_window": 0,
     "uptime_sec": 3600
   }
 }
 ```
+
+`meta.dropped` counts every event the client discarded since the process started (full in-memory queue, disk rotation, records the endpoint kept rejecting). `meta.dropped_window` is the same counter reset to `0` after the endpoint accepts a batch, so a receiver can tell "this install is losing data now" from "it lost data at some point".
 
 ### Event names (client)
 
@@ -91,11 +94,12 @@ Automatic sending is **on** by default (`telemetry.enabled: true`). You can disa
 
 | Status | Client behavior |
 |--------|-----------------|
-| `200`-`299` (prefer `{"ok": true}`) | Success; batch discarded; replayed from `queue.jsonl` if backlog exists |
-| `400` / `401` / `413` | Treat as failure; may spill to local `queue.jsonl` |
-| `429` / `5xx` / network error | Failure; short timeout; backoff via next flush interval; spill to `queue.jsonl` |
+| `200`-`299` (prefer `{"ok": true}`) | Success; batch discarded; backlog in `queue.jsonl` is replayed right away |
+| `413` | Failure; the batch is kept and retried in halves until it fits |
+| other `4xx` (`400`, `401`, `422`) | Permanent failure; the batch is retried up to 3 times, then parked in `quarantine.jsonl` so it cannot block the backlog |
+| `429` / `5xx` / network error | Temporary failure; spill to `queue.jsonl` and retry on the next flush interval |
 
-Client timeout defaults to `telemetry.timeout_sec` (10 seconds). Failed auto batches append to `storage/telemetry/queue.jsonl` (capped size) and are replayed on the next flush or right after a restart — up to 10 batches of `max_batch_size` events per replay pass, stopping at the first failed POST. Telemetry maintains an in-memory ring buffer of recent events for manual export even when auto-reporting is disabled. Telemetry never raises into the detection loop.
+Client timeout defaults to `telemetry.timeout_sec` (10 seconds). Failed auto batches append to `storage/telemetry/queue.jsonl` (capped size) and are replayed on the next flush or right after a restart — up to 10 batches of `max_batch_size` events per replay pass. A temporary failure stops the pass with the file untouched; a permanent one moves those records to `storage/telemetry/quarantine.jsonl` (last 200 records) and the pass continues, so one rejected batch never blocks the rest of the backlog. Queue records are written as `{"attempts": N, "event": {...}}`; bare events written by earlier versions are read as `attempts: 1`. The worker thread survives any internal error and is restarted by the next event, at most 3 times a minute. Telemetry maintains an in-memory ring buffer of recent events for manual export even when auto-reporting is disabled. Telemetry never raises into the detection loop.
 
 ## Privacy (client guarantees)
 

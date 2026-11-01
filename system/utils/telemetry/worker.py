@@ -21,6 +21,9 @@ class QueueWorkerMixin:
         Returns:
             bool: True if the command was enqueued, False otherwise.
         """
+        if self._enabled:
+            # Producers rely on this: a worker that died mid-life is revived by the next event.
+            self._ensure_worker()
         try:
             if force:
                 try:
@@ -28,7 +31,7 @@ class QueueWorkerMixin:
                 except queue.Full:
                     try:
                         self._queue.get_nowait()
-                        self._dropped += 1
+                        self._bump_dropped()
                     except queue.Empty:
                         pass
                     self._queue.put_nowait(item)
@@ -37,12 +40,55 @@ class QueueWorkerMixin:
             self._wake.set()
             return True
         except queue.Full:
-            self._dropped += 1
+            self._bump_dropped()
             return False
+
+    def _bump_dropped(self, count: int = 1) -> None:
+        """
+        Count events lost to a full queue, file rotation or an unusable record.
+
+        Args:
+            count: How many events were lost.
+
+        Returns:
+            None
+        """
+        if count <= 0:
+            return
+        with self._lock:
+            self._dropped += count
+            self._dropped_window += count
+
+    def _on_send_success(self) -> None:
+        """
+        Forget per-window losses once the endpoint accepted a batch.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+        with self._lock:
+            self._dropped_window = 0
+
+    def _note_loop_error(self, exc: Exception) -> None:
+        """
+        Record a worker failure that was survived, without re-raising into the thread.
+
+        Args:
+            exc: The exception that interrupted the iteration.
+
+        Returns:
+            None
+        """
+        with self._lock:
+            self._loop_errors += 1
+        self._log_local(f'Telemetry worker error: {exc!r}')
 
     def _ensure_worker(self) -> None:
         """
-        Ensure a worker thread is running.
+        Ensure a worker thread is running, throttling repeated restarts.
         
         Args:
             None
@@ -52,6 +98,26 @@ class QueueWorkerMixin:
         """
         with self._lock:
             if self._worker is not None and self._worker.is_alive():
+                return
+            if self._stop.is_set():
+                return
+            now = time.monotonic()
+            if now < self._restart_blocked_until:
+                return
+            if self._restart_streak_at is None or (now - self._restart_streak_at) > WORKER_RESTART_WINDOW_SEC:
+                self._restart_streak_at = now
+                self._restart_streak = 0
+            self._restart_streak += 1
+            self._restarts += 1
+            if self._restart_streak >= WORKER_RESTART_LIMIT:
+                # A loop that dies at once would otherwise be restarted on every event
+                self._restart_blocked_until = now + WORKER_RESTART_COOLDOWN_SEC
+                self._restart_streak_at = None
+                self._log_local(
+                    f'Telemetry worker restarted {self._restart_streak} times within '
+                    f'{WORKER_RESTART_WINDOW_SEC:.0f}s, next attempt in '
+                    f'{WORKER_RESTART_COOLDOWN_SEC:.0f}s'
+                )
                 return
             self._stop.clear()
             self._worker = threading.Thread(
@@ -63,7 +129,7 @@ class QueueWorkerMixin:
 
     def _worker_loop(self) -> None:
         """
-        Run the worker loop.
+        Run the worker loop, keeping the thread alive across per-iteration failures.
         
         Args:
             None
@@ -76,41 +142,44 @@ class QueueWorkerMixin:
         if self._enabled:
             self._replay_spilled_events(max_batches=1)
         while not self._stop.is_set():
-            self._wake.wait(timeout=min(30.0, float(self._flush_interval_sec)))
-            self._wake.clear()
             shutdown_requested = False
+            try:
+                self._wake.wait(timeout=min(30.0, float(self._flush_interval_sec)))
+                self._wake.clear()
 
-            while True:
-                try:
-                    item = self._queue.get_nowait()
-                except queue.Empty:
-                    break
+                while True:
+                    try:
+                        item = self._queue.get_nowait()
+                    except queue.Empty:
+                        break
 
-                cmd = item.get('_cmd')
-                if cmd == _CMD_SHUTDOWN:
-                    shutdown_requested = True
-                elif cmd == _CMD_MANUAL:
-                    self._handle_manual_send()
-                elif cmd == _CMD_FLUSH:
-                    self._flush_pending(mode='auto')
-                    last_flush = time.monotonic()
-                elif cmd == _CMD_EVENT:
-                    normalized = self._normalize_event(item)
-                    with self._lock:
-                        self._pending.append(normalized)
-                    if len(self._pending) >= self._max_batch_size:
+                    cmd = item.get('_cmd')
+                    if cmd == _CMD_SHUTDOWN:
+                        shutdown_requested = True
+                    elif cmd == _CMD_MANUAL:
+                        self._handle_manual_send()
+                    elif cmd == _CMD_FLUSH:
                         self._flush_pending(mode='auto')
                         last_flush = time.monotonic()
+                    elif cmd == _CMD_EVENT:
+                        normalized = self._normalize_event(item)
+                        with self._lock:
+                            self._pending.append(normalized)
+                        if len(self._pending) >= self._max_batch_size:
+                            self._flush_pending(mode='auto')
+                            last_flush = time.monotonic()
 
-            now = time.monotonic()
-            if (now - last_heartbeat) >= 86400:
-                if hasattr(self, 'track_heartbeat'):
-                    self.track_heartbeat()
-                last_heartbeat = now
+                now = time.monotonic()
+                if (now - last_heartbeat) >= 86400:
+                    if hasattr(self, 'track_heartbeat'):
+                        self.track_heartbeat()
+                    last_heartbeat = now
 
-            if (now - last_flush) >= self._flush_interval_sec:
-                self._flush_pending(mode='auto')
-                last_flush = now
+                if (now - last_flush) >= self._flush_interval_sec:
+                    self._flush_pending(mode='auto')
+                    last_flush = now
+            except Exception as exc:
+                self._note_loop_error(exc)
 
             if shutdown_requested:
                 # Shorten timeout for final flush so shutdown does not block
@@ -118,6 +187,8 @@ class QueueWorkerMixin:
                 self._timeout_sec = min(2, self._timeout_sec)
                 try:
                     self._flush_pending(mode='auto', max_batches=2, replay_batches=1)
+                except Exception as exc:
+                    self._note_loop_error(exc)
                 finally:
                     self._timeout_sec = old_timeout
                 with self._lock:
@@ -163,16 +234,31 @@ class QueueWorkerMixin:
             self._write_last_send(ok=ok, message=message, status_code=status_code, mode=mode)
             batches_sent += 1
 
-            if not ok:
-                self._spill_events(batch_events)
-                break
-            else:
+            if ok:
+                self._on_send_success()
                 # Connection is healthy, replay any previously spilled events
                 self._replay_spilled_events(max_batches=replay_batches)
+                continue
+
+            if status_code == 413:
+                # Too large for the endpoint: replay will retry it in smaller batches
+                self._spill_events(batch_events)
+                break
+
+            if _classify_post_failure(status_code) == 'permfail':
+                # The endpoint keeps rejecting this batch; spilling it would block the queue
+                self._quarantine_records([(MAX_SPILL_ATTEMPTS, event) for event in batch_events])
+                continue
+
+            self._spill_events(batch_events)
+            break
 
     def _replay_spilled_events(self, max_batches: int = 10) -> None:
         """
         Replay events previously spilled to QUEUE_FILE when network was down.
+
+        Batches the endpoint permanently rejects move to QUARANTINE_FILE so the rest of the
+        backlog still gets delivered; a transport failure stops the pass with the file intact.
 
         Args:
             max_batches: Maximum number of batches sent in one replay pass.
@@ -182,53 +268,68 @@ class QueueWorkerMixin:
         """
         path = resolve_project_path(QUEUE_FILE) or QUEUE_FILE
         try:
-            if not os.path.isfile(path) or os.path.getsize(path) == 0:
-                return
-            with open(path, 'r', encoding='utf-8') as handle:
-                lines = handle.readlines()
+            with self._lock:
+                if not os.path.isfile(path) or os.path.getsize(path) == 0:
+                    return
+                with open(path, 'r', encoding='utf-8') as handle:
+                    raw_lines = handle.readlines()
         except OSError:
             return
 
-        for _ in range(max_batches):
-            replayed_events: list[dict[str, Any]] = []
-            remaining_lines: list[str] = []
-            for line in lines:
-                line_str = line.strip()
-                if not line_str:
-                    continue
-                if len(replayed_events) < self._max_batch_size:
-                    try:
-                        replayed_events.append(json.loads(line_str))
-                    except Exception:
-                        continue
-                else:
-                    remaining_lines.append(line)
+        records: list[tuple[int, dict[str, Any]]] = []
+        unreadable = 0
+        for line in raw_lines:
+            line_str = line.strip()
+            if not line_str:
+                continue
+            attempts, event = _read_spill_record(line_str)
+            if event is None:
+                unreadable += 1
+                continue
+            records.append((attempts, event))
 
-            if not replayed_events:
-                try:
-                    with open(path, 'w', encoding='utf-8'):
-                        pass
-                except OSError:
-                    pass
-                return
+        seen_ids = {str(event.get('id') or '') for _attempts, event in records}
+        if unreadable or not records:
+            self._bump_dropped(unreadable)
+            self._write_spill_records(records, seen_ids)
+        if not records:
+            return
 
-            report = self._build_batch(replayed_events, mode='replay')
+        cursor = 0
+        batch_limit = self._max_batch_size
+        batches_sent = 0
+        while batches_sent < max_batches and cursor < len(records):
+            chunk = records[cursor: cursor + batch_limit]
+            report = self._build_batch([event for _attempts, event in chunk], mode='replay')
             ok, message, status_code = self._post_batch(report)
-            if not ok:
-                return
-            try:
-                ensure_parent_dir(path)
-                tmp_path = f"{path}.tmp"
-                with open(tmp_path, 'w', encoding='utf-8') as handle:
-                    for rem in remaining_lines:
-                        handle.write(rem if rem.endswith('\n') else rem + '\n')
-                os.replace(tmp_path, path)
-            except OSError:
+
+            if ok:
+                self._on_send_success()
+                cursor += len(chunk)
+                batches_sent += 1
+                records = records[cursor:]
+                cursor = 0
+                self._write_spill_records(records, seen_ids)
+                continue
+
+            if _classify_post_failure(status_code) == 'retry':
                 return
 
-            if not remaining_lines:
-                return
-            lines = remaining_lines
+            if status_code == 413 and batch_limit > 1:
+                batch_limit = max(1, batch_limit // 2)
+                continue
+
+            kept: list[tuple[int, dict[str, Any]]] = []
+            dead: list[tuple[int, dict[str, Any]]] = []
+            for attempts, event in chunk:
+                (dead if attempts + 1 >= MAX_SPILL_ATTEMPTS else kept).append((attempts + 1, event))
+            self._quarantine_records(dead)
+
+            # Records that stay in the queue are written back, but not re-sent in this pass
+            records = kept + records[cursor + len(chunk):]
+            cursor = len(kept)
+            batches_sent += 1
+            self._write_spill_records(records, seen_ids)
 
     def _build_batch(self, events: list[dict[str, Any]], mode: str) -> dict[str, Any]:
         """
@@ -241,6 +342,10 @@ class QueueWorkerMixin:
         Returns:
             dict[str, Any]: The batch of events.
         """
+        with self._lock:
+            dropped_total = self._dropped
+            dropped_window = self._dropped_window
+
         return {
             'schema_version': SCHEMA_VERSION,
             'sent_at': _utc_now_iso(),
@@ -250,14 +355,15 @@ class QueueWorkerMixin:
             'system': self._get_system_fingerprint(),
             'events': events,
             'meta': {
-                'dropped': self._dropped,
+                'dropped': dropped_total,
+                'dropped_window': dropped_window,
                 'uptime_sec': int(time.monotonic() - self._started_at),
             },
         }
 
     def _spill_events(self, events: list[dict[str, Any]]) -> None:
         """
-        Spill events to a file.
+        Spill events to a file for a later replay pass.
         
         Args:
             events: The events to spill.
@@ -265,23 +371,113 @@ class QueueWorkerMixin:
         Returns:
             None
         """
+        if not events:
+            return
         path = resolve_project_path(QUEUE_FILE) or QUEUE_FILE
         try:
-            ensure_parent_dir(path)
-            if os.path.exists(path) and os.path.getsize(path) > MAX_QUEUE_DISK_BYTES:
-                try:
-                    with open(path, 'r', encoding='utf-8', errors='replace') as handle:
-                        lines = handle.readlines()
-                    # Retain the most recent 60% of events (FIFO eviction of oldest 40%)
-                    keep_count = int(len(lines) * 0.6)
-                    lines_to_keep = lines[-keep_count:] if keep_count > 0 else []
-                    with open(path, 'w', encoding='utf-8') as handle:
-                        handle.writelines(lines_to_keep)
-                except Exception:
-                    pass
-            with open(path, 'a', encoding='utf-8') as handle:
-                for event in events:
-                    handle.write(json.dumps(event, ensure_ascii=False) + '\n')
+            with self._lock:
+                ensure_parent_dir(path)
+                if os.path.exists(path) and os.path.getsize(path) > MAX_QUEUE_DISK_BYTES:
+                    # Retain the most recent events (FIFO eviction of the oldest ones)
+                    evicted = self._trim_jsonl(path)
+                    if evicted:
+                        self._bump_dropped(evicted)
+                        self._log_local(f'Telemetry queue overflow, dropped {evicted} spilled event(s)')
+                with open(path, 'a', encoding='utf-8') as handle:
+                    for event in events:
+                        handle.write(_write_spill_record(1, event) + '\n')
         except OSError:
             pass
 
+    def _write_spill_records(self, records: list[tuple[int, dict[str, Any]]], seen_ids: Optional[set[str]] = None) -> None:
+        """
+        Replace the replay queue file with the given records.
+
+        Args:
+            records: Attempt counters and events still waiting for delivery.
+            seen_ids: Event ids read at the start of the pass. Lines outside this set were
+                appended while a batch was in flight and must not be dropped by the rewrite.
+
+        Returns:
+            None
+        """
+        path = resolve_project_path(QUEUE_FILE) or QUEUE_FILE
+        try:
+            with self._lock:
+                ensure_parent_dir(path)
+                merged = list(records)
+                if seen_ids is not None and os.path.isfile(path):
+                    with open(path, 'r', encoding='utf-8') as handle:
+                        raw_lines = handle.readlines()
+                    for line in raw_lines:
+                        _attempts, event = _read_spill_record(line.strip())
+                        if event is None:
+                            continue
+                        if str(event.get('id') or '') not in seen_ids:
+                            merged.append((_attempts, event))
+                tmp_path = f"{path}.tmp"
+                with open(tmp_path, 'w', encoding='utf-8') as handle:
+                    for attempts, event in merged:
+                        handle.write(_write_spill_record(attempts, event) + '\n')
+                os.replace(tmp_path, path)
+        except OSError:
+            pass
+
+    def _quarantine_records(self, records: list[tuple[int, dict[str, Any]]]) -> None:
+        """
+        Park batches the endpoint permanently rejects, out of the replay queue.
+
+        Args:
+            records: Attempt counters and events to keep for operator inspection.
+
+        Returns:
+            None
+        """
+        if not records:
+            return
+        path = resolve_project_path(QUARANTINE_FILE) or QUARANTINE_FILE
+        try:
+            with self._lock:
+                ensure_parent_dir(path)
+                with open(path, 'a', encoding='utf-8') as handle:
+                    for attempts, event in records:
+                        handle.write(_write_spill_record(attempts, event) + '\n')
+                self._trim_jsonl(path, max_lines=MAX_QUARANTINE_LINES)
+            self._bump_dropped(len(records))
+        except OSError:
+            pass
+
+    def _trim_jsonl(self, path: str, max_lines: Optional[int] = None) -> int:
+        """
+        Trim a JSONL file to its most recent entries. The caller must hold self._lock.
+
+        Args:
+            path: File to trim.
+            max_lines: Keep at most this many trailing lines, or a share of them when omitted.
+
+        Returns:
+            int: How many lines were evicted.
+        """
+        try:
+            with open(path, 'r', encoding='utf-8', errors='replace') as handle:
+                lines = handle.readlines()
+        except OSError:
+            return 0
+
+        if max_lines is not None:
+            keep = lines[-max_lines:] if max_lines > 0 else []
+        else:
+            keep_count = int(len(lines) * SPILL_KEEP_RATIO)
+            keep = lines[-keep_count:] if keep_count > 0 else []
+
+        evicted = len(lines) - len(keep)
+        if evicted <= 0:
+            return 0
+        try:
+            tmp_path = f"{path}.tmp"
+            with open(tmp_path, 'w', encoding='utf-8') as handle:
+                handle.writelines(keep)
+            os.replace(tmp_path, path)
+        except OSError:
+            return 0
+        return evicted

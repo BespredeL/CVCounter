@@ -29,11 +29,9 @@ class TransportMixin:
         }
 
         if self._enabled:
-            self._ensure_worker()
             ok = self._enqueue_command(payload, force=True)
             if not ok:
                 return False, 'Telemetry queue is full'
-            self._wake.set()
             return True, 'Telemetry send queued'
 
         thread = threading.Thread(
