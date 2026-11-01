@@ -17,6 +17,7 @@ Automatic sending is **on** by default (`telemetry.enabled: true`). You can disa
   - `User-Agent: CVCounter/{app_version}`
   - `X-CVCounter-App-Version: {app_version}`
   - `X-CVCounter-Install-Id: {install_id}`
+  - `X-CVCounter-Batch-Id: {hex}` - same value for every retry of the same event set
   - `X-CVCounter-Signature: sha256={hex}` - only when `telemetry.hmac_secret` is non-empty (HMAC-SHA256 of the raw body)
 
 ## Batch payload schema
@@ -62,6 +63,7 @@ Automatic sending is **on** by default (`telemetry.enabled: true`). You can disa
     }
   ],
   "meta": {
+    "batch_id": "3f2a9c1d0b4e5a67",
     "dropped": 0,
     "dropped_window": 0,
     "uptime_sec": 3600
@@ -90,6 +92,16 @@ Automatic sending is **on** by default (`telemetry.enabled: true`). You can disa
 | `logged_error` | error | Unhandled logger.error message |
 | `client_javascript_error` | error | Unhandled frontend browser exception or rejection |
 
+## Idempotency
+
+Delivery is **at-least-once**. The client mirrors its in-memory buffer to `queue.jsonl` every 5 minutes (and at process exit), so a batch can be acknowledged, then resent after a restart or a crash between the acknowledgment and the file cleanup. Batches sent from that backlog carry `mode: "replay"`, and they may include events the receiver already has.
+
+Deduplicate on the receiving side:
+
+1. Prefer `events[].id` (UUID per event, stable across retries) as the natural key.
+2. `meta.batch_id` / `X-CVCounter-Batch-Id` is derived from the set of event ids in the batch: two batches with the same id carry the same events, so a whole batch can be skipped as a duplicate.
+3. Counters, not last-write-wins: telemetry events are facts about a moment, and a resend of the same `events[].id` should not advance any aggregate twice.
+
 ## Expected responses
 
 | Status | Client behavior |
@@ -97,9 +109,9 @@ Automatic sending is **on** by default (`telemetry.enabled: true`). You can disa
 | `200`-`299` (prefer `{"ok": true}`) | Success; batch discarded; backlog in `queue.jsonl` is replayed right away |
 | `413` | Failure; the batch is kept and retried in halves until it fits |
 | other `4xx` (`400`, `401`, `422`) | Permanent failure; the batch is retried up to 3 times, then parked in `quarantine.jsonl` so it cannot block the backlog |
-| `429` / `5xx` / network error | Temporary failure; spill to `queue.jsonl` and retry on the next flush interval |
+| `429` / `5xx` / network error | Temporary failure; spill to `queue.jsonl` and hold the next attempt back. `Retry-After` (seconds or HTTP date) is honored when present, otherwise the delay grows 60 → 120 → 240 → 480 → 900 s (±20 %) and resets on the first accepted batch |
 
-Client timeout defaults to `telemetry.timeout_sec` (10 seconds). Failed auto batches append to `storage/telemetry/queue.jsonl` (capped size) and are replayed on the next flush or right after a restart — up to 10 batches of `max_batch_size` events per replay pass. A temporary failure stops the pass with the file untouched; a permanent one moves those records to `storage/telemetry/quarantine.jsonl` (last 200 records) and the pass continues, so one rejected batch never blocks the rest of the backlog. Queue records are written as `{"attempts": N, "event": {...}}`; bare events written by earlier versions are read as `attempts: 1`. The worker thread survives any internal error and is restarted by the next event, at most 3 times a minute. Telemetry maintains an in-memory ring buffer of recent events for manual export even when auto-reporting is disabled. Telemetry never raises into the detection loop.
+Client timeout defaults to `telemetry.timeout_sec` (10 seconds). Failed auto batches append to `storage/telemetry/queue.jsonl` (capped size) and are replayed on the next flush or right after a restart — up to 10 batches of `max_batch_size` events per replay pass. A temporary failure stops the pass with the file untouched; a permanent one moves those records to `storage/telemetry/quarantine.jsonl` (last 200 records) and the pass continues, so one rejected batch never blocks the rest of the backlog. Queue records are written as `{"attempts": N, "event": {...}}`; bare events written by earlier versions are read as `attempts: 1`. The worker thread survives any internal error and is restarted by the next event, at most 3 times a minute. Every attempt is appended to `storage/telemetry/delivery.jsonl` (last 200 records: time, mode, HTTP status, event count, payload size, latency, next retry) and the last five are shown on the System info page, so a receiver outage is visible on the box. Telemetry maintains an in-memory ring buffer of recent events for manual export even when auto-reporting is disabled. Telemetry never raises into the detection loop.
 
 ## Privacy (client guarantees)
 
@@ -154,3 +166,7 @@ def verify_signature(body: bytes, secret: str, header_value: str) -> bool:
 ```
 
 `install_id` is stored in `storage/telemetry/install_id`, not in config.
+
+Numeric keys are clamped to the accepted range; out-of-range values in `config.json` are reported by the settings validator and fall back to the defaults above:
+`flush_interval_sec` 1-86400, `max_batch_size` 1-500, `max_queue_size` 1-5000, `max_stack_chars` 1-100000, `error_dedup_sec` 1-86400, `timeout_sec` 1-60.
+`max_queue_size` is applied when the worker starts, so changing it needs an application restart (the log says so if a running worker ignores the new value).

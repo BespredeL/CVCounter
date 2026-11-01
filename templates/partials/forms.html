@@ -614,6 +614,14 @@
                         </label>
                     </div>
                 {% elif value is number %}
+                    {% set numeric_bounds = {
+                        'flush_interval_sec': [1, 86400],
+                        'timeout_sec': [1, 60],
+                        'error_dedup_sec': [1, 86400],
+                        'max_batch_size': [1, 500],
+                        'max_queue_size': [1, 5000],
+                        'max_stack_chars': [1, 100000]
+                    } %}
                     {% if key in ('confidence', 'iou', 'probability', 'tracker_iou', 'tracker_track_thresh', 'tracker_low_thresh') %}
                         <div class="input-group cv-input-group">
                             <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
@@ -630,9 +638,11 @@
                             <span class="input-group-text cv-input-addon font-monospace">%</span>
                         </div>
                     {% elif key in ('idle_timeout', 'flush_interval_sec', 'timeout_sec', 'error_dedup_sec') %}
+                        {% set nb = numeric_bounds.get(key) %}
                         <div class="input-group cv-input-group">
                             <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
-                                   class="form-control cv-form-control font-monospace" min="0" step="1">
+                                   class="form-control cv-form-control font-monospace"
+                                   {% if nb %}min="{{ nb[0] }}" max="{{ nb[1] }}"{% else %}min="0"{% endif %} step="1">
                             <span class="input-group-text cv-input-addon font-monospace">{{ trans('sec') }}</span>
                         </div>
                     {% elif key == 'max_upload_mb' %}
@@ -666,8 +676,10 @@
                         <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
                                class="form-control cv-form-control font-monospace" min="1" max="65535" step="1">
                     {% else %}
+                        {% set nb = numeric_bounds.get(key) %}
                         <input type="number" id="{{ field_id }}" name="{{ field_id }}" value="{{ value }}"
-                               class="form-control cv-form-control font-monospace" step="any">
+                               class="form-control cv-form-control font-monospace"
+                               {% if nb %}min="{{ nb[0] }}" max="{{ nb[1] }}"{% endif %} step="any">
                     {% endif %}
                 {% elif key == 'options' and '-custom_fields-' in prefix %}
                     {% set opt_text = value|join('\n') if (value is iterable and value is not string) else value %}

@@ -6,7 +6,8 @@
 
 from __future__ import annotations
 
-from collections import deque
+from collections import deque, namedtuple
+import atexit
 import gzip
 import hashlib
 import hmac
@@ -14,6 +15,7 @@ import json
 import os
 import platform
 import queue
+import random
 import shutil
 import socket
 import sys
@@ -38,20 +40,40 @@ TELEMETRY_DIR = 'storage/telemetry'
 INSTALL_ID_FILE = 'storage/telemetry/install_id'
 QUEUE_FILE = 'storage/telemetry/queue.jsonl'
 QUARANTINE_FILE = 'storage/telemetry/quarantine.jsonl'
+DELIVERY_FILE = 'storage/telemetry/delivery.jsonl'
 LAST_SEND_FILE = 'storage/telemetry/last_send.json'
 MAX_QUEUE_DISK_BYTES = 512 * 1024
 MAX_QUARANTINE_LINES = 200
 MAX_SPILL_ATTEMPTS = 3
 SPILL_KEEP_RATIO = 0.6
+MAX_DELIVERY_LINES = 200
 
 WORKER_RESTART_WINDOW_SEC = 60.0
 WORKER_RESTART_LIMIT = 3
 WORKER_RESTART_COOLDOWN_SEC = 60.0
 
+CHECKPOINT_MAX_SEC = 300.0
+BACKOFF_START_SEC = 60.0
+BACKOFF_MAX_SEC = 900.0
+BACKOFF_JITTER_RATIO = 0.2
+SCHEDULE_JITTER_RATIO = 0.05
+
+MAX_FLUSH_INTERVAL_SEC = 86400
+MAX_BATCH_SIZE_LIMIT = 500
+MAX_QUEUE_SIZE_LIMIT = 5000
+MAX_STACK_CHARS_LIMIT = 100000
+MAX_ERROR_DEDUP_SEC = 86400
+MAX_TIMEOUT_SEC = 60
+
 _CMD_EVENT = 'event'
 _CMD_FLUSH = 'flush'
 _CMD_MANUAL = 'manual'
 _CMD_SHUTDOWN = 'shutdown'
+
+PostResult = namedtuple(
+    'PostResult',
+    ['ok', 'message', 'status_code', 'verdict', 'retry_after', 'latency_ms', 'bytes'],
+)
 
 
 def _utc_now_iso() -> str:
@@ -61,25 +83,60 @@ def _utc_now_iso() -> str:
     Returns:
         str: The current UTC time in ISO format.
     """
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z')
+    return _utc_iso_from_epoch(time.time())
 
 
-def _safe_int(value: Any, default: int) -> int:
+def _utc_iso_in(seconds: float) -> str:
     """
-    Convert a value to an integer, returning the default value if the conversion fails.
+    Return the UTC time reached after a delay, in ISO format.
+    
+    Args:
+        seconds: Delay from now in seconds.
+        
+    Returns:
+        str: The ISO timestamp the delay leads to.
+    """
+    return _utc_iso_from_epoch(time.time() + seconds)
+
+
+def _utc_iso_from_epoch(epoch: float) -> str:
+    """
+    Format a POSIX timestamp as a UTC ISO string.
+    
+    Args:
+        epoch: Seconds since the Unix epoch.
+        
+    Returns:
+        str: The UTC ISO timestamp with a Z suffix.
+    """
+    return (
+        datetime.fromtimestamp(epoch, timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace('+00:00', 'Z')
+    )
+
+
+def _safe_int(value: Any, default: int, minimum: int = 1, maximum: Optional[int] = None) -> int:
+    """
+    Convert a value to an integer, clamping it into the accepted range.
     
     Args:
         value: The value to convert to an integer.
-        default: The default value to return if the conversion fails.
+        default: The default value to return if the conversion fails or falls below minimum.
+        minimum: Smallest accepted value.
+        maximum: Largest accepted value, or None when unbounded.
         
     Returns:
         int: The integer value of the input, or the default value if the conversion fails.
     """
     try:
         parsed = int(value)
-        return parsed if parsed >= 1 else default
     except (TypeError, ValueError):
         return default
+    if maximum is not None:
+        parsed = min(parsed, maximum)
+    return parsed if parsed >= minimum else default
 
 
 def _message_hash(message: str) -> str:

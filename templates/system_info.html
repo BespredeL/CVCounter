@@ -55,6 +55,15 @@
                             <span class="text-body-secondary">{{ trans('Dropped events') }}:</span>
                             <span class="badge bg-danger-subtle text-danger border border-danger-subtle">{{ telemetry_status.dropped_count }}</span>
                         {% endif %}
+                        {% if telemetry_status.quarantine_count > 0 %}
+                            &middot;
+                            <span class="text-body-secondary">{{ trans('Quarantined events') }}:</span>
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">{{ telemetry_status.quarantine_count }}</span>
+                        {% endif %}
+                        {% if telemetry_enabled and not telemetry_status.worker_alive %}
+                            &middot;
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">{{ trans('Telemetry worker stopped') }}</span>
+                        {% endif %}
                     {% endif %}
                 </p>
                 {% if telemetry_last_send %}
@@ -71,6 +80,44 @@
                             <span class="text-body-secondary">({{ telemetry_last_send.message }})</span>
                         {% endif %}
                     </p>
+                {% endif %}
+                {% if telemetry_status and telemetry_status.delivery_last %}
+                    <div class="table-responsive small mb-3">
+                        <table class="table table-sm align-middle mb-0">
+                            <caption class="caption-top text-body-secondary">{{ trans('Delivery history') }}</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">{{ trans('Send time') }}</th>
+                                    <th scope="col">{{ trans('Mode') }}</th>
+                                    <th scope="col">{{ trans('Status') }}</th>
+                                    <th scope="col" class="text-end">{{ trans('Events') }}</th>
+                                    <th scope="col" class="text-end">{{ trans('Latency') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in telemetry_status.delivery_last %}
+                                    <tr>
+                                        <td class="text-body-secondary">{{ row.ts }}</td>
+                                        <td>{{ row.mode }}</td>
+                                        <td>
+                                            {% if row.ok %}
+                                                <span class="text-success">{{ row.status }}</span>
+                                            {% else %}
+                                                <span class="text-danger">{{ row.status or trans('No response') }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">{{ row.events }}</td>
+                                        <td class="text-end">{{ row.latency_ms }} ms</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if telemetry_status.next_retry_sec > 0 %}
+                        <p class="small mb-3 text-body-secondary">
+                            {{ trans('Next retry') }}: {{ telemetry_status.next_retry_sec }} s
+                        </p>
+                    {% endif %}
                 {% endif %}
                 <div class="pt-3 mt-1 border-top d-flex flex-wrap align-items-center justify-content-between gap-2">
                     <div class="d-flex flex-wrap align-items-center gap-2">

@@ -65,9 +65,9 @@ class FeedbackMixin:
 
         # Build an immediate single-batch report for user feedback
         report = self._build_batch([normalized], mode='feedback')
-        ok, message, status_code = self._post_batch(report)
-        self._write_last_send(ok=ok, message=message, status_code=status_code, mode='feedback')
-        if not ok:
+        result = self._post_batch(report)
+        self._write_last_send(result, 'feedback', event_count=1)
+        if not result.ok:
             # Spill if endpoint is offline so feedback is never lost
             self._spill_events([normalized])
             return True, 'Feedback recorded locally and will be delivered once connection is restored'

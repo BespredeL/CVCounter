@@ -239,14 +239,14 @@ class ConfigValidator:
             if bool_key in telemetry and not isinstance(telemetry[bool_key], bool):
                 self.errors.append(f"'telemetry.{bool_key}' must be a boolean")
 
-        for int_key in (
-                'flush_interval_sec',
-                'max_batch_size',
-                'max_queue_size',
-                'max_stack_chars',
-                'error_dedup_sec',
-                'timeout_sec',
-        ):
+        for int_key, upper_limit in {
+                'flush_interval_sec': 86400,
+                'max_batch_size': 500,
+                'max_queue_size': 5000,
+                'max_stack_chars': 100000,
+                'error_dedup_sec': 86400,
+                'timeout_sec': 60,
+        }.items():
             if int_key not in telemetry:
                 continue
             value = telemetry[int_key]
@@ -254,6 +254,8 @@ class ConfigValidator:
                 self.errors.append(f"'telemetry.{int_key}' must be an integer")
             elif value < 1:
                 self.errors.append(f"'telemetry.{int_key}' must be >= 1")
+            elif value > upper_limit:
+                self.errors.append(f"'telemetry.{int_key}' must be <= {upper_limit}")
 
         if 'hmac_secret' in telemetry and not isinstance(telemetry['hmac_secret'], str):
             self.errors.append("'telemetry.hmac_secret' must be a string")

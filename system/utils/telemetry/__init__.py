@@ -64,6 +64,9 @@ class TelemetryManager(
         self._restart_streak = 0
         self._restart_streak_at: Optional[float] = None
         self._restart_blocked_until = 0.0
+        self._next_send_at = 0.0
+        self._backoff_sec = 0.0
+        self._consecutive_failures = 0
         self._pending: list[dict[str, Any]] = []
         self._recent_events: deque[dict[str, Any]] = deque(maxlen=100)
         self._system_cache: Optional[dict[str, Any]] = None
@@ -72,6 +75,7 @@ class TelemetryManager(
         self._logging_telemetry_error = False
         self._started_at = time.monotonic()
         self._install_id = self._load_or_create_install_id()
+        atexit.register(self._checkpoint_on_exit)
 
     # ------------------------------------------------------------------
     # Configuration / lifecycle
@@ -99,16 +103,29 @@ class TelemetryManager(
             self._send_usage = bool(telemetry.get('send_usage', True))
             endpoint = telemetry.get('endpoint') or DEFAULT_ENDPOINT
             self._endpoint = str(endpoint).strip() or DEFAULT_ENDPOINT
-            self._flush_interval_sec = _safe_int(telemetry.get('flush_interval_sec'), 3600)
-            self._max_batch_size = _safe_int(telemetry.get('max_batch_size'), 200)
-            self._max_queue_size = _safe_int(telemetry.get('max_queue_size'), 400)
-            self._max_stack_chars = _safe_int(telemetry.get('max_stack_chars'), 8000)
-            self._error_dedup_sec = _safe_int(telemetry.get('error_dedup_sec'), 600)
-            self._timeout_sec = _safe_int(telemetry.get('timeout_sec'), 10)
+            self._flush_interval_sec = _safe_int(
+                telemetry.get('flush_interval_sec'), 3600, maximum=MAX_FLUSH_INTERVAL_SEC)
+            self._max_batch_size = _safe_int(
+                telemetry.get('max_batch_size'), 200, maximum=MAX_BATCH_SIZE_LIMIT)
+            self._max_queue_size = _safe_int(
+                telemetry.get('max_queue_size'), 400, maximum=MAX_QUEUE_SIZE_LIMIT)
+            self._max_stack_chars = _safe_int(
+                telemetry.get('max_stack_chars'), 8000, maximum=MAX_STACK_CHARS_LIMIT)
+            self._error_dedup_sec = _safe_int(
+                telemetry.get('error_dedup_sec'), 600, maximum=MAX_ERROR_DEDUP_SEC)
+            self._timeout_sec = _safe_int(telemetry.get('timeout_sec'), 10, maximum=MAX_TIMEOUT_SEC)
             self._hmac_secret = str(telemetry.get('hmac_secret') or '')
             self._compress = bool(telemetry.get('compress', True))
-            if self._worker is None or not self._worker.is_alive():
+            worker_running = self._worker is not None and self._worker.is_alive()
+            queue_resized = self._queue.maxsize != self._max_queue_size
+            if not worker_running:
                 self._queue = queue.Queue(maxsize=self._max_queue_size)
+
+        if queue_resized and worker_running:
+            self._log_local(
+                f'Telemetry max_queue_size changed to {self._max_queue_size}, '
+                'restart the application to apply it'
+            )
 
         if self._enabled:
             with self._lock:
@@ -215,6 +232,8 @@ class TelemetryManager(
             'worker_alive': bool(worker is not None and worker.is_alive()),
             'loop_errors': loop_errors,
             'restarts': restarts,
+            'next_retry_sec': round(self._send_delay_sec(), 1),
+            'delivery_last': self.get_delivery_history(limit=5),
             'last_send': self.get_last_send_status(),
         }
 
