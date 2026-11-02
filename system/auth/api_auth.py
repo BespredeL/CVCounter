@@ -109,7 +109,8 @@ def generate_api_key(name: str, role: str = 'read', prefix: str = 'cvc') -> Dict
     }
 
 
-def validate_api_key(key: Optional[str], required_role: str = 'read') -> Tuple[bool, Optional[Dict[str, Any]], Optional[str]]:
+def validate_api_key(key: Optional[str], required_role: str = 'read') -> Tuple[
+    bool, Optional[Dict[str, Any]], Optional[str]]:
     """
     Validate provided API key against configured keys and required role.
     
@@ -167,6 +168,7 @@ def api_key_required(role: str = 'read'):
     Returns:
         Decorated view function returning JSON on failure.
     """
+
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
@@ -187,4 +189,5 @@ def api_key_required(role: str = 'read'):
             return fn(*args, **kwargs)
 
         return wrapper
+
     return decorator
