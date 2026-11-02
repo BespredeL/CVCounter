@@ -305,10 +305,10 @@ Passwords are stored as scrypt hashes:
 
 | Key | Description | Default |
 |---|---|---|
-| `enabled` | Automatic transmission of anonymized error reports | `true` |
+| `enabled` | Automatic transmission of pseudonymized error reports | `true` |
 | `endpoint` | HTTPS receiver endpoint URL | `"https://bespredel.name/api/cvcounter/telemetry"` |
 | `send_errors` | Send unhandled exceptions | `true` |
-| `send_usage` | Send anonymized system usage events | `true` |
+| `send_usage` | Send pseudonymized system usage events (camera labels travel as stable aliases) | `true` |
 | `flush_interval_sec`| Interval for sending background telemetry batches (sec) | `3600` |
 | `max_batch_size` | Maximum events per HTTP request; also flushes early when the buffer fills | `200` |
 | `max_queue_size` | Maximum in-memory command queue size | `400` |

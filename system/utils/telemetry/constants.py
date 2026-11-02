@@ -42,11 +42,13 @@ QUEUE_FILE = 'storage/telemetry/queue.jsonl'
 QUARANTINE_FILE = 'storage/telemetry/quarantine.jsonl'
 DELIVERY_FILE = 'storage/telemetry/delivery.jsonl'
 LAST_SEND_FILE = 'storage/telemetry/last_send.json'
+LOCATIONS_FILE = 'storage/telemetry/locations.json'
 MAX_QUEUE_DISK_BYTES = 512 * 1024
 MAX_QUARANTINE_LINES = 200
 MAX_SPILL_ATTEMPTS = 3
 SPILL_KEEP_RATIO = 0.6
 MAX_DELIVERY_LINES = 200
+MAX_LOCATION_ALIASES = 200
 
 WORKER_RESTART_WINDOW_SEC = 60.0
 WORKER_RESTART_LIMIT = 3
@@ -57,6 +59,7 @@ BACKOFF_START_SEC = 60.0
 BACKOFF_MAX_SEC = 900.0
 BACKOFF_JITTER_RATIO = 0.2
 SCHEDULE_JITTER_RATIO = 0.05
+DELIVERY_FAILURE_REPORT_AFTER = 3
 
 MAX_FLUSH_INTERVAL_SEC = 86400
 MAX_BATCH_SIZE_LIMIT = 500
@@ -150,6 +153,22 @@ def _message_hash(message: str) -> str:
         str: The SHA-256 hash of the message.
     """
     return hashlib.sha256(message.encode('utf-8', errors='replace')).hexdigest()[:16]
+
+
+def _location_alias(name: str) -> str:
+    """
+    Return the pseudonym a camera label is sent as.
+
+    The same label always yields the same id, so a receiver can still chart a camera over time,
+    while the label itself never leaves the machine.
+
+    Args:
+        name: The camera label as configured locally.
+
+    Returns:
+        str: Short hexadecimal alias of the label.
+    """
+    return hashlib.sha256(str(name).strip().casefold().encode('utf-8')).hexdigest()[:8]
 
 
 def _read_spill_record(raw: str) -> tuple[int, Optional[dict[str, Any]]]:

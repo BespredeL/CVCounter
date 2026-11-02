@@ -74,6 +74,15 @@ def main():
         logger = Logger()
         logger.error(f"Fatal error in main: {e}")
         logger.log_exception()
+        # Telemetry may never have been configured here, so report the crash directly and flush it
+        try:
+            from system.utils.telemetry import get_telemetry
+
+            telemetry = get_telemetry()
+            telemetry.capture_startup_failure(e)
+            telemetry.shutdown(timeout=3.0)
+        except Exception:
+            pass
         raise
 
 

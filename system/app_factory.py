@@ -9,8 +9,10 @@
 import os
 import signal
 import sys
+import threading
 from datetime import timedelta
 from threading import Lock
+from typing import Any
 from flask import Flask
 from flask_socketio import SocketIO
 
@@ -545,5 +547,31 @@ def register_signal_handlers(context: dict):
         signal.signal(signal.SIGINT, shutdown_handler)
     except (ValueError, OSError):
         # This should not happen, but need try handle it this shit
+        pass
+
+    # A thread that dies on its own leaves no trace: its exception never reaches a logger
+    threading.excepthook = _report_thread_failure
+
+
+def _report_thread_failure(args: Any) -> None:
+    """
+    Send a thread death to telemetry, keeping the traceback the interpreter would have printed.
+
+    Args:
+        args: The ThreadExcInfo object handed to threading.excepthook.
+
+    Returns:
+        None
+    """
+    try:
+        from system.utils.telemetry import get_telemetry
+        get_telemetry().capture_thread_exception(args)
+    except Exception:
+        pass
+
+    try:
+        # Replacing the hook silences stderr unless the original hook is still run
+        threading.__excepthook__(args)
+    except Exception:
         pass
 

@@ -308,6 +308,86 @@ class EventCaptureMixin:
         """
         self.track('stream_performance', props)
 
+    def capture_thread_exception(self, args: Any) -> None:
+        """
+        Report an exception that killed a background thread.
+
+        threading.excepthook is the only place a dying counter loop is visible: the thread itself
+        never returns, so nothing else would ever mention the failure.
+
+        Args:
+            args: The ThreadExcInfo passed by threading.excepthook.
+
+        Returns:
+            None
+        """
+        try:
+            exc = getattr(args, 'exc_value', None)
+            if exc is None:
+                return
+            thread = getattr(args, 'thread', None)
+            name = getattr(thread, 'name', '') or ''
+            if not self._allow_dedup(f'thread_error:{type(exc).__name__}:{name}',
+                                      window_sec=float(self._error_dedup_sec)):
+                return
+            self.capture_exception(exc, tags={'thread': name, 'source': 'threading.excepthook'})
+        except Exception:
+            pass
+
+    def capture_delivery_failure(
+            self,
+            status_code: Optional[int],
+            failures: int,
+            retry_in_sec: float,
+    ) -> None:
+        """
+        Report that the telemetry endpoint has refused every batch for a while.
+
+        Args:
+            status_code: HTTP status of the last attempt, or None for a transport failure.
+            failures: How many attempts failed in a row.
+            retry_in_sec: How long the next attempt is held back.
+
+        Returns:
+            None
+        """
+        if not self._allow_dedup('delivery_failure', window_sec=float(self._flush_interval_sec)):
+            return
+        self.track('delivery_failure', {
+            'failures': int(failures),
+            'status': status_code,
+            'retry_in_sec': int(retry_in_sec),
+        })
+
+    def capture_spill_failure(self, exc: BaseException) -> None:
+        """
+        Report that the backlog could not be written to disk, which is how events get lost.
+
+        Args:
+            exc: The OSError raised by the queue file.
+
+        Returns:
+            None
+        """
+        if not self._allow_dedup('spill_failure', window_sec=300.0):
+            return
+        self.track('spill_failure', {'error': f'{type(exc).__name__}: {exc}'})
+
+    def capture_startup_failure(self, exc: BaseException) -> None:
+        """
+        Report a crash that happened while the application was starting.
+
+        Args:
+            exc: The exception that stopped startup.
+
+        Returns:
+            None
+        """
+        self.track('startup_failed', {
+            'error': f'{type(exc).__name__}: {exc}',
+            'app_version': APP_VERSION,
+        })
+
     def _allow_dedup(self, key: str, window_sec: Optional[float] = None) -> bool:
         """
         Check if a deduplication key is allowed within the given time window.

@@ -16,7 +16,12 @@ _CREDENTIAL_RE = re.compile(
     r'(?i)\b(password|passwd|pwd|secret_key|hmac_secret|api[_-]?key|bearer|token|auth|authorization|jwt|access[_-]?token|refresh[_-]?token)\s*[=:]\s*\S+'
 )
 _PATH_HINT_RE = re.compile(
-    r'(?i)(?:[A-Za-z]:[\\/]|/)(?:Users|home|var|opt|storage|config)[^\s\'"]{0,200}'
+    r'(?i)(?:'
+    r'[A-Za-z]:[\\/][^\s\'"]{0,200}'
+    r'|\\\\[^\s\'"\\]+\\[^\s\'"]{0,200}'
+    r'|/(?:app|bin|etc|home|media|mnt|opt|proc|root|run|srv|storage|tmp|usr|var|Users|www|config)'
+    r'(?=[\\/\s\'"]|$)[^\s\'"]{0,200}'
+    r')'
 )
 
 

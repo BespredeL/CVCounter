@@ -67,6 +67,8 @@ class TelemetryManager(
         self._next_send_at = 0.0
         self._backoff_sec = 0.0
         self._consecutive_failures = 0
+        self._doctor_summary_due = False
+        self._location_aliases: dict[str, str] = self._load_location_aliases()
         self._pending: list[dict[str, Any]] = []
         self._recent_events: deque[dict[str, Any]] = deque(maxlen=100)
         self._system_cache: Optional[dict[str, Any]] = None

@@ -1,6 +1,6 @@
 # CVCounter Telemetry API
 
-Client module in CVCounter sends anonymized diagnostics to your HTTP endpoint. No third-party analytics SDKs are used.
+Client module in CVCounter sends pseudonymized diagnostics to your HTTP endpoint: camera labels travel as stable aliases, not as the names you typed in settings. No third-party analytics SDKs are used.
 
 Default client endpoint: `https://bespredel.name/api/cvcounter/telemetry`
 
@@ -88,7 +88,11 @@ Automatic sending is **on** by default (`telemetry.enabled: true`). You can disa
 | `stream_lost` | usage | Camera frame/reconnect failure (rate-limited) |
 | `stream_reconnected` | usage | Camera restored (rate-limited) |
 | `stream_performance` | usage | Aggregate FPS and inference latency report |
-| `uncaught_exception` | error | Logged exception / Flask 500 / sys.exc_info |
+| `doctor_summary` | usage | Subsystem ids and statuses from the system doctor, on start and every 24 h |
+| `delivery_failure` | usage | The endpoint rejected every batch three times in a row |
+| `spill_failure` | usage | The backlog could not be written to disk, so events were lost |
+| `startup_failed` | usage | `app.py` crashed before or while starting the server |
+| `uncaught_exception` | error | Logged exception / Flask 500 / sys.exc_info / a thread that died |
 | `logged_error` | error | Unhandled logger.error message |
 | `client_javascript_error` | error | Unhandled frontend browser exception or rejection |
 
@@ -123,7 +127,14 @@ Never sent:
 - User password hashes
 - `secret_key` / HMAC secret values in event bodies
 
-Messages and stacks are sanitized (URLs, credential-like substrings, path hints redacted).
+Messages and stacks are sanitized (URLs, credential-like substrings, Windows / POSIX / UNC path hints redacted).
+
+Camera labels are **pseudonymized, not anonymous**. `events[].props.location` leaves the machine as
+`sha256(label.strip().casefold())` truncated to 8 hex characters, so the same camera keeps one id across
+batches, restarts and versions, and a time series per camera stays possible. The alias to label map is kept
+on the box in `storage/telemetry/locations.json`; the queue file, the in-memory ring buffer and the JSON you
+download from `/system_info` keep the readable label, so an operator can always tell which alias is which
+camera. Anyone with both the payload and that file can reverse it.
 
 ## HMAC verification (server example)
 

@@ -138,6 +138,7 @@ class QueueWorkerMixin:
         Returns:
             None
         """
+        failures = 0
         with self._lock:
             if result.ok:
                 self._backoff_sec = 0.0
@@ -153,14 +154,20 @@ class QueueWorkerMixin:
                 return
 
             self._consecutive_failures += 1
+            failures = self._consecutive_failures
             if result.retry_after is not None:
                 delay = float(result.retry_after)
             else:
-                base = BACKOFF_START_SEC * (2 ** min(self._consecutive_failures - 1, 8))
+                base = BACKOFF_START_SEC * (2 ** min(failures - 1, 8))
                 delay = min(base, BACKOFF_MAX_SEC)
                 delay *= random.uniform(1.0 - BACKOFF_JITTER_RATIO, 1.0 + BACKOFF_JITTER_RATIO)
             self._backoff_sec = delay
             self._next_send_at = time.monotonic() + delay
+
+        if failures >= DELIVERY_FAILURE_REPORT_AFTER:
+            # An outage this long is worth a line in the batch instead of only a local log entry
+            if hasattr(self, 'capture_delivery_failure'):
+                self.capture_delivery_failure(result.status_code, failures, delay)
 
     def _checkpoint_interval_sec(self) -> float:
         """
@@ -289,6 +296,9 @@ class QueueWorkerMixin:
         last_heartbeat = time.monotonic()
         if self._enabled:
             self._replay_spilled_events(max_batches=1)
+            # The startup backlog is delivered first; the doctor reads the database and imports
+            # torch, so it must not compete with the application coming up around this thread.
+            self._doctor_summary_due = True
         while not self._stop.is_set():
             shutdown_requested = False
             try:
@@ -322,7 +332,14 @@ class QueueWorkerMixin:
                 if (now - last_heartbeat) >= 86400:
                     if hasattr(self, 'track_heartbeat'):
                         self.track_heartbeat()
+                    # Daily uptime is also when the subsystem summary is worth sending again
+                    self._doctor_summary_due = True
                     last_heartbeat = now
+
+                if self._doctor_summary_due and self._send_allowed(now):
+                    self._doctor_summary_due = False
+                    if hasattr(self, 'track_doctor_summary'):
+                        self.track_doctor_summary()
 
                 if now >= next_checkpoint_at:
                     next_checkpoint_at = now + self._checkpoint_interval_sec()
@@ -487,13 +504,99 @@ class QueueWorkerMixin:
             batches_sent += 1
             self._write_spill_records(records, seen_ids)
 
-    def _build_batch(self, events: list[dict[str, Any]], mode: str) -> dict[str, Any]:
+    def _load_location_aliases(self) -> dict[str, str]:
+        """
+        Read the local alias to label map so camera history survives a restart.
+
+        Args:
+            None
+
+        Returns:
+            dict[str, str]: Known aliases and the labels they stand for.
+        """
+        path = resolve_project_path(LOCATIONS_FILE) or LOCATIONS_FILE
+        try:
+            with open(path, 'r', encoding='utf-8') as handle:
+                stored = json.load(handle)
+        except (OSError, ValueError):
+            return {}
+        if not isinstance(stored, dict):
+            return {}
+        return {str(k): str(v) for k, v in stored.items()}
+
+    def _pseudonymize_locations(self, events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """
+        Replace readable camera labels with their stable pseudonyms for transport.
+
+        queue.jsonl, the in-memory ring buffer and the downloaded report keep the label; only the
+        batch handed to the endpoint is rewritten, and the map stays on this machine.
+
+        Args:
+            events: Events about to be sent.
+
+        Returns:
+            list[dict[str, Any]]: Copies of the events with props.location aliased.
+        """
+        found: dict[str, str] = {}
+        outbound: list[dict[str, Any]] = []
+        for event in events:
+            props = event.get('props') if isinstance(event.get('props'), dict) else None
+            label = str((props or {}).get('location') or '').strip()
+            if not label:
+                outbound.append(event)
+                continue
+            alias = _location_alias(label)
+            found[alias] = label
+            rewritten = dict(event)
+            rewritten['props'] = {**props, 'location': alias}
+            outbound.append(rewritten)
+        if found:
+            self._remember_location_aliases(found)
+        return outbound
+
+    def _remember_location_aliases(self, aliases: dict[str, str]) -> None:
+        """
+        Persist the alias to label map locally, where the operator can reverse it.
+
+        Args:
+            aliases: Alias to label pairs carried by this batch.
+
+        Returns:
+            None
+        """
+        path = resolve_project_path(LOCATIONS_FILE) or LOCATIONS_FILE
+        with self._lock:
+            known = dict(self._location_aliases)
+            if all(known.get(alias) == label for alias, label in aliases.items()):
+                return
+            known.update(aliases)
+            if len(known) > MAX_LOCATION_ALIASES:
+                known = dict(list(known.items())[-MAX_LOCATION_ALIASES:])
+            self._location_aliases = known
+            payload = json.dumps(known, ensure_ascii=False, indent=2)
+        try:
+            ensure_parent_dir(path)
+            tmp_path = f'{path}.tmp'
+            with open(tmp_path, 'w', encoding='utf-8') as handle:
+                handle.write(payload)
+            os.replace(tmp_path, path)
+        except OSError as exc:
+            self._log_local(f'Telemetry location map not saved: {exc}')
+
+    def _build_batch(
+            self,
+            events: list[dict[str, Any]],
+            mode: str,
+            wire: bool = True,
+    ) -> dict[str, Any]:
         """
         Build a batch of events.
         
         Args:
             events: The events to build the batch from.
             mode: The mode of the batch.
+            wire: Whether camera labels become pseudonyms. Anything handed to the endpoint must
+                use it; a report the operator downloads locally must not.
             
         Returns:
             dict[str, Any]: The batch of events.
@@ -501,6 +604,9 @@ class QueueWorkerMixin:
         with self._lock:
             dropped_total = self._dropped
             dropped_window = self._dropped_window
+
+        if wire:
+            events = self._pseudonymize_locations(events)
 
         # Stable across retries of the same events, so the receiver can dedup an at-least-once resend
         fingerprint = '|'.join(sorted(str(event.get('id') or '') for event in events))
@@ -546,8 +652,11 @@ class QueueWorkerMixin:
                 with open(path, 'a', encoding='utf-8') as handle:
                     for event in events:
                         handle.write(_write_spill_record(1, event) + '\n')
-        except OSError:
-            pass
+        except OSError as exc:
+            # The events are gone with this write; say so instead of losing them silently
+            if hasattr(self, 'capture_spill_failure'):
+                self.capture_spill_failure(exc)
+            self._bump_dropped(len(events))
 
     def _write_spill_records(self, records: list[tuple[int, dict[str, Any]]], seen_ids: Optional[set[str]] = None) -> None:
         """

@@ -433,13 +433,41 @@ class DoctorMixin:
             'checks': checks,
         }
 
-    def build_diagnostic_report(self, mode: str = 'manual') -> dict[str, Any]:
+    def track_doctor_summary(self) -> None:
+        """
+        Report the outcome of the system doctor as check ids and statuses only.
+
+        The detail lines name local paths and endpoints, so they stay on the machine; the receiver
+        gets the pass or fail of each subsystem, which is what tells a fleet apart from one box.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+        try:
+            report = self.run_system_doctor(getattr(self, '_runtime_context', None))
+        except Exception as exc:
+            self._log_local(f'Telemetry doctor summary skipped: {exc!r}')
+            return
+        statuses = {
+            str(check.get('id')): str(check.get('status'))
+            for check in (report.get('checks') or []) if isinstance(check, dict)
+        }
+        self.track('doctor_summary', {
+            'all_ok': bool(report.get('all_ok')),
+            'statuses': statuses,
+        })
+
+    def build_diagnostic_report(self, mode: str = 'manual', wire: bool = True) -> dict[str, Any]:
         """
         Build a diagnostic payload for download / manual send.
         Prefers pending events if available, falls back to in-memory recent event buffer.
         
         Args:
             mode: The mode of the diagnostic report.
+            wire: Whether camera labels become pseudonyms; False only for a local download.
             
         Returns:
             dict[str, Any]: The diagnostic report.
@@ -449,7 +477,7 @@ class DoctorMixin:
                 events = list(self._pending)
             else:
                 events = list(self._recent_events)
-        report = self._build_batch(events, mode=mode)
+        report = self._build_batch(events, mode=mode, wire=wire)
         return report
 
     def _get_system_fingerprint(self) -> dict[str, Any]:

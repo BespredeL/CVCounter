@@ -53,7 +53,7 @@ class TransportMixin:
         Returns:
             bytes: The serialized diagnostic report.
         """
-        report = self.build_diagnostic_report(mode='manual')
+        report = self.build_diagnostic_report(mode='manual', wire=False)
         return json.dumps(report, ensure_ascii=False, indent=2).encode('utf-8')
 
     def _run_manual_oneshot(self) -> None:
