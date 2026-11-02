@@ -1,0 +1,2 @@
+# Optional ONNX Runtime CPU inference provider.
+onnxruntime>=1.17.0

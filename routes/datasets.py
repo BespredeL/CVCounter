@@ -21,19 +21,16 @@ from system.auth import login_required
 from system.datasets.annotation_store import AnnotationStore
 from system.datasets.dataset_service import DatasetService, VALID_TASKS
 from system.object_detection.metadata import extract_class_name, sanitize_classes_list
-from system.managers.training_job_manager import training_job_manager
-from system.training.yolo_trainer import (
+from system.managers.training_job_manager import (
     DEFAULT_BASE_MODEL,
     DEFAULT_EPOCHS,
     DEFAULT_IMG_SIZE,
-    OFFICIAL_BASE_MODELS,
-    download_base_model,
-    get_available_base_models,
-    list_base_models,
+    TrainingProviderUnavailableError,
+    training_job_manager,
 )
 from system.utils.app_context import get_app_context, refresh_app_context
 from system.utils.i18n import trans as translate
-from system.utils.paths import get_project_root, resolve_project_path
+from system.utils.paths import get_project_root, resolve_project_path, resolve_training_paths
 from system.utils.utils import is_ajax
 
 _ultralytics_class = None
@@ -116,8 +113,8 @@ def _list_detector_models() -> list[dict]:
 
     # Also list standalone model weights in models directories
     try:
-        from system.training.yolo_trainer import MODELS_DIR
-        model_dirs = [MODELS_DIR, Path(get_project_root()) / 'config' / 'models']
+        models_dir = resolve_training_paths(get_project_root())[1]
+        model_dirs = [models_dir, Path(get_project_root()) / 'config' / 'models']
         for mdir in model_dirs:
             if not mdir or not mdir.is_dir():
                 continue
@@ -149,7 +146,6 @@ def _list_available_weights_for_deploy() -> list[dict]:
     trained_items = []
 
     try:
-        from system.training.yolo_trainer import resolve_training_paths
         _, _, runs_dir, _ = resolve_training_paths(root)
         search_dirs = [runs_dir, root / 'storage' / 'runs']
 
@@ -299,8 +295,8 @@ def _resolve_detector_cfg(detector: str | None = None) -> tuple[dict, str | None
     location = (detector or '').strip()
     if location.startswith('model:'):
         model_name = location[6:]
-        from system.training.yolo_trainer import MODELS_DIR
-        for mdir in [MODELS_DIR, Path(get_project_root()) / 'config' / 'models']:
+        models_dir = resolve_training_paths(get_project_root())[1]
+        for mdir in [models_dir, Path(get_project_root()) / 'config' / 'models']:
             cand = mdir / model_name
             if cand.is_file():
                 return {'weights_path': str(cand), 'model_type': 'auto'}, location
@@ -417,8 +413,8 @@ def _resolve_autolabel_weights(
     location = (detector or meta.get('autolabel_detector') or '').strip()
     if location.startswith('model:'):
         model_name = location[6:]
-        from system.training.yolo_trainer import MODELS_DIR
-        for mdir in [MODELS_DIR, Path(get_project_root()) / 'config' / 'models']:
+        models_dir = resolve_training_paths(get_project_root())[1]
+        for mdir in [models_dir, Path(get_project_root()) / 'config' / 'models']:
             cand = mdir / model_name
             if cand.is_file():
                 return cand
@@ -504,15 +500,24 @@ def dataset_detail(name: str):
         loc: (detections.get(loc, {}) or {}).get('label', loc)
         for loc in locations
     }
+    provider_status = training_job_manager.provider_status()
+    try:
+        model_catalog = training_job_manager.base_model_catalog()
+        catalog_error = None
+    except TrainingProviderUnavailableError as exc:
+        model_catalog = {'installed': [], 'available': [], 'official': {}}
+        catalog_error = str(exc)
     return render_template(
         'datasets/detail.html',
         dataset=summary,
         images=images,
         saved_locations=svc.list_saved_image_locations(),
         recordings=svc.list_recordings(),
-        base_models=list_base_models(),
-        available_base_models=get_available_base_models(),
-        official_base_models=OFFICIAL_BASE_MODELS,
+        base_models=model_catalog['installed'],
+        available_base_models=model_catalog['available'],
+        official_base_models=model_catalog['official'],
+        training_provider=provider_status,
+        training_catalog_error=catalog_error,
         counter_locations=locations,
         counter_cameras=locations_dict,
         detector_models=_list_detector_models(),
@@ -1304,11 +1309,11 @@ def api_models_base():
     """
     Return all available base models (installed and available to download).
     """
-    return jsonify({
-        'status': 'ok',
-        'models': get_available_base_models(),
-        'default': DEFAULT_BASE_MODEL,
-    })
+    try:
+        models = training_job_manager.base_model_catalog()['available']
+    except TrainingProviderUnavailableError as exc:
+        return _json_error(str(exc), 503)
+    return jsonify({'status': 'ok', 'models': models, 'default': DEFAULT_BASE_MODEL})
 
 
 @datasets_bp.route('/datasets/api/models/base/download', methods=['POST'])
@@ -1325,7 +1330,12 @@ def api_models_base_download():
         return _json_error('Model name is required')
 
     clean_name = Path(model_name).name
-    if clean_name not in OFFICIAL_BASE_MODELS and not clean_name.endswith('.pt'):
+    try:
+        training_job_manager.ensure_provider_available()
+        official_models = training_job_manager.base_model_catalog()['official']
+    except TrainingProviderUnavailableError as exc:
+        return _json_error(str(exc), 503)
+    if clean_name not in official_models and not clean_name.endswith('.pt'):
         return _json_error(f'Unsupported model: {clean_name}')
 
     context = get_app_context()
@@ -1337,7 +1347,7 @@ def api_models_base_download():
 
     def _worker():
         try:
-            download_base_model(clean_name, progress_callback=_emitter)
+            training_job_manager.download_base_model(clean_name, progress_callback=_emitter)
         except Exception as exc:
             _emitter({
                 'status': 'error',
@@ -1386,6 +1396,11 @@ def api_train(name: str):
     data = request.get_json(silent=True) or {}
     svc = _service()
     try:
+        training_job_manager.ensure_provider_available()
+    except TrainingProviderUnavailableError as exc:
+        return _json_error(str(exc), 503)
+
+    try:
         export_info = svc.export_for_training(name)
     except Exception as exc:
         return _json_error(str(exc))
@@ -1405,6 +1420,8 @@ def api_train(name: str):
             dedupe_val=bool(data.get('dedupe_val')),
             dataset_name=name,
         )
+    except TrainingProviderUnavailableError as exc:
+        return _json_error(str(exc), 503)
     except RuntimeError as exc:
         return _json_error(str(exc), 409)
     except Exception as exc:

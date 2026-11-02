@@ -749,6 +749,11 @@
                         <div class="cv-card shadow-sm h-100">
                             <div class="card-header fw-semibold">{{ trans('Training setup') }}</div>
                             <div class="card-body">
+                                {% if not training_provider.available or training_catalog_error %}
+                                    <div class="alert alert-secondary small py-2 mb-3" role="status">
+                                        {{ training_catalog_error or trans('YOLO training is unavailable. Install the optional PyTorch and Ultralytics dependencies to enable training.') }}
+                                    </div>
+                                {% endif %}
                                 <div class="alert alert-warning small py-2 mb-3" id="gpu-warning">
                                     {{ trans('Training uses the GPU. Pause heavy counters on the same device if needed.') }}
                                 </div>
@@ -757,12 +762,12 @@
                                 <div class="mb-3">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
                                         <label class="form-label mb-0 fw-semibold" for="train-base-model">{{ trans('Base model') }}</label>
-                                        <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" id="btn-download-base-model">
+                                        <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" id="btn-download-base-model" {% if not training_provider.available or training_catalog_error %}disabled{% endif %}>
                                             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-download me-1" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></svg>
                                             <span id="btn-download-base-label">{{ trans('Download model') }}</span>
                                         </button>
                                     </div>
-                                    <select class="form-select shadow-sm" id="train-base-model">
+                                    <select class="form-select shadow-sm" id="train-base-model" {% if not training_provider.available or training_catalog_error %}disabled{% endif %}>
                                         {% if available_base_models %}
                                             <optgroup label="{{ trans('Installed models') }}">
                                                 {% for m in available_base_models if m.installed %}
@@ -875,7 +880,7 @@
                                 </div>
 
                                 <div class="d-flex flex-wrap gap-2 mt-auto pt-2">
-                                    <button type="button" class="btn btn-primary flex-grow-1 shadow-sm d-flex align-items-center justify-content-center gap-1" id="btn-start-train">
+                                    <button type="button" class="btn btn-primary flex-grow-1 shadow-sm d-flex align-items-center justify-content-center gap-1" id="btn-start-train" {% if not training_provider.available or training_catalog_error %}disabled{% endif %}>
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play-fill" viewBox="0 0 16 16"><path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/></svg>
                                         <span>{{ trans('Start training') }}</span>
                                     </button>

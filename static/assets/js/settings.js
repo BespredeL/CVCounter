@@ -15,6 +15,7 @@
         modelClasses: '/settings/api/model_classes',
         modelsList: '/settings/api/models/list',
         runtimesStatus: '/settings/api/runtimes/status',
+        modelExportCapabilities: '/settings/api/models/export/capabilities',
         modelsExport: '/settings/api/models/export',
         modelsExportStatus: '/settings/api/models/export/status'
     }, window.SETTINGS_ENDPOINTS || {});
@@ -1186,6 +1187,8 @@
             var activeTargetInput = null;
             var exportPollInterval = null;
             var cachedRuntimes = null;
+            var cachedModelCapabilities = null;
+            var capabilityRequestId = 0;
             var lastExportedPath = null;
 
             function getSelectedFormat() {
@@ -1218,6 +1221,11 @@
             function checkDependencies() {
                 if (!cachedRuntimes) return;
                 var fmt = getSelectedFormat();
+                var modelCapability = cachedModelCapabilities
+                    && cachedModelCapabilities.export_capabilities
+                    ? cachedModelCapabilities.export_capabilities[fmt]
+                    : null;
+                var runtimeCapability = (cachedRuntimes.export_capabilities || {})[fmt];
                 var gpu = cachedRuntimes.gpu || {};
                 var onnx = cachedRuntimes.onnx || {};
                 var trt = cachedRuntimes.tensorrt || {};
@@ -1225,7 +1233,21 @@
                 exportDepAlert.classList.add('d-none');
                 btnStartExport.disabled = false;
 
-                if (fmt === 'engine') {
+                if (modelCapability) {
+                    if (!modelCapability.supported || !modelCapability.available) {
+                        exportDepMsg.textContent = (modelCapability.reasons || []).join('; ')
+                            || t('The selected model cannot be exported with this provider.');
+                        exportDepAlert.classList.remove('d-none');
+                        btnStartExport.disabled = true;
+                    }
+                } else if (runtimeCapability) {
+                    if (!runtimeCapability.available) {
+                        exportDepMsg.textContent = (runtimeCapability.reasons || []).join('; ')
+                            || t('The selected export provider is unavailable.');
+                        exportDepAlert.classList.remove('d-none');
+                        btnStartExport.disabled = true;
+                    }
+                } else if (fmt === 'engine') {
                     if (!gpu.has_nvidia_gpu) {
                         exportDepMsg.textContent = t('TensorRT Engine export requires an NVIDIA GPU, none was detected.');
                         exportDepAlert.classList.remove('d-none');
@@ -1240,6 +1262,48 @@
                         exportDepAlert.classList.remove('d-none');
                     }
                 }
+            }
+
+            function fetchModelCapabilities() {
+                var weights = exportSourceInput ? exportSourceInput.value.trim() : '';
+                var requestId = ++capabilityRequestId;
+                cachedModelCapabilities = null;
+                if (!weights) {
+                    checkDependencies();
+                    return;
+                }
+
+                fetch(endpoints.modelExportCapabilities + '?weights=' + encodeURIComponent(weights))
+                    .then(function (res) {
+                        return res.json().then(function (data) {
+                            return {ok: res.ok, data: data};
+                        });
+                    })
+                    .then(function (result) {
+                        if (requestId !== capabilityRequestId) return;
+                        if (result.ok && result.data.ok) {
+                            cachedModelCapabilities = result.data.artifact;
+                        } else {
+                            cachedModelCapabilities = {
+                                export_capabilities: {
+                                    onnx: {supported: false, available: false, reasons: [result.data.error || t('Model capabilities could not be resolved.')]},
+                                    engine: {supported: false, available: false, reasons: [result.data.error || t('Model capabilities could not be resolved.')]}
+                                }
+                            };
+                        }
+                        checkDependencies();
+                    })
+                    .catch(function () {
+                        if (requestId !== capabilityRequestId) return;
+                        var reason = t('Model capabilities could not be resolved.');
+                        cachedModelCapabilities = {
+                            export_capabilities: {
+                                onnx: {supported: false, available: false, reasons: [reason]},
+                                engine: {supported: false, available: false, reasons: [reason]}
+                            }
+                        };
+                        checkDependencies();
+                    });
             }
 
             exportFormatRadios.forEach(function (radio) {
@@ -1277,6 +1341,11 @@
                                 if (p && exportSourceInput) {
                                     exportSourceInput.value = p;
                                     if (exportWeightsHint) exportWeightsHint.textContent = '';
+                                    capabilityRequestId += 1;
+                                    cachedModelCapabilities = data.models.find(function (model) {
+                                        return model.path === p;
+                                    }) || null;
+                                    checkDependencies();
                                 }
                             });
                         });
@@ -1284,10 +1353,27 @@
                         if (exportSourceInput && !exportSourceInput.value.trim() && data.models.length > 0) {
                             exportSourceInput.value = data.models[0].path;
                         }
+                        if (exportSourceInput) {
+                            var selectedModel = data.models.find(function (model) {
+                                return model.path === exportSourceInput.value.trim();
+                            });
+                            capabilityRequestId += 1;
+                            cachedModelCapabilities = selectedModel || null;
+                            if (selectedModel) {
+                                checkDependencies();
+                            } else {
+                                fetchModelCapabilities();
+                            }
+                        }
                     })
                     .catch(function () {
                         exportDropdownList.innerHTML = '<li><span class="dropdown-item-text text-danger small">' + escapeHtml(t('Failed to load models list')) + '</span></li>';
                     });
+            }
+
+            if (exportSourceInput) {
+                exportSourceInput.addEventListener('change', fetchModelCapabilities);
+                exportSourceInput.addEventListener('blur', fetchModelCapabilities);
             }
 
             function fetchRuntimesStatus() {
@@ -1354,6 +1440,7 @@
 
                 loadAvailableModels();
                 fetchRuntimesStatus();
+                fetchModelCapabilities();
                 exportModal.show();
             });
 

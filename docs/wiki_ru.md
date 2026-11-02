@@ -95,7 +95,7 @@ CVCounter/
 
 ### Способ 1: Автоматическая установка в 1 клик (Рекомендуется)
 
-Установщик `install.py` определяет установленную видеокарту, выбирает правильную версию PyTorch и ONNX Runtime, создаёт виртуальное окружение `venv` и генерирует конфигурацию:
+Установщик `install.py` определяет аппаратный профиль, устанавливает только Core-зависимости и создаёт конфигурацию. ML runtime-ы и PyTorch/Ultralytics устанавливаются только по явному запросу:
 
 - **Windows:** дважды кликните на `install.bat`. Для запуска используйте `start.bat`.
 - **Linux / macOS:**
@@ -106,17 +106,26 @@ CVCounter/
   ```
 
 #### Поддерживаемые профили оборудования:
-- **`nvidia_cuda`:** Автоматический подбор версии CUDA (12.4 / 12.1 / 11.8), установка `torch` с CUDA и `onnxruntime-gpu`.
-- **`amd_directml`:** Ускорение через DirectX DirectML (`torch-directml`, `onnxruntime-directml`) на видеокартах AMD Radeon в Windows (в Linux — ROCm).
-- **`intel_openvino`:** Оптимизация под процессоры Intel Core/Xeon, встроенную графику iGPU, видеокарты Intel Arc и NPU.
-- **`cpu`:** Универсальный режим без графического ускорителя.
+- **`nvidia_cuda`:** Целевой профиль для NVIDIA; `--with-inference` устанавливает `onnxruntime-gpu`, `--with-pytorch` — подходящую сборку PyTorch.
+- **`amd_directml`:** Целевой профиль AMD; `--with-inference` устанавливает ONNX Runtime DirectML.
+- **`intel_openvino`:** Целевой профиль Intel; `--with-inference` устанавливает OpenVINO и ONNX Runtime.
+- **`cpu`:** Целевой CPU-профиль; `--with-inference` устанавливает ONNX Runtime CPU.
 
 Флаги установщика:
 ```bash
 python install.py --profile nvidia_cuda  # Принудительный выбор профиля
+python install.py --with-inference       # Установка runtime инференса для выбранного профиля
+python install.py --with-ultralytics     # PyTorch + Ultralytics (.pt и обучение YOLO)
+python install.py --with-pytorch         # Только PyTorch provider
+python install.py --provider onnxruntime --provider openvino  # Несколько встроенных runtime
+python install.py --provider opencv       # OpenCV DNN уже входит в Core; пакет не нужен
 python install.py --reinstall            # Переустановка всех пакетов
 python install.py --no-color             # Отключение ANSI-цветов
 ```
+
+`--provider` принимает `onnxruntime`, `openvino`, `opencv`, `pytorch` или
+`ultralytics`; флаг можно повторять. Старый `--with-inference` сохранён и
+устанавливает комбинацию runtime-ов для обнаруженного или заданного профиля.
 
 ---
 
@@ -140,12 +149,18 @@ python install.py --no-color             # Отключение ANSI-цвето�
 3. Установите зависимости:
    ```bash
    pip install -r requirements.txt
+
+   # Опционально: ONNX Runtime CPU inference
+   pip install -r requirements-onnxruntime.txt
    
    # Опционально: для обучения YOLO и моделей .pt
    pip install -r requirements-ultralytics.txt
 
    # Опционально: для ускорения Intel OpenVINO
    pip install -r requirements-openvino.txt
+
+   # Опционально: инструменты ONNX export/optimization
+   pip install -r requirements-onnx-export.txt
    ```
 4. Создайте рабочий конфигурационный файл:
    ```bash
@@ -170,7 +185,37 @@ docker-compose up --build
 
 ## 🧠 Системы детекции и инференс
 
-Реестр сервисов детекции (`system/object_detection/registry.py`) позволяет подключать любые нейросетевые бэкенды через единый интерфейс `BaseObjectDetectionService`.
+Встроенный реестр (`system/object_detection/registry.py`) выбирает движки компьютерного зрения через единый интерфейс `BaseObjectDetectionService`. Алиасы `model_type` и разрешение по расширению сохранены для существующих конфигураций.
+
+### Необязательный манифест модели
+
+Рядом с моделью можно разместить необязательный файл `<имя-модели>.manifest.json`. Он описывает модель, не предполагая, что расширение файла определяет её архитектуру или формат выходных данных:
+
+```json
+{
+  "schema_version": 1,
+  "architecture": "yolo",
+  "task": "object_detection",
+  "format": "onnx",
+  "runtime": "onnxruntime",
+  "preprocessing": {
+    "color_order": "BGR",
+    "resize": "letterbox"
+  },
+  "input_contract": {
+    "dtype": "float32",
+    "layout": "NCHW",
+    "shape": [1, 3, 640, 640]
+  },
+  "output_contract": {
+    "layout": "BNC",
+    "coordinates": "xywh"
+  },
+  "decoder": "yolo_outputs"
+}
+```
+
+Preprocessing, входной тензор, выход и decoder описываются отдельно: загрузки артефакта runtime недостаточно, чтобы считать модель совместимой. Текущие встроенные детекторы ONNX/OpenCV/OpenVINO используют decoder для YOLO-подобных выходов. Другие архитектуры и задачи можно описать в манифесте, но для инференса им потребуется совместимый provider и decoder. Модели без манифеста сохраняют прежнюю маршрутизацию; архитектура и задача остаются неизвестными, а не выводятся из `.onnx`. `DetectionBatch` — только именованный адаптер над существующим кортежем `(boxes_xyxy, confidences, classes)`; counting pipeline продолжает получать кортеж без изменений.
 
 ### Поддерживаемые значения `model_type`:
 
@@ -251,7 +296,7 @@ docker-compose up --build
 | Параметр | Описание | По умолчанию |
 |---|---|---|
 | `debug` | Режим отладки Flask | `true` |
-| `system_check` | Вывод параметров GPU/CUDA/PyTorch в лог при запуске | `true` |
+| `system_check` | Вывод доступных GPU/runtime и статуса optional PyTorch при запуске | `true` |
 | `log_path` | Путь к файлу логов приложения | `"storage/logs/cvcounter.log"` |
 | `log_level` | Минимальный уровень логирования (`DEBUG`, `INFO`, `WARNING`, `ERROR`) | `"INFO"` |
 | `log_console` | Дублирование логов в стандартный вывод консоли | `false` |

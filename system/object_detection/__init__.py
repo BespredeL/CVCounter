@@ -4,10 +4,16 @@
 # Developed by: Aleksandr Kireev
 # Website: https://bespredel.name
 
-from system.object_detection.base_object_detection import BaseObjectDetectionService, DetectionResult
+from system.object_detection.base_object_detection import (
+    BaseObjectDetectionService,
+    DetectionBatch,
+    DetectionResult,
+)
 from system.object_detection.registry import (
     available_model_types,
     create_detector,
+    get_provider_status,
+    get_provider_statuses,
     is_backend_available,
     load_detector,
     register,
@@ -19,39 +25,33 @@ from system.object_detection.metadata import (
     get_model_metadata,
     parse_names_dict,
 )
-
-# Safely import backends to populate the registry without failing if optional dependencies are missing.
-try:
-    from system.object_detection import object_detection_onnx
-except Exception:
-    pass
-
-try:
-    from system.object_detection import object_detection_opencv
-except Exception:
-    pass
-
-try:
-    from system.object_detection import object_detection_yolo
-except Exception:
-    pass
-
-try:
-    from system.object_detection import object_detection_openvino
-except Exception:
-    pass
+from system.object_detection.model_spec import (
+    ModelManifest,
+    ModelSpec,
+    check_provider_compatibility,
+    load_model_manifest,
+    resolve_model_spec,
+)
 
 __all__ = [
     'BaseObjectDetectionService',
+    'DetectionBatch',
     'DetectionResult',
+    'ModelManifest',
+    'ModelSpec',
     'available_model_types',
     'create_detector',
+    'check_provider_compatibility',
     'extract_model_classes',
+    'get_provider_status',
+    'get_provider_statuses',
     'get_model_metadata',
     'is_backend_available',
     'load_detector',
+    'load_model_manifest',
     'parse_names_dict',
     'register',
     'resolve_model_type',
+    'resolve_model_spec',
     'supported_model_types',
 ]

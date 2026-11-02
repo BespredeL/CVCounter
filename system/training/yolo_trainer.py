@@ -12,7 +12,12 @@ from typing import Callable, Iterable, Optional
 
 import yaml
 
-from system.utils.paths import ensure_dir, get_project_root, set_project_root
+from system.utils.paths import (
+    ensure_dir,
+    get_project_root,
+    resolve_training_paths as _resolve_training_paths,
+    set_project_root,
+)
 
 
 class TrainingCancelledError(RuntimeError):
@@ -43,18 +48,7 @@ def resolve_training_paths(project_root: Optional[Path | str] = None) -> tuple[P
     Returns:
         Tuple of (cfg_dir, models_dir, runs_dir, datasets_dir).
     """
-    root = Path(project_root) if project_root else Path(get_project_root())
-    ultra = root / 'config' / 'ultralytics'
-    legacy = root / 'config'
-
-    cfg_dir = ultra / 'cfg' if (ultra / 'cfg').is_dir() or not (legacy / 'cfg').is_dir() else legacy / 'cfg'
-    models_dir = (
-        ultra / 'models' if (ultra / 'models').is_dir() or not (legacy / 'models').is_dir()
-        else legacy / 'models'
-    )
-    runs_dir = ultra / 'runs' if (ultra / 'runs').is_dir() or not (legacy / 'runs').is_dir() else legacy / 'runs'
-    datasets_dir = root / 'storage' / 'datasets'
-    return cfg_dir, models_dir, runs_dir, datasets_dir
+    return _resolve_training_paths(project_root)
 
 
 def _refresh_globals(project_root: Optional[Path | str] = None) -> None:

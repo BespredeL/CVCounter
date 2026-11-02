@@ -5,6 +5,7 @@
 # Website: https://bespredel.name
 
 import os
+from pathlib import Path
 from typing import Optional
 
 _PROJECT_ROOT: Optional[str] = None
@@ -58,6 +59,25 @@ def get_project_root() -> str:
         pass
 
     return os.getcwd()
+
+
+def resolve_training_paths(project_root: Optional[Path | str] = None) -> tuple[Path, Path, Path, Path]:
+    """Resolve legacy-compatible training paths without importing a trainer."""
+    root = Path(project_root) if project_root else Path(get_project_root())
+    ultralytics_root = root / 'config' / 'ultralytics'
+    legacy_root = root / 'config'
+
+    def resolve_dir(name: str) -> Path:
+        modern = ultralytics_root / name
+        legacy = legacy_root / name
+        return modern if modern.is_dir() or not legacy.is_dir() else legacy
+
+    return (
+        resolve_dir('cfg'),
+        resolve_dir('models'),
+        resolve_dir('runs'),
+        root / 'storage' / 'datasets',
+    )
 
 
 def resolve_project_path(relative_path: Optional[str], project_root: Optional[str] = None) -> Optional[str]:

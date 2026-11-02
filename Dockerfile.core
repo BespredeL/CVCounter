@@ -1,0 +1,23 @@
+FROM python:3.11-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 \
+    libglib2.0-0 \
+    libgomp1 \
+    unixodbc \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY requirements.txt .
+
+RUN python -m pip install --no-cache-dir --upgrade pip && \
+    python -m pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+RUN mkdir -p /app/storage/logs /app/storage/saved_recordings /app/storage/saved_images /app/storage/counter_previews /app/storage/datasets
+
+EXPOSE 8080
+
+CMD ["python", "app.py"]

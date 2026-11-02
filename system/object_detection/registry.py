@@ -4,6 +4,9 @@
 # Developed by: Aleksandr Kireev
 # Website: https://bespredel.name
 
+import importlib
+import importlib.util
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Dict, Optional, Type
 from system.object_detection.base_object_detection import BaseObjectDetectionService
@@ -13,6 +16,71 @@ DetectorFactory = Callable[[], BaseObjectDetectionService]
 
 """ Registry of object detection backends. """
 _REGISTRY: Dict[str, DetectorFactory] = {}
+
+
+@dataclass(frozen=True)
+class BuiltinProvider:
+    """Declarative metadata for a built-in inference provider."""
+
+    id: str
+    aliases: tuple[str, ...]
+    module: str
+    dependencies: tuple[str, ...]
+    tasks: tuple[str, ...]
+    architectures: tuple[str, ...]
+    formats: tuple[str, ...]
+    decoders: tuple[str, ...] = ()
+    optional_dependencies: tuple[str, ...] = ()
+
+
+_BUILTIN_PROVIDERS = (
+    BuiltinProvider(
+        'onnxruntime',
+        ('onnx', 'onnxruntime'),
+        'system.object_detection.object_detection_onnx',
+        ('onnxruntime',),
+        ('object_detection',),
+        ('yolo', 'rt-detr'),
+        ('.onnx',),
+        ('yolo_outputs',),
+    ),
+    BuiltinProvider(
+        'opencv_dnn',
+        ('opencv', 'opencv_dnn'),
+        'system.object_detection.object_detection_opencv',
+        ('cv2',),
+        ('object_detection',),
+        ('yolo', 'darknet'),
+        ('.onnx', '.pb', 'Darknet .cfg + .weights'),
+        ('yolo_outputs',),
+    ),
+    BuiltinProvider(
+        'openvino',
+        ('openvino', 'openvino_dnn'),
+        'system.object_detection.object_detection_openvino',
+        ('openvino',),
+        ('object_detection',),
+        ('yolo', 'rt-detr'),
+        ('.xml', '.bin', '.onnx'),
+        ('yolo_outputs',),
+    ),
+    BuiltinProvider(
+        'ultralytics',
+        ('yolo', 'ultralytics'),
+        'system.object_detection.object_detection_yolo',
+        ('torch', 'ultralytics'),
+        ('object_detection', 'training', 'export'),
+        ('yolo',),
+        ('.pt', '.pth', '.engine', '.trt'),
+        ('ultralytics_results',),
+        ('tensorrt',),
+    ),
+)
+_PROVIDER_BY_ALIAS = {
+    alias: provider
+    for provider in _BUILTIN_PROVIDERS
+    for alias in provider.aliases
+}
 
 
 def register(model_type: str) -> Callable[[Type[BaseObjectDetectionService]], Type[BaseObjectDetectionService]]:
@@ -47,36 +115,108 @@ def register(model_type: str) -> Callable[[Type[BaseObjectDetectionService]], Ty
     return decorator
 
 
+def _has_dependency(module_name: str) -> bool:
+    try:
+        return importlib.util.find_spec(module_name) is not None
+    except (ImportError, ModuleNotFoundError, ValueError):
+        return False
+
+
+def _provider_dependencies_available(model_type: str) -> bool:
+    provider = _PROVIDER_BY_ALIAS.get((model_type or '').strip().lower())
+    if provider is None:
+        return (model_type or '').strip().lower() in _REGISTRY
+    return all(_has_dependency(dependency) for dependency in provider.dependencies)
+
+
+def _ensure_provider_loaded(provider: BuiltinProvider) -> None:
+    if all(alias in _REGISTRY for alias in provider.aliases):
+        return
+
+    missing = [name for name in provider.dependencies if not _has_dependency(name)]
+    if missing:
+        raise ModelLoadingError(
+            f"Provider '{provider.id}' is unavailable; missing dependencies: {', '.join(missing)}"
+        )
+
+    try:
+        importlib.import_module(provider.module)
+    except Exception as exc:
+        raise ModelLoadingError(f"Provider '{provider.id}' failed to load: {exc}") from exc
+
+    missing_aliases = [alias for alias in provider.aliases if alias not in _REGISTRY]
+    if missing_aliases:
+        raise ModelLoadingError(
+            f"Provider '{provider.id}' did not register aliases: {', '.join(missing_aliases)}"
+        )
+
+
+def get_provider_status(model_type: str) -> dict:
+    """Return isolated availability and declared capabilities for one provider."""
+    normalized = (model_type or '').strip().lower()
+    provider = _PROVIDER_BY_ALIAS.get(normalized)
+    if provider is None:
+        available = normalized in _REGISTRY
+        return {
+            'id': normalized,
+            'aliases': [normalized] if normalized else [],
+            'status': 'available' if available else 'unavailable',
+            'available': available,
+            'dependencies': [],
+            'optional_dependencies': {},
+            'capabilities': {},
+            'error': None if available else f"Unknown provider '{model_type}'",
+        }
+
+    dependency_status = {
+        dependency: _has_dependency(dependency)
+        for dependency in provider.dependencies
+    }
+    optional_dependency_status = {
+        dependency: _has_dependency(dependency)
+        for dependency in provider.optional_dependencies
+    }
+    missing = [name for name, installed in dependency_status.items() if not installed]
+    error = None
+    status = 'unavailable' if missing else 'available'
+    if missing:
+        error = f"Missing dependencies: {', '.join(missing)}"
+    else:
+        try:
+            _ensure_provider_loaded(provider)
+        except Exception as exc:
+            status = 'error'
+            error = str(exc)
+
+    available = status == 'available'
+    return {
+        'id': provider.id,
+        'aliases': list(provider.aliases),
+        'status': status,
+        'available': available,
+        'dependencies': dependency_status,
+        'optional_dependencies': optional_dependency_status,
+        'capabilities': {
+            'tasks': list(provider.tasks),
+            'architectures': list(provider.architectures),
+            'formats': list(provider.formats),
+            'decoders': list(provider.decoders),
+        },
+        'error': error,
+    }
+
+
+def get_provider_statuses() -> list[dict]:
+    """Return independent health and capability information for built-in providers."""
+    return [get_provider_status(provider.id) for provider in _BUILTIN_PROVIDERS]
+
+
 def is_backend_available(model_type: str) -> bool:
     """
     Check if dependencies for a specific detection backend are installed.
     """
     norm = (model_type or '').strip().lower()
-    if norm in ('onnx', 'onnxruntime'):
-        try:
-            import onnxruntime  # noqa: F401
-            return True
-        except ImportError:
-            return False
-    elif norm in ('opencv', 'opencv_dnn'):
-        try:
-            import cv2  # noqa: F401
-            return True
-        except ImportError:
-            return False
-    elif norm in ('yolo', 'ultralytics'):
-        try:
-            from ultralytics import YOLO  # noqa: F401
-            return True
-        except ImportError:
-            return False
-    elif norm in ('openvino', 'openvino_dnn'):
-        try:
-            import openvino  # noqa: F401
-            return True
-        except ImportError:
-            return False
-    return norm in _REGISTRY
+    return get_provider_status(norm)['available']
 
 
 def is_tensorrt_available() -> bool:
@@ -100,10 +240,10 @@ def find_fallback_weights(weights: Optional[str]) -> Optional[str]:
     p = Path(weights)
     candidates = []
     # If Ultralytics / YOLO backend is available, prefer .pt
-    if is_backend_available('yolo'):
+    if _provider_dependencies_available('yolo'):
         candidates.append(p.with_suffix('.pt'))
     # If ONNX Runtime is available, candidate .onnx
-    if is_backend_available('onnx') or is_backend_available('opencv'):
+    if _provider_dependencies_available('onnx') or _provider_dependencies_available('opencv'):
         candidates.append(p.with_suffix('.onnx'))
     # Also check general .pt / .onnx
     candidates.append(p.with_suffix('.pt'))
@@ -127,14 +267,18 @@ def available_model_types() -> list[str]:
     """
     Get a list of model types whose runtime dependencies are currently installed.
     """
-    return [m for m in sorted(_REGISTRY.keys()) if is_backend_available(m)]
+    return [
+        model_type
+        for model_type in supported_model_types()
+        if model_type != 'auto' and is_backend_available(model_type)
+    ]
 
 
 def supported_model_types() -> list[str]:
     """
     Get a list of all registered model types including 'auto'.
     """
-    types = {'auto'} | set(_REGISTRY.keys())
+    types = {'auto'} | set(_REGISTRY.keys()) | set(_PROVIDER_BY_ALIAS)
     return sorted(types)
 
 
@@ -157,15 +301,15 @@ def resolve_model_type(model_type: Optional[str] = None, weights: Optional[str] 
     # If explicit type is provided and not 'auto'
     if norm_type not in ('auto', '', 'none'):
         # Graceful redirect: if user configured 'yolo' but weights is .onnx, use onnx
-        if norm_type in ('yolo', 'ultralytics') and ext == '.onnx' and is_backend_available('onnx'):
+        if norm_type in ('yolo', 'ultralytics') and ext == '.onnx' and _provider_dependencies_available('onnx'):
             return 'onnx'
         return norm_type
 
     # Auto-detection from weights file extension
     if ext == '.onnx':
-        if is_backend_available('onnx'):
+        if _provider_dependencies_available('onnx'):
             return 'onnx'
-        if is_backend_available('opencv'):
+        if _provider_dependencies_available('opencv'):
             return 'opencv'
         return 'onnx'
 
@@ -173,7 +317,7 @@ def resolve_model_type(model_type: Optional[str] = None, weights: Optional[str] 
         return 'opencv'
 
     if ext in ('.xml', '.bin'):
-        return 'openvino' if is_backend_available('openvino') else 'opencv'
+        return 'openvino' if _provider_dependencies_available('openvino') else 'opencv'
 
     if ext in ('.pt', '.pth'):
         return 'yolo'
@@ -187,15 +331,15 @@ def resolve_model_type(model_type: Optional[str] = None, weights: Optional[str] 
             if fb_ext in ('.pt', '.pth'):
                 return 'yolo'
             elif fb_ext == '.onnx':
-                return 'onnx' if is_backend_available('onnx') else 'opencv'
+                return 'onnx' if _provider_dependencies_available('onnx') else 'opencv'
         return 'yolo'
 
     # Fallback when extension is unknown
-    if is_backend_available('onnx'):
+    if _provider_dependencies_available('onnx'):
         return 'onnx'
-    if is_backend_available('yolo'):
+    if _provider_dependencies_available('yolo'):
         return 'yolo'
-    if is_backend_available('opencv'):
+    if _provider_dependencies_available('opencv'):
         return 'opencv'
 
     return 'onnx'
@@ -212,6 +356,9 @@ def create_detector(model_type: str) -> BaseObjectDetectionService:
         BaseObjectDetectionService: The created detector instance.
     """
     normalized_type = (model_type or '').strip().lower()
+    provider = _PROVIDER_BY_ALIAS.get(normalized_type)
+    if provider is not None:
+        _ensure_provider_loaded(provider)
     factory = _REGISTRY.get(normalized_type)
     if factory is None:
         supported = ', '.join(supported_model_types()) or 'none'

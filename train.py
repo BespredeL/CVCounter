@@ -24,11 +24,9 @@ import argparse
 import glob
 import sys
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
-import torch
 import yaml
-from ultralytics import YOLO
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 CONFIG_DIR = PROJECT_ROOT / 'config'
@@ -66,6 +64,13 @@ def setup_directories() -> None:
 
 
 def resolve_device(device: Optional[str]) -> str | int:
+    try:
+        import torch
+    except ImportError as exc:
+        raise RuntimeError(
+            "PyTorch is required for YOLO training/export. Install the optional "
+            "Ultralytics provider with `python install.py --provider ultralytics`."
+        ) from exc
     if device is None:
         return 0 if torch.cuda.is_available() else 'cpu'
     if device.lower() == 'auto':
@@ -118,9 +123,16 @@ def best_weights_path(config_name: str, task: str = DEFAULT_TASK) -> Path:
     return RUNS_DIR / task / name / 'weights' / 'best.pt'
 
 
-def load_model(model_path: Path) -> YOLO:
+def load_model(model_path: Path) -> Any:
     if not model_path.is_file():
         raise FileNotFoundError(f'Model not found: {model_path}')
+    try:
+        from ultralytics import YOLO
+    except ImportError as exc:
+        raise RuntimeError(
+            "Ultralytics is required for YOLO training/export. Install the optional "
+            "provider with `python install.py --provider ultralytics`."
+        ) from exc
     return YOLO(str(model_path))
 
 
@@ -302,7 +314,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     args = parser.parse_args(argv)
     try:
         args.func(args)
-    except (FileNotFoundError, ValueError) as error:
+    except (FileNotFoundError, ValueError, RuntimeError) as error:
         print(f'Error: {error}', file=sys.stderr)
         return 1
     except KeyboardInterrupt:

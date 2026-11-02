@@ -80,8 +80,21 @@ The installer automatically identifies your hardware acceleration profile (NVIDI
 
 > **Installer CLI options (`install.py`):**
 > - `--profile [nvidia_cuda|amd_directml|intel_openvino|cpu]` — Manually force hardware profile
+> - `--with-inference` — additionally install ONNX Runtime/OpenVINO for the selected profile
+> - `--with-pytorch` — additionally install PyTorch for ML providers that require it
+> - `--with-ultralytics` — additionally install PyTorch and Ultralytics for `.pt` models and training
+> - `--provider <name>` — select a built-in provider; repeat for multiple providers: `onnxruntime`, `openvino`, `opencv`, `pytorch`, `ultralytics`
 > - `--reinstall` — Force reinstallation of packages
 > - `--no-color` — Disable colored console output
+
+By default, the installer installs Core only, without PyTorch, Ultralytics, ONNX
+Runtime, or OpenVINO. Use `--with-inference` for ONNX Runtime/OpenVINO. Missing
+optional providers do not fail the Core installation.
+Use `--with-ultralytics` for `.pt` models, auto-annotation, and YOLO training.
+Individual runtime providers can also be selected with commands such as
+`python install.py --provider onnxruntime` or
+`python install.py --provider onnxruntime --provider openvino`.
+OpenCV DNN is already included in Core and requires no separate installation.
 
 ---
 
@@ -109,6 +122,10 @@ The installer automatically identifies your hardware acceleration profile (NVIDI
    ```bash
    pip install -r requirements.txt
    ```
+   *(Optional)* For ONNX Runtime CPU inference:
+   ```bash
+   pip install -r requirements-onnxruntime.txt
+   ```
    *(Optional)* For PyTorch `.pt` models and YOLO training:
    ```bash
    pip install -r requirements-ultralytics.txt
@@ -116,6 +133,10 @@ The installer automatically identifies your hardware acceleration profile (NVIDI
    *(Optional)* For Intel OpenVINO acceleration:
    ```bash
    pip install -r requirements-openvino.txt
+   ```
+   *(Optional)* For ONNX export/optimization:
+   ```bash
+   pip install -r requirements-onnx-export.txt
    ```
 
 4. **Prepare the configuration file:**
@@ -137,6 +158,13 @@ The installer automatically identifies your hardware acceleration profile (NVIDI
 git clone https://github.com/BespredeL/CVCounter.git
 cd CVCounter
 docker-compose up --build
+```
+
+This command preserves the existing NVIDIA/CUDA deployment. To build and run the
+Core image without PyTorch/Ultralytics, use the separate configuration:
+
+```bash
+docker compose -f docker-compose.core.yml up --build
 ```
 
 ---

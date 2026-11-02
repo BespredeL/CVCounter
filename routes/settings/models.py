@@ -72,10 +72,28 @@ def api_models_list():
     from system.utils.model_exporter import model_export_manager
 
     models = model_export_manager.list_exportable_models()
+    artifacts = model_export_manager.list_model_artifacts()
     return jsonify({
         'ok': True,
         'models': models,
+        'artifacts': artifacts,
     })
+
+
+@settings_bp.route('/settings/api/models/export/capabilities', methods=['GET'])
+@login_required
+def api_models_export_capabilities():
+    """Return manifest-aware export capabilities for a selected model artifact."""
+    from system.utils.model_exporter import model_export_manager
+
+    weights_path = (request.args.get('weights') or '').strip()
+    if not weights_path:
+        return jsonify({'ok': False, 'error': translate('Weights path is required')}), 400
+    try:
+        artifact = model_export_manager.get_model_export_capabilities(weights_path)
+    except FileNotFoundError as exc:
+        return jsonify({'ok': False, 'error': str(exc)}), 404
+    return jsonify({'ok': True, 'artifact': artifact})
 
 
 @settings_bp.route('/settings/api/models/export', methods=['POST'])
@@ -113,7 +131,12 @@ def api_models_export():
         dynamic=dynamic,
         workspace=workspace,
     )
-    status_code = 200 if result.get('ok') else 400
+    if result.get('ok'):
+        status_code = 200
+    elif result.get('error_code') == 'provider_unavailable':
+        status_code = 503
+    else:
+        status_code = 400
     return jsonify(result), status_code
 
 

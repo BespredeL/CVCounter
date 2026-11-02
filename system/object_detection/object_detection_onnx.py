@@ -10,6 +10,7 @@ from numpy import ndarray
 
 from system.object_detection.base_object_detection import BaseObjectDetectionService, DetectionResult
 from system.object_detection.registry import register
+from system.object_detection.model_spec import load_model_manifest
 from system.object_detection.utils import create_blob, normalize_input_size, parse_yolo_outputs
 from system.utils.exception_handler import ModelLoadingError, ModelNotFoundError
 
@@ -18,11 +19,12 @@ from system.utils.exception_handler import ModelLoadingError, ModelNotFoundError
 @register('onnxruntime')
 class ObjectDetectionONNX(BaseObjectDetectionService):
     """
-    ONNX Runtime backend for exported YOLO models.
+    ONNX Runtime backend for manifest-described object-detection models.
 
     Config options (optional):
         input_size: int or [width, height], default 640
         providers: list of ORT providers, e.g. ["CUDAExecutionProvider", "CPUExecutionProvider"]
+        A model manifest may declare end-to-end box format and coordinate space.
     """
 
     def __init__(self) -> None:
@@ -36,6 +38,8 @@ class ObjectDetectionONNX(BaseObjectDetectionService):
         self.classes_map: dict[int, str] = {}
         self.is_end2end: Optional[bool] = None
         self.providers: list[str] = []
+        self.box_format = 'xyxy'
+        self.box_coordinates = 'auto'
 
     def detect(self, image: ndarray, **kwargs) -> DetectionResult:
         """
@@ -61,6 +65,8 @@ class ObjectDetectionONNX(BaseObjectDetectionService):
             image_shape=image.shape,
             classes_list=self.classes_list,
             is_end2end=self.is_end2end,
+            box_format=self.box_format,
+            box_coordinates=self.box_coordinates,
         )
 
     def load_model(self, weights: str, **kwargs) -> None:
@@ -83,6 +89,26 @@ class ObjectDetectionONNX(BaseObjectDetectionService):
         self.input_size = normalize_input_size(kwargs.get('input_size', 640))
         self.classes_list = kwargs.get('classes_list', None)
         self.providers = self._resolve_providers(kwargs.get('providers'), kwargs.get('device'))
+        self.box_format = 'xyxy'
+        self.box_coordinates = 'auto'
+
+        manifest = load_model_manifest(weights)
+        if manifest is not None:
+            if manifest.decoder != 'yolo_outputs':
+                raise ModelLoadingError(
+                    f"Decoder '{manifest.decoder}' is not supported by the ONNX detection adapter"
+                )
+            self.box_format = manifest.output_contract.get('box_format', 'xyxy')
+            self.box_coordinates = manifest.output_contract.get('coordinates', 'auto')
+            if self.box_format not in ('xyxy', 'cxcywh'):
+                raise ModelLoadingError(
+                    f"Unsupported detection box format in model manifest: '{self.box_format}'"
+                )
+            if self.box_coordinates not in ('auto', 'normalized', 'input_pixels'):
+                raise ModelLoadingError(
+                    f"Unsupported detection box coordinate space in model manifest: "
+                    f"'{self.box_coordinates}'"
+                )
 
         try:
             import onnxruntime as ort
@@ -144,6 +170,8 @@ class ObjectDetectionONNX(BaseObjectDetectionService):
         self.session = None
         self.input_name = None
         self.output_names = []
+        self.box_format = 'xyxy'
+        self.box_coordinates = 'auto'
 
     @staticmethod
     def _resolve_providers(providers: Optional[list], device) -> list[str]:

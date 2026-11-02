@@ -95,7 +95,7 @@ CVCounter/
 
 ### Method 1: Automatic 1-Click Installation (Recommended)
 
-The installer script `install.py` inspects your hardware, provisions the appropriate PyTorch and ONNX Runtime packages with hardware acceleration, configures a virtual environment, and creates initial configs:
+The `install.py` script detects a hardware profile but installs only Core dependencies by default. ML runtimes and PyTorch/Ultralytics are installed only when explicitly requested:
 
 - **Windows:** Double-click **`install.bat`**. Launch the app with **`start.bat`**.
 - **Linux / macOS:**
@@ -106,17 +106,27 @@ The installer script `install.py` inspects your hardware, provisions the appropr
   ```
 
 #### Supported Acceleration Profiles:
-- **`nvidia_cuda`:** Detects NVIDIA driver versions and installs compatible PyTorch builds (CUDA 12.4 / 12.1 / 11.8) and `onnxruntime-gpu`.
-- **`amd_directml`:** DirectX DirectML acceleration (`torch-directml`, `onnxruntime-directml`) on AMD Radeon GPUs in Windows (ROCm in Linux).
-- **`intel_openvino`:** Neural network optimization for Intel Core/Xeon CPUs, integrated iGPUs, Intel Arc discrete GPUs, and NPUs.
-- **`cpu`:** Universal fallback profile for systems without dedicated graphics.
+- **`nvidia_cuda`:** NVIDIA target profile; `--with-inference` installs `onnxruntime-gpu`, while `--with-pytorch` installs a compatible PyTorch build.
+- **`amd_directml`:** AMD target profile; `--with-inference` installs ONNX Runtime DirectML.
+- **`intel_openvino`:** Intel target profile; `--with-inference` installs OpenVINO and ONNX Runtime.
+- **`cpu`:** CPU target profile; `--with-inference` installs ONNX Runtime CPU.
 
 Installer options:
 ```bash
 python install.py --profile nvidia_cuda  # Force hardware acceleration profile
+python install.py --with-inference       # Install inference runtime for the selected profile
+python install.py --with-ultralytics     # PyTorch + Ultralytics (.pt models and YOLO training)
+python install.py --with-pytorch         # PyTorch provider only
+python install.py --provider onnxruntime --provider openvino  # Select multiple built-in runtimes
+python install.py --provider opencv       # OpenCV DNN is included in Core; no extra package
 python install.py --reinstall            # Force package reinstallation
 python install.py --no-color             # Disable ANSI colored output
 ```
+
+`--provider` accepts `onnxruntime`, `openvino`, `opencv`, `pytorch`, or
+`ultralytics` and can be repeated. The legacy `--with-inference` option remains
+available and installs the runtime combination selected for the detected or
+forced hardware profile.
 
 ---
 
@@ -140,12 +150,18 @@ python install.py --no-color             # Disable ANSI colored output
 3. Install dependencies:
    ```bash
    pip install -r requirements.txt
+
+   # Optional: ONNX Runtime CPU inference
+   pip install -r requirements-onnxruntime.txt
    
    # Optional: For YOLO training and .pt weights
    pip install -r requirements-ultralytics.txt
 
    # Optional: For Intel OpenVINO acceleration
    pip install -r requirements-openvino.txt
+
+   # Optional: ONNX export/optimization tools
+   pip install -r requirements-onnx-export.txt
    ```
 4. Prepare configuration:
    ```bash
@@ -170,7 +186,37 @@ Mounted volumes ensure persistent storage for configuration (`config/`) and medi
 
 ## 🧠 Detection Systems & Inference
 
-The registry (`system/object_detection/registry.py`) decouples computer vision engines via the unified `BaseObjectDetectionService` interface.
+The built-in registry (`system/object_detection/registry.py`) selects computer vision engines via the unified `BaseObjectDetectionService` interface. `model_type` aliases and extension-based resolution remain supported for existing configurations.
+
+### Optional Model Manifest
+
+An optional `<model-stem>.manifest.json` sidecar can declare model details without assuming that a file extension identifies its architecture or output format:
+
+```json
+{
+  "schema_version": 1,
+  "architecture": "yolo",
+  "task": "object_detection",
+  "format": "onnx",
+  "runtime": "onnxruntime",
+  "preprocessing": {
+    "color_order": "BGR",
+    "resize": "letterbox"
+  },
+  "input_contract": {
+    "dtype": "float32",
+    "layout": "NCHW",
+    "shape": [1, 3, 640, 640]
+  },
+  "output_contract": {
+    "layout": "BNC",
+    "coordinates": "xywh"
+  },
+  "decoder": "yolo_outputs"
+}
+```
+
+Preprocessing, tensor input, output, and decoder declarations are separate so a model is not assumed compatible merely because a runtime can open its artifact. The current built-in ONNX/OpenCV/OpenVINO detection decoders are YOLO-output-specific; other architectures and tasks can be represented in a manifest, but need a compatible provider and decoder before inference is supported. Models without a manifest retain legacy routing and are reported with unknown architecture/task rather than inferred from `.onnx`. `DetectionBatch` is only a named adapter over the existing `(boxes_xyxy, confidences, classes)` tuple; the counting pipeline continues to consume the tuple unchanged.
 
 ### Supported `model_type` Options:
 
@@ -251,7 +297,7 @@ The configuration file is divided into logical sections:
 | Key | Description | Default |
 |---|---|---|
 | `debug` | Enable Flask debug mode | `true` |
-| `system_check` | Print GPU/CUDA/PyTorch environment summary on startup | `true` |
+| `system_check` | Print available GPU/runtime and optional PyTorch status on startup | `true` |
 | `log_path` | Application log file location | `"storage/logs/cvcounter.log"` |
 | `log_level` | Minimum logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`) | `"INFO"` |
 | `log_console` | Mirror log output to terminal standard output | `false` |

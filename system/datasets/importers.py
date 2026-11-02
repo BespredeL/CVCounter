@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import io
+import math
 import shutil
 import zipfile
 from pathlib import Path
@@ -226,7 +227,12 @@ def parse_yolo_label_line(line: str, classes: list[str], task: str = 'detect') -
     except ValueError:
         return None
     label = classes[cls_idx] if 0 <= cls_idx < len(classes) else str(cls_idx)
-    nums = [float(x) for x in parts[1:]]
+    try:
+        nums = [float(x) for x in parts[1:]]
+    except ValueError:
+        return None
+    if not all(math.isfinite(value) for value in nums):
+        return None
 
     if task == 'segment' or (len(nums) > 4 and len(nums) % 2 == 0 and len(nums) >= 6 and task != 'pose'):
         # polygon or detect with many coords treated as poly if > 4

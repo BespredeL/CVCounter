@@ -167,6 +167,8 @@ def parse_yolo_outputs(
         image_shape: Tuple[int, int, int],
         classes_list: Optional[Iterable[int]] = None,
         is_end2end: Optional[bool] = None,
+        box_format: str = 'xyxy',
+        box_coordinates: str = 'auto',
 ) -> DetectionResult:
     """
     Parse YOLO/RT-DETR-style ONNX/OpenCV outputs into xyxy boxes, scores and class IDs.
@@ -180,6 +182,8 @@ def parse_yolo_outputs(
         image_shape (Tuple[int, int, int]): The image shape to parse by.
         classes_list (Optional[Iterable[int]]): The classes list to parse by.
         is_end2end (Optional[bool]): If True, skips NMS (for YOLOv10, RT-DETR).
+        box_format (str): Box layout in end-to-end output rows: 'xyxy' or 'cxcywh'.
+        box_coordinates (str): Coordinate space: 'auto', 'normalized', or 'input_pixels'.
 
     Returns:
         DetectionResult: The parsed boxes, confidences and classes.
@@ -208,7 +212,21 @@ def parse_yolo_outputs(
     else:
         boxes_xyxy, confidences, classes = _parse_yolo_matrix(prediction, confidence)
 
-    boxes_xyxy = _scale_boxes_to_image(boxes_xyxy, input_size, image_shape)
+    if box_format == 'cxcywh':
+        boxes_xyxy = _xywh_to_xyxy(boxes_xyxy)
+    elif box_format != 'xyxy':
+        raise ValueError(f"Unsupported detection box format: '{box_format}'")
+
+    if box_coordinates == 'normalized':
+        image_height, image_width = image_shape[:2]
+        boxes_xyxy[:, [0, 2]] *= image_width
+        boxes_xyxy[:, [1, 3]] *= image_height
+        boxes_xyxy[:, [0, 2]] = np.clip(boxes_xyxy[:, [0, 2]], 0, image_width)
+        boxes_xyxy[:, [1, 3]] = np.clip(boxes_xyxy[:, [1, 3]], 0, image_height)
+    elif box_coordinates in ('auto', 'input_pixels'):
+        boxes_xyxy = _scale_boxes_to_image(boxes_xyxy, input_size, image_shape)
+    else:
+        raise ValueError(f"Unsupported detection box coordinate space: '{box_coordinates}'")
 
     mask = confidences >= confidence
     boxes_xyxy = boxes_xyxy[mask]

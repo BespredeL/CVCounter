@@ -124,7 +124,7 @@ def ensure_vcredist() -> bool:
         return True
 
     pr_warn("Microsoft Visual C++ 2015-2022 Redistributable (x64) not found!")
-    pr_info("It is required for PyTorch (c10.dll) and ONNX Runtime.")
+    pr_info("It is required for ONNX Runtime and optional PyTorch (c10.dll).")
     pr_info("Starting automatic download and installation of vc_redist.x64.exe...")
 
     url = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
@@ -552,8 +552,8 @@ def install_hardware_pytorch(hw: dict, reinstall: bool = False) -> bool:
     return success
 
 
-def install_inference_backend(hw: dict) -> bool:
-    """Install inference backend (ONNX Runtime GPU / DirectML / CPU / OpenVINO)."""
+def install_onnxruntime(hw: dict) -> bool:
+    """Install the ONNX Runtime build appropriate for the selected hardware profile."""
     profile = hw["profile"]
 
     if profile == "nvidia_cuda":
@@ -573,8 +573,7 @@ def install_inference_backend(hw: dict) -> bool:
         return success
 
     elif profile == "intel_openvino":
-        pr_info("Configuring Intel OpenVINO hardware acceleration...")
-        run_pip(["install", "-r", str(REQUIREMENTS_OPENVINO)], "Installing OpenVINO")
+        pr_info("Configuring ONNX Runtime for the selected Intel profile...")
         success = run_pip(["install", "onnxruntime"], "Installing onnxruntime")
         return success
 
@@ -584,44 +583,37 @@ def install_inference_backend(hw: dict) -> bool:
         return success
 
 
-def install_core_dependencies(hw: dict) -> bool:
-    """Install dependencies from requirements.txt without GPU package conflicts."""
+def install_openvino() -> bool:
+    """Install the optional Intel OpenVINO inference provider."""
+    if not REQUIREMENTS_OPENVINO.exists():
+        pr_err(f"File {REQUIREMENTS_OPENVINO} not found!")
+        return False
+    return run_pip(
+        ["install", "-r", str(REQUIREMENTS_OPENVINO)],
+        "Installing OpenVINO",
+    )
+
+
+def install_inference_backend(hw: dict) -> bool:
+    """Keep the legacy profile-based inference install behavior."""
+    onnxruntime_ok = install_onnxruntime(hw)
+    if hw["profile"] == "intel_openvino":
+        return install_openvino() and onnxruntime_ok
+    return onnxruntime_ok
+
+
+def install_core_dependencies() -> bool:
+    """Install the framework-neutral dependencies from requirements.txt."""
     if not REQUIREMENTS_CORE.exists():
         pr_err(f"File {REQUIREMENTS_CORE} not found!")
         return False
 
     pr_info("Installing core system packages...")
 
-    # Read requirements.txt and filter out onnxruntime if GPU runtime is installed
-    lines_to_install = []
-    with open(REQUIREMENTS_CORE, "r", encoding="utf-8") as f:
-        for line in f:
-            stripped = line.strip()
-            if not stripped or stripped.startswith("#"):
-                continue
-            # Skip onnxruntime on GPU profiles to avoid overwriting onnxruntime-gpu/directml
-            if hw["profile"] in ["nvidia_cuda", "amd_directml"] and stripped.startswith("onnxruntime"):
-                continue
-            # Skip legacy TensorRT packages
-            if stripped.startswith("tensorrt") or stripped.startswith("nvidia-pyindex"):
-                continue
-            lines_to_install.append(stripped)
-
-    # Create temporary requirements file
-    temp_req = ROOT_DIR / ".temp_requirements.txt"
-    try:
-        with open(temp_req, "w", encoding="utf-8") as f:
-            f.write("\n".join(lines_to_install) + "\n")
-
-        success = run_pip(["install", "-r", str(temp_req)], "Installing core libraries")
-    finally:
-        if temp_req.exists():
-            try:
-                temp_req.unlink()
-            except Exception:
-                pass
-
-    return success
+    return run_pip(
+        ["install", "-r", str(REQUIREMENTS_CORE)],
+        "Installing Core libraries",
+    )
 
 
 def install_ultralytics() -> bool:
@@ -665,7 +657,13 @@ def setup_configuration_and_storage(hw: dict):
 # Diagnostics and post-installation verification
 # --------------------------------------------------------------------------------
 
-def verify_installation(hw: dict) -> bool:
+def verify_installation(
+        hw: dict,
+        require_pytorch: bool = False,
+        require_ultralytics: bool = False,
+        require_inference: bool = False,
+        require_openvino: bool = False,
+) -> bool:
     """Comprehensive health check of installed components."""
     print()
     pr("============================================================", Colors.CYAN, bold=True)
@@ -674,7 +672,7 @@ def verify_installation(hw: dict) -> bool:
 
     all_ok = True
 
-    # 1. Check PyTorch and CUDA
+    # 1. Check optional PyTorch and CUDA
     try:
         import torch
         torch_ver = torch.__version__
@@ -682,7 +680,7 @@ def verify_installation(hw: dict) -> bool:
         cuda_count = torch.cuda.device_count() if cuda_ok else 0
         device_name = torch.cuda.get_device_name(0) if cuda_ok and cuda_count > 0 else "CPU"
 
-        if hw["profile"] == "nvidia_cuda":
+        if hw["profile"] == "nvidia_cuda" and require_pytorch:
             if cuda_ok:
                 compatible, desc = check_torch_cuda_compatibility(hw)
                 if not compatible:
@@ -710,17 +708,22 @@ def verify_installation(hw: dict) -> bool:
                     except Exception:
                         pass
                 all_ok = False
+        elif hw["profile"] == "nvidia_cuda" and not cuda_ok:
+            pr_warn(f"  [!] Optional PyTorch: {torch_ver} | CUDA is unavailable")
         else:
             pr(f"  [OK] PyTorch: {torch_ver} (Mode: {device_name})", Colors.GREEN)
     except Exception as e:
         err_str = str(e)
-        pr(f"  [ERROR] PyTorch: {e}", Colors.RED)
-        if "126" in err_str or "c10.dll" in err_str or "vcruntime" in err_str.lower():
-            pr_warn("       -> Reason: Microsoft Visual C++ 2015-2022 Redistributable (x64) is missing!")
-            pr_info("       -> Download link: https://aka.ms/vs/17/release/vc_redist.x64.exe")
-        all_ok = False
+        if require_pytorch:
+            pr(f"  [ERROR] PyTorch: {e}", Colors.RED)
+            if "126" in err_str or "c10.dll" in err_str or "vcruntime" in err_str.lower():
+                pr_warn("       -> Reason: Microsoft Visual C++ 2015-2022 Redistributable (x64) is missing!")
+                pr_info("       -> Download link: https://aka.ms/vs/17/release/vc_redist.x64.exe")
+            all_ok = False
+        else:
+            pr_warn(f"Optional PyTorch provider unavailable: {e}")
 
-    # 2. Check ONNX Runtime
+    # 2. Check optional ONNX Runtime
     try:
         import onnxruntime as ort
         providers = ort.get_available_providers()
@@ -735,13 +738,25 @@ def verify_installation(hw: dict) -> bool:
             pr(f"  [OK] ONNX Runtime: {ort.__version__} | Providers: {prov_str}", Colors.GREEN)
     except Exception as e:
         err_str = str(e)
-        pr(f"  [ERROR] ONNX Runtime: {e}", Colors.RED)
-        if "126" in err_str or "onnxruntime_pybind11_state" in err_str:
-            pr_warn("       -> Reason: Microsoft Visual C++ 2015-2022 Redistributable (x64) is missing!")
-            pr_info("       -> Download link: https://aka.ms/vs/17/release/vc_redist.x64.exe")
-        all_ok = False
+        if require_inference:
+            pr(f"  [ERROR] ONNX Runtime: {e}", Colors.RED)
+            if "126" in err_str or "onnxruntime_pybind11_state" in err_str:
+                pr_warn("       -> Reason: Microsoft Visual C++ 2015-2022 Redistributable (x64) is missing!")
+                pr_info("       -> Download link: https://aka.ms/vs/17/release/vc_redist.x64.exe")
+            all_ok = False
+        else:
+            pr_warn(f"Optional ONNX Runtime provider unavailable: {e}")
 
-    # 3. Check OpenCV
+    # 3. Check optional OpenVINO for the selected Intel inference profile
+    if require_openvino or (hw["profile"] == "intel_openvino" and require_inference):
+        try:
+            import openvino
+            pr(f"  [OK] OpenVINO: {openvino.__version__}", Colors.GREEN)
+        except Exception as e:
+            pr(f"  [ERROR] OpenVINO: {e}", Colors.RED)
+            all_ok = False
+
+    # 4. Check OpenCV
     try:
         import cv2
         pr(f"  [OK] OpenCV: {cv2.__version__}", Colors.GREEN)
@@ -749,15 +764,18 @@ def verify_installation(hw: dict) -> bool:
         pr(f"  [ERROR] OpenCV: {e}", Colors.RED)
         all_ok = False
 
-    # 4. Check Ultralytics YOLO
+    # 5. Check optional Ultralytics YOLO
     try:
         import ultralytics
         pr(f"  [OK] Ultralytics YOLO: {ultralytics.__version__}", Colors.GREEN)
     except Exception as e:
-        pr(f"  [ERROR] Ultralytics: {e}", Colors.RED)
-        all_ok = False
+        if require_ultralytics:
+            pr(f"  [ERROR] Ultralytics: {e}", Colors.RED)
+            all_ok = False
+        else:
+            pr_warn(f"Optional Ultralytics provider unavailable: {e}")
 
-    # 5. Check Flask and Flask-SocketIO
+    # 6. Check Flask and Flask-SocketIO
     try:
         import flask
         import flask_socketio
@@ -831,6 +849,32 @@ def main():
     parser = argparse.ArgumentParser(description="Automated CVCounter installer")
     parser.add_argument("--profile", choices=["nvidia_cuda", "amd_directml", "intel_openvino", "cpu"],
                         help="Force specific hardware profile")
+    parser.add_argument(
+        "--with-pytorch",
+        action="store_true",
+        help="Install the optional hardware-appropriate PyTorch runtime",
+    )
+    parser.add_argument(
+        "--with-inference",
+        action="store_true",
+        help="Install the optional ONNX Runtime/OpenVINO provider for the selected hardware profile",
+    )
+    parser.add_argument(
+        "--with-ultralytics",
+        action="store_true",
+        help="Install optional PyTorch and Ultralytics support for .pt models/training",
+    )
+    parser.add_argument(
+        "--provider",
+        action="append",
+        choices=("onnxruntime", "openvino", "opencv", "pytorch", "ultralytics"),
+        default=[],
+        metavar="PROVIDER",
+        help=(
+            "Install or select a built-in provider; repeat to select multiple "
+            "(onnxruntime, openvino, opencv, pytorch, ultralytics)"
+        ),
+    )
     parser.add_argument("--reinstall", action="store_true", help="Reinstall even existing packages")
     parser.add_argument("--no-color", action="store_true", help="Disable colored output")
     args = parser.parse_args()
@@ -870,22 +914,64 @@ def main():
     sanitize_pip_config()
     run_pip(["install", "--upgrade", "pip", "setuptools", "wheel"], "Upgrading core build tools")
 
-    # Step 4: Install hardware-accelerated PyTorch
-    pr_step(4, 6, "Installing hardware-accelerated PyTorch")
-    install_hardware_pytorch(hw, reinstall=args.reinstall)
+    # Step 4: Install optional PyTorch provider only when explicitly requested.
+    selected_providers = set(args.provider)
+    require_pytorch = (
+        args.with_pytorch
+        or args.with_ultralytics
+        or bool(selected_providers & {"pytorch", "ultralytics"})
+    )
+    require_ultralytics = args.with_ultralytics or "ultralytics" in selected_providers
+    pr_step(4, 6, "Installing optional PyTorch/Ultralytics providers")
+    if require_pytorch:
+        pytorch_ok = install_hardware_pytorch(hw, reinstall=args.reinstall)
+    else:
+        pr_info(
+            "Skipping optional PyTorch installation "
+            "(use --with-pytorch, --with-ultralytics, or --provider)"
+        )
+        pytorch_ok = True
 
     # Step 5: Install inference backend and project dependencies
-    pr_step(5, 6, "Installing ONNX Runtime, Ultralytics, and dependencies")
-    install_inference_backend(hw)
-    install_core_dependencies(hw)
-    install_ultralytics()
+    pr_step(5, 6, "Installing inference runtime and Core dependencies")
+    require_inference = args.with_inference or "onnxruntime" in selected_providers
+    require_openvino = "openvino" in selected_providers
+    inference_ok = True
+    if args.with_inference:
+        inference_ok = install_inference_backend(hw) and inference_ok
+    elif require_inference:
+        inference_ok = install_onnxruntime(hw) and inference_ok
+    else:
+        pr_info(
+            "Skipping optional ONNX Runtime/OpenVINO installation "
+            "(use --with-inference or --provider onnxruntime/openvino)"
+        )
+    if require_openvino and not (
+            args.with_inference and hw["profile"] == "intel_openvino"
+    ):
+        inference_ok = install_openvino() and inference_ok
+    if "opencv" in selected_providers:
+        pr_info("OpenCV DNN is included with Core; no additional provider package is needed.")
+    core_ok = install_core_dependencies()
+    ultralytics_ok = True
+    if require_ultralytics and pytorch_ok:
+        ultralytics_ok = install_ultralytics()
+    elif require_ultralytics:
+        ultralytics_ok = False
 
     # Step 6: Setup configuration and storage directories
     pr_step(6, 6, "Configuring project settings and storage directories")
     setup_configuration_and_storage(hw)
 
     # Final verification
-    success = verify_installation(hw)
+    success = verify_installation(
+        hw,
+        require_pytorch=require_pytorch,
+        require_ultralytics=require_ultralytics,
+        require_inference=require_inference,
+        require_openvino=require_openvino,
+    )
+    success = success and pytorch_ok and ultralytics_ok and inference_ok and core_ok
     sys.exit(0 if success else 1)
 
 

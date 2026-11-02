@@ -106,9 +106,51 @@ def get_gpu_info() -> Dict[str, Any]:
     return info
 
 
+def get_export_provider_capabilities(
+        gpu_info: Optional[Dict[str, Any]] = None,
+        yolo_provider: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Dict[str, Any]]:
+    """Describe installed export paths without implying all models are compatible."""
+    gpu = gpu_info or get_gpu_info()
+    if yolo_provider is None:
+        from system.object_detection.registry import get_provider_status
+        yolo_provider = get_provider_status('yolo')
+
+    capabilities = {}
+    for export_format, dependencies, hardware_required in (
+            ('onnx', ('onnx',), False),
+            ('engine', ('tensorrt',), True),
+    ):
+        reasons = []
+        if not yolo_provider.get('available'):
+            reasons.append(yolo_provider.get('error') or 'Ultralytics exporter is unavailable')
+        missing_export_dependencies = [
+            name for name in dependencies if not is_package_installed(name)
+        ]
+        if missing_export_dependencies:
+            reasons.append(
+                f"Missing export dependencies: {', '.join(missing_export_dependencies)}"
+            )
+        if hardware_required and not gpu.get('has_nvidia_gpu'):
+            reasons.append('An NVIDIA GPU is required')
+
+        capabilities[export_format] = {
+            'format': export_format,
+            'extension': f'.{export_format}',
+            'exporter': 'ultralytics',
+            'supported': True,
+            'available': not reasons,
+            'requirements': ['torch', 'ultralytics', *dependencies]
+                + (['NVIDIA GPU'] if hardware_required else []),
+            'reasons': reasons,
+        }
+    return capabilities
+
+
 def get_runtime_status() -> Dict[str, Any]:
     """Get full status of inference runtimes and hardware."""
     gpu = get_gpu_info()
+    from system.object_detection.registry import get_provider_status, get_provider_statuses
 
     # ONNX & ONNX Runtime
     onnx_installed = is_package_installed('onnx')
@@ -170,13 +212,19 @@ def get_runtime_status() -> Dict[str, Any]:
         'openvino': {'installed': openvino_installed, 'version': openvino_version},
     }
 
-    can_export_onnx = bool(ultralytics_installed and onnx_installed)
-    can_export_engine = bool(ultralytics_installed and trt_installed and gpu['has_nvidia_gpu'])
+    export_capabilities = get_export_provider_capabilities(
+        gpu,
+        get_provider_status('ultralytics'),
+    )
+    can_export_onnx = export_capabilities['onnx']['available']
+    can_export_engine = export_capabilities['engine']['available']
     can_run_engine = bool(trt_installed and gpu['has_nvidia_gpu'])
 
     return {
         'gpu': gpu,
         'packages': packages_status,
+        'providers': get_provider_statuses(),
+        'export_capabilities': export_capabilities,
         'onnx': {
             'export_ready': can_export_onnx,
             'inference_ready': ort_installed,

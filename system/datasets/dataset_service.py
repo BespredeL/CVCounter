@@ -29,8 +29,12 @@ from system.datasets.importers import (
     import_uploaded_files,
     import_yolo_labels_to_store,
 )
-from system.training.yolo_trainer import CFG_DIR, setup_directories
-from system.utils.paths import ensure_dir, get_project_root, resolve_project_path
+from system.utils.paths import (
+    ensure_dir,
+    get_project_root,
+    resolve_project_path,
+    resolve_training_paths,
+)
 from system.utils.utils import slug
 
 VALID_TASKS = ('detect', 'segment', 'classify', 'pose')
@@ -186,8 +190,8 @@ class DatasetService:
         Returns:
             list[str]: The classes from the YAML file
         """
-        setup_directories(self.project_root)
-        yaml_path = CFG_DIR / f'{self._safe_name(name)}.yaml'
+        cfg_dir = resolve_training_paths(self.project_root)[0]
+        yaml_path = cfg_dir / f'{self._safe_name(name)}.yaml'
         if not yaml_path.is_file():
             return []
         if yaml is None:
@@ -840,7 +844,6 @@ class DatasetService:
         Returns:
             dict[str, Any]: The export results
         """
-        setup_directories(self.project_root)
         meta = self.load_meta(name)
         classes = meta.get('classes') or []
         task = meta.get('task', 'detect')
@@ -866,7 +869,8 @@ class DatasetService:
                     dest_l.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(label_src, dest_l)
 
-        cfg_path = CFG_DIR / f'{self._safe_name(name)}.yaml'
+        cfg_dir = resolve_training_paths(self.project_root)[0]
+        cfg_path = cfg_dir / f'{self._safe_name(name)}.yaml'
         write_data_yaml(root, classes, cfg_path, task)
         return {
             'yaml': str(cfg_path),
@@ -889,7 +893,8 @@ class DatasetService:
         self.export_for_training(name)
         root = self.root(name)
         zip_path = root / f'{self._safe_name(name)}_yolo.zip'
-        cfg_path = CFG_DIR / f'{self._safe_name(name)}.yaml'
+        cfg_dir = resolve_training_paths(self.project_root)[0]
+        cfg_path = cfg_dir / f'{self._safe_name(name)}.yaml'
 
         with zipfile.ZipFile(zip_path, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
             if cfg_path.is_file():

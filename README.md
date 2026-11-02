@@ -80,8 +80,21 @@ flowchart LR
 
 > **Опции установщика (`install.py`):**
 > - `--profile [nvidia_cuda|amd_directml|intel_openvino|cpu]` — принудительный выбор аппаратного профиля
+> - `--with-inference` — дополнительно установить ONNX Runtime/OpenVINO для выбранного профиля
+> - `--with-pytorch` — дополнительно установить PyTorch для ML-провайдеров, которым он нужен
+> - `--with-ultralytics` — дополнительно установить PyTorch и Ultralytics для моделей `.pt` и обучения
+> - `--provider <name>` — выбрать встроенный provider; флаг можно повторять для нескольких: `onnxruntime`, `openvino`, `opencv`, `pytorch`, `ultralytics`
 > - `--reinstall` — принудительная переустановка зависимостей
 > - `--no-color` — отключение цветного вывода в терминале
+
+По умолчанию установщик ставит только Core, без PyTorch, Ultralytics, ONNX Runtime
+и OpenVINO. Для ONNX Runtime/OpenVINO используйте `--with-inference`. Отсутствие
+этих optional providers не считается ошибкой Core installation.
+Для `.pt`-моделей, авторазметки и обучения YOLO используйте `--with-ultralytics`.
+Отдельные runtime providers можно выбрать, например, командами
+`python install.py --provider onnxruntime` или
+`python install.py --provider onnxruntime --provider openvino`.
+OpenCV DNN уже входит в Core и не требует отдельной установки.
 
 ---
 
@@ -109,6 +122,10 @@ flowchart LR
    ```bash
    pip install -r requirements.txt
    ```
+   *(Опционально)* Для инференса через ONNX Runtime CPU:
+   ```bash
+   pip install -r requirements-onnxruntime.txt
+   ```
    *(Опционально)* Для работы с весами `.pt` и обучения YOLO:
    ```bash
    pip install -r requirements-ultralytics.txt
@@ -116,6 +133,10 @@ flowchart LR
    *(Опционально)* Для аппаратного ускорения Intel OpenVINO:
    ```bash
    pip install -r requirements-openvino.txt
+   ```
+   *(Опционально)* Для ONNX export/optimization:
+   ```bash
+   pip install -r requirements-onnx-export.txt
    ```
 
 4. **Подготовьте файл конфигурации:**
@@ -137,6 +158,13 @@ flowchart LR
 git clone https://github.com/BespredeL/CVCounter.git
 cd CVCounter
 docker-compose up --build
+```
+
+Эта команда сохраняет прежний NVIDIA/CUDA deployment. Для Core-образа без
+PyTorch/Ultralytics используйте отдельную конфигурацию:
+
+```bash
+docker compose -f docker-compose.core.yml up --build
 ```
 
 ---

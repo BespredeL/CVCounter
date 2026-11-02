@@ -317,6 +317,13 @@ def get_model_metadata(weights: str | Path) -> Dict[str, Any]:
         'classes_source': source,
         'format': path.suffix.lower().lstrip('.'),
     }
+    from system.object_detection.model_spec import (
+        check_provider_compatibility,
+        resolve_model_spec,
+    )
+    model_spec = resolve_model_spec(path)
+    info['model_spec'] = model_spec.to_dict()
+    info['provider_compatibility'] = check_provider_compatibility(model_spec)
 
     if path.suffix.lower() == '.onnx':
         try:

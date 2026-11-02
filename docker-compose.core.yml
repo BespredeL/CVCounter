@@ -1,0 +1,22 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.core
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config:/app/config
+      - ./langs:/app/langs
+      - ./storage:/app/storage
+    environment:
+      - FLASK_ENV=production
+    networks:
+      - app_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+networks:
+  app_network:
+    driver: bridge

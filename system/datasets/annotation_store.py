@@ -5,7 +5,10 @@
 # Website: https://bespredel.name
 
 from __future__ import annotations
+import copy
 import json
+import os
+import tempfile
 import uuid
 from pathlib import Path
 from typing import Any, Optional
@@ -18,7 +21,7 @@ class AnnotationStore:
         self.root = Path(dataset_root)
         self.ann_dir = self.root / 'annotations'
         self.ann_dir.mkdir(parents=True, exist_ok=True)
-        self._cache: dict[str, tuple[float, dict[str, Any]]] = {}
+        self._cache: dict[str, tuple[int, int, dict[str, Any]]] = {}
 
     @staticmethod
     def empty_doc(image_name: str, width: int = 0, height: int = 0) -> dict[str, Any]:
@@ -90,23 +93,25 @@ class AnnotationStore:
         path = self.path_for(image_name)
         if not path.is_file():
             return self.empty_doc(image_name)
+        stat = path.stat()
+        cached = self._cache.get(image_name)
+        if cached and cached[:2] == (stat.st_mtime_ns, stat.st_size):
+            return copy.deepcopy(cached[2])
         try:
-            mtime = path.stat().st_mtime
-            cached = self._cache.get(image_name)
-            if cached and cached[0] == mtime:
-                return dict(cached[1])
-            with open(path, encoding='utf-8') as fh:
-                data = json.load(fh) or {}
-            data.setdefault('image', image_name)
-            data.setdefault('width', 0)
-            data.setdefault('height', 0)
-            data.setdefault('image_label', None)
-            data.setdefault('shapes', [])
-            data.setdefault('keypoints', [])
-            self._cache[image_name] = (mtime, data)
-            return dict(data)
-        except Exception:
-            return self.empty_doc(image_name)
+            with path.open(encoding='utf-8') as fh:
+                data = json.load(fh)
+        except (OSError, json.JSONDecodeError) as exc:
+            raise ValueError(f"Could not read annotation '{path}': {exc}") from exc
+        if not isinstance(data, dict):
+            raise ValueError(f"Annotation '{path}' must contain a JSON object")
+        data.setdefault('image', image_name)
+        data.setdefault('width', 0)
+        data.setdefault('height', 0)
+        data.setdefault('image_label', None)
+        data.setdefault('shapes', [])
+        data.setdefault('keypoints', [])
+        self._cache[image_name] = (stat.st_mtime_ns, stat.st_size, copy.deepcopy(data))
+        return data
 
     def save(self, image_name: str, doc: dict[str, Any]) -> Path:
         """
@@ -120,16 +125,32 @@ class AnnotationStore:
             Path: The path for the saved annotation file
         """
         path = self.path_for(image_name)
-        payload = dict(doc)
+        if not isinstance(doc, dict):
+            raise TypeError('Annotation document must be a dictionary')
+        payload = copy.deepcopy(doc)
         payload['image'] = image_name
         payload.setdefault('shapes', [])
         payload.setdefault('keypoints', [])
-        with open(path, 'w', encoding='utf-8') as fh:
-            json.dump(payload, fh, ensure_ascii=False, indent=2)
+        temp_path: Optional[Path] = None
         try:
-            self._cache[image_name] = (path.stat().st_mtime, dict(payload))
-        except Exception:
-            pass
+            with tempfile.NamedTemporaryFile(
+                mode='w',
+                encoding='utf-8',
+                dir=self.ann_dir,
+                prefix=f'.{path.stem}.',
+                suffix='.tmp',
+                delete=False,
+            ) as fh:
+                temp_path = Path(fh.name)
+                json.dump(payload, fh, ensure_ascii=False, indent=2)
+                fh.flush()
+                os.fsync(fh.fileno())
+            os.replace(temp_path, path)
+        finally:
+            if temp_path is not None and temp_path.exists():
+                temp_path.unlink()
+        stat = path.stat()
+        self._cache[image_name] = (stat.st_mtime_ns, stat.st_size, copy.deepcopy(payload))
         return path
 
     def delete(self, image_name: str) -> bool:

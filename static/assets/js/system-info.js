@@ -88,6 +88,7 @@
             const pkgs = r.packages || {};
             const onnx = r.onnx || {};
             const trt = r.tensorrt || {};
+            const exportCapabilities = r.export_capabilities || {};
 
             let cardsHtml = '';
 
@@ -125,8 +126,22 @@
 
             // 2. ONNX & ONNX Runtime
             const onnxSlimPkg = pkgs.onnxslim || {};
+            const onnxPkg = pkgs.onnx || {};
             const ortPkg = pkgs.onnxruntime || {};
-            const onnxExportReady = onnx.export_ready;
+            const onnxExportCapability = exportCapabilities.onnx || {};
+            const onnxExportReady = onnxExportCapability.available !== undefined
+                ? onnxExportCapability.available
+                : onnx.export_ready;
+            const onnxExportReason = (onnxExportCapability.reasons || []).join('; ');
+            const ultralyticsExporterAvailable = (r.providers || []).some(provider =>
+                provider.id === 'ultralytics' && provider.available
+            );
+            const canInstallOnnxTools = !onnxExportReady
+                && ultralyticsExporterAvailable
+                && !onnxPkg.installed;
+            const onnxToolsButtonLabel = onnxExportReady
+                ? t('Update ONNX Tools')
+                : (canInstallOnnxTools ? t('Install ONNX Tools') : t('Exporter unavailable'));
             cardsHtml += `
                 <div class="col-12 col-md-6 col-xl-3">
                     <div class="card h-100 border rounded-3 p-3 d-flex flex-column" style="background: var(--cv-surface-elevated, #1e2128); border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
@@ -142,8 +157,9 @@
                         <div class="mb-3">
                             <div class="small mb-1 text-body-secondary d-flex align-items-center gap-1">
                                 <span>${escapeHtml(t('Export Tools'))}:</span>
-                                <span class="badge ${onnxExportReady ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-danger-subtle text-danger border border-danger-subtle'}">
-                                    ${escapeHtml(onnxExportReady ? t('Ready') : t('Missing onnx'))}
+                                <span class="badge ${onnxExportReady ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-danger-subtle text-danger border border-danger-subtle'}"
+                                      ${onnxExportReason ? 'title="' + escapeHtml(onnxExportReason) + '"' : ''}>
+                                    ${escapeHtml(onnxExportReady ? t('Ready') : t('Unavailable'))}
                                 </span>
                                 ${onnxSlimPkg.installed ? '<span class="badge bg-body-tertiary border text-body-secondary font-monospace" style="font-size: 0.7rem;">slim</span>' : ''}
                             </div>
@@ -155,9 +171,11 @@
                             </div>
                         </div>
                         <div class="pt-2 border-top mt-auto" style="border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
-                            <button type="button" class="btn btn-outline-primary btn-sm w-100 btn-install-bundle d-inline-flex align-items-center justify-content-center gap-2" data-bundle="onnx_export">
+                            <button type="button" class="btn btn-outline-primary btn-sm w-100 btn-install-bundle d-inline-flex align-items-center justify-content-center gap-2"
+                                    data-bundle="onnx_export" ${!onnxExportReady && !canInstallOnnxTools ? 'disabled' : ''}
+                                    ${onnxExportReason ? 'title="' + escapeHtml(onnxExportReason) + '"' : ''}>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" class="bi bi-download"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></svg>
-                                <span>${escapeHtml(onnxExportReady ? t('Update ONNX Tools') : t('Install ONNX Tools'))}</span>
+                                <span>${escapeHtml(onnxToolsButtonLabel)}</span>
                             </button>
                         </div>
                     </div>
@@ -167,7 +185,11 @@
             // 3. TensorRT (.engine)
             const trtPkg = pkgs.tensorrt || {};
             const trtSupported = trt.supported_on_hardware;
-            const trtReady = trt.export_ready;
+            const trtExportCapability = exportCapabilities.engine || {};
+            const trtReady = trtExportCapability.available !== undefined
+                ? trtExportCapability.available
+                : trt.export_ready;
+            const trtExportReason = (trtExportCapability.reasons || []).join('; ');
             cardsHtml += `
                 <div class="col-12 col-md-6 col-xl-3">
                     <div class="card h-100 border rounded-3 p-3 d-flex flex-column" style="background: var(--cv-surface-elevated, #1e2128); border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
@@ -187,7 +209,7 @@
                             <p class="small mb-0 text-body-secondary">
                                 ${escapeHtml(t('Status'))}: 
                                 <strong class="${trtReady ? 'text-success' : (trtSupported ? 'text-warning' : 'text-secondary')}">
-                                    ${escapeHtml(trtReady ? t('Ready for Engine Export') : (trtSupported ? t('Requires tensorrt package') : t('NVIDIA GPU required')))}
+                                    ${escapeHtml(trtReady ? t('Ready for Engine Export') : (trtExportReason || (trtSupported ? t('Requires tensorrt package') : t('NVIDIA GPU required'))))}
                                 </strong>
                             </p>
                         </div>
@@ -229,6 +251,47 @@
                     </div>
                 </div>
             `;
+
+            const builtInProviders = r.providers || [];
+            if (builtInProviders.length) {
+                const providerRows = builtInProviders.map(provider => {
+                    const available = Boolean(provider.available);
+                    const statusLabel = available ? t('Available') : t('Unavailable');
+                    const dependencies = Object.entries(provider.dependencies || {})
+                        .filter(([, installed]) => !installed)
+                        .map(([name]) => name);
+                    const capabilities = provider.capabilities || {};
+                    const capabilityLabels = [
+                        ...(capabilities.tasks || []),
+                        ...(capabilities.architectures || []),
+                        ...(capabilities.formats || [])
+                    ];
+                    const details = provider.error || (dependencies.length
+                        ? t('Missing dependencies') + ': ' + dependencies.join(', ')
+                        : '');
+                    return `
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 py-2 border-bottom">
+                            <div>
+                                <span class="fw-semibold">${escapeHtml(provider.id || t('Provider'))}</span>
+                                <span class="badge ms-2 ${available ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle'}">${escapeHtml(statusLabel)}</span>
+                                ${details ? `<div class="small text-body-secondary mt-1">${escapeHtml(details)}</div>` : ''}
+                            </div>
+                            <div class="d-flex flex-wrap justify-content-end gap-1">
+                                ${capabilityLabels.map(label => `<span class="badge bg-body-tertiary border text-body-secondary">${escapeHtml(label)}</span>`).join('')}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                cardsHtml += `
+                    <div class="col-12">
+                        <div class="card h-100 border rounded-3 p-3" style="background: var(--cv-surface-elevated, #1e2128); border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
+                            <div class="fw-bold mb-1">${escapeHtml(t('Built-in inference providers'))}</div>
+                            <div class="small text-body-secondary mb-2">${escapeHtml(t('Provider availability is independent; a missing optional provider does not disable the others.'))}</div>
+                            ${providerRows}
+                        </div>
+                    </div>
+                `;
+            }
 
             runtimesContainer.innerHTML = cardsHtml;
 

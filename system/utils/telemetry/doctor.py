@@ -199,6 +199,8 @@ class DoctorMixin:
             else:
                 accel_status = 'warning'
                 accel_details.append('PyTorch CPU-only (CUDA not available)')
+        except ImportError:
+            accel_details.append('PyTorch runtime not installed (optional)')
         except Exception as e:
             accel_details.append(f'PyTorch: {e}')
 
@@ -215,7 +217,26 @@ class DoctorMixin:
             'details': '; '.join(accel_details) if accel_details else 'CPU only',
         })
 
-        # 7. Model inference benchmark
+        # 7. Inference provider availability
+        from system.object_detection.registry import get_provider_statuses
+        provider_statuses = get_provider_statuses()
+        provider_details = []
+        provider_load_errors = False
+        for provider in provider_statuses:
+            detail = f"{provider['id']}: {provider['status']}"
+            if provider.get('error'):
+                detail += f" ({provider['error']})"
+            provider_details.append(detail)
+            provider_load_errors |= provider['status'] == 'error'
+
+        checks.append({
+            'id': 'inference_providers',
+            'title': 'Inference providers',
+            'status': 'warning' if provider_load_errors else 'info',
+            'details': '; '.join(provider_details) or 'No inference providers registered',
+        })
+
+        # 8. Model inference benchmark
         benchmark_status = 'ok'
         benchmark_detail = 'Inference ready'
         try:
@@ -263,7 +284,7 @@ class DoctorMixin:
             'details': benchmark_detail,
         })
 
-        # 8. Camera network reachability
+        # 9. Camera network reachability
         cam_status = 'ok'
         cam_details = []
 
@@ -323,7 +344,7 @@ class DoctorMixin:
             'details': '; '.join(cam_details),
         })
 
-        # 9. Video recording codecs
+        # 10. Video recording codecs
         codecs_status = 'ok'
         codecs_detail = 'MP4V codec supported'
         try:
@@ -351,7 +372,7 @@ class DoctorMixin:
             'details': codecs_detail,
         })
 
-        # 10. System time sync & Telemetry connectivity
+        # 11. System time sync & Telemetry connectivity
         telemetry_status = 'ok'
         telemetry_detail = 'Ready'
         time_sync_status = 'ok'
@@ -411,7 +432,7 @@ class DoctorMixin:
             'details': telemetry_detail,
         })
 
-        # 11. Video counters status
+        # 12. Video counters status
         counters_count = 0
         running_count = 0
         if runtime_context:
@@ -588,4 +609,3 @@ class DoctorMixin:
             pass
 
         return info
-

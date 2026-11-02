@@ -3,13 +3,14 @@
 #   pip install -r requirements.txt
 #
 # Optional plugins:
+#   - ONNX Runtime CPU inference:
+#       pip install -r requirements-onnxruntime.txt
 #   - Ultralytics YOLO (.pt models & training, AGPL-3.0):
 #       pip install -r requirements-ultralytics.txt
 #   - OpenVINO acceleration (Apache-2.0):
 #       pip install -r requirements-openvino.txt
-#
-# To manually install requirements with CUDA run:
-#   pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu118
+#   - ONNX export/optimization tools:
+#       pip install -r requirements-onnx-export.txt
 #
 
 # Core Web & App -----------------------------
@@ -30,17 +31,7 @@ mysql-connector-python==9.3
 Werkzeug==3.1.*
 pyyaml==6.0.3
 
-# Core Inference (MIT License) ----------------
-# Standard CPU / DirectML:
-onnxruntime>=1.17.0
-# Or for NVIDIA CUDA GPU:
-# onnxruntime-gpu==1.20.1
-
-# Export & Optimization -----------------------
-# coremltools>=7.0  # CoreML export
-onnx==1.17  # ONNX export
-onnxsim==0.4.36  # ONNX simplifier
-onnxslim==0.1.57  # ONNX simplifier
+# Optional Export & Optimization --------------
 # tensorrt==8.6.1 # TensorRT export (requires TensorRT SDK / wheels)
 # nvidia-pyindex  # TensorRT export
 # nvidia-tensorrt  # TensorRT export
