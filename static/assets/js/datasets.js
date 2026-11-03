@@ -733,6 +733,18 @@
         pollIntervalStatus(initialCamLoc);
     }
 
+    /* --- Training Provider Selection --- */
+    function providerId() {
+        return document.getElementById('train-provider')?.value || 'ultralytics';
+    }
+
+    const selectProvider = document.getElementById('train-provider');
+    selectProvider?.addEventListener('change', () => {
+        const url = new URL(window.location.href);
+        url.searchParams.set('provider', selectProvider.value);
+        window.location.href = url.toString();
+    });
+
     /* --- Base Model Download Handler --- */
     function updateDownloadButtonState() {
         const select = document.getElementById('train-base-model');
@@ -783,7 +795,7 @@
         try {
             const data = await api('/datasets/api/models/base/download', {
                 method: 'POST',
-                json: { model_name: modelName },
+                json: { model_name: modelName, provider: providerId() },
             });
             if (data.status === 'ok') {
                 if (statusEl) statusEl.textContent = data.message || `${t('Downloading')} ${modelName}...`;
@@ -1262,6 +1274,7 @@
             const data = await api(`/datasets/api/${name}/train`, {
                 method: 'POST',
                 json: {
+                    provider: providerId(),
                     base_model: document.getElementById('train-base-model').value,
                     epochs: Number(document.getElementById('train-epochs').value),
                     imgsz: Number(document.getElementById('train-imgsz').value),

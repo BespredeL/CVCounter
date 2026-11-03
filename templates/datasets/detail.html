@@ -85,7 +85,7 @@
                 <div class="d-flex flex-wrap gap-2 align-items-center">
                     <a class="btn btn-outline-secondary d-flex align-items-center gap-1 shadow-sm"
                        href="{{ url_for('datasets.api_export_zip', name=dataset.name) }}"
-                       title="{{ trans('Download YOLO ZIP archive') }}">
+                       title="{{ trans('Download YOLO + COCO ZIP archive') }}">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-file-earmark-zip" viewBox="0 0 16 16"><path d="M5 7.5a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v.938l.4 1.599a1 1 0 0 1-.416 1.074l-.93.62a1 1 0 0 1-1.11 0l-.929-.62a1 1 0 0 1-.415-1.074L5 8.438zm2 0H6v.938a1 1 0 0 1-.03.243l-.4 1.598.93.62.929-.62-.4-1.598A1 1 0 0 1 7 8.438z"/><path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1h-2v1h-1v1h1v1h-1v1h1v1H6V5H5V4h1V3H5V2h1V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5z"/></svg>
                         <span>{{ trans('Export ZIP') }}</span>
                     </a>
@@ -132,7 +132,7 @@
                                 {% elif dataset.unlabeled and dataset.unlabeled > 0 and dataset.labeled < 10 %}
                                     {{ trans('Step 2: Annotate objects') }}
                                 {% elif dataset.labeled and dataset.labeled >= 10 %}
-                                    {{ trans('Step 3: Ready for YOLO training') }}
+                                    {{ trans('Step 3: Ready for model training') }}
                                 {% else %}
                                     {{ trans('Dataset Status') }}
                                 {% endif %}
@@ -146,7 +146,7 @@
                             {% elif dataset.unlabeled and dataset.unlabeled > 0 and dataset.labeled < 10 %}
                                 {{ trans('Annotate at least 10-20 frames to teach the neural network your objects, or use Auto-label AI.') }}
                             {% elif dataset.labeled and dataset.labeled >= 10 %}
-                                {{ trans('{n} frames labeled! You can now start training your custom YOLO model.').replace('{n}', dataset.labeled|string) }}
+                                {{ trans('{n} frames labeled! You can now start training your custom model.').replace('{n}', dataset.labeled|string) }}
                             {% else %}
                                 {{ trans('Typical workflow: Collect frames → Annotate → Train model → Apply to counter.') }}
                             {% endif %}
@@ -246,7 +246,7 @@
                 <button class="nav-link d-flex align-items-center gap-2" id="tab-btn-train"
                         data-bs-toggle="tab" data-bs-target="#tab-train" type="button">
                     <span class="badge rounded-circle bg-body-secondary text-body step-badge-num">3</span>
-                    <span>{{ trans('3. YOLO Training') }}</span>
+                    <span>{{ trans('3. Model Training') }}</span>
                 </button>
             </li>
             <li class="nav-item">
@@ -741,7 +741,7 @@
             </div>
 
             <!-- ========================================== -->
-            <!-- TAB 3: YOLO TRAINING                      -->
+            <!-- TAB 3: MODEL TRAINING                      -->
             <!-- ========================================== -->
             <div class="tab-pane fade" id="tab-train">
                 <div class="row g-3">
@@ -749,9 +749,30 @@
                         <div class="cv-card shadow-sm h-100">
                             <div class="card-header fw-semibold">{{ trans('Training setup') }}</div>
                             <div class="card-body">
+                                <!-- Training provider selection -->
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold mb-1" for="train-provider">{{ trans('Training provider') }}</label>
+                                    <select class="form-select shadow-sm" id="train-provider">
+                                        {% for p in training_providers %}
+                                            <option value="{{ p.id }}" {% if p.id == training_provider_id %}selected{% endif %}>
+                                                {{ p.id }}{% if not p.available %} — {{ trans('dependencies missing') }}{% endif %}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">
+                                        {{ trans('Dataset format') }}: {{ training_provider.capabilities.dataset_formats|join(', ') }}
+                                        · {{ trans('Exports') }}: {{ training_provider.capabilities.export_formats|join(', ') or trans('None') }}
+                                    </div>
+                                </div>
+
                                 {% if not training_provider.available or training_catalog_error %}
                                     <div class="alert alert-secondary small py-2 mb-3" role="status">
-                                        {{ training_catalog_error or trans('YOLO training is unavailable. Install the optional PyTorch and Ultralytics dependencies to enable training.') }}
+                                        {{ training_catalog_error or trans('Training is unavailable for this provider. Install its optional dependencies to enable training.') }}
+                                    </div>
+                                {% endif %}
+                                {% if training_provider.available and not training_provider.capabilities.export_formats %}
+                                    <div class="alert alert-info small py-2 mb-3" role="status">
+                                        {{ trans('This provider trains weights but cannot export a deployable model file yet.') }}
                                     </div>
                                 {% endif %}
                                 <div class="alert alert-warning small py-2 mb-3" id="gpu-warning">
@@ -866,8 +887,9 @@
                                                     <label class="form-label small mb-1" for="train-export">{{ trans('Export') }}</label>
                                                     <select class="form-select form-select-sm" id="train-export">
                                                         <option value="">{{ trans('None') }}</option>
-                                                        <option value="onnx">onnx</option>
-                                                        <option value="engine">engine</option>
+                                                        {% for fmt in training_provider.capabilities.export_formats %}
+                                                            <option value="{{ fmt }}">{{ fmt }}</option>
+                                                        {% endfor %}
                                                     </select>
                                                 </div>
                                             </div>
@@ -924,7 +946,7 @@
                                 </div>
                                 <div>
                                     <h5 class="fw-bold mb-0">{{ trans('Apply weights to counter detector') }}</h5>
-                                    <span class="text-body-secondary small">{{ trans('Deploy your freshly trained custom YOLO weights into an active counter detector.') }}</span>
+                                    <span class="text-body-secondary small">{{ trans('Deploy your freshly trained custom weights into an active counter detector.') }}</span>
                                 </div>
                             </div>
                             <div class="card-body p-4">
