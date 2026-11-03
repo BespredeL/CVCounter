@@ -16,7 +16,7 @@ import numpy as np
 
 from system.detection.interface import IDetector, ModelInfo
 from system.detection.result import Detection, DetectionFrameResult
-from system.utils.exception_handler import ModelLoadingError, ModelNotFoundError
+from system.detection.exceptions import ModelLoadingError, ModelNotFoundError
 
 COCO_CLASSES_80 = {
     0: "person", 1: "bicycle", 2: "car", 3: "motorcycle", 4: "airplane", 5: "bus",
@@ -118,10 +118,10 @@ class RFDETRAdapter(IDetector):
             raise ModelLoadingError(f"Failed to initialize RF-DETR model from '{weights}': {e}") from e
 
     def _load_onnx(self, weights_path: str) -> None:
-        from system.inference.onnx_backend import ONNXBackend
-        backend = ONNXBackend(device=self.device)
-        backend.load(weights_path)
-        self._onnx_session = backend
+        from system.detection.backends.onnx import ONNXSession
+        session = ONNXSession()
+        session.load(weights_path, device=self.device)
+        self._onnx_session = session
         self.backend = "onnx"
 
     def unload(self) -> None:
@@ -185,7 +185,8 @@ class RFDETRAdapter(IDetector):
 
         if self._onnx_session is not None:
             # Process via ONNX Runtime
-            from system.object_detection.utils import create_blob, parse_detr_outputs
+            from system.detection.transforms import create_blob
+            from system.detection.postprocessing import parse_detr_outputs
             blob = create_blob(image, self.input_size, {"resize": "letterbox"})
             outputs = self._onnx_session.predict(blob)
             boxes, confs, clss = parse_detr_outputs(
@@ -195,7 +196,7 @@ class RFDETRAdapter(IDetector):
                 image_shape=(h, w),
                 classes_list=self.classes_list,
                 num_classes=len(self.classes_map),
-                output_names=self._onnx_session._output_names,
+                output_names=self._onnx_session.output_names,
             )
             for i in range(len(boxes)):
                 cid = int(clss[i])
@@ -259,6 +260,11 @@ class RFDETRAdapter(IDetector):
         result.suppress_duplicates(iou_threshold=0.6)
         return result
 
+    # Contract aliases
+    load_model = load
+    detect = predict
+    model_info = get_model_info
+
     def export_onnx(self, output_path: str, input_size: Optional[tuple[int, int]] = None) -> str:
         """Export loaded RF-DETR model to ONNX format."""
         if self.model is None:
@@ -287,3 +293,4 @@ class RFDETRAdapter(IDetector):
             dynamic_axes={"images": {0: "batch"}, "boxes": {0: "batch"}, "scores": {0: "batch"}},
         )
         return str(out)
+

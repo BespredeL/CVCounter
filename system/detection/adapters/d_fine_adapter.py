@@ -17,7 +17,7 @@ import numpy as np
 from system.detection.interface import IDetector, ModelInfo
 from system.detection.result import Detection, DetectionFrameResult
 from system.detection.adapters.rf_detr_adapter import COCO_CLASSES_80
-from system.utils.exception_handler import ModelLoadingError, ModelNotFoundError
+from system.detection.exceptions import ModelLoadingError, ModelNotFoundError
 
 
 class DFINEAdapter(IDetector):
@@ -97,10 +97,10 @@ class DFINEAdapter(IDetector):
             raise ModelLoadingError(f"Failed to load D-FINE checkpoint from '{weights}': {e}") from e
 
     def _load_onnx(self, weights_path: str) -> None:
-        from system.inference.onnx_backend import ONNXBackend
-        backend = ONNXBackend(device=self.device)
-        backend.load(weights_path)
-        self._onnx_session = backend
+        from system.detection.backends.onnx import ONNXSession
+        session = ONNXSession()
+        session.load(weights_path, device=self.device)
+        self._onnx_session = session
         self.backend = "onnx"
 
     def unload(self) -> None:
@@ -164,7 +164,8 @@ class DFINEAdapter(IDetector):
         detections: list[Detection] = []
 
         if self._onnx_session is not None:
-            from system.object_detection.utils import create_blob, parse_detr_outputs
+            from system.detection.transforms import create_blob
+            from system.detection.postprocessing import parse_detr_outputs
             blob = create_blob(image, self.input_size, {"resize": "letterbox"})
             outputs = self._onnx_session.predict(blob)
             boxes, confs, clss = parse_detr_outputs(
@@ -174,7 +175,7 @@ class DFINEAdapter(IDetector):
                 image_shape=(h, w),
                 classes_list=self.classes_list,
                 num_classes=len(self.classes_map),
-                output_names=self._onnx_session._output_names,
+                output_names=self._onnx_session.output_names,
             )
             for i in range(len(boxes)):
                 cid = int(clss[i])
@@ -279,6 +280,11 @@ class DFINEAdapter(IDetector):
         result.suppress_duplicates(iou_threshold=0.6)
         return result
 
+    # Contract aliases
+    load_model = load
+    detect = predict
+    model_info = get_model_info
+
     def export_onnx(self, output_path: str, input_size: Optional[tuple[int, int]] = None) -> str:
         """Export loaded D-FINE PyTorch model to ONNX."""
         if self.model is None or not hasattr(self.model, "eval"):
@@ -301,3 +307,4 @@ class DFINEAdapter(IDetector):
             dynamic_axes={"images": {0: "batch"}, "boxes": {0: "batch"}, "scores": {0: "batch"}},
         )
         return str(out)
+

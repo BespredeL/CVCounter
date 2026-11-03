@@ -130,14 +130,26 @@ class DetectionFrameResult:
             return np.empty((0,), dtype=int)
         return np.array([d.class_id for d in self.detections], dtype=int)
 
+    def to_tracker_array(self) -> np.ndarray:
+        """
+        Return (N, 6) numpy array [x1, y1, x2, y2, score, class_id]
+        ready for direct passing to trackers (ByteTrack, Sort).
+        """
+        if not self.detections:
+            return np.empty((0, 6), dtype=np.float32)
+        arr = np.empty((len(self.detections), 6), dtype=np.float32)
+        for i, d in enumerate(self.detections):
+            arr[i, 0] = d.x1
+            arr[i, 1] = d.y1
+            arr[i, 2] = d.x2
+            arr[i, 3] = d.y2
+            arr[i, 4] = d.confidence
+            arr[i, 5] = float(d.class_id)
+        return arr
+
     def to_legacy(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Convert to legacy CVCounter detector tuple: (boxes_xyxy, confidences, classes)."""
         return self.boxes_xyxy, self.confidences, self.classes
-
-    def to_batch(self):
-        """Convert to legacy DetectionBatch."""
-        from system.object_detection.base_object_detection import DetectionBatch
-        return DetectionBatch(self.boxes_xyxy, self.confidences, self.classes)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -296,3 +308,4 @@ def _calc_iou(b1: Detection, b2: Detection) -> float:
     if union <= 0.0:
         return 0.0
     return inter_area / union
+

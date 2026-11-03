@@ -16,7 +16,7 @@ import numpy as np
 from system.detection.interface import IDetector, ModelInfo
 from system.detection.result import Detection, DetectionFrameResult
 from system.detection.adapters.rf_detr_adapter import COCO_CLASSES_80
-from system.utils.exception_handler import ModelLoadingError, ModelNotFoundError
+from system.detection.exceptions import ModelLoadingError, ModelNotFoundError
 
 
 class RTMDetAdapter(IDetector):
@@ -72,7 +72,9 @@ class RTMDetAdapter(IDetector):
 
         if not self.config_path or not Path(self.config_path).is_file():
             # Search for default configs if available
-            cand = Path(f"configs/models/rtmdet/rtmdet_{self.variant}_8xb32-300e_coco.py")
+            cand = Path(f"config/models/rtmdet/rtmdet_{self.variant}_8xb32-300e_coco.py")
+            if not cand.is_file():
+                cand = Path(f"configs/models/rtmdet/rtmdet_{self.variant}_8xb32-300e_coco.py")
             if cand.is_file():
                 self.config_path = str(cand)
             else:
@@ -91,10 +93,10 @@ class RTMDetAdapter(IDetector):
             raise ModelLoadingError(f"Failed to load RTMDet model: {e}") from e
 
     def _load_onnx(self, weights_path: str) -> None:
-        from system.inference.onnx_backend import ONNXBackend
-        backend = ONNXBackend(device=self.device)
-        backend.load(weights_path)
-        self._onnx_session = backend
+        from system.detection.backends.onnx import ONNXSession
+        session = ONNXSession()
+        session.load(weights_path, device=self.device)
+        self._onnx_session = session
         self.backend = "onnx"
 
     def unload(self) -> None:
@@ -160,7 +162,8 @@ class RTMDetAdapter(IDetector):
 
         if self._onnx_session is not None:
             # Process via ONNX Runtime (compatible with MMDeploy RTMDet ONNX export)
-            from system.object_detection.utils import create_blob, parse_yolo_outputs
+            from system.detection.transforms import create_blob
+            from system.detection.postprocessing import parse_yolo_outputs
             blob = create_blob(image, self.input_size, {"resize": "letterbox"})
             outputs = self._onnx_session.predict(blob)
 
@@ -230,3 +233,9 @@ class RTMDetAdapter(IDetector):
         )
         result.clip_to_image()
         return result
+
+    # Contract aliases
+    load_model = load
+    detect = predict
+    model_info = get_model_info
+
