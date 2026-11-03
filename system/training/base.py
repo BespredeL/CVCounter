@@ -57,6 +57,7 @@ class TrainingRequest:
     img_size: int
     batch: int
     device: str | int
+    provider: str = ''
     export_format: Optional[str] = None
     project_root: Optional[Path] = None
     run_dir: Optional[Path] = None
@@ -122,39 +123,25 @@ class BaseTrainingProvider(ABC):
         """Directory holding the training artifacts of this provider."""
         return self.directories(project_root)[2]
 
-    def list_runs(self, task: str = 'detect', project_root: Optional[Path | str] = None) -> list[dict[str, Any]]:
-        """
-        List finished runs that produced loadable weights.
-
-        Args:
-            task (str): Task folder inside the runs directory
-            project_root (Optional[Path | str]): Project root override
-
-        Returns:
-            list[dict[str, Any]]: Run descriptors
-        """
-        task_dir = self.runs_dir(project_root) / task
-        if not task_dir.is_dir():
-            return []
-        runs = []
-        for path in sorted(task_dir.iterdir(), reverse=True):
-            for candidate in ('weights/best.pt', 'weights/model_final.pt',
-                              'weights/best.pth', 'weights/model_final.pth'):
-                weights = path / candidate
-                if weights.is_file():
-                    runs.append({
-                        'provider': self.id,
-                        'name': path.name,
-                        'task': task,
-                        'weights': str(weights),
-                        'mtime': weights.stat().st_mtime,
-                    })
-                    break
-        return runs
-
     def base_models(self) -> list[dict[str, Any]]:
         """Return the base checkpoints this provider can start from."""
         return []
+
+    def curated_models(self) -> dict[str, Any]:
+        """Return the provider's downloadable start checkpoints by filename."""
+        return {}
+
+    def supports_base_model(self, model_name: str) -> bool:
+        """
+        Whether this provider can fetch a checkpoint of this name.
+
+        Args:
+            model_name (str): Checkpoint filename
+
+        Returns:
+            bool: True when the name is in the downloadable catalog
+        """
+        return model_name in self.curated_models()
 
     def download_base_model(self, model_name: str, progress_callback=None) -> Path:
         """

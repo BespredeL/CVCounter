@@ -33,6 +33,7 @@ class BuiltinTrainingProvider:
     export_formats: tuple[str, ...]
     architectures: tuple[str, ...] = ()
     optional_dependencies: tuple[str, ...] = ()
+    install_provider: str = ''
 
 
 _BUILTIN_TRAINING_PROVIDERS = (
@@ -46,6 +47,7 @@ _BUILTIN_TRAINING_PROVIDERS = (
         ('yolo',),
         ('onnx', 'engine'),
         ('yolo',),
+        install_provider='ultralytics',
     ),
     BuiltinTrainingProvider(
         'torchvision',
@@ -55,8 +57,45 @@ _BUILTIN_TRAINING_PROVIDERS = (
         ('torch', 'torchvision'),
         ('detect',),
         ('coco',),
-        ('onnx',),
+        (),
         ('fasterrcnn',),
+        install_provider='pytorch',
+    ),
+    BuiltinTrainingProvider(
+        'rf_detr',
+        ('rf_detr', 'rfdetr', 'rf-detr'),
+        'system.training.adapters.rf_detr_trainer',
+        'RFDETRTrainingProvider',
+        ('torch',),
+        ('detect',),
+        ('coco', 'yolo'),
+        ('onnx',),
+        ('rf_detr',),
+        install_provider='rfdetr',
+    ),
+    BuiltinTrainingProvider(
+        'd_fine',
+        ('d_fine', 'dfine', 'd-fine'),
+        'system.training.adapters.d_fine_trainer',
+        'DFINETrainingProvider',
+        ('torch',),
+        ('detect',),
+        ('coco', 'yolo'),
+        ('onnx',),
+        ('d_fine',),
+        install_provider='pytorch',
+    ),
+    BuiltinTrainingProvider(
+        'rtmdet',
+        ('rtmdet', 'rtm-det'),
+        'system.training.adapters.rtmdet_trainer',
+        'RTMDetTrainingProvider',
+        ('torch',),
+        ('detect',),
+        ('coco', 'yolo'),
+        ('onnx',),
+        ('rtmdet',),
+        install_provider='mmdet',
     ),
 )
 _TRAINING_PROVIDER_BY_ALIAS = {
@@ -136,6 +175,7 @@ def get_provider_status(provider: Optional[str]) -> dict[str, Any]:
         'aliases': list(definition.aliases),
         'status': status,
         'available': status == 'available',
+        'install_provider': definition.install_provider,
         'dependencies': dependency_status,
         'optional_dependencies': optional_status,
         'capabilities': {
@@ -173,7 +213,7 @@ def load_provider(provider: Optional[str]) -> BaseTrainingProvider:
         raise RuntimeError(
             f"Training provider '{definition.id}' is unavailable; "
             f"missing dependencies: {', '.join(missing)}. "
-            f"Install them with `python install.py --provider {definition.id}`."
+            f"Install them with `python install.py --provider {definition.install_provider}`."
         )
 
     try:
@@ -271,15 +311,89 @@ def provider_paths(
     return resolve_provider_training_paths(definition.id, project_root)
 
 
+RUN_WEIGHT_NAMES = (
+    'weights/best.pt',
+    'weights/model_final.pt',
+    'weights/best.pth',
+    'weights/model_final.pth',
+)
+
+
+def list_runs(
+        provider: Optional[str] = None,
+        task: str = 'detect',
+        project_root: Optional[Path | str] = None,
+) -> list[dict[str, Any]]:
+    """
+    List finished runs of a provider without importing its framework.
+
+    Args:
+        provider (Optional[str]): Provider id or alias
+        task (str): Task folder inside the runs directory
+        project_root (Optional[Path | str]): Project root override
+
+    Returns:
+        list[dict[str, Any]]: Run descriptors
+    """
+    definition = get_provider_definition(provider)
+    task_dir = provider_paths(definition.id, project_root)[2] / task
+    if not task_dir.is_dir():
+        return []
+
+    runs = []
+    for path in sorted(task_dir.iterdir(), reverse=True):
+        for candidate in RUN_WEIGHT_NAMES:
+            weights = path / candidate
+            if weights.is_file():
+                runs.append({
+                    'provider': definition.id,
+                    'name': path.name,
+                    'task': task,
+                    'weights': str(weights),
+                    'mtime': weights.stat().st_mtime,
+                })
+                break
+    return runs
+
+
+def find_run_weights(
+        run_name: str,
+        task: str = 'detect',
+        provider: Optional[str] = None,
+        project_root: Optional[Path | str] = None,
+) -> Optional[Path]:
+    """
+    Locate the primary checkpoint of one finished run.
+
+    Args:
+        run_name (str): Name of the training run
+        task (str): Task folder inside the runs directory
+        provider (Optional[str]): Provider id or alias
+        project_root (Optional[Path | str]): Project root override
+
+    Returns:
+        Optional[Path]: The checkpoint path when it exists
+    """
+    definition = get_provider_definition(provider)
+    run_dir = provider_paths(definition.id, project_root)[2] / task / run_name.removesuffix('.yaml')
+    for candidate in RUN_WEIGHT_NAMES:
+        weights = run_dir / candidate
+        if weights.is_file():
+            return weights
+    return None
+
+
 __all__ = [
     'BuiltinTrainingProvider',
     'DEFAULT_TRAINING_PROVIDER',
     'TrainingRequest',
     'TrainingResult',
     'check_training_compatibility',
+    'find_run_weights',
     'get_provider_definition',
     'get_provider_status',
     'get_provider_statuses',
+    'list_runs',
     'load_provider',
     'provider_paths',
     'resolve_provider_id',

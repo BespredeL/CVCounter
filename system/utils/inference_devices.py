@@ -58,6 +58,13 @@ def normalize_device(value: Any, model_type: Any = None) -> int | str:
         lowered = text.lower()
         if lowered in (DEVICE_CPU, DEVICE_AUTO):
             return lowered
+        if lowered == "cuda":
+            return 0
+        if lowered.startswith("cuda:"):
+            try:
+                return int(lowered.split(":", 1)[1])
+            except ValueError:
+                pass
         if lowered in ACCELERATOR_DEVICES and str(model_type or '').lower() in ACCELERATOR_MODEL_TYPES:
             return lowered
 

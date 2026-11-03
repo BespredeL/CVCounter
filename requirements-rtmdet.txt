@@ -8,3 +8,4 @@
 #
 # Alternatively, use exported RTMDet .onnx models with ONNX Runtime without building mmcv.
 openmim>=0.3.9
+

@@ -116,6 +116,25 @@ class UltralyticsTrainingProvider(BaseTrainingProvider):
 
         return yolo_trainer.get_available_base_models()
 
+    def curated_models(self) -> dict[str, Any]:
+        """Return the curated Ultralytics start checkpoints."""
+        from system.training import yolo_trainer
+
+        return yolo_trainer.OFFICIAL_BASE_MODELS
+
+    def supports_base_model(self, model_name: str) -> bool:
+        """
+        Whether Ultralytics can fetch this checkpoint name.
+
+        Args:
+            model_name (str): Checkpoint filename
+
+        Returns:
+            bool: True for curated names and any other '.pt' weight
+        """
+        clean_name = Path(model_name).name
+        return clean_name in self.curated_models() or clean_name.endswith('.pt')
+
     def download_base_model(self, model_name: str, progress_callback=None) -> Path:
         """
         Download an official Ultralytics checkpoint.

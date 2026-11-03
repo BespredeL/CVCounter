@@ -123,3 +123,4 @@ class RTMDetTrainingProvider(BaseTrainingProvider):
             return exported_path
         except Exception as e:
             raise RuntimeError(f"RTMDet ONNX export failed: {e}")
+

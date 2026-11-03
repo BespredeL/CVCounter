@@ -143,3 +143,4 @@ class RFDETRTrainingProvider(BaseTrainingProvider):
             return exported_path
         except Exception as e:
             raise RuntimeError(f"RF-DETR ONNX export failed: {e}")
+

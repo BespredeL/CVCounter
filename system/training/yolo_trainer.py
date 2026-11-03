@@ -12,17 +12,14 @@ from typing import Callable, Iterable, Optional
 
 import yaml
 
+from system.training.base import TrainingCancelledError
+from system.utils.downloads import download_file
 from system.utils.paths import (
     ensure_dir,
     get_project_root,
     resolve_training_paths as _resolve_training_paths,
     set_project_root,
 )
-
-
-class TrainingCancelledError(RuntimeError):
-    """Raised when training is cancelled by the user."""
-    pass
 
 
 DEFAULT_BASE_MODEL = 'yolo11n.pt'
@@ -238,108 +235,6 @@ def get_base_model_download_candidates(clean_name: str) -> list[str]:
     return urls
 
 
-def _download_file_requests(
-        url: str,
-        tmp_path: Path,
-        clean_name: str,
-        progress_callback: Optional[Callable[[dict], None]] = None,
-) -> bool:
-    import requests
-    import urllib3
-    urllib3.disable_warnings()
-
-    # Try with verify=True first, fall back to verify=False if certificate issue
-    for verify_ssl in (True, False):
-        try:
-            with requests.get(
-                url,
-                stream=True,
-                timeout=(10, 60),
-                verify=verify_ssl,
-                headers={'User-Agent': 'Mozilla/5.0 (CVCounterWEB Auto-Downloader)'}
-            ) as response:
-                if response.status_code != 200:
-                    return False
-                total_size = int(response.headers.get('Content-Length') or 0)
-                downloaded = 0
-                chunk_size = 128 * 1024
-                last_reported = 0
-
-                with open(tmp_path, 'wb') as out_f:
-                    for chunk in response.iter_content(chunk_size=chunk_size):
-                        if not chunk:
-                            continue
-                        out_f.write(chunk)
-                        downloaded += len(chunk)
-                        if total_size > 0:
-                            pct = int((downloaded / total_size) * 100)
-                            if pct >= last_reported + 5 or downloaded == total_size:
-                                last_reported = pct
-                                if progress_callback:
-                                    progress_callback({
-                                        'status': 'downloading',
-                                        'model': clean_name,
-                                        'model_name': clean_name,
-                                        'percent': pct,
-                                        'progress': pct,
-                                        'downloaded': downloaded,
-                                        'total': total_size,
-                                        'message': f'Downloading {clean_name}: {pct}%',
-                                    })
-                if total_size > 0 and downloaded < int(total_size * 0.95):
-                    raise IOError(f"Incomplete download: {downloaded}/{total_size} bytes")
-                return True
-        except requests.exceptions.SSLError:
-            if verify_ssl:
-                continue
-            raise
-        except Exception:
-            raise
-    return False
-
-
-def _download_file_urllib(
-        url: str,
-        tmp_path: Path,
-        clean_name: str,
-        progress_callback: Optional[Callable[[dict], None]] = None,
-) -> bool:
-    import urllib.request
-    req = urllib.request.Request(
-        url,
-        headers={'User-Agent': 'Mozilla/5.0 (CVCounterWEB Auto-Downloader)'}
-    )
-    with urllib.request.urlopen(req, timeout=30) as response:
-        total_size = int(response.headers.get('Content-Length') or 0)
-        downloaded = 0
-        chunk_size = 128 * 1024
-        last_reported = 0
-
-        with open(tmp_path, 'wb') as out_f:
-            while True:
-                chunk = response.read(chunk_size)
-                if not chunk:
-                    break
-                out_f.write(chunk)
-                downloaded += len(chunk)
-                if total_size > 0:
-                    pct = int((downloaded / total_size) * 100)
-                    if pct >= last_reported + 5 or downloaded == total_size:
-                        last_reported = pct
-                        if progress_callback:
-                            progress_callback({
-                                'status': 'downloading',
-                                'model': clean_name,
-                                'model_name': clean_name,
-                                'percent': pct,
-                                'progress': pct,
-                                'downloaded': downloaded,
-                                'total': total_size,
-                                'message': f'Downloading {clean_name}: {pct}%',
-                            })
-    return True
-
-
 def download_base_model(
         model_name: str,
         progress_callback: Optional[Callable[[dict], None]] = None,
@@ -395,49 +290,14 @@ def download_base_model(
     candidate_urls = get_base_model_download_candidates(clean_name)
     logger.info(f"Downloading base model '{clean_name}' from candidates: {candidate_urls}")
 
-    if progress_callback:
-        progress_callback({
-            'status': 'starting',
-            'model': clean_name,
-            'model_name': clean_name,
-            'percent': 0,
-            'progress': 0,
-            'message': f'Starting download of {clean_name}...',
-        })
-
-    tmp_path = dest_path.with_suffix('.pt.tmp')
     last_error: Optional[Exception] = None
-
-    # Try downloading via requests across candidate mirrors
-    for url in candidate_urls:
-        try:
-            logger.info(f"Attempting download of {clean_name} from: {url}")
-            success = _download_file_requests(url, tmp_path, clean_name, progress_callback)
-            if not success:
-                success = _download_file_urllib(url, tmp_path, clean_name, progress_callback)
-            if success and tmp_path.is_file() and tmp_path.stat().st_size > 1024 * 1024:
-                if dest_path.is_file():
-                    dest_path.unlink()
-                tmp_path.rename(dest_path)
-                logger.info(f"Successfully downloaded base model: {dest_path}")
-                if progress_callback:
-                    progress_callback({
-                        'status': 'done',
-                        'model': clean_name,
-                        'model_name': clean_name,
-                        'percent': 100,
-                        'progress': 100,
-                        'message': f'Successfully downloaded {clean_name}',
-                    })
-                return dest_path
-        except Exception as exc:
-            logger.warning(f"Download candidate {url} failed: {exc}")
-            last_error = exc
-            if tmp_path.is_file():
-                try:
-                    tmp_path.unlink()
-                except Exception:
-                    pass
+    try:
+        download_file(candidate_urls, dest_path, clean_name, progress_callback)
+        logger.info(f'Successfully downloaded base model: {dest_path}')
+        return dest_path
+    except Exception as exc:
+        logger.warning(f'Mirror download failed for {clean_name}: {exc}')
+        last_error = exc
 
     # Fallback to Ultralytics built-in downloader
     logger.info(f"Trying Ultralytics fallback for {clean_name}...")

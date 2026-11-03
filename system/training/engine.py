@@ -142,6 +142,9 @@ class TrainingEngine:
 
             cancel_evt = threading.Event()
 
+            def on_progress(event: dict[str, Any]) -> None:
+                self._handle_job_progress(job_id, event)
+
             request = TrainingRequest(
                 config_name=f"{architecture}_{dataset_name}",
                 dataset_name=dataset_name,
@@ -159,6 +162,7 @@ class TrainingEngine:
                 export_format=export_format,
                 project_root=self.project_root,
                 options=req_options,
+                progress_callback=on_progress,
                 cancel_check=lambda: cancel_evt.is_set(),
             )
 
@@ -202,30 +206,31 @@ class TrainingEngine:
         with self._lock:
             return [job.to_dict() for job in self._jobs.values()]
 
+    def _handle_job_progress(self, job_id: str, event: dict[str, Any]) -> None:
+        job = self._jobs.get(job_id)
+        if not job:
+            return
+        evt_type = event.get("event")
+        if evt_type == "epoch_end":
+            job.progress.epoch = int(event.get("epoch", job.progress.epoch))
+            job.progress.total_epochs = int(event.get("epochs", job.request.epochs))
+            if job.progress.total_epochs > 0:
+                job.progress.percent = round((job.progress.epoch / job.progress.total_epochs) * 100.0, 1)
+            metrics = event.get("metrics") or {}
+            job.progress.metrics = metrics
+            job.progress.current_loss = float(metrics.get("loss", metrics.get("train/loss", 0.0)))
+            job.progress.current_mAP = float(metrics.get("mAP50", metrics.get("metrics/mAP50(B)", 0.0)))
+            job.logs.append(
+                f"Epoch {job.progress.epoch}/{job.progress.total_epochs} - loss: {job.progress.current_loss:.4f}, mAP50: {job.progress.current_mAP:.4f}"
+            )
+        elif evt_type == "log":
+            msg = str(event.get("message", ""))
+            job.logs.append(msg)
+            job.progress.message = msg
+
     def _run_job_worker(self, job: TrainingJob) -> None:
         job.started_at = time.time()
         job.state = JobState.RUNNING
-
-        def on_progress(event: dict[str, Any]) -> None:
-            evt_type = event.get("event")
-            if evt_type == "epoch_end":
-                job.progress.epoch = int(event.get("epoch", job.progress.epoch))
-                job.progress.total_epochs = int(event.get("epochs", job.request.epochs))
-                if job.progress.total_epochs > 0:
-                    job.progress.percent = round((job.progress.epoch / job.progress.total_epochs) * 100.0, 1)
-                metrics = event.get("metrics") or {}
-                job.progress.metrics = metrics
-                job.progress.current_loss = float(metrics.get("loss", metrics.get("train/loss", 0.0)))
-                job.progress.current_mAP = float(metrics.get("mAP50", metrics.get("metrics/mAP50(B)", 0.0)))
-                job.logs.append(
-                    f"Epoch {job.progress.epoch}/{job.progress.total_epochs} - loss: {job.progress.current_loss:.4f}, mAP50: {job.progress.current_mAP:.4f}"
-                )
-            elif evt_type == "log":
-                msg = str(event.get("message", ""))
-                job.logs.append(msg)
-                job.progress.message = msg
-
-        job.request.progress_callback = on_progress
 
         try:
             provider = self._resolve_provider(job.architecture)

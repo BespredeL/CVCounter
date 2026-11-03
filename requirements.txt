@@ -3,10 +3,18 @@
 #   pip install -r requirements.txt
 #
 # Optional plugins:
-#   - ONNX Runtime CPU inference:
+#   - ONNX Runtime inference:
 #       pip install -r requirements-onnxruntime.txt
 #   - Ultralytics YOLO (.pt models & training, AGPL-3.0):
 #       pip install -r requirements-ultralytics.txt
+#   - Roboflow RF-DETR (Apache-2.0):
+#       pip install -r requirements-rfdetr.txt
+#   - Peterande D-FINE (Apache-2.0):
+#       pip install -r requirements-dfine.txt
+#   - OpenMMLab RTMDet (Apache-2.0):
+#       pip install -r requirements-rtmdet.txt
+#   - NVIDIA TensorRT acceleration:
+#       pip install -r requirements-tensorrt.txt
 #   - OpenVINO acceleration (Apache-2.0):
 #       pip install -r requirements-openvino.txt
 #   - ONNX export/optimization tools:

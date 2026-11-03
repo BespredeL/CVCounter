@@ -1,5 +1,6 @@
 # Weights and models outside config
 *.pt
+*.pth
 *.onnx
 *.engine
 *.bin
@@ -11,6 +12,7 @@
 .idea/
 config/config.json
 config/ultralytics/
+config/torchvision/
 storage/
 *.sqlite*
 *.db

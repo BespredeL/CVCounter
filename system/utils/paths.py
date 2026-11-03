@@ -80,6 +80,32 @@ def resolve_training_paths(project_root: Optional[Path | str] = None) -> tuple[P
     )
 
 
+def resolve_provider_training_paths(
+        provider_id: str,
+        project_root: Optional[Path | str] = None,
+) -> tuple[Path, Path, Path]:
+    """
+    Resolve cfg/models/runs directories owned by one training provider.
+
+    Ultralytics keeps the historic layout (config/ultralytics with a legacy
+    config/ fallback); every other provider gets its own config/<provider> tree.
+
+    Args:
+        provider_id (str): Canonical training provider id.
+        project_root (Optional[Path | str]): Project root override.
+
+    Returns:
+        tuple[Path, Path, Path]: cfg, models and runs directories.
+    """
+    root = Path(project_root) if project_root else Path(get_project_root())
+    normalized = (provider_id or 'ultralytics').strip().lower()
+    if normalized == 'ultralytics':
+        cfg, models, runs, _ = resolve_training_paths(root)
+        return cfg, models, runs
+    provider_root = root / 'config' / normalized
+    return provider_root / 'cfg', provider_root / 'models', provider_root / 'runs'
+
+
 def resolve_project_path(relative_path: Optional[str], project_root: Optional[str] = None) -> Optional[str]:
     """
     Resolve a project path.

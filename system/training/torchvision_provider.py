@@ -342,9 +342,9 @@ class TorchVisionTrainingProvider(BaseTrainingProvider):
             if cancel_check is not None and cancel_check():
                 raise TrainingCancelledError('Training was cancelled by user')
 
-            train_loss = self._run_epoch(model, train_loader, optimizer, device, True, cancel_check)
+            train_loss = self._run_epoch(model, train_loader, optimizer, device, cancel_check)
             with torch.no_grad():
-                val_loss = self._run_epoch(model, val_loader, None, device, False, cancel_check)
+                val_loss = self._run_epoch(model, val_loader, None, device, cancel_check)
 
             scheduler.step()
             payload = {
@@ -374,27 +374,31 @@ class TorchVisionTrainingProvider(BaseTrainingProvider):
             metrics={'best_val_loss': best_loss, 'model': info['name'], 'epochs': metrics},
         )
 
-    def _run_epoch(self, model, loader, optimizer, device, training: bool, cancel_check) -> float:
+    def _run_epoch(self, model, loader, optimizer, device, cancel_check) -> float:
         """
         Run one epoch and return its mean total loss.
+
+        Detection models report losses only in training mode, so the validation pass
+        keeps that mode, skips the optimizer step, and freezes batch-norm statistics.
 
         Args:
             model: The torchvision detection model
             loader: DataLoader yielding (images, targets)
-            optimizer: Optimizer used while training
+            optimizer: Optimizer used while training; None for the validation pass
             device: Torch device
-            training (bool): Training mode flag
             cancel_check: Optional callback returning True when cancelling
 
         Returns:
             float: Mean loss over the epoch
         """
         import torch
+        from torch.nn.modules.batchnorm import _BatchNorm
 
-        if training:
-            model.train()
-        else:
-            model.eval()
+        model.train()
+        if optimizer is None:
+            for module in model.modules():
+                if isinstance(module, _BatchNorm):
+                    module.eval()
 
         total = 0.0
         batches = 0
@@ -404,7 +408,7 @@ class TorchVisionTrainingProvider(BaseTrainingProvider):
             loss_dict = model(images, targets)
             loss = torch.stack(list(loss_dict.values())).sum()
 
-            if training:
+            if optimizer is not None:
                 optimizer.zero_grad(set_to_none=True)
                 loss.backward()
                 optimizer.step()
