@@ -1,0 +1,9 @@
+# Optional plugin dependencies for NVIDIA TensorRT inference acceleration.
+#
+# Requires:
+#   - NVIDIA GPU (Pascal, Turing, Ampere, Ada Lovelace, Blackwell)
+#   - Compatible NVIDIA driver and CUDA Toolkit
+#
+# Install:
+#   pip install -r requirements-tensorrt.txt
+tensorrt>=8.6.0

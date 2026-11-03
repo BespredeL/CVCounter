@@ -1,0 +1,11 @@
+# Optional plugin dependencies for Peterande/D-FINE models (Apache-2.0).
+#
+# Install:
+#   pip install -r requirements-dfine.txt
+#
+torch>=2.2.0
+torchvision>=0.17.0
+pyyaml>=6.0.0
+scipy>=1.10.0
+onnx>=1.14.0
+onnxslim>=0.1.30

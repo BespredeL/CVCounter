@@ -1,0 +1,10 @@
+# Optional plugin dependencies for OpenMMLab RTMDet models (Apache-2.0).
+#
+# Recommended installation:
+#   pip install openmim
+#   mim install mmengine
+#   mim install "mmcv>=2.0.0"
+#   mim install mmdet
+#
+# Alternatively, use exported RTMDet .onnx models with ONNX Runtime without building mmcv.
+openmim>=0.3.9

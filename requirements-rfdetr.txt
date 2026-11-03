@@ -1,0 +1,10 @@
+# Optional plugin dependencies for Roboflow RF-DETR models (Apache-2.0).
+#
+# Install:
+#   pip install -r requirements-rfdetr.txt
+#
+# Core models (Nano, Small, Medium, Large) are Apache-2.0 licensed.
+rfdetr>=1.11.0
+supervision>=0.29.0
+transformers>=5.0.0
+pydantic>=2.0.0
