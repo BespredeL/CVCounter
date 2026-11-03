@@ -8,32 +8,32 @@ from system.utils.exception_handler import BaseError
 
 
 class DetectionError(BaseError):
-    """Базовое исключение подсистемы детекции объектов (замена ObjectDetectionError)."""
+    """Basic object detection subsystem exception (replacement for ObjectDetectionError)."""
 
     def __init__(self, message: str, errors: Optional[dict] = None, **kwargs):
         super().__init__(message, errors=errors, **kwargs)
 
 
 class ModelNotFoundError(DetectionError):
-    """Файл весов не найден или недоступен."""
+    """The scale file was not found or was not accessible."""
 
     pass
 
 
 class ModelLoadingError(DetectionError):
-    """Ошибка инициализации весов или несовместимость среды исполнения."""
+    """Scale initialization error or runtime incompatibility."""
 
     pass
 
 
 class InferenceError(DetectionError):
-    """Ошибка выполнения инференса на кадре."""
+    """Error performing inference on frame."""
 
     pass
 
 
 class UnsupportedModelFormatError(DetectionError):
-    """Попытка загрузки весов неподдерживаемого формата (Darknet .weights/.cfg, OpenVINO IR .xml)."""
+    """Attempt to load scales of unsupported format (Darknet .weights/.cfg, OpenVINO IR .xml)."""
 
     pass
 
@@ -45,3 +45,4 @@ __all__ = [
     "InferenceError",
     "UnsupportedModelFormatError",
 ]
+

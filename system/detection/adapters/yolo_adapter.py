@@ -277,3 +277,4 @@ class YOLOAdapter(IDetector):
 UltralyticsYOLOAdapter = YOLOAdapter
 
 __all__ = ["YOLOAdapter", "UltralyticsYOLOAdapter"]
+

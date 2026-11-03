@@ -34,12 +34,12 @@ Welcome to the comprehensive technical documentation for **CVCounter**!
 ### Key Capabilities:
 
 - 🎯 **Multi-Zone Counting:** Interactive visual polygon editor (arbitrary number of zones per counter, custom BGR colors, union mask logic).
-- 🔄 **ByteTrack Multi-Object Tracking:** High-accuracy tracker maintaining persistent IDs between frames to prevent double-counting.
+- 🔄 **Multi-Object Tracking:** High-accuracy tracker maintaining persistent IDs between frames to prevent double-counting.
 - 🏷️ **Per-Class Breakdown:** Real-time counters showing both total counts and current batch counts partitioned by detection classes.
 - 🎥 **Flexible Video Inputs:** RTSP/RTMP network camera streams, local webcams (USB/V4L2), and pre-recorded video files.
 - 🎬 **Event-Driven Recording:** Video clips start recording automatically upon object detection and stop following a configurable `idle_timeout`.
 - 🧠 **Multi-Engine Inference:** Seamless runtime selection between ONNX Runtime, Intel OpenVINO, OpenCV DNN, and Ultralytics YOLO.
-- 📚 **Full Dataset Workflow:** In-browser frame capture, bounding box/polygon annotation, active learning, autolabeling, YOLO training, and 1-click model weight deployment.
+- 📚 **Full Dataset Workflow:** In-browser frame capture, bounding box/polygon annotation, active learning, autolabeling, YOLO + COCO export, training through pluggable providers (Ultralytics YOLO, torchvision), and 1-click model weight deployment.
 - 📊 **Reports & Analytics:** Paginated session history, defect and manual correction logs, saved media playback, and A4 print-ready layouts with sign-off blocks.
 - 🚀 **1-Click Installer:** Cross-platform scripts (`install.bat` / `install.sh`) automatically detecting GPUs (NVIDIA CUDA, AMD DirectML, Intel Arc / OpenVINO).
 - 🛠️ **AI Runtimes Center:** In-app inspection and automated installation of missing inference libraries (CUDA, TensorRT, OpenVINO).
@@ -54,13 +54,14 @@ The system is organized into modular blueprints utilizing Flask's Application Fa
 ```
 CVCounter/
 ├── app.py                      # Application entrypoint, blueprint & socketio registration
-├── train.py                    # Standalone CLI training & export utility for YOLO
+├── train.py                    # Standalone CLI training & export for any provider
 ├── install.py                  # Cross-platform automated setup script
 ├── config/                     # Configuration files & model storage
 │   ├── config.json             # Active configuration file
 │   ├── config.example.json     # Reference default configuration
 │   ├── database.sqlite         # SQLite database (sessions, batch history)
-│   └── ultralytics/            # Ultralytics YOLO models and configs
+│   ├── ultralytics/            # Ultralytics YOLO configs, base weights and runs
+│   └── torchvision/            # torchvision configs, base weights and runs
 ├── routes/                     # Blueprint controllers
 │   ├── main.py                 # Dashboard, authentication, static pages
 │   ├── counters.py             # Counters, MJPEG streaming, zone editor, counting API
@@ -72,7 +73,7 @@ CVCounter/
 │   ├── object_detection/       # Detection backend abstractions and registry
 │   ├── managers/               # Video streams, database, notifications, training
 │   ├── datasets/               # Annotation storage and dataset services
-│   ├── training/               # Model training pipelines and export tools
+│   ├── training/               # Training provider registry, training and export
 │   └── utils/                  # I18n, telemetry, input validators, logger
 ├── static/                     # CSS, JS, fonts, and UI assets
 ├── templates/                  # Jinja2 templates
@@ -216,7 +217,7 @@ An optional `<model-stem>.manifest.json` sidecar can declare model details witho
 }
 ```
 
-Preprocessing, tensor input, output, and decoder declarations are separate so a model is not assumed compatible merely because a runtime can open its artifact. The current built-in ONNX/OpenCV/OpenVINO detection decoders are YOLO-output-specific; other architectures and tasks can be represented in a manifest, but need a compatible provider and decoder before inference is supported. Models without a manifest retain legacy routing and are reported with unknown architecture/task rather than inferred from `.onnx`. `DetectionBatch` is only a named adapter over the existing `(boxes_xyxy, confidences, classes)` tuple; the counting pipeline continues to consume the tuple unchanged.
+Preprocessing, tensor input, output, and decoder declarations are separate so a model is not assumed compatible merely because a runtime can open its artifact. Two detection decoders are built in: `yolo_outputs` parses a per-anchor matrix (including the objectness column that Darknet and YOLOv3–v5 publish) or an end-to-end `[N, 6]` tensor, and `detr_outputs` pairs the DETR/RT-DETR class logits with the box tensor and skips NMS. The ONNX Runtime and OpenVINO adapters accept either decoder, the OpenCV DNN adapter stays on `yolo_outputs` for YOLO and Darknet heads, and Ultralytics models keep returning their own result objects. The `output_contract` fields `box_format` (`xyxy`/`cxcywh`), `coordinates` (`normalized`/`input_pixels`) and `score_activation` (`sigmoid`/`softmax`) describe how a decoder reads a tensor, while `preprocessing.resize` (`letterbox`/`stretch`) decides both the input blob and how padding is removed from the boxes. Models without a manifest retain legacy routing — letterbox preprocessing and a geometry-inferred box layout — and are reported with unknown architecture/task rather than inferred from `.onnx`. `DetectionBatch` is only a named adapter over the existing `(boxes_xyxy, confidences, classes)` tuple; the counting pipeline continues to consume the tuple unchanged.
 
 ### Supported `model_type` Options:
 
@@ -455,10 +456,76 @@ The `/datasets` suite provides end-to-end tooling for custom vision models:
    - **Autolabeling:** Automated pre-annotation using standard foundation models (`Ctrl+A`);
    - **Active Learning:** Prioritizing uncertain frames to maximize training efficiency.
 4. **Model Training:**
-   - Select base models (YOLO11, YOLOv8, etc.);
+   - Select a training provider — training is not tied to any single framework;
+   - Pick a base checkpoint from the catalog the chosen provider can actually download;
    - Configure epochs, batch sizes, and image resolution;
    - Real-time training progress graphs;
-   - Deploy `best.pt` model weights to any counter with 1 click.
+   - Deploy the trained weights to any counter with 1 click.
+
+### Training Providers
+
+Training capabilities are declared, not assumed: `BuiltinTrainingProvider`
+(`system/training/registry.py`) lists the tasks, dataset formats, export formats and
+architectures a provider genuinely supports. The UI and the API only offer what a provider
+declares, so a job that asks it to export a format it cannot produce never gets queued.
+
+| Provider | Tasks | Dataset format | Export | Dependency install | License |
+|---|---|---|---|---|---|
+| `ultralytics` | `detect`, `segment`, `classify`, `pose` | `yolo` (`.txt` + `data.yaml`) | `onnx`, `engine` | `python install.py --provider ultralytics` | AGPL-3.0 |
+| `torchvision` | `detect` | `coco` (COCO JSON) | *not implemented* | `python install.py --provider pytorch` | BSD-3-Clause |
+
+- Every provider keeps its configs, base weights and runs under `config/<provider>/{cfg,models,runs}`;
+  Ultralytics keeps the historic `config/ultralytics/` layout with a fallback to the legacy
+  `config/{cfg,models,runs}`.
+- Runs are discovered without importing the framework: `list_runs()` and `find_run_weights()`
+  look for `weights/best.pt`, `weights/model_final.pt`, `weights/best.pth` and `weights/model_final.pth`.
+- `torchvision` fine-tunes Faster R-CNN (`fasterrcnn_resnet50_fpn_v2`) from COCO annotations
+  but does not yet emit a deployable model file. Its training tab shows a warning about that
+  and offers no export format.
+- The "apply weights to a camera" step only lists artifacts the detection registry can load
+  (Ultralytics `.pt`, `.onnx`, `.engine`); checkpoints from providers without export stay in
+  `/datasets/api/training/runs` and never appear in the deploy dropdown.
+
+To add your own provider, subclass `BaseTrainingProvider` (`system/training/base.py`),
+implement `train()` — the only abstract method — plus `export()`, `prepare()`,
+`base_models()`, `supports_base_model()` or `download_base_model()` as needed, then register a
+`BuiltinTrainingProvider(...)` entry in `_BUILTIN_TRAINING_PROVIDERS`. The registry imports the
+class lazily and probes dependencies with `importlib.util.find_spec`, so a missing framework
+does not break the app: the provider simply reports status `unavailable` and the UI suggests the
+install command from its `install_provider` field.
+
+### Dataset Export Formats
+
+`export_for_training(name, dataset_format)` writes one of `'yolo'`, `'coco'` or `'both'`; the
+`dataset_format` (alias `format`) parameter is accepted by the UI and by
+`POST /datasets/api/<name>/export`. The framework-neutral dataset looks like this:
+
+```
+storage/datasets/<name>/
+├── images/{train,val}/…                     # source frames
+└── coco/annotations/instances_{split}.json  # COCO detection
+```
+
+Each JSON is standard COCO detection (`categories` with 1-based `id`, `bbox [x, y, w, h]` in
+absolute pixels, `area`, plus `segmentation` for the `segment` task) extended with project keys:
+top-level `task`, `split` and `root`, and a `path` on every image entry. A provider resolves
+frames through them, falling back to three levels up from the annotation file when `root` is
+absent.
+
+### Standalone `train.py` CLI
+
+```bash
+python train.py providers
+python train.py list --provider ultralytics
+python train.py list --provider torchvision
+python train.py train --config road-map --provider ultralytics --epochs 100 --export onnx
+python train.py train --config road-map --provider torchvision --epochs 20 --imgsz 800 --batch 2
+python train.py export --config road-map --provider ultralytics --export engine
+```
+
+`--provider auto` selects the provider from the task and dataset format, `--dataset-format`
+states it explicitly, and `train.py` refuses to start a job the selected provider does not
+declare.
 
 ---
 
@@ -520,11 +587,15 @@ The `/datasets` suite provides end-to-end tooling for custom vision models:
 | `POST` | `/datasets/api/<name>/import/upload` | Upload images or ZIP archive to dataset |
 | `POST` | `/datasets/api/<name>/split` | Automatically split images into train/val subsets |
 | `GET`, `POST`| `/datasets/api/<name>/annotations/<image>` | Read or write annotations for an image |
+| `POST` | `/datasets/api/<name>/export` | Export the dataset as `yolo`, `coco` or `both` (`dataset_format`) |
+| `GET` | `/datasets/api/<name>/export-zip` | ZIP archive of the dataset in both formats |
 | `POST` | `/datasets/api/<name>/autolabel` | Batch auto-annotate dataset images |
-| `POST` | `/datasets/api/<name>/train` | Launch YOLO model training job |
+| `GET` | `/datasets/api/models/base` | Base checkpoint catalog of a provider (`?provider=`) |
+| `POST` | `/datasets/api/<name>/train` | Launch a training job (`provider`, `base_model`) |
 | `GET` | `/datasets/api/training/status` | Monitor training metrics and progress |
 | `POST` | `/datasets/api/training/cancel` | Cancel active training run |
-| `POST` | `/datasets/api/training/apply-weights` | Deploy `best.pt` weights to a camera detector |
+| `GET` | `/datasets/api/training/runs` | List finished runs (`?provider=`, `?task=`) |
+| `POST` | `/datasets/api/training/apply-weights` | Deploy trained weights to a camera detector |
 
 ---
 
@@ -586,3 +657,7 @@ Contributions, bug reports, and pull requests are warmly welcomed:
 4. Push to branch (`git push origin feature/my-feature`) and open a Pull Request.
 
 Distributed under the open-source **[GNU AGPLv3](https://github.com/BespredeL/CVCounter/blob/master/LICENSE)** license.
+
+Training providers bring their own terms: Ultralytics is **AGPL-3.0**, while PyTorch and
+torchvision are **BSD-3-Clause**. Installing only the `pytorch` provider keeps Ultralytics out
+of the training path.

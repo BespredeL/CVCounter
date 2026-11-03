@@ -14,11 +14,14 @@ CVCounter is a flexible and high-performance web-based computer vision system de
 
 ## ✨ Features
 
-- 🎯 **Detection & Tracking:** Robust ByteTrack object tracking and real-time counting across single or multiple customizable polygon zones with motion direction filtering (8 vectors).
+- 🎯 **Detection & Tracking:** Robust object tracking and real-time counting across single or multiple customizable polygon zones with motion direction filtering (8 vectors).
 - 🎥 **Video Sources:** Support for RTSP network streams, USB/webcams, and local video files, with automatic event-driven video recording.
 - 🏷️ **Classification:** Object counting broken down by classes with flexible class filtering.
-- 📚 **Dataset Management:** In-browser frame capture (from stream, ZIP upload, recordings), bounding box/polygon annotation, YOLO training, and one-click deployment of trained `best.pt` weights.
-- 🧠 **Multi-Backend Inference:** Support for ONNX Runtime, Intel OpenVINO, OpenCV DNN, and Ultralytics YOLO.
+- 📚 **Dataset Management:** In-browser frame capture (from stream, ZIP upload, recordings), bounding box/polygon annotation, YOLO + COCO export, training through pluggable training providers (Ultralytics YOLO, torchvision), and one-click deployment of trained weights.
+- 🧠 **Multi-Architecture Object Detection Platform:** Pluggable Detection Engine supporting **Ultralytics YOLO**, **Roboflow RF-DETR**, **Peterande D-FINE**, and **OpenMMLab RTMDet**, alongside generic ONNX Runtime. Read more: [`docs/multi_architecture_guide.md`](docs/multi_architecture_guide.md).
+- ⚡ **Multi-Backend Inference:** PyTorch CUDA, PyTorch CPU, ONNX Runtime (CPU/CUDA), and NVIDIA TensorRT FP16 acceleration.
+- 🏋️ **Training Engine & Fine-tuning:** Independent background training subsystem with checkpoint management (`best.pth`, `last.pth`), progress tracking, validation, and ONNX export.
+- 📁 **Dataset Engine:** Dataset validation (YOLO TXT & COCO JSON), boundary checks, sequence data leakage prevention, and lossless two-way conversion.
 - 📊 **Reports & Analytics:** Batch and shift history, class breakdowns, saved media viewer, and export/printing in A4 format.
 - 🚀 **1-Click Automated Setup:** Installer automatically detects GPUs (NVIDIA CUDA, AMD DirectML, Intel OpenVINO) and configures the environment.
 - 🛠️ **Runtime Management:** Hardware acceleration diagnostics and one-click installation of missing inference libraries directly from the UI.
@@ -47,7 +50,7 @@ CVCounter is a flexible and high-performance web-based computer vision system de
 ```mermaid
 flowchart LR
     A[Video Stream<br>RTSP / Camera / File] --> B[Object Detection<br>YOLO / ONNX / OpenVINO]
-    B --> C[ByteTrack Tracker<br>Assign Track ID]
+    B --> C[Tracker<br>Assign Track ID]
     C --> D{Zone<br>Intersection?}
     D -- Yes --> E[Record Count<br>Classes / Batches]
     E --> F[Web UI,<br>Reports & Media Storage]
@@ -55,7 +58,7 @@ flowchart LR
 
 1. **Video Ingestion:** Continuous frame reading from an IP camera, webcam, or video file.
 2. **Inference:** Object detection using the configured model and backend.
-3. **Tracking (ByteTrack):** Persistent ID assignment across frames to prevent double-counting.
+3. **Tracking:** Persistent ID assignment across frames to prevent double-counting.
 4. **Zone Monitoring:** Triggering counts when an object enters any defined polygonal zone.
 5. **Reporting & Persistence:** Live counter updates, per-class breakdown, and database persistence.
 
@@ -195,13 +198,17 @@ The built-in dataset suite lets you train custom vision models tailored to your 
 
 1. Create a dataset and add images (via browser upload, ZIP file, or automatic capture from the camera feed).
 2. Annotate images with bounding boxes or polygons.
-3. Start training directly from the UI.
-4. Apply the resulting `best.pt` model weights to any counter with a single click.
+3. Pick a training provider (Ultralytics YOLO or torchvision) and start training from the UI.
+4. Apply the resulting weights to any counter with a single click.
+
+Each dataset exports both as YOLO (`.txt` + `data.yaml`) and as framework-neutral COCO JSON
+(`storage/datasets/<name>/coco/annotations/`), so you can fine-tune outside Ultralytics too.
 
 You can also manage training via the CLI:
 ```bash
-python train.py list
-python train.py train --config my-dataset --epochs 100
+python train.py providers
+python train.py train --config my-dataset --provider ultralytics --epochs 100 --export onnx
+python train.py train --config my-dataset --provider torchvision --epochs 20
 python train.py export --config my-dataset --export onnx
 ```
 

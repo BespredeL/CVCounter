@@ -34,12 +34,12 @@
 ### Ключевые возможности:
 
 - 🎯 **Мульти-зонный подсчёт:** визуальный редактор полигональных зон (произвольное количество зон у каждого детектора, индивидуальные цвета, подсчёт по объединению масок).
-- 🔄 **Высокоточный трекинг (ByteTrack):** устойчивое отслеживание объектов между кадрами с предотвращением повторного подсчёта.
+- 🔄 **Высокоточный трекинг:** устойчивое отслеживание объектов между кадрами с предотвращением повторного подсчёта.
 - 🏷️ **Разбивка по классам:** подсчёт суммарного количества и количества в текущей партии по каждому обнаруженному классу.
 - 🎥 **Гибкие источники видео:** RTSP/RTMP-потоки IP-камер, локальные веб-камеры (USB/V4L2) и видеофайлы.
 - 🎬 **Умная видеозапись:** автоматический старт записи видео при появлении детекций и остановка по настраиваемому таймауту неактивности (`idle_timeout`).
 - 🧠 **Поддержка любых моделей:** автоматический выбор или явное указание рантайма (ONNX Runtime, Intel OpenVINO, OpenCV DNN, Ultralytics YOLO).
-- 📚 **Полный цикл работы с датасетами:** сбор кадров из потока, разметка боксов/полигонов, активное обучение (Active Learning), авторазметка, обучение YOLO и применение обученных весов в 1 клик.
+- 📚 **Полный цикл работы с датасетами:** сбор кадров из потока, разметка боксов/полигонов, активное обучение (Active Learning), авторазметка, выгрузка в YOLO и COCO, обучение через подключаемые provider-ы (Ultralytics YOLO, torchvision) и применение обученных весов в 1 клик.
 - 📊 **Отчёты и аналитика:** журнал сессий с разбивкой по партиям, брак/коррекция, просмотр сохранённых кадров и видео, печать и экспорт в A4 PDF.
 - 🚀 **1-Click установщик:** скрипт `install.bat` / `install.sh` автоматически распознаёт модель GPU (NVIDIA CUDA, AMD DirectML, Intel Arc / OpenVINO) и собирает готовое окружение.
 - 🛠️ **Управление рантаймами (AI Runtimes Center):** проверка статуса CUDA, TensorRT, OpenVINO и доустановка библиотек через веб-интерфейс.
@@ -54,13 +54,14 @@
 ```
 CVCounter/
 ├── app.py                      # Точка входа, регистрация blueprints и socketio
-├── train.py                    # Автономный CLI-скрипт обучения и экспорта YOLO
+├── train.py                    # Автономный CLI обучения и экспорта для любого provider-а
 ├── install.py                  # Универсальный кроссплатформенный установщик
 ├── config/                     # Файлы конфигурации и веса моделей
 │   ├── config.json             # Рабочий файл настроек
 │   ├── config.example.json     # Эталонный файл настроек
 │   ├── database.sqlite         # База данных SQLite (сессии, отчёты)
-│   └── ultralytics/            # Модели и конфиги Ultralytics YOLO
+│   ├── ultralytics/            # Конфиги, базовые веса и прогоны Ultralytics YOLO
+│   └── torchvision/            # Конфиги, базовые веса и прогоны torchvision
 ├── routes/                     # Модули представлений (Blueprints)
 │   ├── main.py                 # Дашборд, авторизация, статические страницы
 │   ├── counters.py             # Счётчики, видеопотоки, редактор зон, API подсчёта
@@ -72,7 +73,7 @@ CVCounter/
 │   ├── object_detection/       # Абстракции и реализации бэкендов детекции
 │   ├── managers/               # Менеджеры потоков, БД, уведомлений, обучения
 │   ├── datasets/               # Хранилище аннотаций и сервис датасетов
-│   ├── training/               # Обучение и экспорт моделей
+│   ├── training/               # Реестр training provider-ов, обучение и экспорт
 │   └── utils/                  # I18n, телеметрия, валидаторы, логгер
 ├── static/                     # CSS, JS, шрифты и иконки
 ├── templates/                  # Шаблоны Jinja2
@@ -215,7 +216,7 @@ docker-compose up --build
 }
 ```
 
-Preprocessing, входной тензор, выход и decoder описываются отдельно: загрузки артефакта runtime недостаточно, чтобы считать модель совместимой. Текущие встроенные детекторы ONNX/OpenCV/OpenVINO используют decoder для YOLO-подобных выходов. Другие архитектуры и задачи можно описать в манифесте, но для инференса им потребуется совместимый provider и decoder. Модели без манифеста сохраняют прежнюю маршрутизацию; архитектура и задача остаются неизвестными, а не выводятся из `.onnx`. `DetectionBatch` — только именованный адаптер над существующим кортежем `(boxes_xyxy, confidences, classes)`; counting pipeline продолжает получать кортеж без изменений.
+Preprocessing, входной тензор, выход и decoder описываются отдельно: загрузки артефакта runtime недостаточно, чтобы считать модель совместимой. Встроены два декодера детекции: `yolo_outputs` разбирает матрицу по якорям (в том числе с колонкой objectness у Darknet и YOLOv3–v5) либо end-to-end тензор `[N, 6]`, а `detr_outputs` соединяет пару «логиты классов + боксы» у DETR/RT-DETR и не применяет NMS. Адаптеры ONNX Runtime и OpenVINO принимают любой из них, адаптер OpenCV DNN остаётся на `yolo_outputs` для YOLO и Darknet, а модели Ultralytics продолжают возвращать собственные объекты результатов. Поля `output_contract` — `box_format` (`xyxy`/`cxcywh`), `coordinates` (`normalized`/`input_pixels`) и `score_activation` (`sigmoid`/`softmax`) — описывают чтение тензора, а `preprocessing.resize` (`letterbox`/`stretch`) задаёт и сборку входного blob, и снятие паддинга с координат. Модели без манифеста сохраняют прежнюю маршрутизацию (letterbox и определение формата боксов по геометрии); архитектура и задача остаются неизвестными, а не выводятся из `.onnx`. `DetectionBatch` — только именованный адаптер над существующим кортежем `(boxes_xyxy, confidences, classes)`; counting pipeline продолжает получать кортеж без изменений.
 
 ### Поддерживаемые значения `model_type`:
 
@@ -454,10 +455,77 @@ Preprocessing, входной тензор, выход и decoder описыва
    - **Авторазметка (Autolabel):** автоматическая предварительная разметка с помощью базовых предобученных моделей (`Ctrl+A`);
    - **Active Learning:** приоритетный отбор наиболее информативных кадров для разметки.
 4. **Обучение модели:**
-   - Выбор базовой архитектуры (YOLO11, YOLOv8 и др.);
+   - Выбор training provider-а — обучение не привязано к какому-либо фреймворку;
+   - Выбор базового чекпойнта из каталога, который выбранный provider реально умеет скачивать;
    - Настройка эпох, размера батча и разрешения входа;
    - Мониторинг прогресса обучения в реальном времени;
-   - Автоматическое применение обученных весов `best.pt` к выбранному счётчику.
+   - Автоматическое применение обученных весов к выбранному счётчику.
+
+### Провайдеры обучения
+
+Возможности обучения описаны декларативно: `BuiltinTrainingProvider`
+(`system/training/registry.py`) объявляет задачи, форматы датасетов, форматы экспорта и
+архитектуры, которые provider действительно поддерживает. Веб-интерфейс и API предлагают
+только заявленное, поэтому задача «обучить и выгрузить в формат, которого provider не
+делает» не возникает.
+
+| Provider | Задачи | Формат датасета | Экспорт | Установка зависимостей | Лицензия |
+|---|---|---|---|---|---|
+| `ultralytics` | `detect`, `segment`, `classify`, `pose` | `yolo` (`.txt` + `data.yaml`) | `onnx`, `engine` | `python install.py --provider ultralytics` | AGPL-3.0 |
+| `torchvision` | `detect` | `coco` (COCO JSON) | *не реализован* | `python install.py --provider pytorch` | BSD-3-Clause |
+
+- Каждый provider хранит конфиги, базовые веса и прогоны в `config/<provider>/{cfg,models,runs}`;
+  Ultralytics сохраняет исторический макет `config/ultralytics/` с откатом на старые
+  `config/{cfg,models,runs}`.
+- Прогоны находятся без импорта фреймворка: `list_runs()` и `find_run_weights()` перебирают
+  `weights/best.pt`, `weights/model_final.pt`, `weights/best.pth` и `weights/model_final.pth`.
+- `torchvision` дообучает Faster R-CNN (`fasterrcnn_resnet50_fpn_v2`) по COCO-аннотациям,
+  но пока не выгружает развёртываемый файл модели. Вкладка обучения показывает предупреждение
+  об этом и не предлагает ни одного формата экспорта.
+- К шагу «применить веса к камере» допускаются только артефакты, которые читает реестр
+  детекции (`.pt` Ultralytics, `.onnx`, `.engine`); чекпойнты provider-ов без экспорта
+  остаются в списке прогонов `/datasets/api/training/runs` и в выпадающий список развёртывания
+  не попадают.
+
+Свой provider: наследуйте `BaseTrainingProvider` (`system/training/base.py`), реализуйте
+единственный обязательный метод `train()` и — по необходимости — `export()`, `prepare()`,
+`base_models()`, `supports_base_model()`, `download_base_model()`, после чего добавьте
+запись `BuiltinTrainingProvider(...)` в `_BUILTIN_TRAINING_PROVIDERS`. Реестр импортирует
+класс лениво и проверяет зависимости через `importlib.util.find_spec`, поэтому отсутствующий
+фреймворк не ломает приложение: статус provider становится `unavailable`, а интерфейс
+предлагает установить его командой из поля `install_provider`.
+
+### Форматы выгрузки датасета
+
+`export_for_training(name, dataset_format)` пишет один из вариантов `'yolo'`, `'coco'` или
+`'both'`; параметр `dataset_format` (он же `format`) принимают веб-интерфейс и
+`POST /datasets/api/<name>/export`. Нейтральный датасет лежит так:
+
+```
+storage/datasets/<name>/
+├── images/{train,val}/…                     # исходные кадры
+└── coco/annotations/instances_{split}.json  # COCO detection
+```
+
+Каждый JSON — стандартный COCO detection (`categories` с `id` от 1, `bbox [x, y, w, h]` в
+абсолютных пикселях, `area`, а для `segment` ещё и `segmentation`) плюс собственные ключи:
+верхнеуровневые `task`, `split`, `root` и относительный `path` у каждой записи кадра. По ним
+provider находит изображения; если `root` отсутствует, отсчитываются три уровня вверх от
+файла аннотаций.
+
+### Автономный CLI `train.py`
+
+```bash
+python train.py providers
+python train.py list --provider ultralytics
+python train.py list --provider torchvision
+python train.py train --config road-map --provider ultralytics --epochs 100 --export onnx
+python train.py train --config road-map --provider torchvision --epochs 20 --imgsz 800 --batch 2
+python train.py export --config road-map --provider ultralytics --export engine
+```
+
+`--provider auto` выбирает provider по задаче и формату датасета, `--dataset-format` задаёт
+его явно; `train.py` отказывается запускать задачу, которую выбранный provider не объявляет.
 
 ---
 
@@ -519,11 +587,15 @@ Preprocessing, входной тензор, выход и decoder описыва
 | `POST` | `/datasets/api/<name>/import/upload` | Загрузка изображений или архива в датасет |
 | `POST` | `/datasets/api/<name>/split` | Автоматическое разделение на выборки train/val |
 | `GET`, `POST`| `/datasets/api/<name>/annotations/<image>` | Чтение и запись разметки конкретного кадра |
+| `POST` | `/datasets/api/<name>/export` | Выгрузка датасета в `yolo`, `coco` или `both` (параметр `dataset_format`) |
+| `GET` | `/datasets/api/<name>/export-zip` | ZIP-архив датасета сразу в обоих форматах |
 | `POST` | `/datasets/api/<name>/autolabel` | Пакетная авторазметка изображений моделью |
-| `POST` | `/datasets/api/<name>/train` | Запуск процесса обучения нейросети |
+| `GET` | `/datasets/api/models/base` | Каталог базовых чекпойнтов provider-а (`?provider=`) |
+| `POST` | `/datasets/api/<name>/train` | Запуск обучения: параметры `provider` и `base_model` |
 | `GET` | `/datasets/api/training/status` | Мониторинг прогресса обучения |
 | `POST` | `/datasets/api/training/cancel` | Прерывание задачи обучения |
-| `POST` | `/datasets/api/training/apply-weights` | Применение обученной модели `best.pt` к камере |
+| `GET` | `/datasets/api/training/runs` | Список завершённых прогонов (`?provider=`, `?task=`) |
+| `POST` | `/datasets/api/training/apply-weights` | Применение весов обученной модели к камере |
 
 ---
 
@@ -585,3 +657,7 @@ google-chrome --kiosk --start-fullscreen http://localhost:8080/counter/Line1
 4. Отправьте ветку на GitHub (`git push origin feature/my-feature`) и откройте PR.
 
 Проект распространяется под свободной лицензией **[GNU AGPLv3](https://github.com/BespredeL/CVCounter/blob/master/LICENSE)**.
+
+У каждого training provider-а свои условия: Ultralytics лицензирован под **AGPL-3.0**,
+PyTorch и torchvision — под **BSD-3-Clause**. Если установить только provider `pytorch`,
+Ultralytics не участвует в обучении вовсе.
