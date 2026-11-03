@@ -3,19 +3,27 @@
 
 """
 Unified Detection Engine Registry for CVCounter.
-Provides registration, factory creation, and lifecycle management for all detector adapters.
+Provides registration, factory creation, provider telemetry, and lifecycle management
+for all detector adapters.
 """
 
 from __future__ import annotations
 
-import logging
+from dataclasses import dataclass
+import importlib.util
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Type
+from typing import Any, Callable, Dict, List, Optional, Sequence, Type, Union
 
+from system.detection.exceptions import (
+    DetectionError,
+    ModelLoadingError,
+    ModelNotFoundError,
+    UnsupportedModelFormatError,
+)
 from system.detection.interface import IDetector
-from system.utils.exception_handler import ModelLoadingError
+from system.utils.logger import Logger
 
-logger = logging.getLogger("cvcounter.detection.registry")
+logger = Logger()
 
 DetectorFactory = Callable[[], IDetector]
 
@@ -37,17 +45,185 @@ _ARCHITECTURE_ALIASES: dict[str, str] = {
 }
 
 
+@dataclass(frozen=True)
+class BuiltinProvider:
+    """Declarative metadata for a built-in detection provider."""
+
+    id: str
+    aliases: tuple[str, ...]
+    dependencies: tuple[str, ...]
+    optional_dependencies: tuple[str, ...] = ()
+    tasks: tuple[str, ...] = ("object_detection",)
+    architectures: tuple[str, ...] = ()
+    formats: tuple[str, ...] = ()
+
+
+_BUILTIN_PROVIDERS: tuple[BuiltinProvider, ...] = (
+    BuiltinProvider(
+        id="ultralytics",
+        aliases=("yolo", "ultralytics"),
+        dependencies=("torch", "ultralytics"),
+        optional_dependencies=("tensorrt",),
+        tasks=("object_detection", "training", "export"),
+        architectures=("yolo",),
+        formats=(".pt", ".pth", ".engine", ".trt"),
+    ),
+    BuiltinProvider(
+        id="onnxruntime",
+        aliases=("onnx", "onnxruntime"),
+        dependencies=("onnxruntime",),
+        optional_dependencies=("onnx", "onnxslim"),
+        tasks=("object_detection",),
+        architectures=("yolo", "rf_detr", "d_fine", "rtmdet"),
+        formats=(".onnx",),
+    ),
+    BuiltinProvider(
+        id="rf_detr",
+        aliases=("rf_detr", "rfdetr", "rf-detr"),
+        dependencies=("torch",),
+        optional_dependencies=("rfdetr",),
+        tasks=("object_detection", "training"),
+        architectures=("rf_detr",),
+        formats=(".pth", ".pt", ".onnx"),
+    ),
+    BuiltinProvider(
+        id="d_fine",
+        aliases=("d_fine", "dfine", "d-fine"),
+        dependencies=("torch",),
+        optional_dependencies=(),
+        tasks=("object_detection", "training"),
+        architectures=("d_fine",),
+        formats=(".pth", ".pt", ".onnx"),
+    ),
+    BuiltinProvider(
+        id="rtmdet",
+        aliases=("rtmdet", "rtm-det"),
+        dependencies=("torch",),
+        optional_dependencies=("mmdet", "mmcv"),
+        tasks=("object_detection", "training"),
+        architectures=("rtmdet",),
+        formats=(".pth", ".onnx"),
+    ),
+)
+
+_PROVIDER_BY_ALIAS: dict[str, BuiltinProvider] = {
+    alias: provider
+    for provider in _BUILTIN_PROVIDERS
+    for alias in provider.aliases
+}
+
+
+def _has_dependency(module_name: str) -> bool:
+    """Check if a Python package or module is importable."""
+    try:
+        return importlib.util.find_spec(module_name) is not None
+    except (ImportError, ModuleNotFoundError, ValueError):
+        return False
+
+
+def is_backend_available(model_type: str) -> bool:
+    """Check if runtime dependencies for an architecture or provider are installed."""
+    norm = (model_type or "").strip().lower()
+    return get_provider_status(norm)["available"]
+
+
+def is_tensorrt_available() -> bool:
+    """Check if TensorRT is installed and usable."""
+    return _has_dependency("tensorrt")
+
+
+def get_provider_status(model_type: str) -> dict[str, Any]:
+    """Return availability and declared capabilities for one provider."""
+    normalized = (model_type or "").strip().lower()
+    provider = _PROVIDER_BY_ALIAS.get(normalized)
+    if provider is None:
+        available = normalized in _DETECTOR_REGISTRY
+        return {
+            "id": normalized,
+            "aliases": [normalized] if normalized else [],
+            "status": "available" if available else "unavailable",
+            "available": available,
+            "dependencies": {},
+            "optional_dependencies": {},
+            "capabilities": {},
+            "error": None if available else f"Unknown provider '{model_type}'",
+        }
+
+    dep_status = {dep: _has_dependency(dep) for dep in provider.dependencies}
+    opt_dep_status = {dep: _has_dependency(dep) for dep in provider.optional_dependencies}
+    missing = [name for name, installed in dep_status.items() if not installed]
+    available = len(missing) == 0
+
+    return {
+        "id": provider.id,
+        "aliases": list(provider.aliases),
+        "status": "available" if available else "unavailable",
+        "available": available,
+        "dependencies": dep_status,
+        "optional_dependencies": opt_dep_status,
+        "capabilities": {
+            "tasks": list(provider.tasks),
+            "architectures": list(provider.architectures),
+            "formats": list(provider.formats),
+        },
+        "error": f"Missing dependencies: {', '.join(missing)}" if missing else None,
+    }
+
+
+def get_provider_statuses() -> list[dict[str, Any]]:
+    """Return health and capability information for all built-in detection providers."""
+    return [get_provider_status(provider.id) for provider in _BUILTIN_PROVIDERS]
+
+
+def find_fallback_weights(weights: Optional[str]) -> Optional[str]:
+    """
+    Find an alternative weights file (.pt or .onnx) when the requested format
+    (e.g., .engine / .trt) cannot be loaded on the current system.
+    """
+    if not weights:
+        return None
+    p = Path(weights)
+    candidates: list[Path] = []
+
+    # Check same stem with .pt or .onnx
+    candidates.append(p.with_suffix(".pt"))
+    candidates.append(p.with_suffix(".onnx"))
+
+    for cand in candidates:
+        if cand.is_file():
+            return str(cand)
+
+    # Check common default models in the parent folder
+    if p.parent.is_dir():
+        for fallback_name in (
+            "yolo26n.pt",
+            "yolo11n.pt",
+            "yolov8n.pt",
+            "yolo26n.onnx",
+            "yolo11n.onnx",
+            "yolov8n.onnx",
+        ):
+            cand = p.parent / fallback_name
+            if cand.is_file():
+                return str(cand)
+
+    return None
+
+
 def register_detector(alias: str, factory: DetectorFactory) -> None:
+    """Register a factory for an architecture alias."""
     norm = alias.strip().lower()
     _DETECTOR_REGISTRY[norm] = factory
 
 
 def canonical_architecture(arch: Optional[str]) -> str:
+    """Resolve architecture alias to canonical internal name."""
     key = (arch or "ultralytics").strip().lower().replace("-", "_")
     return _ARCHITECTURE_ALIASES.get(key, key)
 
 
 def get_supported_architectures() -> list[str]:
+    """Return list of distinct supported canonical architectures."""
     return sorted(list(set(_ARCHITECTURE_ALIASES.values())))
 
 
@@ -55,21 +231,22 @@ def create_detector(architecture: str) -> IDetector:
     """Create an uninitialized detector adapter instance by architecture name."""
     canon = canonical_architecture(architecture)
 
-    # Lazy registration of built-in adapters
     if canon not in _DETECTOR_REGISTRY:
         _ensure_builtins_registered()
 
     factory = _DETECTOR_REGISTRY.get(canon)
     if factory is None:
         supported = ", ".join(get_supported_architectures())
-        raise ModelLoadingError(f"Unsupported architecture '{architecture}'. Supported architectures: {supported}")
+        raise ModelLoadingError(
+            f"Unsupported architecture '{architecture}'. Supported architectures: {supported}"
+        )
 
     return factory()
 
 
-def resolve_architecture(architecture: Optional[str], weights: Optional[str] = None) -> str:
+def resolve_architecture(architecture: Optional[str] = None, weights: Optional[str] = None) -> str:
     """
-    Resolve the intended architecture from user parameter or weights file name/extension.
+    Resolve the intended architecture from user parameter or weights filename / extension.
     """
     arch = (architecture or "").strip().lower()
     if arch and arch not in ("auto", "none", "preview"):
@@ -88,7 +265,7 @@ def resolve_architecture(architecture: Optional[str], weights: Optional[str] = N
         return "rtmdet"
 
     ext = Path(weights).suffix.lower()
-    if ext in (".pt", ".engine", ".trt"):
+    if ext in (".pt", ".pth", ".engine", ".trt"):
         return "ultralytics"
     if ext == ".onnx":
         return "onnx"
@@ -96,29 +273,100 @@ def resolve_architecture(architecture: Optional[str], weights: Optional[str] = N
     return "ultralytics"
 
 
-def load_detector(architecture: Optional[str], weights: Optional[str], **kwargs) -> Optional[IDetector]:
+def load_detector(
+    architecture: Optional[str] = None,
+    weights: Optional[str] = None,
+    **kwargs: Any,
+) -> Optional[IDetector]:
     """
     Instantiate and load a detector for the given architecture and weights.
-    Returns None if weights are empty or architecture is 'none'/'preview'.
+
+    Args:
+        architecture: Architecture alias ('yolo', 'ultralytics', 'onnx', 'rf_detr', 'd_fine', 'rtmdet')
+                      or 'auto'.
+        weights: Path to model weights file.
+        **kwargs: Runtime parameters (confidence, iou, device, providers, etc.).
+
+    Returns:
+        Loaded IDetector instance, or None if weights are empty or architecture is 'none'/'preview'.
+
+    Raises:
+        UnsupportedModelFormatError: If an obsolete format (.weights, .cfg, .xml) is passed.
+        ModelNotFoundError: If weights file does not exist.
+        ModelLoadingError: If initialization fails.
     """
+    # Backward compatibility: accept model_type as alias for architecture
+    if architecture is None and "model_type" in kwargs:
+        architecture = kwargs.pop("model_type")
+
     if not weights or str(architecture).lower() in ("none", "preview", "passthrough"):
         return None
 
-    resolved_arch = resolve_architecture(architecture, weights)
+    path = Path(weights)
+    ext = path.suffix.lower()
+
+    # Reject obsolete formats per architecture audit
+    if ext in (".weights", ".cfg", ".pb"):
+        raise UnsupportedModelFormatError(
+            f"Darknet / OpenCV format '{weights}' (.weights, .cfg) is discontinued and not supported. "
+            f"Please convert your model to ONNX (.onnx) or PyTorch (.pt) format."
+        )
+
+    if ext in (".xml", ".bin"):
+        raise UnsupportedModelFormatError(
+            f"Intel OpenVINO IR format '{weights}' (.xml, .bin) is discontinued. "
+            f"Please convert your model to ONNX format to leverage OpenVINOExecutionProvider via ONNX Runtime."
+        )
+
+    # TensorRT engine check and automatic fallback
+    if ext in (".engine", ".trt") and not is_tensorrt_available():
+        fallback = find_fallback_weights(str(weights))
+        if fallback and fallback != str(weights):
+            logger.warning(
+                f"Weights '{weights}' is a TensorRT engine, but 'tensorrt' package is not installed. "
+                f"Falling back to '{fallback}'."
+            )
+            weights = fallback
+            ext = Path(weights).suffix.lower()
+            if architecture in ("auto", None):
+                architecture = "auto"
+        else:
+            raise ModelLoadingError(
+                f"Model '{weights}' requires 'tensorrt' package and NVIDIA GPU, but 'tensorrt' is not installed. "
+                f"Please install TensorRT or provide a .pt / .onnx model."
+            )
+
+    resolved_arch = resolve_architecture(architecture, str(weights))
     detector = create_detector(resolved_arch)
-    detector.load(weights, **kwargs)
+
+    try:
+        detector.load_model(str(weights), **kwargs)
+    except Exception as exc:
+        if ext in (".engine", ".trt"):
+            fallback = find_fallback_weights(str(weights))
+            if fallback and fallback != str(weights):
+                logger.warning(
+                    f"Failed to load TensorRT engine '{weights}': {exc}. "
+                    f"Falling back to '{fallback}'."
+                )
+                fb_arch = resolve_architecture(architecture, fallback)
+                detector = create_detector(fb_arch)
+                detector.load_model(fallback, **kwargs)
+                return detector
+        raise
+
     return detector
 
 
 def _ensure_builtins_registered() -> None:
-    from system.detection.adapters.ultralytics_adapter import UltralyticsYOLOAdapter
+    from system.detection.adapters.yolo_adapter import YOLOAdapter
     from system.detection.adapters.rf_detr_adapter import RFDETRAdapter
     from system.detection.adapters.d_fine_adapter import DFINEAdapter
     from system.detection.adapters.rtmdet_adapter import RTMDetAdapter
     from system.detection.adapters.onnx_adapter import GenericONNXAdapter
 
-    register_detector("ultralytics", lambda: UltralyticsYOLOAdapter())
-    register_detector("yolo", lambda: UltralyticsYOLOAdapter())
+    register_detector("ultralytics", lambda: YOLOAdapter())
+    register_detector("yolo", lambda: YOLOAdapter())
     register_detector("rf_detr", lambda: RFDETRAdapter())
     register_detector("rfdetr", lambda: RFDETRAdapter())
     register_detector("d_fine", lambda: DFINEAdapter())
@@ -130,3 +378,17 @@ def _ensure_builtins_registered() -> None:
 
 # Initialize built-ins immediately
 _ensure_builtins_registered()
+
+__all__ = [
+    "canonical_architecture",
+    "create_detector",
+    "find_fallback_weights",
+    "get_provider_status",
+    "get_provider_statuses",
+    "get_supported_architectures",
+    "is_backend_available",
+    "is_tensorrt_available",
+    "load_detector",
+    "register_detector",
+    "resolve_architecture",
+]
