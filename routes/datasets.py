@@ -20,9 +20,8 @@ from flask import (
 from system.auth import login_required
 from system.datasets.annotation_store import AnnotationStore
 from system.datasets.dataset_service import DatasetService, VALID_TASKS
-from system.object_detection.metadata import extract_class_name, sanitize_classes_list
+from system.detection.metadata import extract_class_name, sanitize_classes_list
 from system.managers.training_job_manager import (
-    DEFAULT_BASE_MODEL,
     DEFAULT_EPOCHS,
     DEFAULT_IMG_SIZE,
     TrainingProviderUnavailableError,
@@ -334,7 +333,7 @@ def _detector_class_names(detector: str | None = None) -> tuple[list[str], str |
         return [], None, location
 
     try:
-        from system.object_detection.metadata import extract_model_classes
+        from system.detection.metadata import extract_model_classes
         classes_dict, source = extract_model_classes(path)
         if classes_dict:
             return _ordered_class_names(classes_dict), source or 'weights', location
@@ -500,13 +499,16 @@ def dataset_detail(name: str):
         loc: (detections.get(loc, {}) or {}).get('label', loc)
         for loc in locations
     }
-    provider_status = training_job_manager.provider_status()
+    provider_id = training_job_manager.resolve_provider(request.args.get('provider'))
+    provider_status = training_job_manager.provider_status(provider_id)
     try:
-        model_catalog = training_job_manager.base_model_catalog()
+        model_catalog = training_job_manager.base_model_catalog(provider_id)
         catalog_error = None
+        provider_default_model = training_job_manager.default_base_model(provider_id)
     except TrainingProviderUnavailableError as exc:
         model_catalog = {'installed': [], 'available': [], 'official': {}}
         catalog_error = str(exc)
+        provider_default_model = ''
     return render_template(
         'datasets/detail.html',
         dataset=summary,
@@ -517,6 +519,8 @@ def dataset_detail(name: str):
         available_base_models=model_catalog['available'],
         official_base_models=model_catalog['official'],
         training_provider=provider_status,
+        training_provider_id=provider_id,
+        training_providers=training_job_manager.provider_statuses(),
         training_catalog_error=catalog_error,
         counter_locations=locations,
         counter_cameras=locations_dict,
@@ -525,7 +529,7 @@ def dataset_detail(name: str):
         training_status=training_job_manager.status(),
         default_epochs=DEFAULT_EPOCHS,
         default_imgsz=DEFAULT_IMG_SIZE,
-        default_base_model=DEFAULT_BASE_MODEL,
+        default_base_model=provider_default_model,
     )
 
 
@@ -1268,15 +1272,17 @@ def api_merge(name: str):
 def api_export(name: str):
     """
     Export the dataset for training.
-    
+
     Args:
         name: The dataset name
-    
+
     Returns:
         JSON response
     """
+    data = request.get_json(silent=True) or request.form or {}
+    dataset_format = (data.get('dataset_format') or data.get('format') or 'yolo').strip().lower()
     try:
-        result = _service().export_for_training(name)
+        result = _service().export_for_training(name, dataset_format=dataset_format)
     except Exception as exc:
         return _json_error(str(exc))
     return jsonify({'status': 'ok', **result})
@@ -1309,11 +1315,18 @@ def api_models_base():
     """
     Return all available base models (installed and available to download).
     """
+    provider_id = training_job_manager.resolve_provider(request.args.get('provider'))
     try:
-        models = training_job_manager.base_model_catalog()['available']
+        catalog = training_job_manager.base_model_catalog(provider_id)
+        default_model = training_job_manager.default_base_model(provider_id)
     except TrainingProviderUnavailableError as exc:
         return _json_error(str(exc), 503)
-    return jsonify({'status': 'ok', 'models': models, 'default': DEFAULT_BASE_MODEL})
+    return jsonify({
+        'status': 'ok',
+        'provider': provider_id,
+        'models': catalog['available'],
+        'default': default_model,
+    })
 
 
 @datasets_bp.route('/datasets/api/models/base/download', methods=['POST'])
@@ -1330,13 +1343,14 @@ def api_models_base_download():
         return _json_error('Model name is required')
 
     clean_name = Path(model_name).name
+    provider_id = training_job_manager.resolve_provider(data.get('provider'))
     try:
-        training_job_manager.ensure_provider_available()
-        official_models = training_job_manager.base_model_catalog()['official']
+        training_job_manager.ensure_provider_available(provider_id)
+        supported = training_job_manager.supports_base_model(clean_name, provider_id)
     except TrainingProviderUnavailableError as exc:
         return _json_error(str(exc), 503)
-    if clean_name not in official_models and not clean_name.endswith('.pt'):
-        return _json_error(f'Unsupported model: {clean_name}')
+    if not supported:
+        return _json_error(f"Provider '{provider_id}' does not offer the model {clean_name}")
 
     context = get_app_context()
     socketio = context.get('socketio')
@@ -1347,7 +1361,9 @@ def api_models_base_download():
 
     def _worker():
         try:
-            training_job_manager.download_base_model(clean_name, progress_callback=_emitter)
+            training_job_manager.download_base_model(
+                clean_name, progress_callback=_emitter, provider=provider_id
+            )
         except Exception as exc:
             _emitter({
                 'status': 'error',
@@ -1364,6 +1380,7 @@ def api_models_base_download():
         'message': f'Download started for {clean_name}',
         'model': clean_name,
         'model_name': clean_name,
+        'provider': provider_id,
     })
 
 
@@ -1395,22 +1412,26 @@ def api_train(name: str):
     _wire_training_emitter()
     data = request.get_json(silent=True) or {}
     svc = _service()
+    provider_id = training_job_manager.resolve_provider(data.get('provider'))
     try:
-        training_job_manager.ensure_provider_available()
+        training_job_manager.ensure_provider_available(provider_id)
     except TrainingProviderUnavailableError as exc:
         return _json_error(str(exc), 503)
 
     try:
-        export_info = svc.export_for_training(name)
+        export_info = svc.export_for_training(
+            name, dataset_format=training_job_manager.dataset_format(provider_id)
+        )
     except Exception as exc:
         return _json_error(str(exc))
 
     try:
         from system.utils.telemetry import get_telemetry
-        get_telemetry().track('training_started', {'dataset': name})
+        get_telemetry().track('training_started', {'dataset': name, 'provider': provider_id})
         job = training_job_manager.start(
             config_name=name,
-            base_model=data.get('base_model') or DEFAULT_BASE_MODEL,
+            provider=provider_id,
+            base_model=data.get('base_model') or '',
             epochs=int(data.get('epochs') or DEFAULT_EPOCHS),
             imgsz=int(data.get('imgsz') or DEFAULT_IMG_SIZE),
             batch=int(data.get('batch') if data.get('batch') is not None else -1),
@@ -1419,6 +1440,7 @@ def api_train(name: str):
             export_format=data.get('export_format') or '',
             dedupe_val=bool(data.get('dedupe_val')),
             dataset_name=name,
+            dataset_export=export_info,
         )
     except TrainingProviderUnavailableError as exc:
         return _json_error(str(exc), 503)
@@ -1452,7 +1474,12 @@ def api_training_runs():
         JSON response
     """
     task = request.args.get('task') or 'detect'
-    return jsonify({'status': 'ok', 'runs': training_job_manager.list_runs(task)})
+    provider_id = training_job_manager.resolve_provider(request.args.get('provider'))
+    return jsonify({
+        'status': 'ok',
+        'provider': provider_id,
+        'runs': training_job_manager.list_runs(task, provider_id),
+    })
 
 
 @datasets_bp.route('/datasets/api/training/apply-weights', methods=['POST'])
@@ -1483,9 +1510,9 @@ def api_apply_weights():
     except ValueError:
         rel = str(weights_path).replace('\\', '/')
 
-    from system.object_detection.registry import resolve_model_type
+    from system.detection.registry import resolve_architecture
     config.set(f'detections.{location}.weights_path', rel)
-    config.set(f'detections.{location}.model_type', resolve_model_type(weights=rel))
+    config.set(f'detections.{location}.model_type', resolve_architecture(weights=rel))
     if classes:
         if isinstance(classes, list):
             class_map = {str(i): c for i, c in enumerate(classes)}
@@ -1543,7 +1570,7 @@ def api_autolabel(name: str):
     if cv2 is None:
         return _json_error(str(_cv2_import_error or 'cv2 not available'))
 
-    from system.object_detection import extract_model_classes, load_detector
+    from system.detection import extract_model_classes, load_detector
     predict_classes = sorted(detector_map.keys()) if detector_map else None
 
     try:
@@ -1583,13 +1610,13 @@ def api_autolabel(name: str):
                 continue
             h, w = img.shape[:2]
 
-            boxes_xyxy, confidences, classes_ids = model.detect(img)
+            res = model.detect(img)
             shapes = []
             max_conf = 0.0
-            for idx in range(len(boxes_xyxy)):
-                conf = float(confidences[idx])
+            for det in res.detections:
+                conf = float(det.confidence)
                 max_conf = max(max_conf, conf)
-                cls_id = int(classes_ids[idx])
+                cls_id = int(det.class_id)
                 label = _autolabel_label_for_cls(
                     cls_id,
                     dataset_classes=dataset_classes,
@@ -1598,9 +1625,8 @@ def api_autolabel(name: str):
                 )
                 if not label:
                     continue
-                xyxy = boxes_xyxy[idx]
                 if w and h:
-                    points = [float(xyxy[0]) / w, float(xyxy[1]) / h, float(xyxy[2]) / w, float(xyxy[3]) / h]
+                    points = [float(det.x1) / w, float(det.y1) / h, float(det.x2) / w, float(det.y2) / h]
                 else:
                     continue
                 shapes.append({
@@ -1667,12 +1693,12 @@ def api_active_learning(name: str):
     if cv2 is None:
         return _json_error(str(_cv2_import_error or 'cv2 not available'))
 
-    from system.object_detection import load_detector
+    from system.detection import load_detector
     predict_classes = sorted(detector_map.keys()) if detector_map else None
 
     try:
         model = load_detector(
-            model_type=(det_cfg or {}).get('model_type', 'auto'),
+            architecture=(det_cfg or {}).get('model_type', 'auto'),
             weights=str(weights_path),
             confidence=confidence,
             classes_list=predict_classes,
@@ -1688,9 +1714,9 @@ def api_active_learning(name: str):
             if img is None:
                 predictions.append({'image': item['name'], 'max_conf': 0.0, 'num_boxes': 0})
                 continue
-            boxes_xyxy, confidences, _ = model.detect(img)
-            num = len(boxes_xyxy)
-            max_conf = float(max(confidences)) if num > 0 else 0.0
+            res = model.detect(img)
+            num = len(res)
+            max_conf = max((float(d.confidence) for d in res.detections), default=0.0)
             predictions.append({'image': item['name'], 'max_conf': max_conf, 'num_boxes': num})
     finally:
         model.cleanup()

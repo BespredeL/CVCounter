@@ -38,7 +38,7 @@ def api_model_classes():
     if not resolved_path:
         resolved_path = weights_path
 
-    from system.object_detection.metadata import extract_model_classes
+    from system.detection.metadata import extract_model_classes
     classes_dict, source = extract_model_classes(resolved_path)
 
     if not classes_dict:

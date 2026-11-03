@@ -218,7 +218,7 @@ class DoctorMixin:
         })
 
         # 7. Inference provider availability
-        from system.object_detection.registry import get_provider_statuses
+        from system.detection.registry import get_provider_statuses
         provider_statuses = get_provider_statuses()
         provider_details = []
         provider_load_errors = False

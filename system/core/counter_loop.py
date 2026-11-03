@@ -231,20 +231,27 @@ class CounterLoop:
         if counter.model is None or counter.preview_mode:
             return counter.tracker.update(np.empty((0, 6)))
 
-        xyxy, conf, cls = counter.model.detect(image=image)
+        res = counter.model.detect(image=image)
+        if hasattr(res, 'to_tracker_array'):
+            detections_array = res.to_tracker_array()
+        elif hasattr(res, 'to_legacy'):
+            xyxy, conf, cls = res.to_legacy()
+            if xyxy is None or len(xyxy) == 0:
+                return counter.tracker.update(np.empty((0, 6), dtype=np.float32))
+            detections_array = np.empty((len(xyxy), 6), dtype=np.float32)
+            detections_array[:, :4] = xyxy
+            detections_array[:, 4] = conf
+            detections_array[:, 5] = cls
+        else:
+            xyxy, conf, cls = res
+            if xyxy is None or len(xyxy) == 0:
+                return counter.tracker.update(np.empty((0, 6), dtype=np.float32))
+            detections_array = np.empty((len(xyxy), 6), dtype=np.float32)
+            detections_array[:, :4] = xyxy
+            detections_array[:, 4] = conf
+            detections_array[:, 5] = cls
 
-        if xyxy is None or len(xyxy) == 0:
-            return counter.tracker.update(np.empty((0, 6)))
-
-        # Prepare detections for the tracker: [x1, y1, x2, y2, conf, class]
-        n_dets = len(xyxy)
-        detections = np.empty((n_dets, 6), dtype=np.float32)
-        detections[:, :4] = xyxy
-        detections[:, 4] = conf
-        detections[:, 5] = cls
-
-        # Tracked boxes: [x1, y1, x2, y2, track_id, class_id]
-        return counter.tracker.update(detections)
+        return counter.tracker.update(detections_array)
 
     def count_and_draw(self, image: np.ndarray, boxes: list | np.ndarray) -> np.ndarray:
         """

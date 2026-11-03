@@ -113,7 +113,7 @@ def get_export_provider_capabilities(
     """Describe installed export paths without implying all models are compatible."""
     gpu = gpu_info or get_gpu_info()
     if yolo_provider is None:
-        from system.object_detection.registry import get_provider_status
+        from system.detection.registry import get_provider_status
         yolo_provider = get_provider_status('yolo')
 
     capabilities = {}
@@ -150,7 +150,7 @@ def get_export_provider_capabilities(
 def get_runtime_status() -> Dict[str, Any]:
     """Get full status of inference runtimes and hardware."""
     gpu = get_gpu_info()
-    from system.object_detection.registry import get_provider_status, get_provider_statuses
+    from system.detection.registry import get_provider_status, get_provider_statuses
 
     # ONNX & ONNX Runtime
     onnx_installed = is_package_installed('onnx')

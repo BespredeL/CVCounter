@@ -223,8 +223,8 @@ def canonical_architecture(arch: Optional[str]) -> str:
 
 
 def get_supported_architectures() -> list[str]:
-    """Return list of distinct supported canonical architectures."""
-    return sorted(list(set(_ARCHITECTURE_ALIASES.values())))
+    """Return list of supported architecture identifiers including 'auto' and aliases."""
+    return sorted(list({"auto", *set(_ARCHITECTURE_ALIASES.keys()), *set(_ARCHITECTURE_ALIASES.values())}))
 
 
 def create_detector(architecture: str) -> IDetector:

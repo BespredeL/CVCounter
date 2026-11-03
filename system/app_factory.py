@@ -345,9 +345,9 @@ def register_error_handlers(app: Flask, context: dict):
         ConfigError,
         ConfigNotFoundError,
         InvalidConfigError,
-        ObjectDetectionError,
         VideoStreamError
     )
+    from system.detection.exceptions import DetectionError
 
     logger = Logger()
 
@@ -430,10 +430,10 @@ def register_error_handlers(app: Flask, context: dict):
         _telemetry_capture(error)
         return render_template('errors/config_error.html', error=error, error_type="Configuration Error"), 500
 
-    @app.errorhandler(ObjectDetectionError)
-    def object_detection_error(error):
+    @app.errorhandler(DetectionError)
+    def detection_error(error):
         """Handle object detection errors."""
-        logger.error(f"Object detection error: {error.message}")
+        logger.error(f"Detection error: {error.message}")
         logger.log_exception()
         return render_template('errors/500.html', error=error, error_message="Object detection error occurred"), 500
 

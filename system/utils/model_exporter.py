@@ -12,7 +12,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from system.object_detection.model_spec import load_model_manifest, resolve_model_spec
+from system.detection.metadata import load_model_manifest
 from system.utils.paths import ensure_dir, get_project_root, resolve_project_path, resolve_training_paths
 from system.utils.runtimes import get_export_provider_capabilities
 
@@ -177,12 +177,10 @@ class ModelExportManager:
         """Resolve metadata and source-specific export support for one file."""
         manifest_error = None
         try:
-            spec = resolve_model_spec(path)
             manifest = load_model_manifest(path)
         except ValueError as exc:
             manifest_error = str(exc)
             manifest = None
-            spec = None
 
         source_reasons = []
         source_supported = path.suffix.lower() in ('.pt', '.pth')
@@ -230,7 +228,7 @@ class ModelExportManager:
             ).to_dict()
 
         try:
-            spec_payload = spec.to_dict() if spec else {}
+            spec_payload = manifest.to_dict() if manifest else {}
         except Exception:
             spec_payload = {}
         artifact = Artifact(

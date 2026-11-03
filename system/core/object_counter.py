@@ -11,7 +11,7 @@ from typing import Any, Generator, List, Optional, Tuple
 import numpy as np
 from system.managers.config_manager import ConfigManager
 from system.utils.logger import Logger
-from system.object_detection import load_detector
+from system.detection import load_detector
 from system.core.byte_tracker import BYTETracker
 from system.core.count_state import CountState
 from system.core.counter_config import CounterSettings
@@ -136,7 +136,7 @@ class ObjectCounter:
                 active_class_ids = self.settings.active_class_ids()
                 classes_list = active_class_ids or None
                 self.model = load_detector(
-                    model_type=self.model_type,
+                    architecture=self.model_type,
                     weights=self.weights,
                     confidence=self.confidence,
                     iou=self.iou,
@@ -144,10 +144,7 @@ class ObjectCounter:
                     vid_stride=self.vid_stride,
                     classes_list=classes_list,
                     verbose=self.debug,
-                    model_config_path=self.model_config_path,
                     input_size=self.input_size,
-                    backend=self.backend,
-                    target=self.target,
                     providers=self.providers,
                 )
             except Exception as e:

@@ -17,10 +17,12 @@ from typing import Any, Optional
 import yaml
 import cv2
 from system.datasets.annotation_store import AnnotationStore
-from system.object_detection.metadata import sanitize_classes_list
+from system.detection.metadata import sanitize_classes_list
 from system.datasets.exporters import (
     IMAGE_EXTENSIONS,
+    export_coco_dataset,
     export_split_labels,
+    normalize_dataset_format,
     write_data_yaml,
 )
 from system.datasets.importers import (
@@ -834,16 +836,18 @@ class DatasetService:
             'val_ratio': val_ratio,
         }
 
-    def export_for_training(self, name: str) -> dict[str, Any]:
+    def export_for_training(self, name: str, dataset_format: str = 'yolo') -> dict[str, Any]:
         """
-        Write YOLO labels + data.yaml under config/ultralytics/cfg.
-        
+        Write training exports for a dataset in one or more framework formats.
+
         Args:
             name (str): The name of the dataset
-        
+            dataset_format (str): 'yolo' (labels + data.yaml), 'coco' (COCO JSON) or 'both'
+
         Returns:
             dict[str, Any]: The export results
         """
+        fmt = normalize_dataset_format(dataset_format)
         meta = self.load_meta(name)
         classes = meta.get('classes') or []
         task = meta.get('task', 'detect')
@@ -851,34 +855,58 @@ class DatasetService:
         for item in self.list_images(name, split='inbox', labeled=True):
             self.move_images(name, [item['name']], 'train')
 
-        written_train = export_split_labels(root, 'train', classes, task, self.store(name))
-        written_val = export_split_labels(root, 'val', classes, task, self.store(name))
+        self._ensure_val_sample(name)
 
+        formats = ['yolo', 'coco'] if fmt == 'both' else [fmt]
+        result: dict[str, Any] = {'task': task, 'classes': classes, 'formats': formats}
+
+        if 'yolo' in formats:
+            written_train = export_split_labels(root, 'train', classes, task, self.store(name))
+            written_val = export_split_labels(root, 'val', classes, task, self.store(name))
+            cfg_dir = resolve_training_paths(self.project_root)[0]
+            cfg_path = cfg_dir / f'{self._safe_name(name)}.yaml'
+            result['yaml'] = str(write_data_yaml(root, classes, cfg_path, task))
+            result['train_labels'] = written_train
+            result['val_labels'] = written_val
+
+        if 'coco' in formats:
+            coco = export_coco_dataset(root, classes, task, store=self.store(name))
+            result['coco'] = coco['annotations']
+            result['coco_images'] = coco['images']
+            result['coco_instances'] = coco['instances']
+
+        return result
+
+    def _ensure_val_sample(self, name: str) -> None:
+        """
+        Copy one training image into the val split when validation has no images.
+
+        Args:
+            name (str): The name of the dataset
+
+        Returns:
+            None
+        """
+        root = self.root(name)
         val_images = list((root / 'images' / 'val').glob('*'))
         val_images = [p for p in val_images if p.suffix.lower() in IMAGE_EXTENSIONS]
-        if not val_images:
-            train_images = [p for p in (root / 'images' / 'train').iterdir() if p.suffix.lower() in IMAGE_EXTENSIONS]
-            if train_images:
-                sample = train_images[0]
-                dest = root / 'images' / 'val' / sample.name
-                if not dest.exists():
-                    shutil.copy2(sample, dest)
-                label_src = root / 'labels' / 'train' / f'{sample.stem}.txt'
-                if label_src.is_file():
-                    dest_l = root / 'labels' / 'val' / label_src.name
-                    dest_l.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(label_src, dest_l)
-
-        cfg_dir = resolve_training_paths(self.project_root)[0]
-        cfg_path = cfg_dir / f'{self._safe_name(name)}.yaml'
-        write_data_yaml(root, classes, cfg_path, task)
-        return {
-            'yaml': str(cfg_path),
-            'train_labels': written_train,
-            'val_labels': written_val,
-            'task': task,
-            'classes': classes,
-        }
+        if val_images:
+            return
+        train_dir = root / 'images' / 'train'
+        if not train_dir.is_dir():
+            return
+        train_images = [p for p in train_dir.iterdir() if p.suffix.lower() in IMAGE_EXTENSIONS]
+        if not train_images:
+            return
+        sample = train_images[0]
+        dest = root / 'images' / 'val' / sample.name
+        if not dest.exists():
+            shutil.copy2(sample, dest)
+        label_src = root / 'labels' / 'train' / f'{sample.stem}.txt'
+        if label_src.is_file():
+            dest_l = root / 'labels' / 'val' / label_src.name
+            dest_l.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(label_src, dest_l)
 
     def export_zip(self, name: str) -> Path:
         """
@@ -890,7 +918,7 @@ class DatasetService:
         Returns:
             Path: The path to the created ZIP archive
         """
-        self.export_for_training(name)
+        self.export_for_training(name, dataset_format='both')
         root = self.root(name)
         zip_path = root / f'{self._safe_name(name)}_yolo.zip'
         cfg_dir = resolve_training_paths(self.project_root)[0]
@@ -902,7 +930,7 @@ class DatasetService:
             meta_path = self._meta_path(name)
             if meta_path.is_file():
                 zf.write(meta_path, 'meta.json')
-            for sub in ('images', 'labels'):
+            for sub in ('images', 'labels', 'annotations', 'coco'):
                 sub_dir = root / sub
                 if sub_dir.is_dir():
                     for file_path in sub_dir.rglob('*'):
