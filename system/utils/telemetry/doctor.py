@@ -21,6 +21,20 @@ class DoctorMixin:
         Returns:
             dict: Structured checklist of subsystem health statuses.
         """
+        def _resolve_config() -> Any:
+            c = (runtime_context or {}).get('config') or (getattr(self, '_runtime_context', None) or {}).get('config')
+            if c:
+                return c
+            try:
+                from system.managers.config_manager import ConfigManager
+                if ConfigManager._instance is not None:
+                    return ConfigManager._instance
+                from system.utils.paths import resolve_project_path
+                cfg_path = resolve_project_path('config/config.json') or 'config/config.json'
+                return ConfigManager(cfg_path)
+            except Exception:
+                return None
+
         checks: list[dict[str, Any]] = []
 
         # 1. Storage write permissions
@@ -107,10 +121,7 @@ class DoctorMixin:
                 dbm = self._runtime_context['db_manager']
 
             if dbm is None:
-                config = (runtime_context or {}).get('config') or (self._runtime_context or {}).get('config')
-                if not config:
-                    from system.managers.config_manager import ConfigManager
-                    config = ConfigManager('config/config.json')
+                config = _resolve_config()
                 from system.managers.database_manager import DatabaseManager
                 from system.utils.paths import resolve_sqlite_uri
                 raw_uri = config.get('db.uri') or 'sqlite:///config/database.sqlite'
@@ -140,16 +151,11 @@ class DoctorMixin:
         })
 
         # 5. Model weights files check
-        cfg = (runtime_context or {}).get('config') or (self._runtime_context or {}).get('config')
-        if not cfg:
-            try:
-                from system.managers.config_manager import ConfigManager
-                cfg = ConfigManager('config/config.json')
-            except Exception:
-                cfg = None
+        cfg = _resolve_config()
 
         weights_status = 'ok'
         weights_details_list = []
+        weights_items = []
         if cfg:
             detections = cfg.get('detections') or {}
             if isinstance(detections, dict) and detections:
@@ -157,14 +163,31 @@ class DoctorMixin:
                 for loc_id, loc_cfg in detections.items():
                     if isinstance(loc_cfg, dict):
                         wpath = loc_cfg.get('weights_path')
+                        cam_name = loc_cfg.get('label') or loc_id
                         if wpath:
                             resolved_w = resolve_project_path(wpath) or wpath
                             if os.path.isfile(resolved_w) and os.path.getsize(resolved_w) > 0:
                                 sz_mb = round(os.path.getsize(resolved_w) / (1024 * 1024), 1)
-                                weights_details_list.append(f'{loc_id}: {os.path.basename(wpath)} ({sz_mb} MB)')
+                                weights_details_list.append(f'{cam_name}: {os.path.basename(wpath)} ({sz_mb} MB)')
+                                weights_items.append({
+                                    'id': loc_id,
+                                    'name': cam_name,
+                                    'file': os.path.basename(wpath),
+                                    'size_mb': sz_mb,
+                                    'status': 'ok',
+                                    'missing': False,
+                                })
                             else:
                                 missing_count += 1
-                                weights_details_list.append(f'{loc_id}: {wpath} (NOT FOUND)')
+                                weights_details_list.append(f'{cam_name}: {os.path.basename(wpath) or wpath} (NOT FOUND)')
+                                weights_items.append({
+                                    'id': loc_id,
+                                    'name': cam_name,
+                                    'file': os.path.basename(wpath) or wpath,
+                                    'size_mb': 0,
+                                    'status': 'error',
+                                    'missing': True,
+                                })
                 if missing_count > 0:
                     weights_status = 'error'
                 elif not weights_details_list:
@@ -182,6 +205,7 @@ class DoctorMixin:
             'title': 'Model weights',
             'status': weights_status,
             'details': '; '.join(weights_details_list),
+            'items': weights_items,
         })
 
         # 6. Hardware acceleration
@@ -221,12 +245,18 @@ class DoctorMixin:
         from system.detection.registry import get_provider_statuses
         provider_statuses = get_provider_statuses()
         provider_details = []
+        provider_items = []
         provider_load_errors = False
         for provider in provider_statuses:
             detail = f"{provider['id']}: {provider['status']}"
             if provider.get('error'):
                 detail += f" ({provider['error']})"
             provider_details.append(detail)
+            provider_items.append({
+                'id': provider['id'],
+                'status': provider['status'],
+                'error': provider.get('error'),
+            })
             provider_load_errors |= provider['status'] == 'error'
 
         checks.append({
@@ -234,6 +264,7 @@ class DoctorMixin:
             'title': 'Inference providers',
             'status': 'warning' if provider_load_errors else 'info',
             'details': '; '.join(provider_details) or 'No inference providers registered',
+            'items': provider_items,
         })
 
         # 8. Model inference benchmark
@@ -287,49 +318,99 @@ class DoctorMixin:
         # 9. Camera network reachability
         cam_status = 'ok'
         cam_details = []
+        cam_items = []
 
-        def _check_camera(loc_id: str, loc_cfg: dict) -> tuple[str, bool]:
+        def _check_camera(loc_id: str, loc_cfg: dict) -> dict[str, Any]:
+            cam_name = loc_cfg.get('label') or loc_id
             vpath = str(loc_cfg.get('video_path') or '').strip()
+            item = {
+                'id': loc_id,
+                'name': cam_name,
+                'target': '',
+                'type': 'network',
+                'status': 'ok',
+                'message': 'OK',
+                'detail': '',
+            }
             if vpath.lower().startswith(('rtsp://', 'rtsps://', 'http://', 'https://')):
                 try:
                     parsed = urllib_parse.urlparse(vpath)
                     host = parsed.hostname
                     port = parsed.port or (443 if parsed.scheme == 'https' else (80 if parsed.scheme == 'http' else 554))
+                    item['target'] = f'{host}:{port}' if host else vpath
                     if host:
                         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                         sock.settimeout(1.0)
                         code = sock.connect_ex((host, port))
                         sock.close()
                         if code == 0:
-                            return f'{loc_id} ({host}:{port}): OK', True
-                        return f'{loc_id} ({host}:{port}): Unreachable', False
+                            item['status'] = 'ok'
+                            item['message'] = 'OK'
+                            item['detail'] = f'{cam_name} ({host}:{port}): OK'
+                            return item
+                        item['status'] = 'warning'
+                        item['message'] = 'Unreachable'
+                        item['detail'] = f'{cam_name} ({host}:{port}): Unreachable'
+                        return item
                 except Exception as ce:
-                    return f'{loc_id}: {ce}', False
+                    item['status'] = 'warning'
+                    item['message'] = 'Error'
+                    item['detail'] = f'{cam_name}: {ce}'
+                    return item
             elif vpath.isdigit():
-                return f'{loc_id}: USB Camera #{vpath}', True
+                item['type'] = 'usb'
+                item['target'] = f'USB #{vpath}'
+                item['status'] = 'ok'
+                item['message'] = 'OK'
+                item['detail'] = f'{cam_name}: USB Camera #{vpath}'
+                return item
             elif vpath:
+                item['type'] = 'file'
+                item['target'] = os.path.basename(vpath)
                 resolved_v = resolve_project_path(vpath) or vpath
                 if os.path.exists(resolved_v):
-                    return f'{loc_id}: File OK', True
-                return f'{loc_id}: File missing', False
-            return f'{loc_id}: Not configured', True
+                    item['status'] = 'ok'
+                    item['message'] = 'File OK'
+                    item['detail'] = f'{cam_name}: File OK'
+                    return item
+                item['status'] = 'warning'
+                item['message'] = 'File missing'
+                item['detail'] = f'{cam_name}: File missing'
+                return item
+            item['type'] = 'none'
+            item['target'] = 'Not configured'
+            item['status'] = 'info'
+            item['message'] = 'Not configured'
+            item['detail'] = f'{cam_name}: Not configured'
+            return item
 
         if cfg:
             detections = cfg.get('detections') or {}
             if isinstance(detections, dict) and detections:
-                cam_items = [(loc_id, loc_cfg) for loc_id, loc_cfg in detections.items() if isinstance(loc_cfg, dict)]
-                if cam_items:
-                    with ThreadPoolExecutor(max_workers=min(8, len(cam_items))) as pool:
-                        futures = [pool.submit(_check_camera, loc_id, loc_cfg) for loc_id, loc_cfg in cam_items]
+                cam_entries = [(loc_id, loc_cfg) for loc_id, loc_cfg in detections.items() if isinstance(loc_cfg, dict)]
+                if cam_entries:
+                    with ThreadPoolExecutor(max_workers=min(8, len(cam_entries))) as pool:
+                        futures = [pool.submit(_check_camera, loc_id, loc_cfg) for loc_id, loc_cfg in cam_entries]
                         for f in futures:
                             try:
-                                detail, is_ok = f.result(timeout=1.5)
-                                cam_details.append(detail)
-                                if not is_ok:
+                                res_item = f.result(timeout=1.5)
+                                cam_details.append(res_item['detail'])
+                                cam_items.append(res_item)
+                                if res_item['status'] not in ('ok', 'info'):
                                     cam_status = 'warning'
                             except Exception as ce:
                                 cam_status = 'warning'
-                                cam_details.append(f'Camera check error: {ce}')
+                                err_text = f'Camera check error: {ce}'
+                                cam_details.append(err_text)
+                                cam_items.append({
+                                    'id': '',
+                                    'name': 'Camera',
+                                    'target': '',
+                                    'type': 'network',
+                                    'status': 'warning',
+                                    'message': 'Error',
+                                    'detail': err_text,
+                                })
             if not cam_details:
                 cam_status = 'info'
                 cam_details.append('No cameras configured')
@@ -342,6 +423,7 @@ class DoctorMixin:
             'title': 'Camera network connections',
             'status': cam_status,
             'details': '; '.join(cam_details),
+            'items': cam_items,
         })
 
         # 10. Video recording codecs

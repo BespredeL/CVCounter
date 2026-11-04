@@ -671,6 +671,16 @@ function initSystemDoctor() {
     });
 }
 
+function escapeHtml(str) {
+    if (!str) return "";
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 function formatDoctorDetail(detail, t) {
     if (!detail) return "";
     const direct = t(detail);
@@ -742,6 +752,134 @@ function formatDoctorDetail(detail, t) {
     return direct || detail;
 }
 
+function renderDoctorCheckDetails(c, t) {
+    const icons = {
+        check: `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-check-circle-fill text-success flex-shrink-0" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>`,
+        x: `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-x-circle-fill text-danger flex-shrink-0" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293z"/></svg>`,
+        dash: `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-dash-circle text-secondary flex-shrink-0" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/><path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8"/></svg>`
+    };
+
+    // 1. Cameras Network
+    if (c.id === "cameras_network") {
+        let items = c.items;
+        if ((!items || items.length === 0) && c.details && c.details.includes("; ")) {
+            items = c.details.split("; ").map(part => {
+                const m = part.match(/^(.+?)\s*\((.+?)\):\s*(.+)$/);
+                if (m) {
+                    return {
+                        name: m[1],
+                        target: m[2],
+                        status: m[3] === "OK" ? "ok" : "warning",
+                        message: m[3]
+                    };
+                }
+                return { name: part, target: "", status: "info", message: "" };
+            });
+        }
+        if (items && items.length > 0) {
+            const chips = items.map(it => {
+                const isOk = it.status === "ok";
+                const bgClass = isOk
+                    ? "bg-success-subtle text-success border border-success-subtle"
+                    : "bg-danger-subtle text-danger border border-danger-subtle";
+                const badge = isOk
+                    ? `<span class="badge bg-success text-white py-0 px-1 small">OK</span>`
+                    : `<span class="badge bg-danger text-white py-0 px-1 small">${escapeHtml(t(it.message || "Unreachable"))}</span>`;
+                const titleAttr = it.id ? `title="${escapeHtml(it.id)}"` : "";
+                const targetHtml = it.target ? `<span class="text-body-secondary font-monospace small">(${escapeHtml(it.target)})</span>` : "";
+
+                return `
+                    <div class="badge ${bgClass} py-1 px-2 d-inline-flex align-items-center gap-2 fw-normal text-start" ${titleAttr} style="white-space: normal;">
+                        ${isOk ? icons.check : icons.x}
+                        <span class="fw-semibold text-body">${escapeHtml(it.name)}</span>
+                        ${targetHtml}
+                        ${badge}
+                    </div>`;
+            }).join("");
+            return `<div class="d-flex flex-wrap gap-2 mt-2 ms-4">${chips}</div>`;
+        }
+    }
+
+    // 2. Model Weights
+    if (c.id === "model_weights") {
+        let items = c.items;
+        if ((!items || items.length === 0) && c.details && c.details.includes("; ")) {
+            items = c.details.split("; ").map(part => {
+                const m = part.match(/^(.+?):\s*(.+?)(?:\s*\((.+?)\))?$/);
+                if (m) {
+                    const isErr = m[3] === "NOT FOUND";
+                    return {
+                        name: m[1],
+                        file: m[2],
+                        size_mb: isErr ? 0 : m[3],
+                        status: isErr ? "error" : "ok",
+                        missing: isErr
+                    };
+                }
+                return { name: part, file: "", status: "info" };
+            });
+        }
+        if (items && items.length > 0) {
+            const chips = items.map(it => {
+                const isOk = it.status === "ok" && !it.missing;
+                const bgClass = isOk
+                    ? "bg-body-tertiary text-body border"
+                    : "bg-danger-subtle text-danger border border-danger-subtle";
+                const sizeBadge = isOk
+                    ? `<span class="badge bg-secondary-subtle text-body-secondary border ms-1">${it.size_mb ? (typeof it.size_mb === "number" ? `${it.size_mb} MB` : it.size_mb) : ""}</span>`
+                    : `<span class="badge bg-danger text-white ms-1">${escapeHtml(t("NOT FOUND"))}</span>`;
+                const titleAttr = it.id ? `title="${escapeHtml(it.id)}"` : "";
+
+                return `
+                    <div class="badge ${bgClass} py-1 px-2 d-inline-flex align-items-center gap-2 fw-normal text-start" ${titleAttr} style="white-space: normal;">
+                        ${isOk ? icons.check : icons.x}
+                        <span class="fw-semibold text-body">${escapeHtml(it.name)}</span>
+                        <span class="${isOk ? 'text-primary-emphasis' : 'text-danger'} font-monospace small">${escapeHtml(it.file)}</span>
+                        ${sizeBadge}
+                    </div>`;
+            }).join("");
+            return `<div class="d-flex flex-wrap gap-2 mt-2 ms-4">${chips}</div>`;
+        }
+    }
+
+    // 3. Inference Providers
+    if (c.id === "inference_providers") {
+        let items = c.items;
+        if ((!items || items.length === 0) && c.details && c.details.includes("; ")) {
+            items = c.details.split("; ").map(part => {
+                const m = part.match(/^(.+?):\s*([a-zA-Z_]+)(?:\s*\((.+?)\))?$/);
+                if (m) {
+                    return { id: m[1], status: m[2], error: m[3] };
+                }
+                return { id: part, status: "info" };
+            });
+        }
+        if (items && items.length > 0) {
+            const chips = items.map(it => {
+                const isAvail = it.status === "available";
+                const isErr = it.status === "error";
+                const bgClass = isAvail
+                    ? "bg-success-subtle text-success border border-success-subtle"
+                    : (isErr ? "bg-danger-subtle text-danger border border-danger-subtle" : "bg-secondary-subtle text-body-secondary border");
+                const icon = isAvail ? icons.check : (isErr ? icons.x : icons.dash);
+                const errHtml = it.error ? `<span class="text-danger small ms-1">(${escapeHtml(it.error)})</span>` : "";
+
+                return `
+                    <div class="badge ${bgClass} py-1 px-2 d-inline-flex align-items-center gap-1 font-monospace fw-normal text-start">
+                        ${icon}
+                        <strong class="text-body">${escapeHtml(it.id)}</strong>:
+                        <span class="small">${escapeHtml(t(it.status))}</span>
+                        ${errHtml}
+                    </div>`;
+            }).join("");
+            return `<div class="d-flex flex-wrap gap-2 mt-2 ms-4">${chips}</div>`;
+        }
+    }
+
+    // Default single-metric detail
+    return `<small class="text-body-secondary ms-4 d-block mt-1">${formatDoctorDetail(c.details, t)}</small>`;
+}
+
 function renderDoctorResults(container, data, t) {
     const checks = data.checks || [];
     const allOk = data.all_ok;
@@ -770,14 +908,14 @@ function renderDoctorResults(container, data, t) {
         }
         return `
             <li class="list-group-item d-flex justify-content-between align-items-start py-2">
-                <div class="ms-2 me-auto">
+                <div class="ms-2 me-3 flex-grow-1">
                     <div class="fw-semibold d-flex align-items-center gap-2">
                         ${iconSvg}
                         <span>${t(c.title)}</span>
                     </div>
-                    <small class="text-body-secondary ms-4 d-block">${formatDoctorDetail(c.details, t)}</small>
+                    ${renderDoctorCheckDetails(c, t)}
                 </div>
-                <span class="badge ${badgeClass} rounded-pill text-uppercase">${c.status}</span>
+                <span><span class="badge ${badgeClass} rounded-pill text-uppercase">${c.status}</span></span>
             </li>`;
     }).join("");
 
