@@ -671,6 +671,77 @@ function initSystemDoctor() {
     });
 }
 
+function formatDoctorDetail(detail, t) {
+    if (!detail) return "";
+    const direct = t(detail);
+    if (direct && direct !== detail) return direct;
+
+    let m = detail.match(/^([\d.]+\s*(?:GB|MB|TB))\s+free of\s+([\d.]+\s*(?:GB|MB|TB))\s+\(([\d.]+%(?:\s*free)?)\)$/i);
+    if (m) {
+        return t("{free} free of {total} ({pct})", { free: m[1], total: m[2], pct: m[3] });
+    }
+
+    m = detail.match(/^([\d.]+\s*(?:GB|MB|TB))\s+available of\s+([\d.]+\s*(?:GB|MB|TB))\s+\(([\d.]+%(?:\s*used)?)\)$/i);
+    if (m) {
+        return t("{avail} available of {total} ({pct})", { avail: m[1], total: m[2], pct: m[3] });
+    }
+
+    m = detail.match(/^(\d+)\s+running of\s+(\d+)\s+configured counters$/i);
+    if (m) {
+        return t("{running} running of {total} configured counters", { running: m[1], total: m[2] });
+    }
+
+    m = detail.match(/^CUDA available:\s*(.+?)\s*\(([\d.]+\s*GB\s*VRAM)\)$/i);
+    if (m) {
+        return t("CUDA available: {gpu} ({vram})", { gpu: m[1], vram: m[2] });
+    }
+
+    m = detail.match(/^Clock in sync\s*\(delta\s*([\d.]+s)\)$/i);
+    if (m) {
+        return t("Clock in sync (delta {delta})", { delta: m[1] });
+    }
+    m = detail.match(/^Clock out of sync:\s*([\d.]+s)\s*discrepancy$/i);
+    if (m) {
+        return t("Clock out of sync: {delta} discrepancy", { delta: m[1] });
+    }
+
+    m = detail.match(/^Active counter live latency:\s*([\d.]+\s*ms)\s*\(avg over\s*(\d+)\s*frames\)$/i);
+    if (m) {
+        return t("Active counter live latency: {latency} (avg over {frames} frames)", { latency: m[1], frames: m[2] });
+    }
+
+    m = detail.match(/^Active model dry-run:\s*([\d.]+\s*ms)$/i);
+    if (m) {
+        return t("Active model dry-run: {elapsed}", { elapsed: m[1] });
+    }
+
+    m = detail.match(/^Model\s*(.+?)\s*verified for\s*(GPU|CPU)\s*inference$/i);
+    if (m) {
+        return t("Model {model} verified for {device} inference", { model: m[1], device: m[2] });
+    }
+
+    m = detail.match(/^Endpoint reachable\s*\(HTTP\s*(\d+)\)$/i);
+    if (m) {
+        return t("Endpoint reachable (HTTP {code})", { code: m[1] });
+    }
+
+    m = detail.match(/^Endpoint reached\s*\(HTTP\s*(\d+)\)$/i);
+    if (m) {
+        return t("Endpoint reached (HTTP {code})", { code: m[1] });
+    }
+
+    if (detail.includes(": available") || detail.includes(": unavailable")) {
+        return detail.split("; ").map(part => {
+            return part
+                .replace(/:\s*available\b/g, `: ${t("available")}`)
+                .replace(/:\s*unavailable\b/g, `: ${t("unavailable")}`)
+                .replace(/:\s*error\b/g, `: ${t("error")}`);
+        }).join("; ");
+    }
+
+    return direct || detail;
+}
+
 function renderDoctorResults(container, data, t) {
     const checks = data.checks || [];
     const allOk = data.all_ok;
@@ -704,7 +775,7 @@ function renderDoctorResults(container, data, t) {
                         ${iconSvg}
                         <span>${t(c.title)}</span>
                     </div>
-                    <small class="text-body-secondary ms-4 d-block">${t(c.details) || c.details || ""}</small>
+                    <small class="text-body-secondary ms-4 d-block">${formatDoctorDetail(c.details, t)}</small>
                 </div>
                 <span class="badge ${badgeClass} rounded-pill text-uppercase">${c.status}</span>
             </li>`;
@@ -713,7 +784,7 @@ function renderDoctorResults(container, data, t) {
     container.innerHTML = `
         <div class="alert ${alertClass} mb-3 py-2 px-3 fw-semibold d-flex align-items-center justify-content-between">
             <span>${headerTitle}</span>
-            <button type="button" class="btn-close" id="btn-close-doctor" aria-label="Close"></button>
+            <button type="button" class="btn-close" id="btn-close-doctor" aria-label="${t('Close')}"></button>
         </div>
         <ul class="list-group mb-0">
             ${listHtml}
