@@ -262,7 +262,12 @@ class VideoRecorderManager:
         """
         base_dir = self.base_path or self.DEFAULT_RECORDING_PATH
         safe_location = re.sub('[^A-Za-z0-9-_]+', '', self.location)
-        full_dir = os.path.join(base_dir, safe_location)
+        loc_key = safe_location or self.location
+        norm_base = base_dir.replace('\\', '/').rstrip('/')
+        if norm_base.endswith(f'/{loc_key}') or norm_base.endswith(f'/{self.location}'):
+            full_dir = base_dir
+        else:
+            full_dir = os.path.join(base_dir, loc_key)
         os.makedirs(full_dir, exist_ok=True)
         return full_dir
 

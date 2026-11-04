@@ -177,9 +177,10 @@ class CounterSettings:
         raw_weights = kwargs.get('weights', detector_config.get('weights_path'))
         model_config_path = detector_config.get('model_config_path') or detection_default.get('model_config_path')
 
+        dataset_default = detection_default.get('dataset_create', {})
         dataset_config = dict(detector_config.get('dataset_create', {}))
-        if dataset_config.get('path'):
-            dataset_config['path'] = config_manager.resolve_path(dataset_config['path'])
+        dataset_base_path = dataset_config.get('path') or dataset_default.get('path') or 'storage/saved_images'
+        dataset_config['path'] = config_manager.resolve_path(dataset_base_path)
 
         recording_default = detection_default.get('recording', {})
         recording_config = detector_config.get('recording', {})

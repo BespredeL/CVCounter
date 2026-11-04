@@ -208,11 +208,19 @@ class DatasetCapture:
             else:
                 raw_path = self.dataset.get('path') if isinstance(self.dataset, dict) else None
                 if not raw_path:
-                    raw_path = f'storage/saved_images/{self.settings.location}'
+                    raw_path = 'storage/saved_images'
                 if self.config_manager and hasattr(self.config_manager, 'resolve_path'):
-                    dataset_path = self.config_manager.resolve_path(raw_path)
+                    base_dir = self.config_manager.resolve_path(raw_path)
                 else:
-                    dataset_path = str(resolve_project_path(raw_path))
+                    base_dir = str(resolve_project_path(raw_path))
+
+                safe_loc = re.sub(r'[^A-Za-z0-9-_]+', '', self.settings.location)
+                loc_key = safe_loc or self.settings.location
+                norm_base = base_dir.replace('\\', '/').rstrip('/')
+                if norm_base.endswith(f'/{loc_key}') or norm_base.endswith(f'/{self.settings.location}'):
+                    dataset_path = base_dir
+                else:
+                    dataset_path = os.path.join(base_dir, loc_key)
 
             if classes_to_save and boxes is not None and len(boxes) > 0:
                 detected_classes = [int(result[-1]) for result in boxes]

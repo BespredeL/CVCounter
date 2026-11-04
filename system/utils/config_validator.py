@@ -589,6 +589,23 @@ class ConfigValidator:
                     else:
                         self.errors.append(f"{zone_prefix} must be an object or a polygon point list")
 
+        # Validate dataset_create
+        if 'dataset_create' in config:
+            dataset_create = config['dataset_create']
+            if not isinstance(dataset_create, dict):
+                self.errors.append(f"'{prefix}.dataset_create' must be a dictionary")
+            else:
+                if 'enable' in dataset_create and not isinstance(dataset_create['enable'], bool):
+                    self.errors.append(f"'{prefix}.dataset_create.enable' must be a boolean")
+                if 'probability' in dataset_create:
+                    prob = dataset_create['probability']
+                    if not isinstance(prob, (int, float)) or isinstance(prob, bool) or not (0.0 <= prob <= 1.0):
+                        self.errors.append(f"'{prefix}.dataset_create.probability' must be a number between 0.0 and 1.0")
+                if 'path' in dataset_create:
+                    path = dataset_create['path']
+                    if not isinstance(path, str):
+                        self.errors.append(f"'{prefix}.dataset_create.path' must be a string")
+
         # Validate recording
         if 'recording' in config:
             recording = config['recording']

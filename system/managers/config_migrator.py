@@ -31,6 +31,7 @@ layer can be cleanly removed by:
 from __future__ import annotations
 
 import copy
+import re
 from typing import Any, Dict, List, Tuple
 
 from system.utils.logger import Logger
@@ -45,19 +46,31 @@ LEGACY_DETECTION_KEYS: Tuple[str, ...] = (
 )
 
 
-def is_legacy_detection_entry(det_cfg: Dict[str, Any]) -> bool:
+def is_legacy_detection_entry(det_cfg: Dict[str, Any], name: str = "") -> bool:
     """
     Check if a detection dictionary contains any legacy configuration fields.
 
     Args:
         det_cfg (dict): Detection configuration dictionary.
+        name (str): Optional name of entry (e.g. 'detections.road_cam')
 
     Returns:
         bool: True if legacy fields are present.
     """
     if not isinstance(det_cfg, dict):
         return False
-    return any(key in det_cfg for key in LEGACY_DETECTION_KEYS)
+    if any(key in det_cfg for key in LEGACY_DETECTION_KEYS):
+        return True
+    if name.startswith("detections."):
+        cam_id = name[len("detections."):]
+        dataset_cfg = det_cfg.get("dataset_create")
+        if isinstance(dataset_cfg, dict) and "path" in dataset_cfg:
+            path_val = str(dataset_cfg["path"]).replace('\\', '/').rstrip('/')
+            safe_id = re.sub(r'[^A-Za-z0-9-_]+', '', cam_id)
+            for suffix in (f"/{cam_id}", f"/{safe_id}"):
+                if suffix != "/" and path_val.endswith(suffix):
+                    return True
+    return False
 
 
 def is_legacy_config(config_data: Dict[str, Any]) -> bool:
@@ -75,14 +88,14 @@ def is_legacy_config(config_data: Dict[str, Any]) -> bool:
 
     # Check detection_default
     det_default = config_data.get("detection_default")
-    if isinstance(det_default, dict) and is_legacy_detection_entry(det_default):
+    if isinstance(det_default, dict) and is_legacy_detection_entry(det_default, name="detection_default"):
         return True
 
     # Check detections.<camera>
     detections = config_data.get("detections")
     if isinstance(detections, dict):
-        for cam_cfg in detections.values():
-            if isinstance(cam_cfg, dict) and is_legacy_detection_entry(cam_cfg):
+        for cam_name, cam_cfg in detections.items():
+            if isinstance(cam_cfg, dict) and is_legacy_detection_entry(cam_cfg, name=f"detections.{cam_name}"):
                 return True
 
     return False
@@ -167,6 +180,21 @@ def migrate_detection_entry(det_cfg: Dict[str, Any], name: str = "") -> Tuple[Di
             ]
             migrated = True
             _logger.info(f"[LegacyMigrator] Converted single counting_area to counting_areas for '{name or 'camera'}'.")
+
+    # Normalize dataset_create.path: strip trailing camera location so it stores base directory
+    if name.startswith("detections."):
+        cam_id = name[len("detections."):]
+        safe_id = re.sub(r'[^A-Za-z0-9-_]+', '', cam_id)
+        dataset_cfg = det_cfg.get("dataset_create")
+        if isinstance(dataset_cfg, dict) and "path" in dataset_cfg:
+            path_val = str(dataset_cfg["path"]).replace('\\', '/').rstrip('/')
+            for suffix in (f"/{cam_id}", f"/{safe_id}"):
+                if suffix != "/" and path_val.endswith(suffix):
+                    new_base = path_val[:-len(suffix)]
+                    dataset_cfg["path"] = new_base or "storage/saved_images"
+                    migrated = True
+                    _logger.info(f"[LegacyMigrator] Normalized dataset_create.path to base directory for '{name}'.")
+                    break
 
     # Remove all legacy keys from dictionary
     for legacy_key in LEGACY_DETECTION_KEYS:

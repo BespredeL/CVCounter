@@ -113,8 +113,8 @@ def images_dir_for_location(location: str, config=None) -> Path:
     """
     Resolve the folder where capture images for ``location`` are stored.
 
-    Prefers ``detections.<location>.dataset_create.path``, else
-    ``storage/saved_images/<location>``.
+    Base path from ``detections.<location>.dataset_create.path`` or detection_default,
+    then ``/<safe_location>/``.
     
     Args:
         location (str): The location
@@ -125,13 +125,21 @@ def images_dir_for_location(location: str, config=None) -> Path:
     """
     root = get_project_root()
     safe = _safe_location_key(location)
-    custom = None
+    base = 'storage/saved_images'
     if config is not None:
-        custom = (config.get(f'detections.{location}.dataset_create.path')
-                  or config.get(f'detections.{safe}.dataset_create.path'))
-    if custom:
-        return Path(resolve_project_path(custom, str(root)))
-    return Path(resolve_project_path(f'storage/saved_images/{safe or location}', str(root)))
+        base = (
+            config.get(f'detections.{location}.dataset_create.path')
+            or config.get(f'detections.{safe}.dataset_create.path')
+            or config.get('detection_default.dataset_create.path')
+            or base
+        )
+    loc_key = safe or location
+    norm = str(base).replace('\\', '/').rstrip('/')
+    if not (norm.endswith(f'/{location}') or norm.endswith(f'/{loc_key}')):
+        target_path = f'{norm}/{loc_key}'
+    else:
+        target_path = norm
+    return Path(resolve_project_path(target_path, str(root)))
 
 
 def recordings_dir_for_location(location: str, config=None) -> Path:
@@ -153,13 +161,18 @@ def recordings_dir_for_location(location: str, config=None) -> Path:
     base = 'storage/saved_recordings'
     if config is not None:
         base = (
-                config.get(f'detections.{location}.recording.path')
-                or config.get(f'detections.{safe}.recording.path')
-                or config.get('detection_default.recording.path')
-                or base
+            config.get(f'detections.{location}.recording.path')
+            or config.get(f'detections.{safe}.recording.path')
+            or config.get('detection_default.recording.path')
+            or base
         )
-    base_path = Path(resolve_project_path(base, str(root)))
-    return base_path / (safe or location)
+    loc_key = safe or location
+    norm = str(base).replace('\\', '/').rstrip('/')
+    if not (norm.endswith(f'/{location}') or norm.endswith(f'/{loc_key}')):
+        target_path = f'{norm}/{loc_key}'
+    else:
+        target_path = norm
+    return Path(resolve_project_path(target_path, str(root)))
 
 
 def web_cache_dir_for_location(location: str) -> Path:

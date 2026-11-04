@@ -11,6 +11,7 @@ and preservation of custom user keys.
 """
 
 import copy
+import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from system.utils.preview_settings import (
@@ -190,8 +191,6 @@ def align_camera_dict(
                 src[key] = copy.deepcopy(fallback[key])
             else:
                 src[key] = copy.deepcopy(default_val)
-                if key == "dataset_create" and location_id:
-                    src[key]["path"] = f"storage/saved_images/{location_id}"
 
     # Ensure backend-specific parameters if this model_type requires them
     for param_key, param_default in backend_params.items():
@@ -200,6 +199,15 @@ def align_camera_dict(
                 src[param_key] = copy.deepcopy(fallback[param_key])
             else:
                 src[param_key] = copy.deepcopy(param_default)
+
+    # Normalize dataset_create path if it contains trailing camera location
+    if location_id and isinstance(src.get("dataset_create"), dict) and "path" in src["dataset_create"]:
+        p_val = str(src["dataset_create"]["path"]).replace('\\', '/').rstrip('/')
+        safe_loc = re.sub(r'[^A-Za-z0-9-_]+', '', location_id)
+        for sfx in (f"/{location_id}", f"/{safe_loc}"):
+            if sfx != "/" and p_val.endswith(sfx):
+                src["dataset_create"]["path"] = p_val[:-len(sfx)] or "storage/saved_images"
+                break
 
     # Discard obsolete legacy keys
     for legacy_key in ("counting_area", "counting_area_color", "counting_area_direction"):

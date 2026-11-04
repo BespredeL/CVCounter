@@ -250,7 +250,7 @@
             "dataset_create": {
                 "enable": true,
                 "probability": 0.05,
-                "path": "storage/saved_images/ExampleCam"
+                "path": "storage/saved_images"
             },
             "recording": {
                 "enable": true,
