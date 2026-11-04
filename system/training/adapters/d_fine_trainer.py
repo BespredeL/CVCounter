@@ -90,7 +90,7 @@ class DFINETrainingProvider(BaseTrainingProvider):
                     self.download_base_model(base_model, progress_callback=request.progress_callback)
                 except Exception:
                     pass
-        run_dir = request.run_dir or (request.project_root or Path(".")).resolve() / "storage" / "runs" / "d_fine" / request.run_name
+        run_dir = request.run_dir or (self.runs_dir(request.project_root) / request.task / request.run_name)
         run_dir.mkdir(parents=True, exist_ok=True)
         weights_dir = run_dir / "weights"
         weights_dir.mkdir(parents=True, exist_ok=True)

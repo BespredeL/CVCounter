@@ -119,13 +119,24 @@ class ModelExportManager:
             runs_dir / 'detect',
             root / 'storage' / 'runs' / 'detect',
         ]
+        config_dir = root / 'config'
+        if config_dir.is_dir():
+            for p_dir in config_dir.iterdir():
+                if p_dir.is_dir() and p_dir.name not in ('ultralytics', 'models'):
+                    for sub in ('models', 'runs'):
+                        target = p_dir / sub
+                        if target.is_dir() and target not in search_dirs:
+                            search_dirs.append(target)
+
         models: List[Dict[str, Any]] = []
         seen_paths = set()
 
         for s_dir in search_dirs:
             if not s_dir.is_dir():
                 continue
-            for pt_file in s_dir.rglob('*.pt'):
+            for pt_file in s_dir.rglob('*'):
+                if not pt_file.is_file() or pt_file.suffix.lower() not in ('.pt', '.pth'):
+                    continue
                 try:
                     rel = str(pt_file.resolve().relative_to(root.resolve())).replace('\\', '/')
                 except ValueError:
@@ -148,6 +159,14 @@ class ModelExportManager:
             runs_dir,
             root / 'storage' / 'runs',
         ]
+        config_dir = root / 'config'
+        if config_dir.is_dir():
+            for p_dir in config_dir.iterdir():
+                if p_dir.is_dir() and p_dir.name not in ('ultralytics', 'models'):
+                    for sub in ('models', 'runs'):
+                        target = p_dir / sub
+                        if target.is_dir() and target not in search_dirs:
+                            search_dirs.append(target)
         artifacts: List[Dict[str, Any]] = []
         seen_paths = set()
         provider_capabilities = get_export_provider_capabilities()

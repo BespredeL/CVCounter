@@ -147,11 +147,18 @@ def _list_available_weights_for_deploy() -> list[dict]:
     try:
         _, _, runs_dir, _ = resolve_training_paths(root)
         search_dirs = [runs_dir, root / 'storage' / 'runs']
+        config_dir = root / 'config'
+        if config_dir.is_dir():
+            for p_dir in config_dir.iterdir():
+                if p_dir.is_dir():
+                    r_dir = p_dir / 'runs'
+                    if r_dir.is_dir() and r_dir not in search_dirs:
+                        search_dirs.append(r_dir)
 
         for sdir in search_dirs:
             if not sdir or not sdir.is_dir():
                 continue
-            for ext in ('*.pt', '*.onnx', '*.engine'):
+            for ext in ('*.pt', '*.pth', '*.onnx', '*.engine'):
                 for p in sdir.rglob(ext):
                     if not p.is_file():
                         continue
@@ -185,7 +192,7 @@ def _list_available_weights_for_deploy() -> list[dict]:
                         'label': label,
                         'category': 'trained_runs',
                         'mtime': mtime,
-                        'is_best': p.name == 'best.pt',
+                        'is_best': p.name in ('best.pt', 'best.pth'),
                     })
     except Exception:
         pass

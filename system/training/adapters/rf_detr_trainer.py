@@ -71,7 +71,7 @@ class RFDETRTrainingProvider(BaseTrainingProvider):
     BASE_MODELS = BASE_MODELS
 
     def train(self, request: TrainingRequest) -> TrainingResult:
-        run_dir = request.run_dir or (request.project_root or Path(".")).resolve() / "storage" / "runs" / "rf_detr" / request.run_name
+        run_dir = request.run_dir or (self.runs_dir(request.project_root) / request.task / request.run_name)
         run_dir.mkdir(parents=True, exist_ok=True)
         weights_dir = run_dir / "weights"
         weights_dir.mkdir(parents=True, exist_ok=True)
