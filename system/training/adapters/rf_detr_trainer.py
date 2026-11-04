@@ -109,11 +109,12 @@ class RFDETRTrainingProvider(BaseTrainingProvider):
             else:
                 model = model_cls()
 
+            batch_size = request.batch if request.batch and request.batch > 0 else 4
             # Train using rfdetr
             model.train(
                 dataset_dir=str(request.dataset_root),
                 epochs=request.epochs,
-                batch_size=request.batch,
+                batch_size=batch_size,
                 lr=float(request.options.get("lr", 1e-4)),
                 output_dir=str(run_dir),
                 device=str(request.device),
@@ -123,6 +124,7 @@ class RFDETRTrainingProvider(BaseTrainingProvider):
             import torch
             import torch.nn as nn
 
+            batch_size = request.batch if request.batch and request.batch > 0 else 4
             device_str = "cuda" if str(request.device) in ("0", "cuda", "cuda:0") and torch.cuda.is_available() else "cpu"
             device = torch.device(device_str)
 
@@ -143,7 +145,7 @@ class RFDETRTrainingProvider(BaseTrainingProvider):
                     raise TrainingCancelledError("Training cancelled during epoch.")
 
                 model.train()
-                dummy_input = torch.randn(min(4, request.batch), 3, 64, 64, device=device)
+                dummy_input = torch.randn(min(4, batch_size), 3, 64, 64, device=device)
                 loss = model(dummy_input).sum() * 0.01 + (1.0 / epoch)
                 optimizer.zero_grad()
                 loss.backward()

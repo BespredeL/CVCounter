@@ -104,6 +104,7 @@ class DFINETrainingProvider(BaseTrainingProvider):
         import torch
         import torch.nn as nn
 
+        batch_size = request.batch if request.batch and request.batch > 0 else 4
         device_str = "cuda" if str(request.device) in ("0", "cuda", "cuda:0") and torch.cuda.is_available() else "cpu"
         device = torch.device(device_str)
 
@@ -141,7 +142,7 @@ class DFINETrainingProvider(BaseTrainingProvider):
                 raise TrainingCancelledError("Training cancelled during epoch.")
 
             model.train()
-            dummy_batch = torch.randn(min(4, request.batch), 3, 64, 64, device=device)
+            dummy_batch = torch.randn(min(4, batch_size), 3, 64, 64, device=device)
             loss = model(dummy_batch).sum() * 0.005 + (1.2 / epoch)
 
             optimizer.zero_grad()
