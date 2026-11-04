@@ -40,7 +40,7 @@
                                 {{ trans('Display label') }} <span class="text-danger">*</span>
                             </label>
                             <input type="text" class="form-control" id="new_field_label" name="label"
-                                   required placeholder="e.g. Defect Reason">
+                                   required placeholder="{{ trans('e.g. Defect Reason') }}">
                             <div class="form-text">{{ trans('Display title shown in forms and reports.') }}</div>
                         </div>
                         <div class="col-md-6">
@@ -77,7 +77,7 @@
                                 {{ trans('Options (one per line)') }} <span class="text-danger">*</span>
                             </label>
                             <textarea class="form-control font-monospace" id="new_field_options" name="options"
-                                      rows="3" placeholder="Option 1&#10;Option 2&#10;Option 3"></textarea>
+                                      rows="3" placeholder="{{ trans('Option 1\nOption 2\nOption 3') }}"></textarea>
                             <div class="form-text">{{ trans('Enter choices for the dropdown, each on a new line or comma-separated.') }}</div>
                         </div>
                         <div class="col-12">

@@ -53,7 +53,7 @@
 
                 <!-- Center: Tool Switcher -->
                 <div class="ca-tools-switcher d-flex align-items-center gap-2">
-                    <div class="btn-group btn-group-sm" role="group" aria-label="Editor Tools">
+                    <div class="btn-group btn-group-sm" role="group" aria-label="{{ trans('Editor Tools') }}">
                         <input type="radio" class="btn-check" name="ca-tool-mode" id="ca-tool-edit" value="edit" checked autocomplete="off">
                         <label class="btn btn-outline-primary d-inline-flex align-items-center gap-1" for="ca-tool-edit" title="V · {{ trans('Select & Edit') }}">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-cursor-fill" viewBox="0 0 16 16">
@@ -288,7 +288,7 @@
                             <label class="form-label small text-body-secondary fw-semibold text-uppercase tracking-wider mb-2">
                                 {{ trans('Counting direction') }}
                             </label>
-                            <div class="ca-direction-dpad d-grid gap-1 mb-1" style="grid-template-columns: repeat(3, 1fr);" id="ca-direction-group" aria-label="Counting Direction">
+                            <div class="ca-direction-dpad d-grid gap-1 mb-1" style="grid-template-columns: repeat(3, 1fr);" id="ca-direction-group" aria-label="{{ trans('Counting direction') }}">
                                 <!-- Row 1: ↖️ ⬆️ ↗️ -->
                                 <div>
                                     <input type="radio" class="btn-check" name="ca-zone-direction" id="ca-dir-brtl" value="bottom_right_to_top_left" autocomplete="off">
@@ -384,7 +384,7 @@
                             </li>
                             <li class="d-flex justify-content-between align-items-center">
                                 <span>{{ trans('Move entire zone') }}</span>
-                                <span><kbd>Alt + ЛКМ</kbd></span>
+                                <span><kbd>Alt + {{ trans('LMB') }}</kbd></span>
                             </li>
                             <li class="d-flex justify-content-between align-items-center">
                                 <span>{{ trans('Wheel to zoom, Space+drag to pan') }}</span>
@@ -413,55 +413,55 @@
                                 <tbody>
                                     <tr>
                                         <td class="ps-3"><kbd>V</kbd> / <kbd>1</kbd></td>
-                                        <td>{{ trans('Select & Edit') }} (тяните вершины, кликайте на грань)</td>
+                                        <td>{{ trans('Select & Edit') }} <span class="text-body-secondary">({{ trans('drag vertices, click edge') }})</span></td>
                                     </tr>
                                     <tr>
                                         <td class="ps-3"><kbd>P</kbd> / <kbd>2</kbd></td>
-                                        <td>{{ trans('Draw polygon') }} (кликайте точки, замкните на первой)</td>
+                                        <td>{{ trans('Draw polygon') }} <span class="text-body-secondary">({{ trans('click points, close on first') }})</span></td>
                                     </tr>
                                     <tr>
                                         <td class="ps-3"><kbd>R</kbd> / <kbd>3</kbd></td>
-                                        <td>{{ trans('Draw rectangle') }} (зажмите и растяните область)</td>
+                                        <td>{{ trans('Draw rectangle') }} <span class="text-body-secondary">({{ trans('click and drag area') }})</span></td>
                                     </tr>
                                     <tr>
                                         <td class="ps-3"><kbd>Ctrl</kbd> + <kbd>Z</kbd></td>
-                                        <td>{{ trans('Undo') }} (отменить последнее действие)</td>
+                                        <td>{{ trans('Undo') }} <span class="text-body-secondary">({{ trans('revert last action') }})</span></td>
                                     </tr>
                                     <tr>
                                         <td class="ps-3"><kbd>Ctrl</kbd> + <kbd>Y</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td>
-                                        <td>{{ trans('Redo') }} (повторить отмененное действие)</td>
+                                        <td>{{ trans('Redo') }} <span class="text-body-secondary">({{ trans('repeat reverted action') }})</span></td>
                                     </tr>
                                     <tr>
                                         <td class="ps-3"><kbd>Ctrl</kbd> + <kbd>S</kbd></td>
-                                        <td>{{ trans('Save zone') }} (сохранить настройки в конфигурацию)</td>
+                                        <td>{{ trans('Save zone') }} <span class="text-body-secondary">({{ trans('save settings to config') }})</span></td>
                                     </tr>
                                     <tr>
-                                        <td class="ps-3"><kbd>Alt</kbd> + Перетаскивание</td>
-                                        <td>{{ trans('Move entire zone') }} (сдвинуть весь полигон целиком)</td>
+                                        <td class="ps-3"><kbd>Alt</kbd> + {{ trans('Drag') }}</td>
+                                        <td>{{ trans('Move entire zone') }} <span class="text-body-secondary">({{ trans('shift entire polygon') }})</span></td>
                                     </tr>
                                     <tr>
-                                        <td class="ps-3"><kbd>Пробел</kbd> + ЛКМ / СКМ</td>
-                                        <td>Панорамирование (перемещение холста)</td>
+                                        <td class="ps-3"><kbd>{{ trans('Space') }}</kbd> + {{ trans('LMB / MMB') }}</td>
+                                        <td>{{ trans('Pan canvas') }} <span class="text-body-secondary">({{ trans('move canvas') }})</span></td>
                                     </tr>
                                     <tr>
-                                        <td class="ps-3">Колёсико мыши</td>
-                                        <td>Плавный зум в точку курсора (25% &mdash; 500%)</td>
+                                        <td class="ps-3">{{ trans('Mouse wheel') }}</td>
+                                        <td>{{ trans('Smooth zoom to cursor (25% — 500%)') }}</td>
                                     </tr>
                                     <tr>
                                         <td class="ps-3"><kbd>F</kbd></td>
-                                        <td>{{ trans('Fit to view') }} (вписать изображение в экран)</td>
+                                        <td>{{ trans('Fit to view') }} <span class="text-body-secondary">({{ trans('fit image to screen') }})</span></td>
                                     </tr>
                                     <tr>
-                                        <td class="ps-3">Двойной клик по вершине</td>
-                                        <td>Удалить вершину (если точек &gt; 3)</td>
+                                        <td class="ps-3">{{ trans('Double click vertex') }}</td>
+                                        <td>{{ trans('Delete vertex (if points > 3)') }}</td>
                                     </tr>
                                     <tr>
                                         <td class="ps-3"><kbd>Del</kbd> / <kbd>Backspace</kbd></td>
-                                        <td>Удалить выбранную вершину или активную зону</td>
+                                        <td>{{ trans('Delete selected vertex or active zone') }}</td>
                                     </tr>
                                     <tr>
                                         <td class="ps-3"><kbd>Esc</kbd></td>
-                                        <td>Сброс рисования / возврат к режиму правки</td>
+                                        <td>{{ trans('Cancel drawing / return to edit mode') }}</td>
                                     </tr>
                                 </tbody>
                             </table>

@@ -200,10 +200,17 @@
             {% endif %}
 
             <span class="d-none d-sm-block lh-1 opacity-50">&nbsp;·&nbsp;</span>
-            <a href="https://bespredel.name" class="text-body-secondary text-decoration-none lh-1"
-               data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
-               data-bs-title="Разработчик системы: <br><b>Александр Киреев</b>"
-               target="_blank">Dev: Александр Киреев</a>
+            {% if config.get('general.default_language', 'ru') == 'ru' %}
+                <a href="https://bespredel.name" class="text-body-secondary text-decoration-none lh-1"
+                   data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
+                   data-bs-title="Разработчик системы: <br><b>Александр Киреев</b>"
+                   target="_blank">Dev: Александр Киреев</a>
+            {% else %}
+                <a href="https://bespredel.name" class="text-body-secondary text-decoration-none lh-1"
+                   data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
+                   data-bs-title="System Developer: <br><b>Aleksandr Kireev</b>"
+                   target="_blank">Dev: Aleksandr Kireev</a>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -235,7 +242,7 @@
         <div class="modal-content text-center p-4 shadow-lg border-0">
             <div class="my-3">
                 <div class="spinner-border text-primary spinner-lg" role="status">
-                    <span class="visually-hidden">Loading...</span>
+                    <span class="visually-hidden">{{ trans('Loading...') }}</span>
                 </div>
             </div>
             <h5 class="fw-bold mb-2">{{ trans('Restarting server...') }}</h5>
