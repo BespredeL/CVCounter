@@ -28,7 +28,7 @@ from system.services.counter_runtime import (
     stop_counter,
 )
 from system.utils.app_context import get_app_context
-from system.utils.counting_area import areas_for_config, normalize_counting_areas
+from system.utils.counting_area import normalize_counting_areas
 from system.utils.counter_preview import get_preview_path
 from system.utils.frame_utils import FrameUtils
 from system.utils.i18n import trans as translate
@@ -174,12 +174,8 @@ def counting_area_data(location: str = None):
 
     detector_config = config.get(f'detections.{location}', {})
     areas = normalize_counting_areas(detector_config)
-    legacy = areas_for_config(areas)
     return jsonify({
-        'counting_areas': legacy['counting_areas'],
-        'counting_area': legacy['counting_area'],
-        'counting_area_color': legacy['counting_area_color'],
-        'counting_area_direction': legacy.get('counting_area_direction', 'any'),
+        'counting_areas': areas,
     })
 
 
@@ -249,7 +245,7 @@ def counter_settings_save(location: str = None):
     require_detection_location(location)
 
     prefix = f'detections-{location}-'
-    zone_field_suffixes = ('counting_area', 'counting_area_color', 'counting_areas')
+    zone_field_suffixes = ('counting_area', 'counting_area_color', 'counting_area_direction', 'counting_areas')
     form_data = {
         key: value
         for key, value in request.form.items()
@@ -340,11 +336,12 @@ def counting_area_save(location: str = None):
         abort(400, str(e))
 
     counting_areas = payload['counting_areas']
-    legacy = areas_for_config(counting_areas)
-    config.set(f'detections.{location}.counting_areas', legacy['counting_areas'])
-    config.set(f'detections.{location}.counting_area', legacy['counting_area'])
-    config.set(f'detections.{location}.counting_area_color', legacy['counting_area_color'])
-    config.set(f'detections.{location}.counting_area_direction', legacy.get('counting_area_direction', 'any'))
+    config.set(f'detections.{location}.counting_areas', counting_areas)
+    for legacy_key in ('counting_area', 'counting_area_color', 'counting_area_direction'):
+        try:
+            config.delete(f'detections.{location}.{legacy_key}')
+        except KeyError:
+            pass
     config.save_config()
 
     if location in object_counters:
@@ -352,10 +349,7 @@ def counting_area_save(location: str = None):
 
     return jsonify({
         'status': 'saved',
-        'counting_areas': legacy['counting_areas'],
-        'counting_area': legacy['counting_area'],
-        'counting_area_color': legacy['counting_area_color'],
-        'counting_area_direction': legacy.get('counting_area_direction', 'any'),
+        'counting_areas': counting_areas,
     })
 
 

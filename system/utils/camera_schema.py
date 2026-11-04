@@ -48,9 +48,7 @@ CANONICAL_CAMERA_KEYS: List[str] = [
     "indicator_detected_color",
     "indicator_counted_color",
     # 3. Counting Areas (Zones)
-    "counting_area",
     "counting_areas",
-    "counting_area_color",
     # 4. Model & Backend-Specific Options
     "model_config_path",
     "input_size",
@@ -90,13 +88,6 @@ CANONICAL_DEFAULTS: Dict[str, Any] = {
     "indicator_size": 10,
     "indicator_detected_color": [255, 0, 255],
     "indicator_counted_color": [0, 255, 0],
-    "counting_area": [
-        [0, 0],
-        [100, 0],
-        [100, 100],
-        [0, 100]
-    ],
-    "counting_area_color": [67, 211, 255],
     "counting_areas": [
         {
             "points": [
@@ -105,7 +96,8 @@ CANONICAL_DEFAULTS: Dict[str, Any] = {
                 [100, 100],
                 [0, 100]
             ],
-            "color": [67, 211, 255]
+            "color": [67, 211, 255],
+            "direction": "any"
         }
     ],
     "classes": {},
@@ -208,6 +200,10 @@ def align_camera_dict(
                 src[param_key] = copy.deepcopy(fallback[param_key])
             else:
                 src[param_key] = copy.deepcopy(param_default)
+
+    # Discard obsolete legacy keys
+    for legacy_key in ("counting_area", "counting_area_color", "counting_area_direction"):
+        src.pop(legacy_key, None)
 
     # 2. Place known canonical keys in exact order
     for canon_key in CANONICAL_CAMERA_KEYS:

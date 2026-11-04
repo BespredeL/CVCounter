@@ -532,27 +532,12 @@ class ConfigValidator:
                 if isinstance(device, int) and device < 0:
                     self.warnings.append(f"'{prefix}.device' is {device}, negative values may cause issues")
 
-        # Validate counting_area (legacy single polygon)
-        if 'counting_area' in config:
-            counting_area = config['counting_area']
-            if not isinstance(counting_area, list):
-                self.errors.append(f"'{prefix}.counting_area' must be a list")
-            elif len(counting_area) < 3:
-                self.errors.append(f"'{prefix}.counting_area' must have at least 3 points")
-            else:
-                for i, point in enumerate(counting_area):
-                    if not isinstance(point, list) or len(point) != 2:
-                        self.errors.append(f"'{prefix}.counting_area[{i}]' must be a list of 2 numbers")
-                    elif not all(isinstance(coord, (int, float)) for coord in point):
-                        self.errors.append(f"'{prefix}.counting_area[{i}]' coordinates must be numbers")
-
-        # Validate counting_area_color
-        if 'counting_area_color' in config:
-            color = config['counting_area_color']
-            if not isinstance(color, list) or len(color) != 3:
-                self.errors.append(f"'{prefix}.counting_area_color' must be a list of 3 integers (BGR)")
-            elif not all(isinstance(c, int) and 0 <= c <= 255 for c in color):
-                self.errors.append(f"'{prefix}.counting_area_color' values must be integers between 0 and 255")
+        # Warn on legacy zone fields if still present in raw config
+        if 'counting_area' in config or 'counting_area_color' in config or 'counting_area_direction' in config:
+            self.warnings.append(
+                f"'{prefix}' contains legacy counting area fields ('counting_area', 'counting_area_color', 'counting_area_direction'); "
+                f"use 'counting_areas' instead"
+            )
 
         # Validate indicator state colors
         for color_key in ('indicator_detected_color', 'indicator_counted_color'):

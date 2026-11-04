@@ -61,9 +61,17 @@ class ConfigManager:
                 if not isinstance(config_data, dict):
                     raise InvalidConfigError("Configuration must be a JSON object")
 
+                # --- LEGACY CONFIG COMPATIBILITY LAYER ---
+                # Transitional migration: upgrades legacy items (e.g. counting_area -> counting_areas).
+                # Easily removable in a future major version by deleting config_migrator.py
+                # and this 2-line block.
+                from system.managers.config_migrator import migrate_legacy_config
+                config_data, migrated = migrate_legacy_config(config_data)
+                # -----------------------------------------
+
                 from system.utils.camera_schema import align_full_config
                 aligned_data, changed = align_full_config(config_data)
-                if changed:
+                if changed or migrated:
                     config_data = aligned_data
                     try:
                         with open(self._config_path, 'w', encoding='utf-8') as config_file_w:
@@ -217,7 +225,7 @@ class ConfigManager:
             for key, value in form_data.items():
                 keys = self._split_form_key(key, current_config)
                 if keys and keys[0] == 'detections' and keys[-1] in (
-                        'counting_area', 'counting_area_color', 'counting_areas'
+                        'counting_area', 'counting_area_color', 'counting_areas', 'counting_area_direction'
                 ):
                     continue
 
@@ -356,6 +364,8 @@ class ConfigManager:
                     config_data = json.load(config_file)
                     if not isinstance(config_data, dict):
                         raise InvalidConfigError("Configuration must be a JSON object")
+                    from system.managers.config_migrator import migrate_legacy_config
+                    config_data, _ = migrate_legacy_config(config_data)
                     self._config = config_data
             else:
                 self._config = self.read_config()

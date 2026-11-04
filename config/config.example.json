@@ -126,25 +126,15 @@
         "tracker_low_thresh": 0.1,
         "indicator_mode": "circle",
         "indicator_size": 10,
-        "indicator_detected_color": [255, 0, 255],
-        "indicator_counted_color": [0, 255, 0],
-        "counting_area": [
-            [
-                0,
-                0
-            ],
-            [
-                100,
-                0
-            ],
-            [
-                100,
-                100
-            ],
-            [
-                0,
-                100
-            ]
+        "indicator_detected_color": [
+            255,
+            0,
+            255
+        ],
+        "indicator_counted_color": [
+            0,
+            255,
+            0
         ],
         "counting_areas": [
             {
@@ -172,11 +162,6 @@
                     255
                 ]
             }
-        ],
-        "counting_area_color": [
-            67,
-            211,
-            255
         ],
         "classes": {},
         "custom_fields": {},
@@ -216,25 +201,15 @@
             "tracker_low_thresh": 0.1,
             "indicator_mode": "circle",
             "indicator_size": 10,
-            "indicator_detected_color": [255, 0, 255],
-            "indicator_counted_color": [0, 255, 0],
-            "counting_area": [
-                [
-                    0,
-                    0
-                ],
-                [
-                    100,
-                    0
-                ],
-                [
-                    100,
-                    100
-                ],
-                [
-                    0,
-                    100
-                ]
+            "indicator_detected_color": [
+                255,
+                0,
+                255
+            ],
+            "indicator_counted_color": [
+                0,
+                255,
+                0
             ],
             "counting_areas": [
                 {
@@ -262,11 +237,6 @@
                         0
                     ]
                 }
-            ],
-            "counting_area_color": [
-                67,
-                211,
-                255
             ],
             "classes": {},
             "custom_fields": {

@@ -236,22 +236,17 @@ def areas_to_legacy_fields(areas: Sequence[Mapping[str, Any]]) -> tuple[list[lis
 
 def areas_for_config(areas: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     """
-    Build config keys for multi-zone storage with legacy aliases.
+    Build config keys for canonical multi-zone storage.
 
     Args:
         areas: The areas to build the config keys from.
 
     Returns:
-        The config keys.
+        The config keys containing canonical counting_areas.
     """
     normalized = normalize_counting_areas({'counting_areas': list(areas)})
-    legacy_area, legacy_color = areas_to_legacy_fields(normalized)
-    legacy_direction = normalized[0].get('direction', 'any') if normalized else 'any'
     return {
         'counting_areas': normalized,
-        'counting_area': legacy_area,
-        'counting_area_color': legacy_color,
-        'counting_area_direction': legacy_direction,
     }
 
 
