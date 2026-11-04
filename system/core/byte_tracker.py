@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import threading
 from typing import Optional
 import numpy as np
 from filterpy.kalman import KalmanFilter
@@ -75,8 +76,9 @@ class KalmanBoxTracker:
     Uses constant-velocity model with 7-dim state [x, y, s, r, vx, vy, vs].
     """
     count = 0
+    _count_lock = threading.Lock()
 
-    def __init__(self, bbox: np.ndarray, class_id: int = 0, track_id: Optional[int] = None):
+    def __init__(self, bbox: np.ndarray, class_id: int = -1, track_id: Optional[int] = None):
         self.kf = KalmanFilter(dim_x=7, dim_z=4)
         self.kf.F = np.array([
             [1, 0, 0, 0, 1, 0, 0],
@@ -107,8 +109,9 @@ class KalmanBoxTracker:
         if track_id is not None:
             self.id = int(track_id)
         else:
-            KalmanBoxTracker.count += 1
-            self.id = KalmanBoxTracker.count
+            with KalmanBoxTracker._count_lock:
+                self.id = KalmanBoxTracker.count
+                KalmanBoxTracker.count += 1
 
         self.hits = 1
         self.hit_streak = 1
@@ -174,17 +177,20 @@ class BYTETracker:
         self.trackers: list[KalmanBoxTracker] = []
         self.frame_count: int = 0
         self._next_id: int = 0
+        self._lock = threading.RLock()
 
     def next_id(self) -> int:
         """Allocate next track ID for this tracker instance."""
-        self._next_id += 1
-        return self._next_id
+        with self._lock:
+            self._next_id += 1
+            return self._next_id
 
     def reset(self):
         """Reset internal tracker state."""
-        self.trackers.clear()
-        self.frame_count = 0
-        self._next_id = 0
+        with self._lock:
+            self.trackers.clear()
+            self.frame_count = 0
+            self._next_id = 0
 
     def update(self, dets: Optional[np.ndarray] = None) -> np.ndarray:
         """
@@ -198,80 +204,81 @@ class BYTETracker:
             np.ndarray: Tracked objects with shape (M, 6):
                         [x1, y1, x2, y2, track_id, class_id]
         """
-        self.frame_count += 1
-        if dets is None or len(dets) == 0:
-            dets = np.empty((0, 6), dtype=np.float32)
+        with self._lock:
+            self.frame_count += 1
+            if dets is None or len(dets) == 0:
+                dets = np.empty((0, 6), dtype=np.float32)
 
-        # 1. Predict locations for all existing trackers
-        trks = np.zeros((len(self.trackers), 4), dtype=np.float32)
-        to_del = []
-        for t, trk in enumerate(self.trackers):
-            pos = trk.predict()
-            if np.any(np.isnan(pos)) or np.any(np.isinf(pos)):
-                to_del.append(t)
-            else:
-                trks[t, :] = pos
+            # 1. Predict locations for all existing trackers
+            trks = np.zeros((len(self.trackers), 4), dtype=np.float32)
+            to_del = []
+            for t, trk in enumerate(self.trackers):
+                pos = trk.predict()
+                if np.any(np.isnan(pos)) or np.any(np.isinf(pos)):
+                    to_del.append(t)
+                else:
+                    trks[t, :] = pos
 
-        for t in reversed(to_del):
-            self.trackers.pop(t)
-            trks = np.delete(trks, t, axis=0)
+            for t in reversed(to_del):
+                self.trackers.pop(t)
+                trks = np.delete(trks, t, axis=0)
 
-        # 2. Split detections into high-score and low-score (ByteTrack Core)
-        scores = dets[:, 4] if dets.shape[1] > 4 else np.ones(len(dets), dtype=np.float32)
-        high_mask = scores >= self.track_thresh
-        low_mask = (scores < self.track_thresh) & (scores >= self.low_thresh)
+            # 2. Split detections into high-score and low-score (ByteTrack Core)
+            scores = dets[:, 4] if dets.shape[1] > 4 else np.ones(len(dets), dtype=np.float32)
+            high_mask = scores >= self.track_thresh
+            low_mask = (scores < self.track_thresh) & (scores >= self.low_thresh)
 
-        dets_high = dets[high_mask]
-        dets_low = dets[low_mask]
+            dets_high = dets[high_mask]
+            dets_low = dets[low_mask]
 
-        # 3. First association: match high-score detections with existing trackers
-        matched_trks_set: set[int] = set()
-        unmatched_dets_high: list[int] = list(range(len(dets_high)))
+            # 3. First association: match high-score detections with existing trackers
+            matched_trks_set: set[int] = set()
+            unmatched_dets_high: list[int] = list(range(len(dets_high)))
 
-        if len(dets_high) > 0 and len(self.trackers) > 0:
-            iou_mat = iou_batch(dets_high[:, :4], trks)
-            row_ind, col_ind = linear_sum_assignment(-iou_mat)
-            for r, c in zip(row_ind, col_ind):
-                if iou_mat[r, c] >= self.min_iou:
-                    cls_val = dets_high[r, 5] if dets_high.shape[1] > 5 else None
-                    self.trackers[c].update(dets_high[r, :4], cls_val)
-                    matched_trks_set.add(c)
-                    unmatched_dets_high.remove(r)
+            if len(dets_high) > 0 and len(self.trackers) > 0:
+                iou_mat = iou_batch(dets_high[:, :4], trks)
+                row_ind, col_ind = linear_sum_assignment(-iou_mat)
+                for r, c in zip(row_ind, col_ind):
+                    if iou_mat[r, c] >= self.min_iou:
+                        cls_val = dets_high[r, 5] if dets_high.shape[1] > 5 else None
+                        self.trackers[c].update(dets_high[r, :4], cls_val)
+                        matched_trks_set.add(c)
+                        unmatched_dets_high.remove(r)
 
-        # 4. Second association: match low-score detections with remaining unmatched trackers
-        # (This rescues tracks occluded by objects or motion blur, preventing ID switches!)
-        unmatched_trks = [t for t in range(len(self.trackers)) if t not in matched_trks_set]
-        if len(dets_low) > 0 and len(unmatched_trks) > 0:
-            iou_mat_low = iou_batch(dets_low[:, :4], trks[unmatched_trks])
-            row_ind, col_ind = linear_sum_assignment(-iou_mat_low)
-            # Low-score detections use a slightly more forgiving IoU threshold
-            second_iou_thresh = max(0.15, self.min_iou * 0.7)
-            for r, c in zip(row_ind, col_ind):
-                trk_idx = unmatched_trks[c]
-                if iou_mat_low[r, c] >= second_iou_thresh:
-                    cls_val = dets_low[r, 5] if dets_low.shape[1] > 5 else None
-                    self.trackers[trk_idx].update(dets_low[r, :4], cls_val)
-                    matched_trks_set.add(trk_idx)
+            # 4. Second association: match low-score detections with remaining unmatched trackers
+            # (This rescues tracks occluded by objects or motion blur, preventing ID switches!)
+            unmatched_trks = [t for t in range(len(self.trackers)) if t not in matched_trks_set]
+            if len(dets_low) > 0 and len(unmatched_trks) > 0:
+                iou_mat_low = iou_batch(dets_low[:, :4], trks[unmatched_trks])
+                row_ind, col_ind = linear_sum_assignment(-iou_mat_low)
+                # Low-score detections use a slightly more forgiving IoU threshold
+                second_iou_thresh = max(0.15, self.min_iou * 0.7)
+                for r, c in zip(row_ind, col_ind):
+                    trk_idx = unmatched_trks[c]
+                    if iou_mat_low[r, c] >= second_iou_thresh:
+                        cls_val = dets_low[r, 5] if dets_low.shape[1] > 5 else None
+                        self.trackers[trk_idx].update(dets_low[r, :4], cls_val)
+                        matched_trks_set.add(trk_idx)
 
-        # 5. Initialize new trackers from remaining unmatched high-score detections
-        for r in unmatched_dets_high:
-            cls_id = int(dets_high[r, 5]) if dets_high.shape[1] > 5 else 0
-            self.trackers.append(KalmanBoxTracker(dets_high[r, :4], cls_id, track_id=self.next_id()))
+            # 5. Initialize new trackers from remaining unmatched high-score detections
+            for r in unmatched_dets_high:
+                cls_id = int(dets_high[r, 5]) if dets_high.shape[1] > 5 else -1
+                self.trackers.append(KalmanBoxTracker(dets_high[r, :4], cls_id, track_id=self.next_id()))
 
-        # 6. Collect confirmed active tracks and purge dead tracks
-        ret = []
-        i = len(self.trackers)
-        for trk in reversed(self.trackers):
-            i -= 1
-            d = trk.get_state()
-            if (trk.time_since_update < 1) and (trk.hit_streak >= self.min_hits or self.frame_count <= self.min_hits):
-                ret.append([d[0], d[1], d[2], d[3], trk.id, trk.class_id])
-            if trk.time_since_update > self.max_age:
-                self.trackers.pop(i)
+            # 6. Collect confirmed active tracks and purge dead tracks
+            ret = []
+            i = len(self.trackers)
+            for trk in reversed(self.trackers):
+                i -= 1
+                d = trk.get_state()
+                if (trk.time_since_update < 1) and (trk.hit_streak >= self.min_hits or self.frame_count <= self.min_hits):
+                    ret.append([d[0], d[1], d[2], d[3], trk.id, trk.class_id])
+                if trk.time_since_update > self.max_age:
+                    self.trackers.pop(i)
 
-        if len(ret) > 0:
-            return np.array(ret, dtype=np.float32)
-        return np.empty((0, 6), dtype=np.float32)
+            if len(ret) > 0:
+                return np.array(ret, dtype=np.float32)
+            return np.empty((0, 6), dtype=np.float32)
 
 
 ByteTrack = BYTETracker
