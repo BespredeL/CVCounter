@@ -1564,5 +1564,17 @@
   "{running} running of {total} configured counters": "{running} запущено из {total} настроенных счетчиков",
   "→ inbox": "→ во входящие",
   "→ train": "→ в обучающую",
-  "→ val": "→ в валидацию"
+  "→ val": "→ в валидацию",
+  "Delete media": "Удалить медиафайл",
+  "Are you sure you want to delete media file \"{name}\"?": "Вы уверены, что хотите удалить медиафайл «{name}»?",
+  "Media file deleted successfully": "Медиафайл успешно удален",
+  "Failed to delete media file": "Не удалось удалить медиафайл",
+  "Delete selected": "Удалить выбранные",
+  "Are you sure you want to delete {count} selected files?": "Вы уверены, что хотите удалить {count} выбранных файлов?",
+  "Selected media files deleted successfully": "Выбранные медиафайлы успешно удалены",
+  "Failed to delete selected media files": "Не удалось удалить выбранные медиафайлы",
+  "Administrator privileges required.": "Требуются права администратора.",
+  "Invalid media type": "Неверный тип медиафайла",
+  "No media files specified": "Медиафайлы не указаны",
+  "Media file not found or could not be deleted": "Медиафайл не найден или не может быть удален"
 }

@@ -453,3 +453,78 @@
     min-width: 3rem;
     text-align: right;
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* Reports Saved Media Delete and Selection Controls                          */
+/* -------------------------------------------------------------------------- */
+
+.reports-media__card {
+    position: relative;
+    border-radius: var(--cv-radius);
+    transition: transform 0.15s ease;
+}
+
+.reports-media__btn-delete {
+    position: absolute;
+    top: 0.35rem;
+    right: 0.35rem;
+    z-index: 4;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    transition: opacity 0.15s ease, transform 0.15s ease, background-color 0.15s ease;
+}
+
+.reports-media__card:hover .reports-media__btn-delete,
+.reports-media__btn-delete:focus-visible {
+    opacity: 0.85;
+}
+
+.reports-media__btn-delete:hover {
+    opacity: 1 !important;
+    transform: scale(1.1);
+}
+
+@media (hover: none) {
+    .reports-media__btn-delete {
+        opacity: 0.85;
+    }
+}
+
+.reports-media__checkbox-wrap {
+    position: absolute;
+    top: 0.35rem;
+    left: 0.35rem;
+    z-index: 4;
+    margin: 0;
+    min-height: auto;
+}
+
+.reports-media__checkbox {
+    width: 1.25rem;
+    height: 1.25rem;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    background-color: rgba(var(--bs-body-bg-rgb, 255, 255, 255), 0.95);
+    border: 2px solid var(--cv-border, #6c757d);
+}
+
+.reports-media.is-select-mode .reports-media__checkbox-wrap {
+    display: block !important;
+}
+
+.reports-media.is-select-mode .reports-media__btn-delete {
+    display: none !important;
+}
+
+.reports-media__item.is-selected .reports-media__thumb {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 2px var(--bs-primary);
+}

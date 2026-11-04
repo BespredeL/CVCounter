@@ -11,7 +11,7 @@ from threading import Thread
 from flask import Blueprint, abort, jsonify, render_template, request, send_file
 from markupsafe import escape
 
-from system.auth import login_required
+from system.auth import admin_required, login_required
 from system.utils.app_context import get_app_context
 from system.utils.i18n import trans as translate
 from system.utils.saved_media import (
@@ -24,6 +24,8 @@ from system.utils.saved_media import (
     resolve_saved_recording,
     resolve_video_poster,
     warm_web_videos,
+    delete_saved_media,
+    delete_saved_media_batch,
 )
 from system.utils.validators import ValidationError, validate_report_list_request
 
@@ -41,11 +43,11 @@ def _valid_location(location: str | None) -> str:
         str: The validated location
     """
     context = get_app_context()
-    locations = context['locations']
+    locations = context.get('locations') if isinstance(context, dict) else None
     if location is None:
         abort(404, translate('Page not found'))
     location = str(location).strip()
-    if location not in locations:
+    if locations is not None and location not in locations:
         abort(404, translate('Page not found'))
     return location
 
@@ -312,6 +314,104 @@ def report_media_video(location: str, filename: str):
         conditional=True,
         max_age=3600,
     )
+
+
+@reports_bp.route('/reports/<string:location>/media/<string:media_type>/<path:filename>/delete', methods=['POST', 'DELETE'])
+@admin_required
+def report_media_delete_item(location: str, media_type: str, filename: str):
+    """
+    Delete a single saved media file (image or video) for a location.
+    Requires administrator privileges.
+
+    Args:
+        location (str): Counter/camera location identifier.
+        media_type (str): Media type ('image' or 'video').
+        filename (str): Base filename of the media file.
+
+    Returns:
+        Response: JSON response indicating success or failure.
+    """
+    valid_loc = _valid_location(location)
+    context = get_app_context()
+    config = context.get('config')
+
+    if media_type not in ('image', 'video'):
+        return jsonify({'ok': False, 'error': translate('Invalid media type')}), 400
+
+    deleted = delete_saved_media(valid_loc, filename, config=config, media_type=media_type)
+    if not deleted:
+        return jsonify({'ok': False, 'error': translate('Media file not found or could not be deleted')}), 404
+
+    return jsonify({
+        'ok': True,
+        'message': translate('Media file deleted successfully'),
+        'filename': filename,
+        'media_type': media_type,
+        'location': valid_loc,
+    })
+
+
+@reports_bp.route('/reports/<string:location>/media/delete', methods=['POST', 'DELETE'])
+@admin_required
+def report_media_delete(location: str):
+    """
+    Delete one or multiple saved media files for a location.
+    Accepts JSON or form payload with 'filename' or 'filenames': [...] and optional 'media_type'.
+    Requires administrator privileges.
+
+    Args:
+        location (str): Counter/camera location identifier.
+
+    Returns:
+        Response: JSON response indicating success or failure.
+    """
+    valid_loc = _valid_location(location)
+    context = get_app_context()
+    config = context.get('config')
+
+    data = request.get_json(silent=True) or request.form or {}
+    filenames = data.get('filenames')
+    media_type = data.get('media_type')
+
+    if not filenames:
+        single = data.get('filename')
+        if single:
+            filenames = [single]
+
+    if not filenames:
+        return jsonify({'ok': False, 'error': translate('No media files specified')}), 400
+
+    if not isinstance(filenames, list):
+        filenames = [str(filenames)]
+
+    filenames = [str(fn).strip() for fn in filenames if fn and str(fn).strip()][:500]
+    if not filenames:
+        return jsonify({'ok': False, 'error': translate('No media files specified')}), 400
+
+    result = delete_saved_media_batch(valid_loc, filenames, config=config, media_type=media_type)
+    deleted_count = len(result['deleted'])
+    failed_count = len(result['failed'])
+
+    if deleted_count == 0 and failed_count > 0:
+        return jsonify({
+            'ok': False,
+            'error': translate('Failed to delete media file'),
+            'details': result,
+        }), 404
+
+    msg = (
+        translate('Selected media files deleted successfully')
+        if deleted_count > 1
+        else translate('Media file deleted successfully')
+    )
+    return jsonify({
+        'ok': True,
+        'message': msg,
+        'deleted': result['deleted'],
+        'failed': result['failed'],
+        'deleted_count': deleted_count,
+        'location': valid_loc,
+    })
 
 
 @reports_bp.route('/reports/<string:location>/<int:report_id>')

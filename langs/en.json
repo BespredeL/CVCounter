@@ -1564,5 +1564,17 @@
   "{running} running of {total} configured counters": "{running} running of {total} configured counters",
   "→ inbox": "→ inbox",
   "→ train": "→ train",
-  "→ val": "→ val"
+  "→ val": "→ val",
+  "Delete media": "Delete media",
+  "Are you sure you want to delete media file \"{name}\"?": "Are you sure you want to delete media file \"{name}\"?",
+  "Media file deleted successfully": "Media file deleted successfully",
+  "Failed to delete media file": "Failed to delete media file",
+  "Delete selected": "Delete selected",
+  "Are you sure you want to delete {count} selected files?": "Are you sure you want to delete {count} selected files?",
+  "Selected media files deleted successfully": "Selected media files deleted successfully",
+  "Failed to delete selected media files": "Failed to delete selected media files",
+  "Administrator privileges required.": "Administrator privileges required.",
+  "Invalid media type": "Invalid media type",
+  "No media files specified": "No media files specified",
+  "Media file not found or could not be deleted": "Media file not found or could not be deleted"
 }

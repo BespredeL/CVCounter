@@ -8,11 +8,13 @@ from system.utils.app_context import get_app_context, refresh_app_context
 
 from .auth import (
     _safe_next_url,
+    admin_required,
     auth_enabled,
     check_password_hash,
     generate_password_hash,
     get_auth,
     get_authenticated_username,
+    is_admin_user,
     login_required,
     login_user,
     logout_user,
@@ -35,6 +37,8 @@ __all__ = [
     'get_auth',
     'setup_auth',
     'login_required',
+    'admin_required',
+    'is_admin_user',
     'login_user',
     'logout_user',
     'verify_credentials',

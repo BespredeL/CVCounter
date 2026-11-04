@@ -205,6 +205,74 @@ def login_required(f):
     return decorated_function
 
 
+def is_admin_user() -> bool:
+    """
+    Return True if the current user has administrative privileges.
+
+    If authentication is not configured/enabled, returns True (single-user local setup).
+    If authentication is enabled, returns True if the user is logged in as 'admin'
+    or if there is only one user configured in the system.
+
+    Returns:
+        bool: True if admin privileges are granted.
+    """
+    if not auth_enabled():
+        return True
+    username = get_authenticated_username()
+    if not username:
+        return False
+    users = _users()
+    return username == "admin" or len(users) == 1
+
+
+def admin_required(f):
+    """
+    Require admin privileges when users are configured.
+
+    Args:
+        f: The function to decorate
+
+    Returns:
+        function: The decorated function
+    """
+
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not auth_enabled():
+            return f(*args, **kwargs)
+
+        username = get_authenticated_username()
+        if not username:
+            if is_ajax() or request.accept_mimetypes.best == "application/json":
+                return jsonify({
+                    "status": "error",
+                    "ok": False,
+                    "error": translate("Authentication required to access this resource."),
+                    "message": translate("Authentication required to access this resource."),
+                }), 401
+
+            next_url = request.full_path if request.query_string else request.path
+            if next_url.endswith("?"):
+                next_url = next_url[:-1]
+            return redirect(url_for("main.login", next=next_url))
+
+        if not is_admin_user():
+            if is_ajax() or request.accept_mimetypes.best == "application/json":
+                return jsonify({
+                    "status": "error",
+                    "ok": False,
+                    "error": translate("Administrator privileges required."),
+                    "message": translate("Administrator privileges required."),
+                }), 403
+
+            flash(translate("Administrator privileges required."), "danger")
+            return redirect(url_for("main.index"))
+
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
 def generate_password_hash(password: str) -> str:
     """
     Generate a password hash for storage in config ``users``.

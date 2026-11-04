@@ -1,6 +1,7 @@
 /**
  * Computer Vision Counter (CVCounter)
- * Reports saved media viewer (images and recordings) with lightbox navigation.
+ * Reports saved media viewer (images and recordings) with lightbox navigation
+ * and administrative management (deletion, bulk selection).
  *
  * Developed by: Aleksandr Kireev
  * Website: https://bespredel.name
@@ -24,18 +25,37 @@
     const loadingEl = document.getElementById("reportsMediaModalLoading");
     const loadingTextEl = document.getElementById("reportsMediaModalLoadingText");
     const errorEl = document.getElementById("reportsMediaModalError");
-    const footerEl = document.getElementById("reportsMediaModalFooter");
     const downloadEl = document.getElementById("reportsMediaModalDownload");
+    const modalDeleteBtn = document.getElementById("reportsMediaModalDelete");
     const btnPrev = document.getElementById("reportsMediaBtnPrev");
     const btnNext = document.getElementById("reportsMediaBtnNext");
     const speedWrap = document.getElementById("reportsMediaVideoSpeedWrap");
 
-    const i18nPreparing = root.dataset.i18nPreparing || "Preparing video for playback…";
-    const i18nPlayError = root.dataset.i18nPlayError || "This video cannot be played in the browser. You can download the original file.";
+    const toggleSelectBtn = document.getElementById("reportsMediaToggleSelectBtn");
+    const toggleSelectText = document.getElementById("reportsMediaToggleSelectText");
+    const selectAllBtn = document.getElementById("reportsMediaSelectAllBtn");
+    const bulkDeleteBtn = document.getElementById("reportsMediaBulkDeleteBtn");
+    const selectedCountEl = document.getElementById("reportsMediaSelectedCount");
+
+    const locationName = root.dataset.location || "";
+    const isAdmin = root.dataset.isAdmin === "1";
+    const bulkDeleteUrl = root.dataset.deleteUrl || `/reports/${encodeURIComponent(locationName)}/media/delete`;
+
+    const t = (key, params) => (typeof window.trans === "function" ? window.trans(key, params) : key);
+
+    const i18nPreparing = root.dataset.i18nPreparing || t("Preparing video for playback…");
+    const i18nPlayError = root.dataset.i18nPlayError || t("This video cannot be played in the browser. You can download the original file.");
 
     let pendingVideoUrl = null;
     let currentMediaList = [];
     let currentIndex = -1;
+    let isSelectMode = false;
+
+    function toast(message, type = "primary") {
+        if (typeof window.showToast === "function") {
+            window.showToast(message, type);
+        }
+    }
 
     function getMediaItems() {
         /* Collect visible tab's items first, or all items */
@@ -45,6 +65,14 @@
             if (tabItems.length > 0) return tabItems;
         }
         return Array.from(root.querySelectorAll("[data-media-url]"));
+    }
+
+    function getActiveTabType() {
+        const activePane = root.querySelector(".tab-pane.active");
+        if (activePane && activePane.id === "tab-saved-videos") {
+            return "video";
+        }
+        return "image";
     }
 
     function setLoading(visible, text) {
@@ -175,8 +203,277 @@
         }
     }
 
-    /* --- Thumbnail click handler --- */
+    /* --- DOM Updates after deletion --- */
+    function decrementCounter(selector, amount = 1) {
+        const el = document.querySelector(selector);
+        if (!el) return;
+        const current = parseInt(el.textContent || "0", 10);
+        el.textContent = Math.max(0, current - amount);
+    }
+
+    function removeMediaItemFromDOM(itemEl, mediaType) {
+        if (!itemEl) return;
+        const parentPane = itemEl.closest(".tab-pane");
+        itemEl.remove();
+
+        if (mediaType === "video") {
+            decrementCounter("#tab-btn-videos .badge", 1);
+        } else {
+            decrementCounter("#tab-btn-images .badge", 1);
+        }
+        decrementCounter(".reports-kpi-value.text-info", 1);
+
+        if (parentPane) {
+            const remaining = parentPane.querySelectorAll(".reports-media__item");
+            if (remaining.length === 0) {
+                const grid = parentPane.querySelector(".reports-media__grid");
+                const nav = parentPane.querySelector("nav[aria-label]");
+                if (grid) grid.remove();
+                if (nav) nav.remove();
+
+                const emptyHtml = mediaType === "video"
+                    ? `<div class="reports-media__empty py-5">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true" class="bi bi-camera-video-fill"><path fill-rule="evenodd" d="M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2z"/></svg>
+                            <div class="mt-2 text-body-secondary">${t("No saved recordings for this location.")}</div>
+                       </div>`
+                    : `<div class="reports-media__empty py-5">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true" class="bi bi-images"><path d="M4.502 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"/><path d="M14.002 13a2 2 0 0 1-2 2h-10a2 2 0 0 1-2-2V5A2 2 0 0 1 2 3a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-1.998 2M14 2H4a1 1 0 0 0-1 1h9.002a2 2 0 0 1 2 2v7A1 1 0 0 0 15 11V3a1 1 0 0 0-1-1M2.002 4a1 1 0 0 0-1 1v8l2.646-2.354a.5.5 0 0 1 .63-.062l2.66 1.773 3.71-3.71a.5.5 0 0 1 .577-.094l1.777 1.947V5a1 1 0 0 0-1-1z"/></svg>
+                            <div class="mt-2 text-body-secondary">${t("No saved images for this location.")}</div>
+                       </div>`;
+                parentPane.insertAdjacentHTML("beforeend", emptyHtml);
+            }
+        }
+    }
+
+    /* --- Delete single item handler --- */
+    async function handleDeleteSingle(triggerEl, fromModal = false) {
+        let btnEl = triggerEl;
+        let filename = "";
+        let mediaType = "";
+        let deleteUrl = "";
+
+        if (fromModal) {
+            currentMediaList = getMediaItems();
+            if (currentIndex < 0 || currentIndex >= currentMediaList.length) return;
+            btnEl = currentMediaList[currentIndex];
+        }
+
+        filename = btnEl.dataset.mediaTitle || btnEl.dataset.filename || "";
+        mediaType = btnEl.dataset.mediaType || (btnEl.closest(".reports-media__item")?.dataset.mediaType || "image");
+        deleteUrl = btnEl.dataset.mediaDeleteUrl || btnEl.dataset.deleteUrl || "";
+
+        if (!deleteUrl && locationName && filename) {
+            deleteUrl = `/reports/${encodeURIComponent(locationName)}/media/${encodeURIComponent(mediaType)}/${encodeURIComponent(filename)}/delete`;
+        }
+        if (!deleteUrl || !filename) return;
+
+        const confirmMsg = t('Are you sure you want to delete media file "{name}"?', { name: filename });
+        const confirmed = typeof window.appConfirm === "function"
+            ? await window.appConfirm({
+                title: t("Delete media"),
+                message: confirmMsg,
+                confirmText: t("Delete"),
+                tone: "danger"
+            })
+            : window.confirm(confirmMsg);
+
+        if (!confirmed) return;
+
+        try {
+            const res = await fetch(deleteUrl, {
+                method: "POST",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest",
+                    "Content-Type": "application/json"
+                }
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data.ok) {
+                throw new Error(data.error || t("Failed to delete media file"));
+            }
+
+            const itemEl = btnEl.closest(".reports-media__item") || root.querySelector(`[data-media-filename="${CSS.escape(filename)}"]`);
+            removeMediaItemFromDOM(itemEl, mediaType);
+            toast(data.message || t("Media file deleted successfully"), "success");
+
+            if (fromModal) {
+                currentMediaList = getMediaItems();
+                if (currentMediaList.length === 0) {
+                    modal.hide();
+                } else {
+                    if (currentIndex >= currentMediaList.length) {
+                        currentIndex = currentMediaList.length - 1;
+                    }
+                    openMediaByIndex(currentIndex);
+                }
+            }
+        } catch (err) {
+            toast(err.message || t("Failed to delete media file"), "danger");
+        }
+    }
+
+    /* --- Bulk selection management --- */
+    function updateSelectedUI() {
+        const activePane = root.querySelector(".tab-pane.active");
+        if (!activePane) return;
+        const checkedBoxes = Array.from(activePane.querySelectorAll(".reports-media__checkbox:checked"));
+        const count = checkedBoxes.length;
+
+        if (selectedCountEl) selectedCountEl.textContent = String(count);
+        if (bulkDeleteBtn) {
+            bulkDeleteBtn.classList.toggle("d-none", count === 0);
+        }
+
+        const totalBoxes = activePane.querySelectorAll(".reports-media__checkbox").length;
+        if (selectAllBtn) {
+            const allChecked = totalBoxes > 0 && count === totalBoxes;
+            selectAllBtn.innerHTML = allChecked
+                ? `<span>${t("Clear selection")}</span>`
+                : `<span>${t("Select all")}</span>`;
+        }
+    }
+
+    function exitSelectMode() {
+        isSelectMode = false;
+        root.classList.remove("is-select-mode");
+        if (toggleSelectText) toggleSelectText.textContent = t("Select");
+        if (selectAllBtn) selectAllBtn.classList.add("d-none");
+        if (bulkDeleteBtn) bulkDeleteBtn.classList.add("d-none");
+
+        root.querySelectorAll(".reports-media__checkbox").forEach((cb) => {
+            cb.checked = false;
+        });
+        root.querySelectorAll(".reports-media__item").forEach((it) => {
+            it.classList.remove("is-selected");
+        });
+        if (selectedCountEl) selectedCountEl.textContent = "0";
+    }
+
+    function toggleSelectMode() {
+        isSelectMode = !isSelectMode;
+        root.classList.toggle("is-select-mode", isSelectMode);
+
+        if (isSelectMode) {
+            if (toggleSelectText) toggleSelectText.textContent = t("Cancel");
+            if (selectAllBtn) selectAllBtn.classList.remove("d-none");
+            updateSelectedUI();
+        } else {
+            exitSelectMode();
+        }
+    }
+
+    toggleSelectBtn?.addEventListener("click", () => {
+        toggleSelectMode();
+    });
+
+    selectAllBtn?.addEventListener("click", () => {
+        const activePane = root.querySelector(".tab-pane.active");
+        if (!activePane) return;
+        const boxes = Array.from(activePane.querySelectorAll(".reports-media__checkbox"));
+        if (!boxes.length) return;
+
+        const allChecked = boxes.every((b) => b.checked);
+        boxes.forEach((b) => {
+            b.checked = !allChecked;
+            const item = b.closest(".reports-media__item");
+            if (item) item.classList.toggle("is-selected", !allChecked);
+        });
+        updateSelectedUI();
+    });
+
+    root.addEventListener("change", (e) => {
+        const cb = e.target.closest(".reports-media__checkbox");
+        if (!cb) return;
+        const item = cb.closest(".reports-media__item");
+        if (item) {
+            item.classList.toggle("is-selected", cb.checked);
+        }
+        updateSelectedUI();
+    });
+
+    /* --- Bulk Delete Handler --- */
+    bulkDeleteBtn?.addEventListener("click", async () => {
+        const activePane = root.querySelector(".tab-pane.active");
+        if (!activePane) return;
+
+        const checkedBoxes = Array.from(activePane.querySelectorAll(".reports-media__checkbox:checked"));
+        if (checkedBoxes.length === 0) return;
+
+        const filenames = checkedBoxes.map((b) => b.value).filter(Boolean);
+        const count = filenames.length;
+        const activeType = getActiveTabType();
+
+        const confirmMsg = t("Are you sure you want to delete {count} selected files?", { count: count });
+        const confirmed = typeof window.appConfirm === "function"
+            ? await window.appConfirm({
+                title: t("Delete media"),
+                message: confirmMsg,
+                confirmText: t("Delete"),
+                tone: "danger"
+            })
+            : window.confirm(confirmMsg);
+
+        if (!confirmed) return;
+
+        bulkDeleteBtn.disabled = true;
+        try {
+            const res = await fetch(bulkDeleteUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                body: JSON.stringify({
+                    filenames: filenames,
+                    media_type: activeType
+                })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data.ok) {
+                throw new Error(data.error || t("Failed to delete selected media files"));
+            }
+
+            const deletedList = data.deleted || filenames;
+            deletedList.forEach((fn) => {
+                const itemEl = root.querySelector(`[data-media-filename="${CSS.escape(fn)}"]`);
+                removeMediaItemFromDOM(itemEl, activeType);
+            });
+
+            toast(data.message || t("Selected media files deleted successfully"), "success");
+            exitSelectMode();
+        } catch (err) {
+            toast(err.message || t("Failed to delete selected media files"), "danger");
+        } finally {
+            bulkDeleteBtn.disabled = false;
+        }
+    });
+
+    /* --- Thumbnail and actions click handler --- */
     root.addEventListener("click", (e) => {
+        // 1. Delete button on thumbnail
+        const delBtn = e.target.closest("[data-action='delete-media']");
+        if (delBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            handleDeleteSingle(delBtn, false);
+            return;
+        }
+
+        // 2. Click in select mode
+        if (isSelectMode) {
+            const item = e.target.closest(".reports-media__item");
+            if (item) {
+                const cb = item.querySelector(".reports-media__checkbox");
+                if (cb && e.target !== cb) {
+                    cb.checked = !cb.checked;
+                    item.classList.toggle("is-selected", cb.checked);
+                    updateSelectedUI();
+                }
+            }
+            return;
+        }
+
+        // 3. Normal thumbnail click to open lightbox
         const btn = e.target.closest("[data-media-url]");
         if (!btn) return;
         currentMediaList = getMediaItems();
@@ -184,6 +481,11 @@
         if (idx >= 0) {
             openMediaByIndex(idx);
         }
+    });
+
+    /* --- Modal Delete button --- */
+    modalDeleteBtn?.addEventListener("click", () => {
+        handleDeleteSingle(null, true);
     });
 
     /* --- Lightbox navigation buttons --- */
@@ -227,6 +529,15 @@
             document.querySelectorAll(".reports-media-speed-btn").forEach((b) => {
                 b.classList.toggle("active", b === btn);
             });
+        });
+    });
+
+    /* --- Tab switch resets select mode --- */
+    root.querySelectorAll('[data-bs-toggle="tab"]').forEach((tabBtn) => {
+        tabBtn.addEventListener("show.bs.tab", () => {
+            if (isSelectMode) {
+                exitSelectMode();
+            }
         });
     });
 

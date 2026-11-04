@@ -16,7 +16,7 @@ from typing import Any
 from flask import Flask
 from flask_socketio import SocketIO
 
-from system.auth import auth_enabled, get_authenticated_username, setup_auth
+from system.auth import auth_enabled, get_authenticated_username, is_admin_user, setup_auth
 from system.managers.config_manager import init_config
 from system.managers.database_manager import DatabaseManager
 from system.core.object_counter import ObjectCounter
@@ -306,6 +306,7 @@ def register_template_helpers(app: Flask, context: dict):
             socketio_upgrade=context.get('socketio_upgrade', True),
             auth_enabled=auth_enabled(),
             auth_user=get_authenticated_username(),
+            is_admin=is_admin_user(),
         )
 
 

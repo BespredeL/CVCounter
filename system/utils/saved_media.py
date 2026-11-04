@@ -627,3 +627,134 @@ def warm_web_videos(location: str, config=None, limit: int = 3) -> None:
             ensure_web_playable_video(path, location)
         except Exception as exc:
             _logger.error(f'Warm web video failed for {item["name"]}: {exc}')
+
+
+def delete_saved_image(location: str, filename: str, config=None) -> bool:
+    """
+    Delete a saved image for ``location``.
+
+    Args:
+        location (str): Counter/camera location identifier.
+        filename (str): Base filename of the image.
+        config (Optional[dict]): Application configuration.
+
+    Returns:
+        bool: True if the file was deleted successfully, False otherwise.
+    """
+    path = resolve_saved_image(location, filename, config=config)
+    if path is None or not path.is_file():
+        return False
+    try:
+        path.unlink(missing_ok=True)
+        _logger.info(f'Deleted saved image: {filename} for location {location}')
+        return True
+    except OSError as exc:
+        _logger.error(f'Failed to delete saved image {filename} for {location}: {exc}')
+        return False
+
+
+def delete_saved_recording(location: str, filename: str, config=None) -> bool:
+    """
+    Delete a saved recording for ``location`` and clean up any cached web transcodes or posters.
+
+    Args:
+        location (str): Counter/camera location identifier.
+        filename (str): Base filename of the recording.
+        config (Optional[dict]): Application configuration.
+
+    Returns:
+        bool: True if the file was deleted successfully, False otherwise.
+    """
+    src = resolve_saved_recording(location, filename, config=config)
+    if src is None or not src.is_file():
+        return False
+
+    stem = src.stem
+    try:
+        src.unlink(missing_ok=True)
+        _logger.info(f'Deleted saved recording: {filename} for location {location}')
+    except OSError as exc:
+        _logger.error(f'Failed to delete saved recording {filename} for {location}: {exc}')
+        return False
+
+    # Clean up associated web cache artifacts (posters and re-encoded video)
+    try:
+        cache_dir = web_cache_dir_for_location(location)
+        if cache_dir.is_dir():
+            for suffix in ('.web.mp4', '.web.webm', '.poster.jpg'):
+                cached_file = cache_dir / f'{stem}{suffix}'
+                if cached_file.is_file():
+                    try:
+                        cached_file.unlink(missing_ok=True)
+                    except OSError:
+                        pass
+    except Exception as exc:
+        _logger.debug(f'Error cleaning web cache for {filename}: {exc}')
+
+    return True
+
+
+def delete_saved_media(
+    location: str,
+    filename: str,
+    config=None,
+    media_type: Optional[str] = None
+) -> bool:
+    """
+    Delete a saved media file (image or recording) for ``location``.
+    Auto-detects media type from extension if not explicitly specified.
+
+    Args:
+        location (str): Counter/camera location identifier.
+        filename (str): Base filename of the media file.
+        config (Optional[dict]): Application configuration.
+        media_type (Optional[str]): Explicit 'image' or 'video'.
+
+    Returns:
+        bool: True if deleted successfully, False otherwise.
+    """
+    ext = Path(filename).suffix.lower()
+    if media_type == 'image' or (not media_type and ext in IMAGE_EXTENSIONS):
+        return delete_saved_image(location, filename, config=config)
+    if media_type == 'video' or (not media_type and ext in VIDEO_EXTENSIONS):
+        return delete_saved_recording(location, filename, config=config)
+    return False
+
+
+def delete_saved_media_batch(
+    location: str,
+    filenames: list[str],
+    config=None,
+    media_type: Optional[str] = None
+) -> dict[str, Any]:
+    """
+    Delete multiple saved media files for ``location``.
+
+    Args:
+        location (str): Counter/camera location identifier.
+        filenames (list[str]): List of filenames to delete.
+        config (Optional[dict]): Application configuration.
+        media_type (Optional[str]): Explicit 'image' or 'video'.
+
+    Returns:
+        dict[str, Any]: Dictionary with 'deleted' and 'failed' lists of filenames.
+    """
+    deleted: list[str] = []
+    failed: list[str] = []
+
+    for fn in filenames:
+        if not fn or not isinstance(fn, str):
+            continue
+        cleaned = fn.strip()
+        if not cleaned:
+            continue
+        if delete_saved_media(location, cleaned, config=config, media_type=media_type):
+            deleted.append(cleaned)
+        else:
+            failed.append(cleaned)
+
+    return {
+        'deleted': deleted,
+        'failed': failed,
+        'location': location,
+    }
