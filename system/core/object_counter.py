@@ -6,6 +6,7 @@
 
 from collections import deque
 import os
+import threading
 from typing import Any, Generator, List, Optional, Tuple
 
 import numpy as np
@@ -53,6 +54,10 @@ class ObjectCounter:
             None
         """
 
+        # Init synchronization lock
+        self._lock: threading.RLock = threading.RLock()
+        self._generation: int = 0
+
         # Init variables
         self.counts: CountState = CountState()
         self.total_objects: set = set()
@@ -60,7 +65,7 @@ class ObjectCounter:
         self._max_tracked_history: int = 30000
         self._track_history: dict[int, deque] = {}
         self._max_track_history_len: int = 15
-        self.frame: np.ndarray | None = None
+        self._frame: np.ndarray | None = None
         self._last_count_payload: dict | None = None
         self.running: bool = True
         self.paused = False
@@ -160,6 +165,49 @@ class ObjectCounter:
         # through this counter, so there is one copy of every value.
         self.loop: CounterLoop = CounterLoop(self)
 
+    @property
+    def lock(self) -> threading.RLock:
+        """Synchronization lock protecting shared counter state."""
+        return self._lock
+
+    @property
+    def generation(self) -> int:
+        """Monotonically increasing generation version for tracking resets."""
+        with self._lock:
+            return self._generation
+
+    def set_frame(self, value: np.ndarray | None, copy: bool = True) -> None:
+        """
+        Set the current annotated frame.
+
+        Args:
+            value: The frame to store.
+            copy: If True, copies the buffer for safe isolation.
+                  If False (used by CounterLoop), transfers ownership of an
+                  already-owned, freshly-rendered frame without an extra copy.
+        """
+        with self._lock:
+            if value is None:
+                self._frame = None
+            else:
+                self._frame = value.copy() if copy else value
+
+    @property
+    def frame(self) -> np.ndarray | None:
+        """Latest annotated frame produced by the counter loop (isolated copy)."""
+        with self._lock:
+            if self._frame is not None:
+                return self._frame.copy()
+            return None
+
+    @frame.setter
+    def frame(self, value: np.ndarray | None) -> None:
+        self.set_frame(value, copy=True)
+
+    def get_annotated_frame(self) -> Optional[np.ndarray]:
+        """Return an independent copy of the latest annotated frame under lock."""
+        return self.frame
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -241,20 +289,21 @@ class ObjectCounter:
         Returns:
             list[dict]: The list of class payloads
         """
-        class_ids = (
-                set(self.counts.class_counts.keys())
-                | set(self.counts.current_class_counts.keys())
-                | self._configured_class_ids()
-        )
-        return [
-            {
-                'id': class_id,
-                'name': self._class_label(class_id),
-                'total': int(self.counts.class_counts.get(class_id, 0)),
-                'current': int(self.counts.current_class_counts.get(class_id, 0)),
-            }
-            for class_id in sorted(class_ids)
-        ]
+        with self._lock:
+            class_ids = (
+                    set(self.counts.class_counts.keys())
+                    | set(self.counts.current_class_counts.keys())
+                    | self._configured_class_ids()
+            )
+            return [
+                {
+                    'id': class_id,
+                    'name': self._class_label(class_id),
+                    'total': int(self.counts.class_counts.get(class_id, 0)),
+                    'current': int(self.counts.current_class_counts.get(class_id, 0)),
+                }
+                for class_id in sorted(class_ids)
+            ]
 
     def get_live_counts(self) -> dict:
         """
@@ -263,16 +312,17 @@ class ObjectCounter:
         Returns:
             dict: total, current, defect, correct, pending_defect, pending_correct, by_class
         """
-        counts = self.counts
-        return {
-            'total': counts.total_count - counts.defect_count + counts.correct_count,
-            'current': counts.current_count,
-            'defect': counts.defect_count,
-            'correct': counts.correct_count,
-            'pending_defect': counts.pending_defect_count,
-            'pending_correct': counts.pending_correct_count,
-            'by_class': self._by_class_payload(),
-        }
+        with self._lock:
+            counts = self.counts
+            return {
+                'total': counts.total_count - counts.defect_count + counts.correct_count,
+                'current': counts.current_count,
+                'defect': counts.defect_count,
+                'correct': counts.correct_count,
+                'pending_defect': counts.pending_defect_count,
+                'pending_correct': counts.pending_correct_count,
+                'by_class': self._by_class_payload(),
+            }
 
     def emit_live_counts(self, force: bool = False) -> None:
         """
@@ -281,10 +331,15 @@ class ObjectCounter:
         Args:
             force (bool): Emit even when the payload is unchanged.
         """
-        payload = self.get_live_counts()
-        if force or payload != self._last_count_payload:
+        should_emit = False
+        with self._lock:
+            payload = self.get_live_counts()
+            if force or payload != self._last_count_payload:
+                self._last_count_payload = payload
+                should_emit = True
+
+        if should_emit:
             self.events.counts(payload)
-            self._last_count_payload = payload
 
     def set_pending_counts(self, pending_defect: int, pending_correct: int) -> dict:
         """
@@ -297,9 +352,13 @@ class ObjectCounter:
         Returns:
             dict: Current live counts payload.
         """
-        self.counts.set_pending(pending_defect, pending_correct)
-        self.emit_live_counts(force=True)
-        return self.get_live_counts()
+        with self._lock:
+            self.counts.set_pending(pending_defect, pending_correct)
+            payload = self.get_live_counts()
+            self._last_count_payload = payload
+
+        self.events.counts(payload)
+        return payload
 
     def get_current_count(self) -> dict:
         """
@@ -325,30 +384,38 @@ class ObjectCounter:
         Returns:
             dict: The total count.
         """
-        total_count = int(self.counts.total_count)
-        correct_count, defect_count = self.counts.resolve_adjustment(correct_count, defect_count)
-        current_total_count = self.counts.apply_save(correct_count, defect_count)
+        with self._lock:
+            total_count = int(self.counts.total_count)
+            resolved_correct, resolved_defect = self.counts.resolve_adjustment(correct_count, defect_count)
+            current_total_count = self.counts.apply_save(resolved_correct, resolved_defect)
+            saved_correct = int(self.counts.correct_count)
+            saved_defect = int(self.counts.defect_count)
+            class_payload = self._by_class_payload()
+            self.counts.clear_pending()
+            live_payload = self.get_live_counts()
+            self._last_count_payload = live_payload
 
-        result = self.store.save_result(
-            location=location,
-            total_count=current_total_count,
-            source_count=total_count,
-            correct_count=self.counts.correct_count,
-            defects_count=self.counts.defect_count,
-            custom_fields=custom_fields,
-            active=active,
-            class_counts=self._by_class_payload(),
-        )
+        result = False
+        if self.store is not None:
+            result = self.store.save_result(
+                location=location,
+                total_count=current_total_count,
+                source_count=total_count,
+                correct_count=saved_correct,
+                defects_count=saved_defect,
+                custom_fields=custom_fields,
+                active=active,
+                class_counts=class_payload,
+            )
 
         if result:
             self.events.notify(trans('Saved successfully!'), 'success')
         else:
             self.events.notify(trans('Save error!'), 'danger')
 
-        self.counts.clear_pending()
-        self.emit_live_counts(force=True)
+        self.events.counts(live_payload)
 
-        return dict(total=total_count, defect=defect_count, correct=correct_count)
+        return dict(total=total_count, defect=resolved_defect, correct=resolved_correct)
 
     def reset_count(self, location: str) -> None:
         """
@@ -360,26 +427,29 @@ class ObjectCounter:
         Returns:
             None
         """
+        with self._lock:
+            final_class_counts = self._by_class_payload()
+            self._generation += 1  # Invalidate in-flight detections from prior generation
 
-        final_class_counts = self._by_class_payload()
+            self.total_objects.clear()
+            self._total_objects_queue.clear()
+            self._track_history.clear()
+            self.counts.reset_counts()
+            self.counts.clear_pending()
 
-        self.total_objects.clear()
-        self._total_objects_queue.clear()
-        self._track_history.clear()
-        self.counts.reset_counts()
-        self.counts.clear_pending()
-        self._last_count_payload = None
+            # Reset active tracker state so old tracks don't instantly re-trigger
+            self.tracker = self._new_tracker()
+            live_payload = self.get_live_counts()
+            self._last_count_payload = live_payload
 
-        # Reset active tracker state so old tracks don't instantly re-trigger
-        self.tracker = self._new_tracker()
-
-        self.store.close_current(location, class_counts=final_class_counts)
+        if self.store is not None:
+            self.store.close_current(location, class_counts=final_class_counts)
 
         # Stop the current recording video
         self.rec.stop()
 
         self.events.notify(trans('Counting completed successfully!'), 'primary')
-        self.emit_live_counts(force=True)
+        self.events.counts(live_payload)
 
     def reset_count_current(self, location: str, correct_count: int, defect_count: int) -> None:
         """
@@ -393,28 +463,33 @@ class ObjectCounter:
         Returns:
             None
         """
-        current_count = int(self.counts.current_count)
-        total_count = int(self.counts.total_count)
-        correct_count, defect_count = self.counts.resolve_adjustment(correct_count, defect_count)
-        by_class = self._by_class_payload()
-        try:
-            self.store.save_part_result(
-                location=location,
-                current_count=current_count,
-                total_count=total_count,
-                defects_count=defect_count,
-                correct_count=correct_count,
-                by_class=by_class,
-                class_counts=by_class,
-            )
-        except Exception as e:
-            print(e)
-            self.logger.error(e)
+        with self._lock:
+            current_count = int(self.counts.current_count)
+            total_count = int(self.counts.total_count)
+            resolved_correct, resolved_defect = self.counts.resolve_adjustment(correct_count, defect_count)
+            by_class = self._by_class_payload()
 
-        self.counts.apply_current_reset(correct_count, defect_count)
-        self.counts.clear_pending()
-        self.emit_live_counts(force=True)
+            self.counts.apply_current_reset(resolved_correct, resolved_defect)
+            self.counts.clear_pending()
+            live_payload = self.get_live_counts()
+            self._last_count_payload = live_payload
 
+        if self.store is not None:
+            try:
+                self.store.save_part_result(
+                    location=location,
+                    current_count=current_count,
+                    total_count=total_count,
+                    defects_count=resolved_defect,
+                    correct_count=resolved_correct,
+                    by_class=by_class,
+                    class_counts=by_class,
+                )
+            except Exception as e:
+                print(e)
+                self.logger.error(e)
+
+        self.events.counts(live_payload)
         self.events.notify(trans('The counter has been reset!'), 'primary')
 
     def start(self) -> None:
@@ -427,12 +502,16 @@ class ObjectCounter:
         Returns:
             None
         """
-        # self.running = True
-        if self.paused:
+        was_paused = False
+        with self._lock:
+            if self.paused:
+                was_paused = True
+                self.paused = False
+
+        if was_paused:
             self.events.notify(trans('Counting has started!'), 'success')
             status_evt = 'collection' if self.preview_mode else 'started'
             self.events.status(status_evt)
-        self.paused = False
 
     def stop(self) -> None:
         """
@@ -444,11 +523,17 @@ class ObjectCounter:
         Returns:
             None
         """
-        if self.running:
+        was_running = False
+        with self._lock:
+            if self.running:
+                was_running = True
+                self.running = False
+
+        if was_running:
             self.perf.maybe_report(force=True)
             self.events.notify(trans('Counting has stopped!'), 'primary')
             self.events.status('stopped')
-        self.running = False
+
         self.stream.shutdown()
 
         # Stop the current recording video
@@ -464,31 +549,39 @@ class ObjectCounter:
         Returns:
             None
         """
-        if not self.paused:
+        was_paused = True
+        with self._lock:
+            if not self.paused:
+                was_paused = False
+                self.paused = True
+
+        if not was_paused:
             self.events.notify(trans('Counting has paused!'), 'warning')
             self.events.status('paused')
-        self.paused = True
 
     def is_pause(self) -> bool:
         """
         Check if the counting is paused.
 
-        Args:
-            None
-
         Returns:
             bool: True if the counting is paused, False otherwise
         """
-        return self.paused
+        with self._lock:
+            return self.paused
 
     def cached_source_frame(self) -> np.ndarray | None:
         """
-        The raw frame the loop is currently working on, without a copy.
+        The raw frame the loop is currently working on.
+        Always returns an independent copy under lock to ensure caller isolation.
 
         Returns:
             numpy.ndarray | None: None until the loop has read its first frame.
         """
-        return self.loop.cached_frame
+        with self._lock:
+            cached = self.loop.cached_frame
+            if cached is None:
+                return None
+            return cached.copy()
 
     def get_source_frame(self) -> Optional[np.ndarray]:
         """
@@ -503,9 +596,10 @@ class ObjectCounter:
         Returns:
             Optional[np.ndarray]: BGR frame or None if unavailable.
         """
-        cached = self.cached_source_frame()
-        if cached is not None:
-            return cached.copy()
+        with self._lock:
+            cached = self.loop.cached_frame
+            if cached is not None:
+                return cached.copy()
 
         try:
             return self.vsm.get_frame()
@@ -543,12 +637,13 @@ class ObjectCounter:
         if not runtime:
             raise ValueError('counting_areas must contain at least one zone with 3+ points')
 
-        settings = self.settings
-        settings.counting_areas = runtime
-        settings.counting_area = list(runtime[0]['points'])
-        settings.counting_area_color = tuple(runtime[0]['color'])
-        settings.counting_area_direction = str(runtime[0].get('direction', 'any'))
-        self.renderer.invalidate_zones()
+        with self._lock:
+            settings = self.settings
+            settings.counting_areas = runtime
+            settings.counting_area = list(runtime[0]['points'])
+            settings.counting_area_color = tuple(runtime[0]['color'])
+            settings.counting_area_direction = str(runtime[0].get('direction', 'any'))
+            self.renderer.invalidate_zones()
 
     def update_counting_area(
             self,
@@ -723,7 +818,8 @@ class ObjectCounter:
     @property
     def indicator_mode(self) -> str:
         """Indicator style currently drawn — the live setting, not a copy."""
-        return self.settings.indicator_mode
+        with self._lock:
+            return self.settings.indicator_mode
 
     def set_indicator_mode(self, mode: str) -> str:
         """
@@ -738,8 +834,9 @@ class ObjectCounter:
         mode = str(mode).strip().lower()
         if mode not in ('circle', 'box'):
             mode = CounterSettings.DEFAULT_INDICATOR_MODE
-        self.settings.indicator_mode = mode
-        return self.settings.indicator_mode
+        with self._lock:
+            self.settings.indicator_mode = mode
+            return self.settings.indicator_mode
 
     def set_indicator_colors(
             self,
@@ -756,17 +853,18 @@ class ObjectCounter:
         Returns:
             Tuple[Tuple[int, int, int], Tuple[int, int, int]]: Active (detected_color, counted_color).
         """
-        settings = self.settings
-        if detected_color is not None:
-            try:
-                settings.indicator_detected_color = tuple(
-                    normalize_color_value(detected_color, 'indicator_detected_color'))
-            except Exception as e:
-                self.logger.warning(f"Failed to set indicator_detected_color: {e}")
-        if counted_color is not None:
-            try:
-                settings.indicator_counted_color = tuple(
-                    normalize_color_value(counted_color, 'indicator_counted_color'))
-            except Exception as e:
-                self.logger.warning(f"Failed to set indicator_counted_color: {e}")
-        return settings.indicator_detected_color, settings.indicator_counted_color
+        with self._lock:
+            settings = self.settings
+            if detected_color is not None:
+                try:
+                    settings.indicator_detected_color = tuple(
+                        normalize_color_value(detected_color, 'indicator_detected_color'))
+                except Exception as e:
+                    self.logger.warning(f"Failed to set indicator_detected_color: {e}")
+            if counted_color is not None:
+                try:
+                    settings.indicator_counted_color = tuple(
+                        normalize_color_value(counted_color, 'indicator_counted_color'))
+                except Exception as e:
+                    self.logger.warning(f"Failed to set indicator_counted_color: {e}")
+            return settings.indicator_detected_color, settings.indicator_counted_color

@@ -97,12 +97,14 @@ class CounterLoop:
                 if frame is self.cached_frame:
                     sleep_time = 0.005
                 else:
-                    self.cached_frame = frame
+                    with counter._lock:
+                        self.cached_frame = frame
 
                     if counter.stream.watching:
-                        counter.frame = self.process(frame)
+                        proc_frame = self.process(frame)
+                        counter.set_frame(proc_frame, copy=False)
                     else:
-                        counter.frame = None
+                        counter.set_frame(None, copy=False)
                         self.process(frame)
 
                     # Live RTSP already returns the newest frame, so a fixed pause is
@@ -157,11 +159,13 @@ class CounterLoop:
                 return display_frame
 
             dataset_enabled = counter.capture.dataset_enabled
-            last_total_count = counter.counts.total_count
+            with counter._lock:
+                last_total_count = counter.counts.total_count
+                current_generation = counter._generation
 
             work_frame = self.work_frame(frame)
             inf_start = time.monotonic()
-            boxes = self.detect(work_frame)
+            boxes = self.detect(work_frame, generation=current_generation)
             inf_duration = time.monotonic() - inf_start
             inf_ms = inf_duration * 1000.0
             self.hud_inference_ms = (
@@ -177,9 +181,11 @@ class CounterLoop:
             else:
                 display_frame = work_frame.copy() if dataset_enabled else work_frame
 
-            display_frame = self.count_and_draw(display_frame, boxes)
+            display_frame = self.count_and_draw(display_frame, boxes, generation=current_generation)
 
-            if dataset_enabled and last_total_count != counter.counts.total_count:
+            with counter._lock:
+                current_total_count = counter.counts.total_count
+            if dataset_enabled and last_total_count != current_total_count:
                 counter.capture.save_sample(work_frame, boxes)
 
             # Periodic interval capture
@@ -215,12 +221,15 @@ class CounterLoop:
         """
         return np.ascontiguousarray(frame).copy()
 
-    def detect(self, image: np.ndarray) -> np.ndarray:
+    def detect(self, image: np.ndarray, generation: int | None = None) -> np.ndarray:
         """
         Detects objects in an image using a pre-trained model.
 
         Args:
             image (ndarray): The input image as a numpy array.
+            generation (int, optional): Generation counter captured before inference.
+                                        If counter was reset while detect() was running,
+                                        the stale detections are NOT passed to tracker.update().
 
         Returns:
             ndarray: An array of updated results after tracking the detected objects.
@@ -229,7 +238,10 @@ class CounterLoop:
         """
         counter = self.counter
         if counter.model is None or counter.preview_mode:
-            return counter.tracker.update(np.empty((0, 6)))
+            with counter._lock:
+                if generation is not None and generation != counter._generation:
+                    return np.empty((0, 6), dtype=np.float32)
+                return counter.tracker.update(np.empty((0, 6), dtype=np.float32))
 
         res = counter.model.detect(image=image)
         if hasattr(res, 'to_tracker_array'):
@@ -237,7 +249,10 @@ class CounterLoop:
         elif hasattr(res, 'to_legacy'):
             xyxy, conf, cls = res.to_legacy()
             if xyxy is None or len(xyxy) == 0:
-                return counter.tracker.update(np.empty((0, 6), dtype=np.float32))
+                with counter._lock:
+                    if generation is not None and generation != counter._generation:
+                        return np.empty((0, 6), dtype=np.float32)
+                    return counter.tracker.update(np.empty((0, 6), dtype=np.float32))
             detections_array = np.empty((len(xyxy), 6), dtype=np.float32)
             detections_array[:, :4] = xyxy
             detections_array[:, 4] = conf
@@ -245,15 +260,26 @@ class CounterLoop:
         else:
             xyxy, conf, cls = res
             if xyxy is None or len(xyxy) == 0:
-                return counter.tracker.update(np.empty((0, 6), dtype=np.float32))
+                with counter._lock:
+                    if generation is not None and generation != counter._generation:
+                        return np.empty((0, 6), dtype=np.float32)
+                    return counter.tracker.update(np.empty((0, 6), dtype=np.float32))
             detections_array = np.empty((len(xyxy), 6), dtype=np.float32)
             detections_array[:, :4] = xyxy
             detections_array[:, 4] = conf
             detections_array[:, 5] = cls
 
-        return counter.tracker.update(detections_array)
+        with counter._lock:
+            if generation is not None and generation != counter._generation:
+                return np.empty((0, 6), dtype=np.float32)
+            return counter.tracker.update(detections_array)
 
-    def count_and_draw(self, image: np.ndarray, boxes: list | np.ndarray) -> np.ndarray:
+    def count_and_draw(
+            self,
+            image: np.ndarray,
+            boxes: list | np.ndarray,
+            generation: int | None = None,
+    ) -> np.ndarray:
         """
         Counts objects in the given image and draws indicators on the image.
 
@@ -262,73 +288,83 @@ class CounterLoop:
             boxes (List[Tuple[int]] | numpy.ndarray): A list of boxes, where each box is represented by a tuple of (x1, y1, x2, y2, rid),
                                       where x1, y1 are the top-left coordinates, x2, y2 are the bottom-right coordinates,
                                       and rid is the ID of the box.
+            generation (int, optional): Generation counter at detection time. If counter was reset
+                                        while detect() was running, stale boxes are discarded.
 
         Returns:
             numpy.ndarray: The modified image with the boxes drawn on it.
         """
-        counter = self.counter
-        if counter.paused:
+        if boxes is None or len(boxes) == 0:
             return image
 
-        # Ensure mask for fast point-in-polygon
-        if boxes is not None and len(boxes) > 0:
+        counter = self.counter
+        with counter._lock:
+            if counter.paused:
+                return image
+
+            if generation is not None and generation != counter._generation:
+                # Counter was reset between detection and count_and_draw.
+                # Discard stale detections to prevent ghost counts immediately after reset.
+                return image
+
+            # Ensure mask for fast point-in-polygon
             h, w = image.shape[:2]
             counter.renderer.ensure_mask((h, w))
-        counting_mask = counter.renderer.mask
-        counting_areas = counter.settings.counting_areas
+            counting_mask = counter.renderer.mask
+            counting_areas = counter.settings.counting_areas
 
-        for result in boxes:
-            values = list(map(int, result[:6]))
-            x1, y1, x2, y2, rid = values[:5]
-            class_id = values[5] if len(values) > 5 else -1
-            cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+            for result in boxes:
+                values = list(map(int, result[:6]))
+                x1, y1, x2, y2, rid = values[:5]
+                class_id = values[5] if len(values) > 5 else -1
+                cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
 
-            # Track trajectory history for motion direction validation
-            if rid not in counter._track_history:
-                counter._track_history[rid] = deque(maxlen=counter._max_track_history_len)
-            counter._track_history[rid].append((cx, cy))
+                # Track trajectory history for motion direction validation
+                if rid not in counter._track_history:
+                    counter._track_history[rid] = deque(maxlen=counter._max_track_history_len)
+                counter._track_history[rid].append((cx, cy))
 
-            # Draw indicator on the image
-            counter.renderer.draw_indicator(
-                image, (cx, cy), rid,
-                counted=rid in counter.total_objects,
-                box=(x1, y1, x2, y2),
-                class_id=class_id,
-            )
+                # Draw indicator on the image
+                counter.renderer.draw_indicator(
+                    image, (cx, cy), rid,
+                    counted=rid in counter.total_objects,
+                    box=(x1, y1, x2, y2),
+                    class_id=class_id,
+                )
 
-            # Check if the object is within the counting area using mask
-            if (
-                    counting_mask is not None
-                    and 0 <= cy < counting_mask.shape[0]
-                    and 0 <= cx < counting_mask.shape[1]
-                    and rid not in counter.total_objects
-            ):
-                zone_code = int(counting_mask[cy, cx])
-                if zone_code > 0:
-                    zone_idx = zone_code - 1
-                    zone = counting_areas[zone_idx] if zone_idx < len(counting_areas) else None
-                    direction = zone.get('direction', 'any') if zone else 'any'
+                # Check if the object is within the counting area using mask
+                if (
+                        counting_mask is not None
+                        and 0 <= cy < counting_mask.shape[0]
+                        and 0 <= cx < counting_mask.shape[1]
+                        and rid not in counter.total_objects
+                ):
+                    zone_code = int(counting_mask[cy, cx])
+                    if zone_code > 0:
+                        zone_idx = zone_code - 1
+                        zone = counting_areas[zone_idx] if zone_idx < len(counting_areas) else None
+                        direction = zone.get('direction', 'any') if zone else 'any'
 
-                    is_valid_direction = direction_matches(
-                        (cx, cy), counter._track_history[rid], direction
-                    )
+                        is_valid_direction = direction_matches(
+                            (cx, cy), counter._track_history[rid], direction
+                        )
 
-                    if is_valid_direction:
-                        counter.total_objects.add(rid)
-                        counter._total_objects_queue.append(rid)
-                        counter.counts.total_count += 1
-                        counter.counts.current_count += 1
-                        counter.counts.increment_class_count(class_id)
-                        if len(counter._total_objects_queue) > counter._max_tracked_history:
-                            old_id = counter._total_objects_queue.popleft()
-                            counter.total_objects.discard(old_id)
+                        if is_valid_direction:
+                            counter.total_objects.add(rid)
+                            counter._total_objects_queue.append(rid)
+                            counter.counts.total_count += 1
+                            counter.counts.current_count += 1
+                            counter.counts.increment_class_count(class_id)
+                            if len(counter._total_objects_queue) > counter._max_tracked_history:
+                                old_id = counter._total_objects_queue.popleft()
+                                counter.total_objects.discard(old_id)
 
-        if len(counter._track_history) > 1000:
-            active_rids = {int(b[4]) for b in boxes} if boxes is not None and len(boxes) > 0 else set()
-            counter._track_history = {
-                k: v for k, v in counter._track_history.items()
-                if k in active_rids or k in counter.total_objects
-            }
+            if len(counter._track_history) > 1000:
+                active_rids = {int(b[4]) for b in boxes} if boxes is not None and len(boxes) > 0 else set()
+                counter._track_history = {
+                    k: v for k, v in counter._track_history.items()
+                    if k in active_rids or k in counter.total_objects
+                }
 
         counter.emit_live_counts()
 
