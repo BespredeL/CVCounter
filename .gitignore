@@ -11,8 +11,10 @@
 
 .idea/
 config/config.json
-config/ultralytics/
+config/models/
+config/rtmdet/
 config/torchvision/
+config/ultralytics/
 storage/
 *.sqlite*
 *.db
