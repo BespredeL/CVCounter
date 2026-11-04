@@ -33,8 +33,8 @@ BASE_MODELS: dict[str, dict[str, Any]] = {
         'speed': 'Medium',
         'recommended': True,
         'description': (
-            'Открытая детекторная архитектура torchvision (BSD-3): COCO-предобученный '
-            'Faster R-CNN без зависимости от Ultralytics и его AGPL-лицензии.'
+            'Open-source torchvision detector (BSD-3): COCO-pretrained '
+            'Faster R-CNN without Ultralytics or AGPL license requirements.'
         ),
         'url': 'https://download.pytorch.org/models/fasterrcnn_resnet50_fpn_v2_coco-dd69338a.pth',
     },

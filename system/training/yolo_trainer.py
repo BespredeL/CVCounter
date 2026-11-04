@@ -143,7 +143,7 @@ OFFICIAL_BASE_MODELS: dict[str, dict] = {
         'size_mb': 5.6,
         'speed': 'Ultra Fast',
         'recommended': True,
-        'description': 'Наиболее быстрая и лёгкая модель. Идеально для реального времени и CPU/встраиваемых систем.',
+        'description': 'Fastest and lightest YOLO11 model. Ideal for real-time and CPU/embedded systems.',
         'url': 'https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n.pt',
     },
     'yolo11s.pt': {
@@ -152,7 +152,7 @@ OFFICIAL_BASE_MODELS: dict[str, dict] = {
         'size_mb': 19.3,
         'speed': 'Fast',
         'recommended': False,
-        'description': 'Оптимальный баланс между скоростью и точностью.',
+        'description': 'Optimal balance between speed and detection accuracy.',
         'url': 'https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11s.pt',
     },
     'yolo11m.pt': {
@@ -161,7 +161,7 @@ OFFICIAL_BASE_MODELS: dict[str, dict] = {
         'size_mb': 40.7,
         'speed': 'Balanced',
         'recommended': False,
-        'description': 'Высокая точность для сложных объектов и детализированных сцен.',
+        'description': 'High accuracy for complex objects and detailed scenes.',
         'url': 'https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11m.pt',
     },
     'yolov8n.pt': {
@@ -170,7 +170,7 @@ OFFICIAL_BASE_MODELS: dict[str, dict] = {
         'size_mb': 6.5,
         'speed': 'Ultra Fast',
         'recommended': False,
-        'description': 'Проверенная лёгкая архитектура предыдущего поколения.',
+        'description': 'Proven lightweight architecture of previous YOLO generation.',
         'url': 'https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8n.pt',
     },
     'yolov8s.pt': {
@@ -179,7 +179,7 @@ OFFICIAL_BASE_MODELS: dict[str, dict] = {
         'size_mb': 22.5,
         'speed': 'Fast',
         'recommended': False,
-        'description': 'Средняя модель YOLOv8 для видеокарт с умеренной производительностью.',
+        'description': 'Medium YOLOv8 model for moderate performance graphics cards.',
         'url': 'https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8s.pt',
     },
     'yolov8m.pt': {
@@ -188,7 +188,7 @@ OFFICIAL_BASE_MODELS: dict[str, dict] = {
         'size_mb': 52.0,
         'speed': 'Medium',
         'recommended': False,
-        'description': 'Точная модель YOLOv8 для серверов с производительными GPU.',
+        'description': 'High-accuracy YOLOv8 model for servers with high-performance GPUs.',
         'url': 'https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8m.pt',
     },
 }
@@ -384,7 +384,7 @@ def get_available_base_models() -> list[dict]:
                 'size_mb': size_mb,
                 'speed': 'Custom',
                 'recommended': False,
-                'description': 'Пользовательская модель в папке моделей.',
+                'description': 'Custom model found in the models directory.',
                 'installed': True,
                 'path': str(path),
             })

@@ -29,7 +29,7 @@ BASE_MODELS: dict[str, dict[str, Any]] = {
         "size_mb": 14.8,
         "speed": "Very Fast",
         "recommended": True,
-        "description": "Сверхлегкий Real-Time Transformer Peterande D-FINE Nano для встраиваемых систем.",
+        "description": "Ultra-lightweight Peterande D-FINE Nano Real-Time Transformer for embedded systems.",
         "url": "https://github.com/Peterande/storage/releases/download/dfinev1.0/dfine_n_coco.pth",
     },
     "dfine_s_coco.pth": {
@@ -38,7 +38,7 @@ BASE_MODELS: dict[str, dict[str, Any]] = {
         "size_mb": 39.9,
         "speed": "Fast",
         "recommended": False,
-        "description": "Компактный D-FINE Small с высокой точностью локализации границ объектов.",
+        "description": "Compact D-FINE Small detector with high bounding box localization precision.",
         "url": "https://github.com/Peterande/storage/releases/download/dfinev1.0/dfine_s_coco.pth",
     },
     "dfine_m_coco.pth": {
@@ -47,7 +47,7 @@ BASE_MODELS: dict[str, dict[str, Any]] = {
         "size_mb": 75.4,
         "speed": "Medium",
         "recommended": False,
-        "description": "Сбалансированная модель D-FINE Medium с превосходной точностью детекции.",
+        "description": "Balanced D-FINE Medium detector with superior detection accuracy.",
         "url": "https://github.com/Peterande/storage/releases/download/dfinev1.0/dfine_m_coco.pth",
     },
     "dfine_l_coco.pth": {
@@ -56,7 +56,7 @@ BASE_MODELS: dict[str, dict[str, Any]] = {
         "size_mb": 120.2,
         "speed": "Slow",
         "recommended": False,
-        "description": "Высокоточная архитектура D-FINE Large для серверного инференса.",
+        "description": "High-accuracy D-FINE Large architecture for server inference.",
         "url": "https://github.com/Peterande/storage/releases/download/dfinev1.0/dfine_l_coco.pth",
     },
     "dfine_x_coco.pth": {
@@ -65,7 +65,7 @@ BASE_MODELS: dict[str, dict[str, Any]] = {
         "size_mb": 240.4,
         "speed": "Heavy",
         "recommended": False,
-        "description": "Максимальная модель D-FINE X-Large для соревнований и сложнейших задач.",
+        "description": "Maximum accuracy D-FINE X-Large architecture for demanding detection tasks.",
         "url": "https://github.com/Peterande/storage/releases/download/dfinev1.0/dfine_x_coco.pth",
     },
 }

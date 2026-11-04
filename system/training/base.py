@@ -177,7 +177,7 @@ class BaseTrainingProvider(ABC):
                     "size_mb": size_mb,
                     "speed": "Custom",
                     "recommended": False,
-                    "description": "Пользовательская модель в папке моделей.",
+                    "description": "Custom model found in the models directory.",
                     "installed": True,
                     "path": str(p_file),
                 })

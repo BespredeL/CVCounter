@@ -30,7 +30,7 @@ BASE_MODELS: dict[str, dict[str, Any]] = {
         "size_mb": 349.3,
         "speed": "Very Fast",
         "recommended": True,
-        "description": "Компактный Real-Time Detection Transformer Roboflow RF-DETR Nano.",
+        "description": "Compact Roboflow RF-DETR Nano Real-Time Detection Transformer.",
         "url": "https://storage.googleapis.com/rfdetr/nano_coco/checkpoint_best_regular.pth",
     },
     "rf-detr-small.pth": {
@@ -39,7 +39,7 @@ BASE_MODELS: dict[str, dict[str, Any]] = {
         "size_mb": 368.1,
         "speed": "Fast",
         "recommended": False,
-        "description": "Быстрый Roboflow RF-DETR Small для реального времени на современных GPU.",
+        "description": "Fast Roboflow RF-DETR Small for real-time inference on modern GPUs.",
         "url": "https://storage.googleapis.com/rfdetr/small_coco/checkpoint_best_regular.pth",
     },
     "rf-detr-medium.pth": {
@@ -48,7 +48,7 @@ BASE_MODELS: dict[str, dict[str, Any]] = {
         "size_mb": 386.2,
         "speed": "Medium",
         "recommended": False,
-        "description": "Сбалансированная модель Roboflow RF-DETR Medium.",
+        "description": "Balanced Roboflow RF-DETR Medium detection model.",
         "url": "https://storage.googleapis.com/rfdetr/medium_coco/checkpoint_best_regular.pth",
     },
     "rf-detr-base.pth": {
@@ -57,7 +57,7 @@ BASE_MODELS: dict[str, dict[str, Any]] = {
         "size_mb": 355.3,
         "speed": "Medium",
         "recommended": False,
-        "description": "Базовый чекпоинт Roboflow RF-DETR Base.",
+        "description": "Standard Roboflow RF-DETR Base checkpoint.",
         "url": "https://storage.googleapis.com/rfdetr/rf-detr-base-coco.pth",
     },
 }

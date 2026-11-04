@@ -29,7 +29,7 @@ BASE_MODELS: dict[str, dict[str, Any]] = {
         "size_mb": 54.9,
         "speed": "Very Fast",
         "recommended": True,
-        "description": "Сверхбыстрый детектор OpenMMLab RTMDet-Tiny для edge-устройств и CPU.",
+        "description": "Ultra-fast OpenMMLab RTMDet-Tiny detector for edge devices and CPU.",
         "url": "https://download.openmmlab.com/mmdetection/v3.0/rtmdet/rtmdet_tiny_8xb32-300e_coco/rtmdet_tiny_8xb32-300e_coco_20220902_112414-78e30dcc.pth",
     },
     "rtmdet_s.pth": {
@@ -38,7 +38,7 @@ BASE_MODELS: dict[str, dict[str, Any]] = {
         "size_mb": 87.2,
         "speed": "Fast",
         "recommended": False,
-        "description": "Быстрый детектор OpenMMLab RTMDet-Small с отличным балансом точности и скорости.",
+        "description": "Fast OpenMMLab RTMDet-Small detector with an optimal speed/accuracy balance.",
         "url": "https://download.openmmlab.com/mmdetection/v3.0/rtmdet/rtmdet_s_8xb32-300e_coco/rtmdet_s_8xb32-300e_coco_20220905_161602-387a891e.pth",
     },
     "rtmdet_m.pth": {
@@ -47,7 +47,7 @@ BASE_MODELS: dict[str, dict[str, Any]] = {
         "size_mb": 213.9,
         "speed": "Medium",
         "recommended": False,
-        "description": "Сбалансированный детектор OpenMMLab RTMDet-Medium для GPU.",
+        "description": "Balanced OpenMMLab RTMDet-Medium detector for GPU inference.",
         "url": "https://download.openmmlab.com/mmdetection/v3.0/rtmdet/rtmdet_m_8xb32-300e_coco/rtmdet_m_8xb32-300e_coco_20220719_112220-229f527c.pth",
     },
     "rtmdet_l.pth": {
@@ -56,7 +56,7 @@ BASE_MODELS: dict[str, dict[str, Any]] = {
         "size_mb": 432.7,
         "speed": "Slow",
         "recommended": False,
-        "description": "Высокоточный детектор OpenMMLab RTMDet-Large с максимальной точностью mAP.",
+        "description": "High-accuracy OpenMMLab RTMDet-Large detector with maximum mAP precision.",
         "url": "https://download.openmmlab.com/mmdetection/v3.0/rtmdet/rtmdet_l_8xb32-300e_coco/rtmdet_l_8xb32-300e_coco_20220719_112030-5a0be7c4.pth",
     },
 }
