@@ -742,6 +742,7 @@
     selectProvider?.addEventListener('change', () => {
         const url = new URL(window.location.href);
         url.searchParams.set('provider', selectProvider.value);
+        url.searchParams.set('tab', 'train');
         window.location.href = url.toString();
     });
 
@@ -752,6 +753,15 @@
         const label = document.getElementById('btn-download-base-label');
         if (!select || !btn) return;
         const selectedOpt = select.selectedOptions ? select.selectedOptions[0] : null;
+        const hasModel = Boolean(selectedOpt && selectedOpt.value);
+        if (!hasModel) {
+            btn.classList.add('disabled');
+            btn.setAttribute('aria-disabled', 'true');
+            if (label) label.textContent = t('Download model');
+            return;
+        }
+        btn.classList.remove('disabled');
+        btn.removeAttribute('aria-disabled');
         const isInstalled = selectedOpt?.dataset?.installed === 'true';
         if (isInstalled) {
             if (label) label.textContent = t('Downloaded ✓');
@@ -776,6 +786,11 @@
         const modelName = select?.value;
         if (!modelName) {
             toast(t('Please select a base model'), 'warning');
+            return;
+        }
+        const selectedOpt = select.selectedOptions ? select.selectedOptions[0] : null;
+        if (selectedOpt?.dataset?.installed === 'true') {
+            toast(t('Model is already downloaded and ready to use'), 'info');
             return;
         }
         const box = document.getElementById('base-model-download-box');

@@ -20,13 +20,76 @@ from system.training.base import (
 )
 
 
+DEFAULT_BASE_MODEL = "dfine_n_coco.pth"
+
+BASE_MODELS: dict[str, dict[str, Any]] = {
+    "dfine_n_coco.pth": {
+        "name": "D-FINE Nano (COCO)",
+        "task": "detect",
+        "size_mb": 14.8,
+        "speed": "Very Fast",
+        "recommended": True,
+        "description": "Сверхлегкий Real-Time Transformer Peterande D-FINE Nano для встраиваемых систем.",
+        "url": "https://github.com/Peterande/storage/releases/download/dfinev1.0/dfine_n_coco.pth",
+    },
+    "dfine_s_coco.pth": {
+        "name": "D-FINE Small (COCO)",
+        "task": "detect",
+        "size_mb": 39.9,
+        "speed": "Fast",
+        "recommended": False,
+        "description": "Компактный D-FINE Small с высокой точностью локализации границ объектов.",
+        "url": "https://github.com/Peterande/storage/releases/download/dfinev1.0/dfine_s_coco.pth",
+    },
+    "dfine_m_coco.pth": {
+        "name": "D-FINE Medium (COCO)",
+        "task": "detect",
+        "size_mb": 75.4,
+        "speed": "Medium",
+        "recommended": False,
+        "description": "Сбалансированная модель D-FINE Medium с превосходной точностью детекции.",
+        "url": "https://github.com/Peterande/storage/releases/download/dfinev1.0/dfine_m_coco.pth",
+    },
+    "dfine_l_coco.pth": {
+        "name": "D-FINE Large (COCO)",
+        "task": "detect",
+        "size_mb": 120.2,
+        "speed": "Slow",
+        "recommended": False,
+        "description": "Высокоточная архитектура D-FINE Large для серверного инференса.",
+        "url": "https://github.com/Peterande/storage/releases/download/dfinev1.0/dfine_l_coco.pth",
+    },
+    "dfine_x_coco.pth": {
+        "name": "D-FINE X-Large (COCO)",
+        "task": "detect",
+        "size_mb": 240.4,
+        "speed": "Heavy",
+        "recommended": False,
+        "description": "Максимальная модель D-FINE X-Large для соревнований и сложнейших задач.",
+        "url": "https://github.com/Peterande/storage/releases/download/dfinev1.0/dfine_x_coco.pth",
+    },
+}
+
+
 class DFINETrainingProvider(BaseTrainingProvider):
     id: str = "d_fine"
     tasks: tuple[str, ...] = ("detect",)
     dataset_formats: tuple[str, ...] = ("coco", "yolo")
     export_formats: tuple[str, ...] = ("onnx",)
+    BASE_MODELS = BASE_MODELS
 
     def train(self, request: TrainingRequest) -> TrainingResult:
+        # Resolve / auto-download base model checkpoint
+        base_model = request.options.get("pretrained_weights") or request.base_model
+        if base_model:
+            cand = Path(base_model)
+            if not cand.is_file():
+                cand = self.models_dir() / base_model
+            if not cand.is_file() and self.supports_base_model(base_model):
+                try:
+                    self.download_base_model(base_model, progress_callback=request.progress_callback)
+                except Exception:
+                    pass
         run_dir = request.run_dir or (request.project_root or Path(".")).resolve() / "storage" / "runs" / "d_fine" / request.run_name
         run_dir.mkdir(parents=True, exist_ok=True)
         weights_dir = run_dir / "weights"

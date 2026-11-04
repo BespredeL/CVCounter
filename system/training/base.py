@@ -123,13 +123,65 @@ class BaseTrainingProvider(ABC):
         """Directory holding the training artifacts of this provider."""
         return self.directories(project_root)[2]
 
-    def base_models(self) -> list[dict[str, Any]]:
-        """Return the base checkpoints this provider can start from."""
-        return []
-
     def curated_models(self) -> dict[str, Any]:
         """Return the provider's downloadable start checkpoints by filename."""
-        return {}
+        return getattr(self, "BASE_MODELS", {})
+
+    def base_models(self) -> list[dict[str, Any]]:
+        """Return the base checkpoints this provider can start from."""
+        models_dir = self.models_dir()
+        catalog: list[dict[str, Any]] = []
+        curated = self.curated_models()
+        installed_files: dict[str, Path] = {}
+        if models_dir.is_dir():
+            for p in sorted(models_dir.glob("*.*")):
+                if p.is_file() and p.suffix.lower() in (".pth", ".pt", ".onnx", ".engine"):
+                    installed_files[p.name] = p
+
+        try:
+            shared_dir = self.models_dir().parent.parent / "models"
+            if shared_dir.is_dir():
+                for p in sorted(shared_dir.glob("*.*")):
+                    if p.is_file() and p.name not in installed_files and p.suffix.lower() in (".pth", ".pt", ".onnx", ".engine"):
+                        installed_files[p.name] = p
+        except Exception:
+            pass
+
+        for name, info in curated.items():
+            is_installed = name in installed_files
+            size_mb = (
+                round(installed_files[name].stat().st_size / (1024 * 1024), 1)
+                if is_installed else info.get("size_mb", 0.0)
+            )
+            catalog.append({
+                "name": name,
+                "display_name": info.get("name", name),
+                "task": info.get("task", "detect"),
+                "task_type": info.get("task", "detect"),
+                "size_mb": size_mb,
+                "speed": info.get("speed", "Fast"),
+                "recommended": info.get("recommended", False),
+                "description": info.get("description", ""),
+                "installed": is_installed,
+                "path": str(installed_files[name]) if is_installed else None,
+            })
+
+        for name, p_file in installed_files.items():
+            if name not in curated:
+                size_mb = round(p_file.stat().st_size / (1024 * 1024), 1)
+                catalog.append({
+                    "name": name,
+                    "display_name": f"Custom: {name}",
+                    "task": "detect",
+                    "task_type": "detect",
+                    "size_mb": size_mb,
+                    "speed": "Custom",
+                    "recommended": False,
+                    "description": "Пользовательская модель в папке моделей.",
+                    "installed": True,
+                    "path": str(p_file),
+                })
+        return catalog
 
     def supports_base_model(self, model_name: str) -> bool:
         """
@@ -141,7 +193,8 @@ class BaseTrainingProvider(ABC):
         Returns:
             bool: True when the name is in the downloadable catalog
         """
-        return model_name in self.curated_models()
+        clean = Path(model_name).name
+        return clean in self.curated_models()
 
     def download_base_model(self, model_name: str, progress_callback=None) -> Path:
         """
@@ -154,7 +207,19 @@ class BaseTrainingProvider(ABC):
         Returns:
             Path: The local checkpoint path
         """
-        raise NotImplementedError(f"Provider '{self.id}' does not offer downloadable base models")
+        from system.utils.downloads import download_file
+
+        clean_name = Path(model_name).name
+        curated = self.curated_models()
+        info = curated.get(clean_name)
+        if info is None or not info.get("url"):
+            raise ValueError(
+                f"Unknown base model '{clean_name}' for provider '{self.id}'. Supported: {', '.join(curated)}"
+            )
+
+        urls = info["url"] if isinstance(info["url"], (list, tuple)) else [info["url"]]
+        dest = self.models_dir() / clean_name
+        return download_file(urls, dest, clean_name, progress_callback)
 
     def prepare(self, request: TrainingRequest) -> None:
         """

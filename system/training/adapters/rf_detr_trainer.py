@@ -21,11 +21,54 @@ from system.training.base import (
 )
 
 
+DEFAULT_BASE_MODEL = "rf-detr-nano.pth"
+
+BASE_MODELS: dict[str, dict[str, Any]] = {
+    "rf-detr-nano.pth": {
+        "name": "RF-DETR Nano (COCO)",
+        "task": "detect",
+        "size_mb": 349.3,
+        "speed": "Very Fast",
+        "recommended": True,
+        "description": "Компактный Real-Time Detection Transformer Roboflow RF-DETR Nano.",
+        "url": "https://storage.googleapis.com/rfdetr/nano_coco/checkpoint_best_regular.pth",
+    },
+    "rf-detr-small.pth": {
+        "name": "RF-DETR Small (COCO)",
+        "task": "detect",
+        "size_mb": 368.1,
+        "speed": "Fast",
+        "recommended": False,
+        "description": "Быстрый Roboflow RF-DETR Small для реального времени на современных GPU.",
+        "url": "https://storage.googleapis.com/rfdetr/small_coco/checkpoint_best_regular.pth",
+    },
+    "rf-detr-medium.pth": {
+        "name": "RF-DETR Medium (COCO)",
+        "task": "detect",
+        "size_mb": 386.2,
+        "speed": "Medium",
+        "recommended": False,
+        "description": "Сбалансированная модель Roboflow RF-DETR Medium.",
+        "url": "https://storage.googleapis.com/rfdetr/medium_coco/checkpoint_best_regular.pth",
+    },
+    "rf-detr-base.pth": {
+        "name": "RF-DETR Base (COCO)",
+        "task": "detect",
+        "size_mb": 355.3,
+        "speed": "Medium",
+        "recommended": False,
+        "description": "Базовый чекпоинт Roboflow RF-DETR Base.",
+        "url": "https://storage.googleapis.com/rfdetr/rf-detr-base-coco.pth",
+    },
+}
+
+
 class RFDETRTrainingProvider(BaseTrainingProvider):
     id: str = "rf_detr"
     tasks: tuple[str, ...] = ("detect",)
     dataset_formats: tuple[str, ...] = ("coco", "yolo")
     export_formats: tuple[str, ...] = ("onnx",)
+    BASE_MODELS = BASE_MODELS
 
     def train(self, request: TrainingRequest) -> TrainingResult:
         run_dir = request.run_dir or (request.project_root or Path(".")).resolve() / "storage" / "runs" / "rf_detr" / request.run_name
@@ -48,8 +91,21 @@ class RFDETRTrainingProvider(BaseTrainingProvider):
         if has_rfdetr:
             model_cls = getattr(rfdetr, "RFDETRSmall", None) or getattr(rfdetr, "RFDETRMedium", None)
             base_model = request.options.get("pretrained_weights") or request.base_model
-            if base_model and Path(base_model).is_file():
-                model = model_cls(pretrain_weights=str(base_model))
+            model_path = None
+            if base_model:
+                cand = Path(base_model)
+                if not cand.is_file():
+                    cand = self.models_dir() / base_model
+                if not cand.is_file() and self.supports_base_model(base_model):
+                    try:
+                        cand = self.download_base_model(base_model, progress_callback=request.progress_callback)
+                    except Exception:
+                        pass
+                if cand.is_file():
+                    model_path = cand
+
+            if model_path:
+                model = model_cls(pretrain_weights=str(model_path))
             else:
                 model = model_cls()
 

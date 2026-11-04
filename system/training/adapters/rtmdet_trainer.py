@@ -20,13 +20,67 @@ from system.training.base import (
 )
 
 
+DEFAULT_BASE_MODEL = "rtmdet_tiny.pth"
+
+BASE_MODELS: dict[str, dict[str, Any]] = {
+    "rtmdet_tiny.pth": {
+        "name": "RTMDet-Tiny (COCO)",
+        "task": "detect",
+        "size_mb": 54.9,
+        "speed": "Very Fast",
+        "recommended": True,
+        "description": "Сверхбыстрый детектор OpenMMLab RTMDet-Tiny для edge-устройств и CPU.",
+        "url": "https://download.openmmlab.com/mmdetection/v3.0/rtmdet/rtmdet_tiny_8xb32-300e_coco/rtmdet_tiny_8xb32-300e_coco_20220902_112414-78e30dcc.pth",
+    },
+    "rtmdet_s.pth": {
+        "name": "RTMDet-S (COCO)",
+        "task": "detect",
+        "size_mb": 87.2,
+        "speed": "Fast",
+        "recommended": False,
+        "description": "Быстрый детектор OpenMMLab RTMDet-Small с отличным балансом точности и скорости.",
+        "url": "https://download.openmmlab.com/mmdetection/v3.0/rtmdet/rtmdet_s_8xb32-300e_coco/rtmdet_s_8xb32-300e_coco_20220905_161602-387a891e.pth",
+    },
+    "rtmdet_m.pth": {
+        "name": "RTMDet-M (COCO)",
+        "task": "detect",
+        "size_mb": 213.9,
+        "speed": "Medium",
+        "recommended": False,
+        "description": "Сбалансированный детектор OpenMMLab RTMDet-Medium для GPU.",
+        "url": "https://download.openmmlab.com/mmdetection/v3.0/rtmdet/rtmdet_m_8xb32-300e_coco/rtmdet_m_8xb32-300e_coco_20220719_112220-229f527c.pth",
+    },
+    "rtmdet_l.pth": {
+        "name": "RTMDet-L (COCO)",
+        "task": "detect",
+        "size_mb": 432.7,
+        "speed": "Slow",
+        "recommended": False,
+        "description": "Высокоточный детектор OpenMMLab RTMDet-Large с максимальной точностью mAP.",
+        "url": "https://download.openmmlab.com/mmdetection/v3.0/rtmdet/rtmdet_l_8xb32-300e_coco/rtmdet_l_8xb32-300e_coco_20220719_112030-5a0be7c4.pth",
+    },
+}
+
+
 class RTMDetTrainingProvider(BaseTrainingProvider):
     id: str = "rtmdet"
     tasks: tuple[str, ...] = ("detect",)
     dataset_formats: tuple[str, ...] = ("coco", "yolo")
     export_formats: tuple[str, ...] = ("onnx",)
+    BASE_MODELS = BASE_MODELS
 
     def train(self, request: TrainingRequest) -> TrainingResult:
+        # Resolve / auto-download base model checkpoint
+        base_model = request.options.get("pretrained_weights") or request.base_model
+        if base_model:
+            cand = Path(base_model)
+            if not cand.is_file():
+                cand = self.models_dir() / base_model
+            if not cand.is_file() and self.supports_base_model(base_model):
+                try:
+                    self.download_base_model(base_model, progress_callback=request.progress_callback)
+                except Exception:
+                    pass
         run_dir = request.run_dir or (request.project_root or Path(".")).resolve() / "storage" / "runs" / "rtmdet" / request.run_name
         run_dir.mkdir(parents=True, exist_ok=True)
         weights_dir = run_dir / "weights"
