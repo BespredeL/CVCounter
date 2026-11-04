@@ -7,7 +7,7 @@
  */
 
 document.addEventListener('DOMContentLoaded', function () {
-    const t = (key) => (typeof window.trans === 'function' ? window.trans(key) : key);
+    const t = (key, params) => (typeof window.trans === 'function' ? window.trans(key, params) : key);
 
     // 1. Live Search & Category Filtering
     const searchInput = document.getElementById('help-search');

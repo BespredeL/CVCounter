@@ -7,7 +7,7 @@
  */
 
 (function () {
-    const t = (key) => (typeof window.trans === 'function' ? window.trans(key) : key);
+    const t = (key, params) => (typeof window.trans === 'function' ? window.trans(key, params) : key);
 
     function toast(message, type) {
         if (typeof window.showToast === 'function') {

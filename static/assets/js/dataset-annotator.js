@@ -10,7 +10,7 @@
     const root = document.getElementById('dataset-annotator');
     if (!root) return;
 
-    const t = (key) => (typeof window.trans === 'function' ? window.trans(key) : key);
+    const t = (key, params) => (typeof window.trans === 'function' ? window.trans(key, params) : key);
 
     const COLORS = [
         '#43d3ff', '#00c85a', '#ff4000', '#ff00c8', '#008cff', '#b450ff', '#ffcc00', '#ffffff',
