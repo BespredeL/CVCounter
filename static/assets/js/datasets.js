@@ -1148,27 +1148,67 @@
         });
     });
 
+    function formatShortWeights(weights) {
+        if (!weights) return '';
+        const clean = String(weights).replace(/\\/g, '/').replace(/\/+$/, '');
+        const parts = clean.split('/').filter(Boolean);
+        if (!parts.length) return weights;
+        const file = parts[parts.length - 1];
+        if (parts.length >= 3 && parts[parts.length - 2].toLowerCase() === 'weights') {
+            const runName = parts[parts.length - 3];
+            return `${runName} / ${file}`;
+        }
+        if (parts.length >= 2) {
+            return `${parts[parts.length - 2]} / ${file}`;
+        }
+        return file;
+    }
+
+    function cleanRelativeWeights(weights) {
+        if (!weights) return '';
+        let clean = String(weights).replace(/\\/g, '/');
+        const markerConfig = clean.indexOf('/config/');
+        const markerStorage = clean.indexOf('/storage/');
+        if (markerConfig !== -1) {
+            clean = clean.substring(markerConfig + 1);
+        } else if (markerStorage !== -1) {
+            clean = clean.substring(markerStorage + 1);
+        }
+        return clean;
+    }
+
     const fillBestWeightsBtn = document.getElementById('btn-fill-best-weights');
     const selectAvailableWeights = document.getElementById('select-available-weights');
     const applyWeightsInput = document.getElementById('apply-weights');
 
     if (selectAvailableWeights && applyWeightsInput) {
+        for (const opt of selectAvailableWeights.options) {
+            if (opt.textContent && (opt.textContent.includes(':\\') || opt.textContent.includes(':/'))) {
+                const label = formatShortWeights(opt.value || opt.textContent);
+                opt.textContent = opt.textContent.startsWith('🔥') ? `🔥 ${t('Latest training result')}: ${label}` : label;
+            }
+        }
+
         selectAvailableWeights.addEventListener('change', () => {
             const val = selectAvailableWeights.value;
             if (val) {
-                applyWeightsInput.value = val;
+                applyWeightsInput.value = cleanRelativeWeights(val);
                 toast(t('Weights selected'), 'info');
             }
         });
 
         applyWeightsInput.addEventListener('input', () => {
             const val = applyWeightsInput.value.trim();
+            const normVal = cleanRelativeWeights(val).toLowerCase();
             let matched = false;
             for (const opt of selectAvailableWeights.options) {
-                if (opt.value && opt.value === val) {
-                    selectAvailableWeights.value = val;
-                    matched = true;
-                    break;
+                if (opt.value) {
+                    const normOpt = cleanRelativeWeights(opt.value).toLowerCase();
+                    if (normOpt && (normOpt === normVal || normVal.endsWith(normOpt) || normOpt.endsWith(normVal))) {
+                        selectAvailableWeights.value = opt.value;
+                        matched = true;
+                        break;
+                    }
                 }
             }
             if (!matched) {
@@ -1180,8 +1220,9 @@
     fillBestWeightsBtn?.addEventListener('click', () => {
         const w = detail.dataset.bestWeights;
         if (w) {
+            const relW = cleanRelativeWeights(w);
             if (applyWeightsInput) {
-                applyWeightsInput.value = w;
+                applyWeightsInput.value = relW;
                 applyWeightsInput.dispatchEvent(new Event('input'));
             }
             toast(t('Weights applied'), 'info');
@@ -1190,19 +1231,27 @@
 
     function setKnownBestWeights(weights) {
         if (!weights) return;
-        detail.dataset.bestWeights = weights;
+        const relWeights = cleanRelativeWeights(weights);
+        detail.dataset.bestWeights = relWeights;
         if (fillBestWeightsBtn) fillBestWeightsBtn.classList.remove('d-none');
-        if (applyWeightsInput && !applyWeightsInput.value) {
-            applyWeightsInput.value = weights;
+        if (applyWeightsInput && (!applyWeightsInput.value || applyWeightsInput.value === weights)) {
+            applyWeightsInput.value = relWeights;
         }
         if (selectAvailableWeights) {
-            let opt = Array.from(selectAvailableWeights.options).find(o => o.value === weights);
+            const normRel = relWeights.toLowerCase();
+            let opt = Array.from(selectAvailableWeights.options).find(o => {
+                if (!o.value) return false;
+                const normOpt = cleanRelativeWeights(o.value).toLowerCase();
+                return normOpt === normRel || normOpt.endsWith(normRel) || normRel.endsWith(normOpt);
+            });
             if (!opt) {
-                opt = new Option(`🔥 ${t('Latest training result')}: ${weights}`, weights);
+                const shortLabel = formatShortWeights(relWeights);
+                opt = new Option(`🔥 ${t('Latest training result')}: ${shortLabel}`, relWeights);
                 selectAvailableWeights.add(opt, 1);
             }
-            if (applyWeightsInput && applyWeightsInput.value === weights) {
-                selectAvailableWeights.value = weights;
+            selectAvailableWeights.value = opt.value;
+            if (applyWeightsInput && (!applyWeightsInput.value || applyWeightsInput.value === weights || applyWeightsInput.value === relWeights)) {
+                applyWeightsInput.value = opt.value;
             }
         }
     }
@@ -1273,7 +1322,7 @@
                 if (data.job.weights) {
                     setKnownBestWeights(data.job.weights);
                     const applyInput = document.getElementById('apply-weights');
-                    if (applyInput && !applyInput.value) applyInput.value = data.job.weights;
+                    if (applyInput && !applyInput.value) applyInput.value = cleanRelativeWeights(data.job.weights);
                 }
             } else {
                 setTrainStatus(t(data.busy ? 'busy' : 'idle'));
@@ -1360,7 +1409,7 @@
                     setKnownBestWeights(payload.job.weights);
                     const applyInput = document.getElementById('apply-weights');
                     if (applyInput) {
-                        applyInput.value = payload.job.weights;
+                        applyInput.value = cleanRelativeWeights(payload.job.weights);
                         applyInput.dispatchEvent(new Event('input'));
                     }
                 }

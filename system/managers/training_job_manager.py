@@ -155,6 +155,16 @@ class TrainingJobManager:
         """Return the job status payload."""
         with self._lock:
             job = dict(self._job) if self._job else None
+            if job and job.get('weights'):
+                try:
+                    root = Path(get_project_root()).resolve()
+                    p = Path(job['weights']).resolve()
+                    try:
+                        job['weights'] = p.relative_to(root).as_posix()
+                    except ValueError:
+                        job['weights'] = p.as_posix()
+                except Exception:
+                    job['weights'] = str(job['weights']).replace('\\', '/')
             provider = (job or {}).get('provider') or DEFAULT_TRAINING_PROVIDER
             return {
                 'busy': bool(self._thread and self._thread.is_alive()),
@@ -392,12 +402,23 @@ class TrainingJobManager:
                     with self._lock:
                         if self._job and self._job['id'] == job_id:
                             self._job['status'] = 'completed'
-                            self._job['weights'] = str(result.weights)
+                            weights_str = str(result.weights) if result.weights else None
+                            if weights_str:
+                                try:
+                                    root = Path(get_project_root()).resolve()
+                                    p = Path(result.weights).resolve()
+                                    try:
+                                        weights_str = p.relative_to(root).as_posix()
+                                    except ValueError:
+                                        weights_str = p.as_posix()
+                                except Exception:
+                                    weights_str = str(result.weights).replace('\\', '/')
+                            self._job['weights'] = weights_str
                             self._job['exported'] = str(result.exported) if result.exported else None
                             self._job['metrics'] = result.metrics
                             self._job['finished_at'] = time.time()
                             self._history.append(dict(self._job))
-                    self._append_log(f'Training complete: {result.weights}')
+                    self._append_log(f'Training complete: {weights_str or result.weights}')
                     self._emit({'event': 'job_complete', 'job': self.status().get('job')})
                 except TrainingCancelledError:
                     self.logger.info(f'Training job {job_id} cancelled by user')
@@ -540,6 +561,17 @@ class TrainingJobManager:
         elif event == 'start':
             self._append_log(f"Train start: {payload}")
         elif event == 'complete':
+            weights_val = payload.get('weights')
+            if weights_val:
+                try:
+                    root = Path(get_project_root()).resolve()
+                    p = Path(weights_val).resolve()
+                    try:
+                        payload['weights'] = p.relative_to(root).as_posix()
+                    except ValueError:
+                        payload['weights'] = p.as_posix()
+                except Exception:
+                    payload['weights'] = str(weights_val).replace('\\', '/')
             self._append_log(f"Weights: {payload.get('weights')}")
         self._emit({'event': 'training_progress', **payload, 'job_id': job_id})
 

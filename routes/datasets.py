@@ -212,8 +212,12 @@ def _list_available_weights_for_deploy() -> list[dict]:
                 continue
             if abs_p:
                 seen_paths.add(abs_p)
+            try:
+                rel_det_path = Path(resolved).resolve().relative_to(root).as_posix() if resolved else str(weights).replace('\\', '/')
+            except Exception:
+                rel_det_path = str(weights).replace('\\', '/')
             detector_items.append({
-                'path': str(weights),
+                'path': rel_det_path,
                 'name': Path(str(weights)).name,
                 'run_name': location,
                 'label': f"{location}: {Path(str(weights)).name}",
@@ -1512,8 +1516,12 @@ def api_apply_weights():
 
     root = Path(get_project_root())
     weights_path = Path(weights)
+    if not weights_path.is_absolute():
+        weights_path = (root / weights_path).resolve()
+    else:
+        weights_path = weights_path.resolve()
     try:
-        rel = str(weights_path.resolve().relative_to(root.resolve())).replace('\\', '/')
+        rel = str(weights_path.relative_to(root.resolve())).replace('\\', '/')
     except ValueError:
         rel = str(weights_path).replace('\\', '/')
 
