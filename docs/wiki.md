@@ -444,8 +444,11 @@ Cameras configured under `detections` inherit missing values from `detection_def
 | `video_reconnect_attempts` | Connection retry limit before entering error state | `5` |
 | `counting_areas` | Array of polygonal counting areas with BGR colors and motion direction | `[{"points": [[0,0],[100,0],[100,100],[0,100]], "color": [67,211,255], "direction": "top_to_bottom"}]` |
 | `classes` | Class filter and custom labels for per-class counts | `{"0": "Carton", "1": "Pallet"}` |
+| `dataset_create.enable` | Enable automatic dataset frame collection | `false` |
+| `dataset_create.probability` | Sampling probability for frame saving (0.0 – 1.0) | `0.1` |
+| `dataset_create.path` | Base directory for captured frames (camera subfolder created automatically) | `"storage/saved_images"` |
 | `recording.enable` | Enable event-driven video recording | `false` |
-| `recording.path` | Destination directory for recorded clips | `"storage/saved_recordings"` |
+| `recording.path` | Base directory for recorded video clips (camera subfolder created automatically) | `"storage/saved_recordings"` |
 | `recording.idle_timeout` | Idle seconds without detections before closing video clip | `30` |
 
 ---
@@ -714,7 +717,11 @@ google-chrome --kiosk --start-fullscreen http://localhost:8080/counter/Line1
 Increase `video_reconnect_attempts` (e.g., to `10` or `20`) in camera settings. The engine will transparently reconnect upon temporary network glitches.
 
 ### 4. Where are saved video recordings and snapshots stored?
-All media is stored inside `storage/` (`storage/saved_recordings` and `storage/saved_images`), and can be browsed and downloaded from **Reports ➔ Saved Media**.
+All media is stored inside `storage/`:
+- **Video recordings:** `<recording.path>/<camera_id>/` (default: `storage/saved_recordings/<camera_id>/`)
+- **Captured frames / datasets:** `<dataset_create.path>/<camera_id>/` (default: `storage/saved_images/<camera_id>/`)
+
+The base directory is defined in configuration, and subfolders for each camera are created automatically. All recordings and frames can be browsed, played, and downloaded from **Reports ➔ Saved Media**.
 
 ---
 

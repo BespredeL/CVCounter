@@ -237,6 +237,8 @@ Configure the `model_type` setting per counter (or leave as `"auto"` for automat
 | `vid_stride` | All | Frame stride (skip frames to reduce CPU/GPU load) |
 | `classes` | All | Class filter and custom labels, e.g. `{"0": "Box"}` |
 | `counting_areas` | All | List of polygon counting zones, BGR colors, and motion direction vectors |
+| `dataset_create` | All | Automatic frame capture (base path `storage/saved_images`, camera subfolder created automatically) |
+| `recording` | All | Event-driven video recording (base path `storage/saved_recordings`, camera subfolder created automatically) |
 
 ---
 
