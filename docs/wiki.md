@@ -189,7 +189,9 @@ Mounted volumes ensure persistent storage for configuration (`config/`) and medi
 
 The unified detection subsystem (`system/detection/`) provides a standardized `IDetector` interface (`system/detection/interface.py`) and a centralized factory `load_detector` (`system/detection/registry.py`). The subsystem completely decouples diverse model architectures (Ultralytics YOLO, Generic ONNX, RF-DETR, D-FINE, RTMDet) from the video pipeline.
 
-Each detector returns a structured `DetectionFrameResult` containing a list of `DetectionBox` objects and a `.to_tracker_array() -> np.ndarray(N, 6)` method formatted as `[x1, y1, x2, y2, score, class_id]` consumed directly by ByteTrack.
+Each detector returns a structured `DetectionFrameResult` containing a list of `Detection` objects and a `.to_tracker_array() -> np.ndarray(N, 6)` method formatted as `[x1, y1, x2, y2, score, class_id]` consumed directly by ByteTrack.
+
+> For a comprehensive walkthrough of the multi-architecture detection platform, CPU/CUDA inference, fine-tuning, and export workflows, see the [Multi-Architecture Platform Guide](multi_architecture_guide.md).
 
 ### Optional Model Manifest
 
@@ -276,29 +278,35 @@ Preprocessing, tensor input, output, and decoder declarations are separate so a 
 1. Subclass `IDetector`:
    ```python
    import numpy as np
-   from system.detection.interface import IDetector, DetectionFrameResult, DetectionBox
-   from system.detection.registry import register_detector
+   from system.detection import IDetector, DetectionFrameResult, Detection, register_detector
 
    class MyDetector(IDetector):
        def __init__(self, weights: str, **kwargs):
            self.weights = weights
            # Initialize your detector model
 
+       def is_loaded(self) -> bool:
+           return True
+
+       def unload(self) -> None:
+           pass
+
        def detect(self, frame: np.ndarray) -> DetectionFrameResult:
            # Run inference and construct result
-           boxes = [
-               DetectionBox(
-                   x1=100.0, y1=150.0, x2=200.0, y2=250.0,
-                   confidence=0.95, class_id=0, class_name="box"
+           h, w = frame.shape[:2]
+           detections = [
+               Detection(
+                   class_id=0, class_name="box", confidence=0.95,
+                   x1=100.0, y1=150.0, x2=200.0, y2=250.0
                )
            ]
-           return DetectionFrameResult(boxes=boxes, orig_shape=frame.shape[:2])
+           return DetectionFrameResult(detections=detections, image_width=w, image_height=h)
 
        def get_classes(self) -> dict[int, str]:
            return {0: "box"}
 
        def close(self) -> None:
-           pass
+           self.unload()
 
    # Register detector factory in the registry
    register_detector("my_detector", lambda **kwargs: MyDetector(**kwargs))

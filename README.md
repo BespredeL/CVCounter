@@ -334,6 +334,7 @@ python train.py export --config my-dataset --export onnx
 
 - Сайт проекта: [https://cvcounter.createdby.ru](https://cvcounter.createdby.ru)
 - Документация (Wiki RU): [docs/wiki_ru.md](docs/wiki_ru.md)
+- Руководство по мультиархитектурной платформе: [docs/multi_architecture_guide_ru.md](docs/multi_architecture_guide_ru.md)
 - Описание API телеметрии: [docs/telemetry_api.md](docs/telemetry_api.md)
 - Архитектуры и движки: [ONNX Runtime](https://onnxruntime.ai/) | [Ultralytics YOLO](https://github.com/ultralytics) | [Roboflow RF-DETR](https://github.com/roboflow/rf-detr) | [D-FINE](https://github.com/Peterande/D-FINE) | [OpenMMLab](https://github.com/open-mmlab/mmdetection)
 

@@ -188,7 +188,9 @@ docker-compose up --build
 
 Единая подсистема детекции (`system/detection/`) предоставляет унифицированный интерфейс `IDetector` (`system/detection/interface.py`) и фабрику `load_detector` (`system/detection/registry.py`). Подсистема полностью изолирует работу с моделями различных архитектур (Ultralytics YOLO, Generic ONNX, RF-DETR, D-FINE, RTMDet) от видеопайплайна.
 
-Каждый детектор возвращает структурированный `DetectionFrameResult`, содержащий список `DetectionBox` и метод `.to_tracker_array() -> np.ndarray(N, 6)` с форматом строк `[x1, y1, x2, y2, score, class_id]` для передачи в трекер ByteTrack.
+Каждый детектор возвращает структурированный `DetectionFrameResult`, содержащий список объектов `Detection` и метод `.to_tracker_array() -> np.ndarray(N, 6)` с форматом строк `[x1, y1, x2, y2, score, class_id]` для передачи в трекер ByteTrack.
+
+> Подробное руководство по работе с мультиархитектурной платформой, инференсу на CPU/CUDA, обучению и экспорту см. в [Руководстве по мультиархитектурной платформе](multi_architecture_guide_ru.md).
 
 ### Необязательный манифест модели
 
@@ -275,29 +277,35 @@ Preprocessing, входной тензор, выход и decoder описыва
 1. Создайте класс-наследник `IDetector`:
    ```python
    import numpy as np
-   from system.detection.interface import IDetector, DetectionFrameResult, DetectionBox
-   from system.detection.registry import register_detector
+   from system.detection import IDetector, DetectionFrameResult, Detection, register_detector
 
    class CustomDetector(IDetector):
        def __init__(self, weights: str, **kwargs):
            self.weights = weights
            # Инициализация модели
 
+       def is_loaded(self) -> bool:
+           return True
+
+       def unload(self) -> None:
+           pass
+
        def detect(self, frame: np.ndarray) -> DetectionFrameResult:
            # Инференс и формирование результатов
-           boxes = [
-               DetectionBox(
-                   x1=100.0, y1=150.0, x2=200.0, y2=250.0,
-                   confidence=0.95, class_id=0, class_name="box"
+           h, w = frame.shape[:2]
+           detections = [
+               Detection(
+                   class_id=0, class_name="box", confidence=0.95,
+                   x1=100.0, y1=150.0, x2=200.0, y2=250.0
                )
            ]
-           return DetectionFrameResult(boxes=boxes, orig_shape=frame.shape[:2])
+           return DetectionFrameResult(detections=detections, image_width=w, image_height=h)
 
        def get_classes(self) -> dict[int, str]:
            return {0: "box"}
 
        def close(self) -> None:
-           pass
+           self.unload()
 
    # Регистрация фабрики детектора в реестре
    register_detector("custom_detector", lambda **kwargs: CustomDetector(**kwargs))

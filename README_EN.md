@@ -333,6 +333,7 @@ Sample configuration structure:
 
 - Project Website: [https://cvcounter.createdby.ru](https://cvcounter.createdby.ru)
 - Documentation (Wiki EN): [docs/wiki.md](docs/wiki.md)
+- Multi-Architecture Platform Guide: [docs/multi_architecture_guide.md](docs/multi_architecture_guide.md)
 - Telemetry API Docs: [docs/telemetry_api.md](docs/telemetry_api.md)
 - Inference Engines: [ONNX Runtime](https://onnxruntime.ai/) | [Ultralytics YOLO](https://github.com/ultralytics) | [Roboflow RF-DETR](https://github.com/roboflow/rf-detr) | [D-FINE](https://github.com/Peterande/D-FINE) | [OpenMMLab](https://github.com/open-mmlab/mmdetection)
 
