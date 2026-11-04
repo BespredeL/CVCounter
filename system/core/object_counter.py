@@ -65,6 +65,7 @@ class ObjectCounter:
         self._max_tracked_history: int = 30000
         self._track_history: dict[int, deque] = {}
         self._max_track_history_len: int = 15
+        self._counted_tracks: dict[int, dict] = {}
         self._frame: np.ndarray | None = None
         self._last_count_payload: dict | None = None
         self.running: bool = True
@@ -434,6 +435,7 @@ class ObjectCounter:
             self.total_objects.clear()
             self._total_objects_queue.clear()
             self._track_history.clear()
+            self._counted_tracks.clear()
             self.counts.reset_counts()
             self.counts.clear_pending()
 
