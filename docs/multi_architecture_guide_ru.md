@@ -376,3 +376,4 @@ if manifest:
 - **`Missing dependencies for architecture`**: Проверьте требуемый профиль оборудования и установите соответствующий файл `requirements-<arch>.txt`.
 - **`BBox out of bounds warnings`**: Проверьте датасет валидатором `DatasetValidator`. Координаты в YOLO-разметке должны находиться строго в диапазоне `[0.0, 1.0]`.
 - **`Data leakage warning`**: Убедитесь, что последовательные кадры из одной видеозаписи сгруппированы целиком либо в `train`, либо в `val`, а не перемешаны случайным образом. Используйте `DatasetSplitter.split_items()`.
+

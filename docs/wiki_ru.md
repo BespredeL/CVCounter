@@ -49,46 +49,72 @@
 
 ## 🏛️ Архитектура приложения
 
-Приложение построено по модульной схеме с использованием паттерна Application Factory во Flask:
+CVCounter построен по модульной слоистой архитектуре с чётким разделением ответственности между захватом видео, инференсом, трекингом, подсчётом, веб-интерфейсом и фоновыми задачами.
+
+### Схема обработки видеокадра и данных:
+
+```mermaid
+flowchart TD
+    A[Видеоисточник<br>RTSP / WebCam / File] --> B[VideoStreamManager / VideoCapture]
+    B --> C[CounterLoop<br>Фоновый поток обработки]
+    C --> D[IDetector<br>YOLO / ONNX / DETR / DFINE / RTMDet]
+    D -->|DetectionFrameResult| E[ByteTracker<br>Трекинг и привязка Track ID]
+    E --> F[CountKernel<br>Проверка пересечения зон и полигонов]
+    F --> G[CountState<br>Счётчики, классы, партии, брак]
+    G --> H[FrameRenderer<br>Отрисовка боксов, зон и меток]
+    H --> I[MJPEG Streamer<br>Видео в браузер оператора]
+    G --> J[DatabaseManager<br>Сохранение отчётов в SQLite/MySQL]
+    G --> K[Socket.IO Server<br>Real-time телеметрия на дашборд]
+    C --> L[RecordingControl<br>Запись событийных видеороликов]
+```
+
+### Структура проекта:
 
 ```
 CVCounter/
-├── app.py                      # Точка входа, регистрация blueprints и socketio
-├── train.py                    # Автономный CLI обучения и экспорта для любого provider-а
-├── install.py                  # Универсальный кроссплатформенный установщик
-├── config/                     # Файлы конфигурации и веса моделей
-│   ├── config.json             # Рабочий файл настроек
+├── app.py                      # Точка входа, запуск веб-сервера и сокетов
+├── train.py                    # Автономный CLI обучения и экспорта моделей
+├── install.py                  # Кроссплатформенный установщик с автоопределением оборудования
+├── config/                     # Конфигурационные файлы, веса моделей и база данных
+│   ├── config.json             # Рабочий файл конфигурации системы
 │   ├── config.example.json     # Эталонный файл настроек
-│   ├── database.sqlite         # База данных SQLite (сессии, отчёты)
-│   ├── ultralytics/            # Конфиги, базовые веса и прогоны Ultralytics YOLO
-│   └── torchvision/            # Конфиги, базовые веса и прогоны torchvision
-├── routes/                     # Модули представлений (Blueprints)
-│   ├── main.py                 # Дашборд, авторизация, статические страницы
-│   ├── counters.py             # Счётчики, видеопотоки, редактор зон, API подсчёта
-│   ├── reports.py              # Просмотр отчётов, медиафайлы, экспорт
-│   ├── datasets.py             # Датасеты, разметка, обучение моделей
-│   └── settings.py             # Настройки, системная информация, рантаймы, логи
+│   ├── database.sqlite         # База данных SQLite (сессии, отчёты, брак)
+│   ├── ultralytics/            # Конфигурации и веса моделей Ultralytics YOLO
+│   └── torchvision/            # Конфигурации и базовые чекпойнты torchvision
+├── routes/                     # Модули представлений (Flask Blueprints)
+│   ├── main.py                 # Дашборд, авторизация (/login, /logout), справка
+│   ├── counters.py             # Экраны счётчиков, видеопотоки MJPEG, редактор зон
+│   ├── reports.py              # Просмотр истории сессий, медиафайлы, экспорт в A4 PDF
+│   ├── datasets.py             # Сбор кадров, разметка, обучение и авторазметка
+│   ├── settings/               # Модульный пакет настроек (камеры, модели, рантаймы, логи, API-ключи)
+│   └── api/                    # REST API v1 (/api/v1/counters, /api/v1/reports, /api/v1/system)
 ├── system/                     # Внутреннее ядро системы
-│   ├── core/                   # Логика трекинга и подсчёта (ObjectCounter)
-│   ├── detection/              # Единая подсистема детекции: интерфейс IDetector, адаптеры, реестр
-│   ├── managers/               # Менеджеры потоков, БД, уведомлений, обучения
-│   ├── datasets/               # Хранилище аннотаций и сервис датасетов
-│   ├── training/               # Реестр training provider-ов, обучение и экспорт
-│   └── utils/                  # I18n, телеметрия, валидаторы, логгер
-├── static/                     # CSS, JS, шрифты и иконки
-├── templates/                  # Шаблоны Jinja2
-└── storage/                    # Логи, сохранённые кадры, записи, датасеты
+│   ├── app_factory.py          # Application Factory (сборка Flask-приложения и Socket.IO)
+│   ├── runtime.py              # AppRuntime (контейнер синглтонов и рантайм-состояния)
+│   ├── auth/                   # Аутентификация, валидация сессий и API-ключей, хэширование scrypt
+│   ├── core/                   # Пайплайн обработки: ObjectCounter, CounterLoop, ByteTrack, FrameRenderer
+│   ├── db/                     # Модели ORM SQLAlchemy, миграции и репозитории
+│   ├── detection/              # Единая подсистема детекции: IDetector, адаптеры, transforms, postproc, registry
+│   ├── managers/               # Менеджеры видеопотоков, тредов, базы данных, уведомлений, задач обучения
+│   ├── services/               # Сервисный слой: состояние счётчиков, события, хранилище результатов
+│   ├── datasets/               # Сервис датасетов, валидация утечек, конвертация YOLO/COCO
+│   ├── training/               # TrainingEngine, реестр провайдеров (Ultralytics, torchvision), экспорт
+│   └── utils/                  # I18n, телеметрия, валидаторы, логгер, детектор видеокарт
+├── static/                     # Статические ресурсы (CSS, JS, шрифты, иконки)
+├── templates/                  # Шаблоны страниц Jinja2
+└── storage/                    # Постоянное хранилище (логи, кадры, записи, датасеты)
 ```
 
 ### Основные Blueprints:
 
-| Blueprint | Модуль | Префикс URL | Назначение |
+| Blueprint | Модуль / Пакет | Префикс URL | Назначение |
 |---|---|---|---|
-| `main` | `routes/main.py` | `/` | Дашборд, авторизация (`/login`, `/logout`), справка (`/page/help`) |
+| `main` | `routes/main.py` | `/` | Дашборд, авторизация (`/login`, `/logout`), справочные страницы (`/page/help`) |
 | `counters` | `routes/counters.py` | `/` | Экраны счётчиков, видео MJPEG, редактор зон, сохранение партий |
 | `reports` | `routes/reports.py` | `/reports` | История сессий, сохранённые кадры/видео, печатные формы A4 |
 | `datasets` | `routes/datasets.py` | `/datasets` | Подготовка данных, разметка, обучение моделей (*auth*) |
-| `settings` | `routes/settings.py` | `/settings`, `/system_info` | Конфигуратор, системный статус, консоль логов, рантаймы (*auth*) |
+| `settings` | `routes/settings/` | `/settings`, `/system_info` | Конфигурация камер, рантаймы, системный статус, логи, модели (*auth*) |
+| `api_v1` | `routes/api/v1/` | `/api/v1` | Программный REST API v1: счётчики, отчёты, системное здоровье |
 
 ---
 
@@ -579,7 +605,7 @@ python train.py export --config road-map --provider ultralytics --export engine
 | `GET` | `/counter/<location>/counting_area/snapshot` | Получение стоп-кадра для редактора зон |
 | `POST` | `/counter/<location>/counting_area` | Сохранение новых координат зон подсчёта |
 
-### Настройки и система (`routes/settings.py` — требует авторизации)
+### Настройки и система (пакет `routes/settings/` — требует авторизации)
 
 | Метод | URL | Описание |
 |---|---|---|
@@ -622,6 +648,24 @@ python train.py export --config road-map --provider ultralytics --export engine
 | `POST` | `/datasets/api/training/cancel` | Прерывание задачи обучения |
 | `GET` | `/datasets/api/training/runs` | Список завершённых прогонов (`?provider=`, `?task=`) |
 | `POST` | `/datasets/api/training/apply-weights` | Применение весов обученной модели к камере |
+
+### Программный REST API v1 (пакет `routes/api/v1/` — префикс `/api/v1`)
+
+| Метод | URL | Описание |
+|---|---|---|
+| `GET` | `/api/v1/counters` | Список всех настроенных счётчиков и их текущий статус |
+| `GET` | `/api/v1/counters/<location>` | Текущие показатели и статус конкретного счётчика |
+| `POST` | `/api/v1/counters/<location>/start` | Запуск подсчёта на счётчике |
+| `POST` | `/api/v1/counters/<location>/pause` | Приостановка подсчёта (пауза) |
+| `POST` | `/api/v1/counters/<location>/stop` | Остановка счётчика |
+| `POST` | `/api/v1/counters/<location>/reset` | Сброс общего счётчика |
+| `POST` | `/api/v1/counters/<location>/save` | Сохранение текущей партии и полей формы |
+| `GET` | `/api/v1/counters/<location>/snapshot` | Получение текущего снимка кадра |
+| `GET` | `/api/v1/reports` | Список сохранённых отчётов |
+| `GET` | `/api/v1/reports/<id>` | Детальная информация по конкретному отчёту |
+| `DELETE` | `/api/v1/reports/<id>` | Удаление отчёта из базы данных |
+| `GET` | `/api/v1/system/health` | Проверка жизнеспособности сервиса (healthcheck) |
+| `GET` | `/api/v1/system/info` | Системная информация (версия, ОС, GPU, доступные рантаймы) |
 
 ---
 
@@ -676,7 +720,7 @@ google-chrome --kiosk --start-fullscreen http://localhost:8080/counter/Line1
 
 ## 🤝 Вклад в проект и лицензия
 
-Мы приветствуем предложения, сообщения об ошибках и Pull Request'ы!
+Приветствуются любые предложения, сообщения об ошибках и Pull Request'ы!
 1. Форкните репозиторий [BespredeL/CVCounter](https://github.com/BespredeL/CVCounter).
 2. Создайте ветку для новой функциональности (`git checkout -b feature/my-feature`).
 3. Зафиксируйте изменения (`git commit -m 'Add new feature'`).

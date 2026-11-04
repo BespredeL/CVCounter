@@ -38,18 +38,3 @@ SQLAlchemy==2.0.37
 mysql-connector-python==9.3
 Werkzeug==3.1.*
 pyyaml==6.0.3
-
-# Optional Export & Optimization --------------
-# tensorrt==8.6.1 # TensorRT export (requires TensorRT SDK / wheels)
-# nvidia-pyindex  # TensorRT export
-# nvidia-tensorrt  # TensorRT export
-# scikit-learn==0.19.2  # CoreML quantization
-# tensorflow>=2.4.1  # TF exports (-cpu, -aarch64, -macos)
-# tflite-support
-# tensorflowjs>=3.9.0  # TF.js export
-
-# PyTorch and related packages (optional for PyTorch backends)
-# --index-url https://download.pytorch.org/whl/cu118
-# torch==2.3.1
-# torchvision==0.18.1
-# torchaudio==2.3.1

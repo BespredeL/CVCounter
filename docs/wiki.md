@@ -49,46 +49,72 @@ Welcome to the comprehensive technical documentation for **CVCounter**!
 
 ## 🏛️ Application Architecture
 
-The system is organized into modular blueprints utilizing Flask's Application Factory pattern:
+CVCounter is designed as a layered, modular platform with strict separation of concerns across video ingestion, computer vision inference, tracking, counting logic, web UI, and background workers.
+
+### Video Frame Processing & Data Pipeline:
+
+```mermaid
+flowchart TD
+    A[Video Source<br>RTSP / WebCam / File] --> B[VideoStreamManager / VideoCapture]
+    B --> C[CounterLoop<br>Dedicated Background Processing Thread]
+    C --> D[IDetector<br>YOLO / ONNX / DETR / DFINE / RTMDet]
+    D -->|DetectionFrameResult| E[ByteTracker<br>Persistent ID Assignment]
+    E --> F[CountKernel<br>Polygon & Zone Intersection Logic]
+    F --> G[CountState<br>Per-Class Counts, Batches, Defects]
+    G --> H[FrameRenderer<br>Bounding Boxes, Zones & HUD Overlays]
+    H --> I[MJPEG Streamer<br>Live Video to Browser Operator]
+    G --> J[DatabaseManager<br>Persistence to SQLite / MySQL]
+    G --> K[Socket.IO Server<br>Real-Time Dashboard Telemetry]
+    C --> L[RecordingControl<br>Event-Driven Video Clip Recording]
+```
+
+### Project Structure:
 
 ```
 CVCounter/
-├── app.py                      # Application entrypoint, blueprint & socketio registration
-├── train.py                    # Standalone CLI training & export for any provider
-├── install.py                  # Cross-platform automated setup script
-├── config/                     # Configuration files & model storage
+├── app.py                      # Application entrypoint & WSGI runner
+├── train.py                    # Standalone CLI training & export engine
+├── install.py                  # Cross-platform automated setup script with GPU detection
+├── config/                     # Configuration files, models & database
 │   ├── config.json             # Active configuration file
 │   ├── config.example.json     # Reference default configuration
-│   ├── database.sqlite         # SQLite database (sessions, batch history)
-│   ├── ultralytics/            # Ultralytics YOLO configs, base weights and runs
-│   └── torchvision/            # torchvision configs, base weights and runs
-├── routes/                     # Blueprint controllers
-│   ├── main.py                 # Dashboard, authentication, static pages
-│   ├── counters.py             # Counters, MJPEG streaming, zone editor, counting API
-│   ├── reports.py              # Reports viewer, saved media, export
-│   ├── datasets.py             # Datasets, annotation, training controllers
-│   └── settings.py             # Configuration editor, system diagnostics, AI runtimes
-├── system/                     # Core system modules
-│   ├── core/                   # Tracking and counting logic (ObjectCounter)
-│   ├── detection/              # Unified detection subsystem: IDetector interface, adapters, registry
-│   ├── managers/               # Video streams, database, notifications, training
-│   ├── datasets/               # Annotation storage and dataset services
-│   ├── training/               # Training provider registry, training and export
-│   └── utils/                  # I18n, telemetry, input validators, logger
-├── static/                     # CSS, JS, fonts, and UI assets
-├── templates/                  # Jinja2 templates
-└── storage/                    # Logs, saved clips, snapshots, datasets
+│   ├── database.sqlite         # SQLite database (sessions, batch history, defects)
+│   ├── ultralytics/            # Ultralytics YOLO configs, base checkpoints, and runs
+│   └── torchvision/            # torchvision configs, base checkpoints, and runs
+├── routes/                     # Blueprint controllers (Presentation Layer)
+│   ├── main.py                 # Dashboard, authentication (/login, /logout), help
+│   ├── counters.py             # Counter screens, MJPEG streaming, polygon editor
+│   ├── reports.py              # Reports viewer, saved media playback, A4 PDF print
+│   ├── datasets.py             # Frame capture, annotation, training, and autolabeling
+│   ├── settings/               # Modular settings package (cameras, models, runtimes, logs, API keys)
+│   └── api/                    # REST API v1 (/api/v1/counters, /api/v1/reports, /api/v1/system)
+├── system/                     # Core Application Layer
+│   ├── app_factory.py          # Application Factory (Flask app & Socket.IO initialization)
+│   ├── runtime.py              # AppRuntime (singleton registry & runtime state container)
+│   ├── auth/                   # Session authentication, API token validation, scrypt hashing
+│   ├── core/                   # Video pipeline: ObjectCounter, CounterLoop, ByteTrack, FrameRenderer
+│   ├── db/                     # SQLAlchemy ORM models, migrations & data repositories
+│   ├── detection/              # Unified detection engine: IDetector, standalone adapters, registry
+│   ├── managers/               # Video streams, worker threads, database, notifications, training jobs
+│   ├── services/               # Service layer: counter state, event dispatching, count store
+│   ├── datasets/               # Dataset service, sequence leakage validation, YOLO/COCO converters
+│   ├── training/               # TrainingEngine, provider registry (Ultralytics, torchvision), export
+│   └── utils/                  # I18n, telemetry, validators, logger, hardware GPU inspection
+├── static/                     # Static UI assets (CSS, JS, fonts, icons)
+├── templates/                  # Jinja2 HTML templates
+└── storage/                    # Persistent storage (logs, snapshots, recordings, datasets)
 ```
 
 ### Core Blueprints:
 
-| Blueprint | Module | URL Prefix | Purpose |
+| Blueprint | Module / Package | URL Prefix | Purpose |
 |---|---|---|---|
 | `main` | `routes/main.py` | `/` | Dashboard, authentication (`/login`, `/logout`), help (`/page/help`) |
 | `counters` | `routes/counters.py` | `/` | Counter screens, MJPEG video, zone editor, batch recording |
 | `reports` | `routes/reports.py` | `/reports` | Session histories, captured media viewer, printable A4 layouts |
 | `datasets` | `routes/datasets.py` | `/datasets` | Data preparation, image annotation, model training (*auth*) |
-| `settings` | `routes/settings.py` | `/settings`, `/system_info` | Configurator, system diagnostics, log terminal, runtimes (*auth*) |
+| `settings` | `routes/settings/` | `/settings`, `/system_info` | Camera configuration, AI runtimes, log terminal, models (*auth*) |
+| `api_v1` | `routes/api/v1/` | `/api/v1` | Programmatic REST API v1: counter metrics, reports, system health |
 
 ---
 
@@ -579,7 +605,7 @@ declare.
 | `GET` | `/counter/<location>/counting_area/snapshot` | Fetch still frame for the zone editor canvas |
 | `POST` | `/counter/<location>/counting_area` | Save updated counting area polygon coordinates |
 
-### Settings & System (`routes/settings.py` — Authentication Required)
+### Settings & System (package `routes/settings/` — Authentication Required)
 
 | Method | URL | Description |
 |---|---|---|
@@ -622,6 +648,24 @@ declare.
 | `POST` | `/datasets/api/training/cancel` | Cancel active training run |
 | `GET` | `/datasets/api/training/runs` | List finished runs (`?provider=`, `?task=`) |
 | `POST` | `/datasets/api/training/apply-weights` | Deploy trained weights to a camera detector |
+
+### Programmatic REST API v1 (package `routes/api/v1/` — Prefix `/api/v1`)
+
+| Method | URL | Description |
+|---|---|---|
+| `GET` | `/api/v1/counters` | List all configured counters and their current execution status |
+| `GET` | `/api/v1/counters/<location>` | Retrieve metrics and state for a specific counter |
+| `POST` | `/api/v1/counters/<location>/start` | Start counting on a counter |
+| `POST` | `/api/v1/counters/<location>/pause` | Pause counting |
+| `POST` | `/api/v1/counters/<location>/stop` | Stop counter and release video source |
+| `POST` | `/api/v1/counters/<location>/reset` | Reset total counter metrics |
+| `POST` | `/api/v1/counters/<location>/save` | Save current batch count and form fields |
+| `GET` | `/api/v1/counters/<location>/snapshot` | Capture current still frame |
+| `GET` | `/api/v1/reports` | List saved session reports |
+| `GET` | `/api/v1/reports/<id>` | Fetch detailed report record |
+| `DELETE` | `/api/v1/reports/<id>` | Delete report record from database |
+| `GET` | `/api/v1/system/health` | Service health check endpoint |
+| `GET` | `/api/v1/system/info` | System diagnostic details (version, OS, GPU, available runtimes) |
 
 ---
 
