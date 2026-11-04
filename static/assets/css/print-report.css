@@ -111,7 +111,7 @@
 
     .page-content,
     .reports-detail-page {
-        padding: 0 !important;
+        padding: 0 5px !important;
         margin: 0 !important;
         width: 100% !important;
     }
@@ -266,8 +266,8 @@
         width: 100% !important;
     }
 
-    .reports-detail-page .row.g-2>[class*="col-"],
-    .reports-detail-page .row.g-3>[class*="col-"] {
+    .reports-detail-page .row.g-2 > [class*="col-"],
+    .reports-detail-page .row.g-3 > [class*="col-"] {
         flex: 1 1 0 !important;
         max-width: 25% !important;
         width: 25% !important;
@@ -353,7 +353,7 @@
     }
 
     /* 1. Хронология сессии + 2. Дополнительно (в col-lg-5) идут первыми */
-    .reports-detail-page .row.g-4>.col-lg-5 {
+    .reports-detail-page .row.g-4 > .col-lg-5 {
         order: 1 !important;
         flex: 0 0 100% !important;
         max-width: 100% !important;
@@ -362,7 +362,7 @@
     }
 
     /* 3. Распределение по классам + 4. Всё остальное (в col-lg-7) идут следом */
-    .reports-detail-page .row.g-4>.col-lg-7 {
+    .reports-detail-page .row.g-4 > .col-lg-7 {
         order: 2 !important;
         flex: 0 0 100% !important;
         max-width: 100% !important;
@@ -380,6 +380,7 @@
         page-break-inside: avoid !important;
         break-inside: avoid !important;
         color: #0f172a !important;
+        box-shadow: none !important;
     }
 
     .cv-card h5 {
