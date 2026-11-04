@@ -10,6 +10,7 @@
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 
+import threading
 import numpy as np
 from filterpy.kalman import KalmanFilter
 
@@ -77,8 +78,9 @@ class KalmanBoxTracker(object):
     This class represents the internal state of individual tracked objects observed as bbox.
     """
     count = 0
+    _count_lock = threading.Lock()
 
-    def __init__(self, bbox):
+    def __init__(self, bbox, track_id=None):
         """
         Initialises a tracker using initial bounding box.
         Optional 6th value is the detection class id.
@@ -98,8 +100,12 @@ class KalmanBoxTracker(object):
 
         self.kf.x[:4] = convert_bbox_to_z(bbox)
         self.time_since_update = 0
-        self.id = KalmanBoxTracker.count
-        KalmanBoxTracker.count += 1
+        if track_id is not None:
+            self.id = int(track_id)
+        else:
+            with KalmanBoxTracker._count_lock:
+                self.id = KalmanBoxTracker.count
+                KalmanBoxTracker.count += 1
         self.history = []
         self.hits = 0
         self.hit_streak = 0
@@ -194,8 +200,23 @@ class Sort(object):
         self.iou_threshold = iou_threshold
         self.trackers = []
         self.frame_count = 0
+        self._next_id = 0
+        self._lock = threading.RLock()
 
-    def update(self, dets=np.empty((0, 5))):
+    def next_id(self) -> int:
+        """Allocate next track ID for this tracker instance."""
+        with self._lock:
+            self._next_id += 1
+            return self._next_id
+
+    def reset(self) -> None:
+        """Reset internal tracker state and ID counter."""
+        with self._lock:
+            self.trackers.clear()
+            self.frame_count = 0
+            self._next_id = 0
+
+    def update(self, dets=None):
         """
         Params:
           dets - a numpy array of detections in the format
@@ -206,40 +227,44 @@ class Sort(object):
 
         NOTE: The number of objects returned may differ from the number of detections provided.
         """
-        self.frame_count += 1
-        # get predicted locations from existing trackers.
-        trks = np.zeros((len(self.trackers), 5))
-        to_del = []
-        ret = []
-        for t, trk in enumerate(trks):
-            pos = self.trackers[t].predict()[0]
-            trk[:] = [pos[0], pos[1], pos[2], pos[3], 0]
-            if np.any(np.isnan(pos)):
-                to_del.append(t)
-        trks = np.ma.compress_rows(np.ma.masked_invalid(trks))
-        for t in reversed(to_del):
-            self.trackers.pop(t)
-        matched, unmatched_dets, unmatched_trks = associate_detections_to_trackers(dets, trks, self.iou_threshold)
+        if dets is None:
+            dets = np.empty((0, 5))
 
-        # update matched trackers with assigned detections
-        for m in matched:
-            self.trackers[m[1]].update(dets[m[0], :])
+        with self._lock:
+            self.frame_count += 1
+            # get predicted locations from existing trackers.
+            trks = np.zeros((len(self.trackers), 5))
+            to_del = []
+            ret = []
+            for t, trk in enumerate(trks):
+                pos = self.trackers[t].predict()[0]
+                trk[:] = [pos[0], pos[1], pos[2], pos[3], 0]
+                if np.any(np.isnan(pos)):
+                    to_del.append(t)
+            trks = np.ma.compress_rows(np.ma.masked_invalid(trks))
+            for t in reversed(to_del):
+                self.trackers.pop(t)
+            matched, unmatched_dets, unmatched_trks = associate_detections_to_trackers(dets, trks, self.iou_threshold)
 
-        # create and initialise new trackers for unmatched detections
-        for i in unmatched_dets:
-            trk = KalmanBoxTracker(dets[i, :])
-            self.trackers.append(trk)
-        i = len(self.trackers)
-        for trk in reversed(self.trackers):
-            d = trk.get_state()[0]
-            if (trk.time_since_update < 1) and (trk.hit_streak >= self.min_hits or self.frame_count <= self.min_hits):
-                # +1 as MOT benchmark requires positive IDs; class_id is preserved per track
-                ret.append(np.concatenate((d, [trk.id + 1, trk.class_id])).reshape(1, -1))
-            i -= 1
-            # remove dead tracklet
-            if (trk.time_since_update > self.max_age):
-                self.trackers.pop(i)
-        if (len(ret) > 0):
-            return np.concatenate(ret)
-        return np.empty((0, 6))
+            # update matched trackers with assigned detections
+            for m in matched:
+                self.trackers[m[1]].update(dets[m[0], :])
+
+            # create and initialise new trackers for unmatched detections
+            for i in unmatched_dets:
+                trk = KalmanBoxTracker(dets[i, :], track_id=self.next_id())
+                self.trackers.append(trk)
+            i = len(self.trackers)
+            for trk in reversed(self.trackers):
+                d = trk.get_state()[0]
+                if (trk.time_since_update < 1) and (trk.hit_streak >= self.min_hits or self.frame_count <= self.min_hits):
+                    # track ID is 1-based; class_id is preserved per track
+                    ret.append(np.concatenate((d, [trk.id, trk.class_id])).reshape(1, -1))
+                i -= 1
+                # remove dead tracklet
+                if (trk.time_since_update > self.max_age):
+                    self.trackers.pop(i)
+            if (len(ret) > 0):
+                return np.concatenate(ret)
+            return np.empty((0, 6))
 
