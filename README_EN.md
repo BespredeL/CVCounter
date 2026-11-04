@@ -49,7 +49,7 @@ CVCounter is a flexible and high-performance web-based computer vision system de
 
 ```mermaid
 flowchart LR
-    A[Video Stream<br>RTSP / Camera / File] --> B[Object Detection<br>YOLO / ONNX / OpenVINO]
+    A[Video Stream<br>RTSP / Camera / File] --> B[Object Detection<br>YOLO / ONNX / DETR]
     B --> C[Tracker<br>Assign Track ID]
     C --> D{Zone<br>Intersection?}
     D -- Yes --> E[Record Count<br>Classes / Batches]
@@ -83,21 +83,20 @@ The installer automatically identifies your hardware acceleration profile (NVIDI
 
 > **Installer CLI options (`install.py`):**
 > - `--profile [nvidia_cuda|amd_directml|intel_openvino|cpu]` — Manually force hardware profile
-> - `--with-inference` — additionally install ONNX Runtime/OpenVINO for the selected profile
+> - `--with-inference` — additionally install ONNX Runtime for the selected profile (CUDA/DirectML/OpenVINO)
 > - `--with-pytorch` — additionally install PyTorch for ML providers that require it
 > - `--with-ultralytics` — additionally install PyTorch and Ultralytics for `.pt` models and training
-> - `--provider <name>` — select a built-in provider; repeat for multiple providers: `onnxruntime`, `openvino`, `opencv`, `pytorch`, `ultralytics`
+> - `--provider <name>` — select a built-in provider; repeat for multiple providers: `onnxruntime`, `openvino`, `pytorch`, `ultralytics`
 > - `--reinstall` — Force reinstallation of packages
 > - `--no-color` — Disable colored console output
 
-By default, the installer installs Core only, without PyTorch, Ultralytics, ONNX
-Runtime, or OpenVINO. Use `--with-inference` for ONNX Runtime/OpenVINO. Missing
-optional providers do not fail the Core installation.
+By default, the installer installs Core only, without PyTorch, Ultralytics, or ONNX Runtime.
+Use `--with-inference` for high-performance ONNX Runtime inference.
 Use `--with-ultralytics` for `.pt` models, auto-annotation, and YOLO training.
 Individual runtime providers can also be selected with commands such as
 `python install.py --provider onnxruntime` or
-`python install.py --provider onnxruntime --provider openvino`.
-OpenCV DNN is already included in Core and requires no separate installation.
+`python install.py --provider onnxruntime --provider ultralytics`.
+OpenCV is included in Core and used for video ingestion and image processing.
 
 ---
 
@@ -214,26 +213,27 @@ python train.py export --config my-dataset --export onnx
 
 ---
 
-## 🧠 Supported Inference Backends
+## 🧠 Supported Architectures & Inference Backends
 
-Configure the `model_type` setting per counter (or leave as `"auto"` for automatic detection based on file extension):
+Configure the `model_type` setting per counter (or leave as `"auto"` for automatic detection based on filename and format):
 
-| `model_type` | Backend Engine | License | Supported Model Formats | Notes |
+| `model_type` | Architecture / Backend Engine | License | Supported Model Formats | Notes |
 |---|---|---|---|---|
-| **`auto`** | Auto-detection | — | `.onnx`, `.pt`, `.engine`, `.xml` | Recommended: automatically chooses backend from file extension |
-| **`onnx`**, `onnxruntime` | [ONNX Runtime](https://onnxruntime.ai/) | MIT | `.onnx` (YOLOv5–v11, RT-DETR) | Fast, cross-platform (CUDA, DirectML, CPU) |
-| **`openvino`** | [Intel OpenVINO](https://www.intel.com/openvino) | Apache-2.0 | `.xml`/`.bin`, `.onnx` | Optimized for Intel CPUs, iGPUs, Arc, and NPUs |
-| **`yolo`**, `ultralytics` | [Ultralytics YOLO](https://github.com/ultralytics/ultralytics) | AGPL-3.0 | `.pt`, `.engine` (TensorRT) | Native PyTorch, model training, and tracking |
-| **`opencv`**, `opencv_dnn` | [OpenCV DNN](https://docs.opencv.org) | Apache-2.0 | `.onnx`, Darknet (`.weights` + `.cfg`) | Lightweight, no heavy PyTorch dependencies |
+| **`auto`** | Auto-detection | — | `.onnx`, `.pt`, `.engine`, `.pth` | Recommended: automatically chooses architecture from filename and format |
+| **`yolo`**, `ultralytics` | [Ultralytics YOLO](https://github.com/ultralytics/ultralytics) | AGPL-3.0 | `.pt`, `.engine` (TensorRT) | YOLOv8–YOLO26, native PyTorch, TensorRT engine, training, and tracking |
+| **`onnx`**, `onnxruntime` | [ONNX Runtime](https://onnxruntime.ai/) | MIT | `.onnx` (YOLO, DETR, RTMDet) | Fast, dynamic providers (CUDA, DirectML, OpenVINO, CPU) |
+| **`rf_detr`** | [Roboflow RF-DETR](https://github.com/roboflow/rf-detr) | Apache-2.0 | `.pth`, `.pt`, `.onnx` | Transformer-based RF-DETR detectors (Nano, Small, Medium, Large) |
+| **`d_fine`** | [Peterande D-FINE](https://github.com/Peterande/D-FINE) | Apache-2.0 | `.pth`, `.pt`, `.onnx` | Real-time DETR with Fine-grained Distribution Refinement (N/S/M/L/X) |
+| **`rtmdet`** | [OpenMMLab RTMDet](https://github.com/open-mmlab/mmdetection) | Apache-2.0 | `.pth`, `.onnx` | High-speed OpenMMLab RTMDet detectors (Tiny, S, M, L, X) |
 
 ### Key Detection Parameters
 
 | Parameter | Applicable To | Description |
 |---|---|---|
-| `weights_path` | All | Path to model file (`.onnx`, `.pt`, `.xml`, etc.) |
+| `weights_path` | All | Path to model file (`.onnx`, `.pt`, `.engine`, `.pth`) |
 | `confidence`, `iou` | All | Detection confidence threshold and NMS IoU threshold |
-| `device` | YOLO, ONNX, OpenVINO | Inference device (`0`, `cpu`, `GPU`, `AUTO`) |
-| `input_size` | ONNX, OpenVINO, OpenCV | Model input size (`640` or `[640, 640]`) |
+| `device` | All | Inference device (`0`, `"cpu"`, `"cuda"`, `"cuda:0"`) |
+| `input_size` | ONNX, DETR, YOLO | Model input size (`640` or `[640, 640]`) |
 | `vid_stride` | All | Frame stride (skip frames to reduce CPU/GPU load) |
 | `classes` | All | Class filter and custom labels, e.g. `{"0": "Box"}` |
 | `counting_areas` | All | List of polygon counting zones, BGR colors, and motion direction vectors |
@@ -334,7 +334,7 @@ Sample configuration structure:
 - Project Website: [https://cvcounter.createdby.ru](https://cvcounter.createdby.ru)
 - Documentation (Wiki EN): [docs/wiki.md](docs/wiki.md)
 - Telemetry API Docs: [docs/telemetry_api.md](docs/telemetry_api.md)
-- Inference Engines: [ONNX Runtime](https://onnxruntime.ai/) | [Intel OpenVINO](https://www.intel.com/openvino) | [Ultralytics YOLO](https://github.com/ultralytics) | [OpenCV](https://opencv.org/)
+- Inference Engines: [ONNX Runtime](https://onnxruntime.ai/) | [Ultralytics YOLO](https://github.com/ultralytics) | [Roboflow RF-DETR](https://github.com/roboflow/rf-detr) | [D-FINE](https://github.com/Peterande/D-FINE) | [OpenMMLab](https://github.com/open-mmlab/mmdetection)
 
 ---
 

@@ -38,7 +38,7 @@ Welcome to the comprehensive technical documentation for **CVCounter**!
 - 🏷️ **Per-Class Breakdown:** Real-time counters showing both total counts and current batch counts partitioned by detection classes.
 - 🎥 **Flexible Video Inputs:** RTSP/RTMP network camera streams, local webcams (USB/V4L2), and pre-recorded video files.
 - 🎬 **Event-Driven Recording:** Video clips start recording automatically upon object detection and stop following a configurable `idle_timeout`.
-- 🧠 **Multi-Engine Inference:** Seamless runtime selection between ONNX Runtime, Intel OpenVINO, OpenCV DNN, and Ultralytics YOLO.
+- 🧠 **Multi-Architecture Detection:** Seamless architecture and runtime support across Ultralytics YOLO, ONNX Runtime, RF-DETR, D-FINE, and RTMDet.
 - 📚 **Full Dataset Workflow:** In-browser frame capture, bounding box/polygon annotation, active learning, autolabeling, YOLO + COCO export, training through pluggable providers (Ultralytics YOLO, torchvision), and 1-click model weight deployment.
 - 📊 **Reports & Analytics:** Paginated session history, defect and manual correction logs, saved media playback, and A4 print-ready layouts with sign-off blocks.
 - 🚀 **1-Click Installer:** Cross-platform scripts (`install.bat` / `install.sh`) automatically detecting GPUs (NVIDIA CUDA, AMD DirectML, Intel Arc / OpenVINO).
@@ -70,7 +70,7 @@ CVCounter/
 │   └── settings.py             # Configuration editor, system diagnostics, AI runtimes
 ├── system/                     # Core system modules
 │   ├── core/                   # Tracking and counting logic (ObjectCounter)
-│   ├── object_detection/       # Detection backend abstractions and registry
+│   ├── detection/              # Unified detection subsystem: IDetector interface, adapters, registry
 │   ├── managers/               # Video streams, database, notifications, training
 │   ├── datasets/               # Annotation storage and dataset services
 │   ├── training/               # Training provider registry, training and export
@@ -187,7 +187,9 @@ Mounted volumes ensure persistent storage for configuration (`config/`) and medi
 
 ## 🧠 Detection Systems & Inference
 
-The built-in registry (`system/object_detection/registry.py`) selects computer vision engines via the unified `BaseObjectDetectionService` interface. `model_type` aliases and extension-based resolution remain supported for existing configurations.
+The unified detection subsystem (`system/detection/`) provides a standardized `IDetector` interface (`system/detection/interface.py`) and a centralized factory `load_detector` (`system/detection/registry.py`). The subsystem completely decouples diverse model architectures (Ultralytics YOLO, Generic ONNX, RF-DETR, D-FINE, RTMDet) from the video pipeline.
+
+Each detector returns a structured `DetectionFrameResult` containing a list of `DetectionBox` objects and a `.to_tracker_array() -> np.ndarray(N, 6)` method formatted as `[x1, y1, x2, y2, score, class_id]` consumed directly by ByteTrack.
 
 ### Optional Model Manifest
 
@@ -217,17 +219,18 @@ An optional `<model-stem>.manifest.json` sidecar can declare model details witho
 }
 ```
 
-Preprocessing, tensor input, output, and decoder declarations are separate so a model is not assumed compatible merely because a runtime can open its artifact. Two detection decoders are built in: `yolo_outputs` parses a per-anchor matrix (including the objectness column that Darknet and YOLOv3–v5 publish) or an end-to-end `[N, 6]` tensor, and `detr_outputs` pairs the DETR/RT-DETR class logits with the box tensor and skips NMS. The ONNX Runtime and OpenVINO adapters accept either decoder, the OpenCV DNN adapter stays on `yolo_outputs` for YOLO and Darknet heads, and Ultralytics models keep returning their own result objects. The `output_contract` fields `box_format` (`xyxy`/`cxcywh`), `coordinates` (`normalized`/`input_pixels`) and `score_activation` (`sigmoid`/`softmax`) describe how a decoder reads a tensor, while `preprocessing.resize` (`letterbox`/`stretch`) decides both the input blob and how padding is removed from the boxes. Models without a manifest retain legacy routing — letterbox preprocessing and a geometry-inferred box layout — and are reported with unknown architecture/task rather than inferred from `.onnx`. `DetectionBatch` is only a named adapter over the existing `(boxes_xyxy, confidences, classes)` tuple; the counting pipeline continues to consume the tuple unchanged.
+Preprocessing, tensor input, output, and decoder declarations are separate so a model is not assumed compatible merely because a runtime can open its artifact. The postprocessing module (`system/detection/postprocessing.py`) supports `yolo_outputs` (anchor grids and end-to-end `[N, 6]` tensors), `detr_outputs` (class logits and normalized boxes for DETR/RF-DETR/D-FINE), and `rtmdet_outputs`. Canonical ONNX models are executed via ONNX Runtime (`system/detection/backends/onnx_session.py`) with dynamic Execution Provider selection (CUDA, OpenVINO, DirectML, CPU).
 
 ### Supported `model_type` Options:
 
-| `model_type` | Engine | License | Formats | Best Use Case |
+| `model_type` | Architecture / Engine | License | Formats | Best Use Case |
 |---|---|---|---|---|
-| **`auto`** | Auto-selection | — | `.onnx`, `.pt`, `.engine`, `.xml` | **Default.** Selects backend automatically based on model file extension |
-| **`onnx`**, `onnxruntime` | [ONNX Runtime](https://onnxruntime.ai/) | MIT | `.onnx` (YOLOv5–v11, RT-DETR) | Maximum cross-platform throughput (CUDA, DirectML, CPU) |
-| **`openvino`**, `openvino_dnn` | [Intel OpenVINO](https://www.intel.com/openvino) | Apache-2.0 | `.xml`/`.bin`, `.onnx` | Peak performance on Intel CPUs, Arc GPUs, and integrated iGPUs |
-| **`yolo`**, `ultralytics` | [Ultralytics YOLO](https://github.com/ultralytics/ultralytics) | AGPL-3.0 | `.pt`, `.engine` (TensorRT) | Native PyTorch models, TensorRT engines, model training |
-| **`opencv`**, `opencv_dnn` | [OpenCV DNN](https://docs.opencv.org) | Apache-2.0 | `.onnx`, Darknet (`.weights` + `.cfg`) | Lightweight operation without heavy PyTorch dependencies |
+| **`auto`** | Auto-selection | — | `.onnx`, `.pt`, `.engine`, `.pth` | **Default.** Automatically identifies architecture from filename and format |
+| **`yolo`**, `ultralytics` | [Ultralytics YOLO](https://github.com/ultralytics/ultralytics) | AGPL-3.0 | `.pt`, `.engine` (TensorRT) | YOLOv8–YOLO26, native PyTorch, TensorRT engines, model training |
+| **`onnx`**, `onnxruntime` | [ONNX Runtime](https://onnxruntime.ai/) | MIT | `.onnx` (YOLO, DETR, RTMDet) | Maximum cross-platform throughput (CUDA, DirectML, OpenVINO, CPU) |
+| **`rf_detr`** | [Roboflow RF-DETR](https://github.com/roboflow/rf-detr) | Apache-2.0 | `.pth`, `.pt`, `.onnx` | Transformer RF-DETR detectors (Nano, Small, Medium, Large) |
+| **`d_fine`** | [Peterande D-FINE](https://github.com/Peterande/D-FINE) | Apache-2.0 | `.pth`, `.pt`, `.onnx` | Real-time DETR with fine-grained distribution refinement (N/S/M/L/X) |
+| **`rtmdet`** | [OpenMMLab RTMDet](https://github.com/open-mmlab/mmdetection) | Apache-2.0 | `.pth`, `.onnx` | High-speed OpenMMLab RTMDet detectors (Tiny, S, M, L, X) |
 
 ### Sample Detection Configurations
 
@@ -239,7 +242,7 @@ Preprocessing, tensor input, output, and decoder declarations are separate so a 
 }
 ```
 
-**ONNX Runtime with Hardware Execution Providers:**
+**ONNX Runtime with Hardware Execution Providers (CUDA):**
 ```json
 {
   "model_type": "onnx",
@@ -249,12 +252,13 @@ Preprocessing, tensor input, output, and decoder declarations are separate so a 
 }
 ```
 
-**Intel OpenVINO:**
+**ONNX Runtime with OpenVINO Execution Provider (Intel CPUs, iGPUs, Arc GPUs):**
 ```json
 {
-  "model_type": "openvino",
+  "model_type": "onnx",
   "weights_path": "config/ultralytics/models/yolo11n.onnx",
-  "device": "CPU"
+  "device": "cpu",
+  "providers": ["OpenVINOExecutionProvider", "CPUExecutionProvider"]
 }
 ```
 
@@ -269,23 +273,37 @@ Preprocessing, tensor input, output, and decoder declarations are separate so a 
 
 ### Adding a Custom Detection Backend
 
-1. Subclass `BaseObjectDetectionService`:
+1. Subclass `IDetector`:
    ```python
-   from system.object_detection.base_object_detection import BaseObjectDetectionService, DetectionResult
-   from system.object_detection.registry import register
+   import numpy as np
+   from system.detection.interface import IDetector, DetectionFrameResult, DetectionBox
+   from system.detection.registry import register_detector
 
-   @register('my_detector')
-   class MyDetector(BaseObjectDetectionService):
-       def load_model(self, weights: str, **kwargs) -> None:
+   class MyDetector(IDetector):
+       def __init__(self, weights: str, **kwargs):
+           self.weights = weights
            # Initialize your detector model
+
+       def detect(self, frame: np.ndarray) -> DetectionFrameResult:
+           # Run inference and construct result
+           boxes = [
+               DetectionBox(
+                   x1=100.0, y1=150.0, x2=200.0, y2=250.0,
+                   confidence=0.95, class_id=0, class_name="box"
+               )
+           ]
+           return DetectionFrameResult(boxes=boxes, orig_shape=frame.shape[:2])
+
+       def get_classes(self) -> dict[int, str]:
+           return {0: "box"}
+
+       def close(self) -> None:
            pass
 
-       def detect(self, image, **kwargs) -> DetectionResult:
-           # Run inference: return boxes_xyxy, confidences, classes
-           pass
+   # Register detector factory in the registry
+   register_detector("my_detector", lambda **kwargs: MyDetector(**kwargs))
    ```
-2. Import the module inside `system/object_detection/__init__.py`.
-3. Set `"model_type": "my_detector"` in camera settings.
+2. Set `"model_type": "my_detector"` in camera settings.
 
 ---
 
@@ -380,7 +398,7 @@ Cameras configured under `detections` inherit missing values from `detection_def
 | `label` | Human-readable camera display title | `"Packaging Line #1"` |
 | `video_path` | RTSP stream URL, video file path, or webcam index (`0`, `1`) | `"rtsp://admin:12345@192.168.1.10:554/ch1"` |
 | `start_total_count` | Initial total count value | `0` |
-| `model_type` | Model backend (`auto`, `yolo`, `onnx`, `openvino`, `opencv`) | `"auto"` |
+| `model_type` | Model architecture (`auto`, `ultralytics`, `onnx`, `rf_detr`, `d_fine`, `rtmdet`) | `"auto"` |
 | `weights_path` | Model file path | `"config/ultralytics/models/yolo11n.onnx"` |
 | `confidence` | Minimum detection confidence score (0.0 – 1.0) | `0.6` |
 | `iou` | Non-Maximum Suppression (IoU) threshold | `0.7` |

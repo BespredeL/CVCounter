@@ -38,7 +38,7 @@
 - 🏷️ **Разбивка по классам:** подсчёт суммарного количества и количества в текущей партии по каждому обнаруженному классу.
 - 🎥 **Гибкие источники видео:** RTSP/RTMP-потоки IP-камер, локальные веб-камеры (USB/V4L2) и видеофайлы.
 - 🎬 **Умная видеозапись:** автоматический старт записи видео при появлении детекций и остановка по настраиваемому таймауту неактивности (`idle_timeout`).
-- 🧠 **Поддержка любых моделей:** автоматический выбор или явное указание рантайма (ONNX Runtime, Intel OpenVINO, OpenCV DNN, Ultralytics YOLO).
+- 🧠 **Поддержка любых моделей:** автоматический выбор или явное указание архитектуры и рантайма (Ultralytics YOLO, ONNX Runtime, RF-DETR, D-FINE, RTMDet).
 - 📚 **Полный цикл работы с датасетами:** сбор кадров из потока, разметка боксов/полигонов, активное обучение (Active Learning), авторазметка, выгрузка в YOLO и COCO, обучение через подключаемые provider-ы (Ultralytics YOLO, torchvision) и применение обученных весов в 1 клик.
 - 📊 **Отчёты и аналитика:** журнал сессий с разбивкой по партиям, брак/коррекция, просмотр сохранённых кадров и видео, печать и экспорт в A4 PDF.
 - 🚀 **1-Click установщик:** скрипт `install.bat` / `install.sh` автоматически распознаёт модель GPU (NVIDIA CUDA, AMD DirectML, Intel Arc / OpenVINO) и собирает готовое окружение.
@@ -70,7 +70,7 @@ CVCounter/
 │   └── settings.py             # Настройки, системная информация, рантаймы, логи
 ├── system/                     # Внутреннее ядро системы
 │   ├── core/                   # Логика трекинга и подсчёта (ObjectCounter)
-│   ├── object_detection/       # Абстракции и реализации бэкендов детекции
+│   ├── detection/              # Единая подсистема детекции: интерфейс IDetector, адаптеры, реестр
 │   ├── managers/               # Менеджеры потоков, БД, уведомлений, обучения
 │   ├── datasets/               # Хранилище аннотаций и сервис датасетов
 │   ├── training/               # Реестр training provider-ов, обучение и экспорт
@@ -186,7 +186,9 @@ docker-compose up --build
 
 ## 🧠 Системы детекции и инференс
 
-Встроенный реестр (`system/object_detection/registry.py`) выбирает движки компьютерного зрения через единый интерфейс `BaseObjectDetectionService`. Алиасы `model_type` и разрешение по расширению сохранены для существующих конфигураций.
+Единая подсистема детекции (`system/detection/`) предоставляет унифицированный интерфейс `IDetector` (`system/detection/interface.py`) и фабрику `load_detector` (`system/detection/registry.py`). Подсистема полностью изолирует работу с моделями различных архитектур (Ultralytics YOLO, Generic ONNX, RF-DETR, D-FINE, RTMDet) от видеопайплайна.
+
+Каждый детектор возвращает структурированный `DetectionFrameResult`, содержащий список `DetectionBox` и метод `.to_tracker_array() -> np.ndarray(N, 6)` с форматом строк `[x1, y1, x2, y2, score, class_id]` для передачи в трекер ByteTrack.
 
 ### Необязательный манифест модели
 
@@ -216,17 +218,18 @@ docker-compose up --build
 }
 ```
 
-Preprocessing, входной тензор, выход и decoder описываются отдельно: загрузки артефакта runtime недостаточно, чтобы считать модель совместимой. Встроены два декодера детекции: `yolo_outputs` разбирает матрицу по якорям (в том числе с колонкой objectness у Darknet и YOLOv3–v5) либо end-to-end тензор `[N, 6]`, а `detr_outputs` соединяет пару «логиты классов + боксы» у DETR/RT-DETR и не применяет NMS. Адаптеры ONNX Runtime и OpenVINO принимают любой из них, адаптер OpenCV DNN остаётся на `yolo_outputs` для YOLO и Darknet, а модели Ultralytics продолжают возвращать собственные объекты результатов. Поля `output_contract` — `box_format` (`xyxy`/`cxcywh`), `coordinates` (`normalized`/`input_pixels`) и `score_activation` (`sigmoid`/`softmax`) — описывают чтение тензора, а `preprocessing.resize` (`letterbox`/`stretch`) задаёт и сборку входного blob, и снятие паддинга с координат. Модели без манифеста сохраняют прежнюю маршрутизацию (letterbox и определение формата боксов по геометрии); архитектура и задача остаются неизвестными, а не выводятся из `.onnx`. `DetectionBatch` — только именованный адаптер над существующим кортежем `(boxes_xyxy, confidences, classes)`; counting pipeline продолжает получать кортеж без изменений.
+Preprocessing, входной тензор, выход и decoder описываются отдельно: загрузки артефакта runtime недостаточно, чтобы считать модель совместимой. Модуль постпроцессинга (`system/detection/postprocessing.py`) поддерживает декодеры `yolo_outputs` (матрицы по якорям и end-to-end тензоры `[N, 6]`), `detr_outputs` (пары логитов классов и нормализованных боксов для DETR/RF-DETR/D-FINE) и `rtmdet_outputs`. Для ONNX-моделей используется единый канонический бэкенд ONNX Runtime (`system/detection/backends/onnx_session.py`) с динамическим выбором Execution Provider (CUDA, OpenVINO, DirectML, CPU).
 
 ### Поддерживаемые значения `model_type`:
 
-| `model_type` | Бэкенд | Лицензия | Поддерживаемые форматы | Рекомендуемое применение |
+| `model_type` | Архитектура / Движок | Лицензия | Поддерживаемые форматы | Рекомендуемое применение |
 |---|---|---|---|---|
-| **`auto`** | Автоопределение | — | `.onnx`, `.pt`, `.engine`, `.xml` | **По умолчанию.** Выбирает движок на основе расширения файла модели |
-| **`onnx`**, `onnxruntime` | [ONNX Runtime](https://onnxruntime.ai/) | MIT | `.onnx` (YOLOv5–v11, RT-DETR) | Кроссплатформенный инференс с максимальной скоростью (CUDA, DirectML, CPU) |
-| **`openvino`**, `openvino_dnn` | [Intel OpenVINO](https://www.intel.com/openvino) | Apache-2.0 | `.xml`/`.bin`, `.onnx` | Наилучшая производительность на процессорах Intel, видеокартах Arc и iGPU |
-| **`yolo`**, `ultralytics` | [Ultralytics YOLO](https://github.com/ultralytics/ultralytics) | AGPL-3.0 | `.pt`, `.engine` (TensorRT) | Нативный PyTorch, TensorRT Engine, обучение моделей |
-| **`opencv`**, `opencv_dnn` | [OpenCV DNN](https://docs.opencv.org) | Apache-2.0 | `.onnx`, Darknet (`.weights` + `.cfg`) | Легковесный режим без зависимостей PyTorch |
+| **`auto`** | Автоопределение | — | `.onnx`, `.pt`, `.engine`, `.pth` | **По умолчанию.** Автоматически определяет архитектуру по имени файла и расширению |
+| **`yolo`**, `ultralytics` | [Ultralytics YOLO](https://github.com/ultralytics/ultralytics) | AGPL-3.0 | `.pt`, `.engine` (TensorRT) | YOLOv8–YOLO26, нативный PyTorch, TensorRT Engine, обучение моделей |
+| **`onnx`**, `onnxruntime` | [ONNX Runtime](https://onnxruntime.ai/) | MIT | `.onnx` (YOLO, DETR, RTMDet) | Кроссплатформенный инференс с максимальной скоростью (CUDA, DirectML, OpenVINO, CPU) |
+| **`rf_detr`** | [Roboflow RF-DETR](https://github.com/roboflow/rf-detr) | Apache-2.0 | `.pth`, `.pt`, `.onnx` | Трансформерные детекторы RF-DETR (Nano, Small, Medium, Large) |
+| **`d_fine`** | [Peterande D-FINE](https://github.com/Peterande/D-FINE) | Apache-2.0 | `.pth`, `.pt`, `.onnx` | Real-time DETR с распределением регрессии границ (N/S/M/L/X) |
+| **`rtmdet`** | [OpenMMLab RTMDet](https://github.com/open-mmlab/mmdetection) | Apache-2.0 | `.pth`, `.onnx` | Высокоскоростные детекторы OpenMMLab RTMDet (Tiny, S, M, L, X) |
 
 ### Примеры конфигурации детектора
 
@@ -238,7 +241,7 @@ Preprocessing, входной тензор, выход и decoder описыва
 }
 ```
 
-**ONNX Runtime с аппаратными провайдерами:**
+**ONNX Runtime с аппаратными провайдерами (CUDA):**
 ```json
 {
   "model_type": "onnx",
@@ -248,12 +251,13 @@ Preprocessing, входной тензор, выход и decoder описыва
 }
 ```
 
-**Intel OpenVINO:**
+**ONNX Runtime с OpenVINO Execution Provider (для процессоров Intel, iGPU и видеокарт Arc):**
 ```json
 {
-  "model_type": "openvino",
+  "model_type": "onnx",
   "weights_path": "config/ultralytics/models/yolo11n.onnx",
-  "device": "CPU"
+  "device": "cpu",
+  "providers": ["OpenVINOExecutionProvider", "CPUExecutionProvider"]
 }
 ```
 
@@ -268,23 +272,37 @@ Preprocessing, входной тензор, выход и decoder описыва
 
 ### Добавление собственного детектора
 
-1. Создайте класс-наследник `BaseObjectDetectionService`:
+1. Создайте класс-наследник `IDetector`:
    ```python
-   from system.object_detection.base_object_detection import BaseObjectDetectionService, DetectionResult
-   from system.object_detection.registry import register
+   import numpy as np
+   from system.detection.interface import IDetector, DetectionFrameResult, DetectionBox
+   from system.detection.registry import register_detector
 
-   @register('custom_detector')
-   class CustomDetector(BaseObjectDetectionService):
-       def load_model(self, weights: str, **kwargs) -> None:
+   class CustomDetector(IDetector):
+       def __init__(self, weights: str, **kwargs):
+           self.weights = weights
            # Инициализация модели
+
+       def detect(self, frame: np.ndarray) -> DetectionFrameResult:
+           # Инференс и формирование результатов
+           boxes = [
+               DetectionBox(
+                   x1=100.0, y1=150.0, x2=200.0, y2=250.0,
+                   confidence=0.95, class_id=0, class_name="box"
+               )
+           ]
+           return DetectionFrameResult(boxes=boxes, orig_shape=frame.shape[:2])
+
+       def get_classes(self) -> dict[int, str]:
+           return {0: "box"}
+
+       def close(self) -> None:
            pass
 
-       def detect(self, image, **kwargs) -> DetectionResult:
-           # Инференс: возврат boxes_xyxy, confidences, classes
-           pass
+   # Регистрация фабрики детектора в реестре
+   register_detector("custom_detector", lambda **kwargs: CustomDetector(**kwargs))
    ```
-2. Зарегистрируйте модуль в `system/object_detection/__init__.py`.
-3. Укажите `"model_type": "custom_detector"` в конфигурации камеры.
+2. Укажите `"model_type": "custom_detector"` в конфигурации камеры.
 
 ---
 
@@ -379,7 +397,7 @@ Preprocessing, входной тензор, выход и decoder описыва
 | `label` | Отображаемое название камеры | `"Линия упаковки 1"` |
 | `video_path` | URL RTSP-потока, путь к файлу или индекс веб-камеры (`0`, `1`) | `"rtsp://admin:12345@192.168.1.10:554/ch1"` |
 | `start_total_count` | Начальное значение общего счётчика | `0` |
-| `model_type` | Тип модели (`auto`, `yolo`, `onnx`, `openvino`, `opencv`) | `"auto"` |
+| `model_type` | Тип модели (`auto`, `ultralytics`, `onnx`, `rf_detr`, `d_fine`, `rtmdet`) | `"auto"` |
 | `weights_path` | Путь к файлу модели | `"config/ultralytics/models/yolo11n.onnx"` |
 | `confidence` | Минимальный порог уверенности детекции (0.0 – 1.0) | `0.6` |
 | `iou` | Порог перекрытия Non-Maximum Suppression (IoU) | `0.7` |
