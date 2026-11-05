@@ -34,6 +34,10 @@ class BuiltinTrainingProvider:
     architectures: tuple[str, ...] = ()
     optional_dependencies: tuple[str, ...] = ()
     install_provider: str = ''
+    supports_training: bool = True
+    supports_finetuning: bool = True
+    supports_export: bool = False
+    supports_validation: bool = False
 
 
 _BUILTIN_TRAINING_PROVIDERS = (
@@ -48,6 +52,10 @@ _BUILTIN_TRAINING_PROVIDERS = (
         ('onnx', 'engine'),
         ('yolo',),
         install_provider='ultralytics',
+        supports_training=True,
+        supports_finetuning=True,
+        supports_export=True,
+        supports_validation=True,
     ),
     BuiltinTrainingProvider(
         'torchvision',
@@ -60,18 +68,26 @@ _BUILTIN_TRAINING_PROVIDERS = (
         (),
         ('fasterrcnn',),
         install_provider='pytorch',
+        supports_training=True,
+        supports_finetuning=True,
+        supports_export=False,
+        supports_validation=True,
     ),
     BuiltinTrainingProvider(
         'rf_detr',
         ('rf_detr', 'rfdetr', 'rf-detr'),
         'system.training.adapters.rf_detr_trainer',
         'RFDETRTrainingProvider',
-        ('torch',),
+        ('torch', 'rfdetr'),
         ('detect',),
         ('coco', 'yolo'),
-        ('onnx',),
+        (),
         ('rf_detr',),
         install_provider='rfdetr',
+        supports_training=True,
+        supports_finetuning=True,
+        supports_export=False,
+        supports_validation=False,
     ),
     BuiltinTrainingProvider(
         'd_fine',
@@ -81,21 +97,29 @@ _BUILTIN_TRAINING_PROVIDERS = (
         ('torch',),
         ('detect',),
         ('coco', 'yolo'),
-        ('onnx',),
+        (),
         ('d_fine',),
         install_provider='pytorch',
+        supports_training=False,
+        supports_finetuning=False,
+        supports_export=False,
+        supports_validation=False,
     ),
     BuiltinTrainingProvider(
         'rtmdet',
         ('rtmdet', 'rtm-det'),
         'system.training.adapters.rtmdet_trainer',
         'RTMDetTrainingProvider',
-        ('torch',),
+        ('torch', 'mmdet'),
         ('detect',),
         ('coco', 'yolo'),
-        ('onnx',),
+        (),
         ('rtmdet',),
         install_provider='mmdet',
+        supports_training=False,
+        supports_finetuning=False,
+        supports_export=False,
+        supports_validation=False,
     ),
 )
 _TRAINING_PROVIDER_BY_ALIAS = {
@@ -160,22 +184,72 @@ def get_provider_status(provider: Optional[str]) -> dict[str, Any]:
     dependency_status = {name: _has_dependency(name) for name in definition.dependencies}
     optional_status = {name: _has_dependency(name) for name in definition.optional_dependencies}
     missing = [name for name, installed in dependency_status.items() if not installed]
-    error = f"Missing dependencies: {', '.join(missing)}" if missing else None
-    status = 'unavailable' if missing else 'available'
 
-    if not missing:
+    if not definition.supports_training:
+        status = 'unavailable'
+        error = f"Training for '{definition.id}' is not yet implemented (planned for future release)."
+        available = False
+    elif missing:
+        status = 'unavailable'
+        error = f"Missing dependencies: {', '.join(missing)}"
+        available = False
+    else:
+        status = 'available'
+        error = None
+        available = True
         try:
-            load_provider(definition.id)
+            load_provider(definition.id, check_dependencies=False)
         except Exception as exc:
             status = 'error'
             error = str(exc)
+            available = False
+
+    model_catalog_available = False
+    try:
+        prov = load_provider(definition.id, check_dependencies=False)
+        model_catalog_available = bool(prov.curated_models())
+    except Exception:
+        model_catalog_available = False
+
+    inference_supported = False
+    adapter_registered = False
+    backend_available = _has_dependency('torch')
+    if definition.id == 'torchvision':
+        inference_supported = bool(_has_dependency('torchvision'))
+        adapter_registered = True
+        backend_available = bool(_has_dependency('torch'))
+    else:
+        try:
+            from system.detection.registry import get_provider_status as get_det_status, is_backend_available
+            det_available = bool(is_backend_available(definition.id))
+            det_status = get_det_status(definition.id)
+            inference_supported = det_available and bool(det_status.get("inference_available", False))
+            adapter_registered = bool(det_status.get("adapter_registered", False))
+            backend_available = bool(det_status.get("backend_available", _has_dependency('torch')))
+        except Exception:
+            inference_supported = False
+            adapter_registered = False
+            backend_available = False
 
     return {
         'id': definition.id,
         'aliases': list(definition.aliases),
         'status': status,
-        'available': status == 'available',
+        'available': available,
+        'training_available': available,
+        'training_supported': definition.supports_training,
+        'architecture_registered': True,
+        'adapter_registered': adapter_registered,
+        'backend_available': backend_available,
+        'inference_available': inference_supported,
+        'inference_supported': inference_supported,
+        'model_catalog_available': model_catalog_available,
         'install_provider': definition.install_provider,
+        'supports_training': definition.supports_training,
+        'supports_finetuning': definition.supports_finetuning,
+        'supports_export': definition.supports_export,
+        'supports_validation': definition.supports_validation,
+        'export_formats': definition.export_formats,
         'dependencies': dependency_status,
         'optional_dependencies': optional_status,
         'capabilities': {
@@ -183,6 +257,18 @@ def get_provider_status(provider: Optional[str]) -> dict[str, Any]:
             'architectures': list(definition.architectures),
             'dataset_formats': list(definition.dataset_formats),
             'export_formats': list(definition.export_formats),
+            'supports_training': definition.supports_training,
+            'supports_finetuning': definition.supports_finetuning,
+            'supports_export': definition.supports_export,
+            'supports_validation': definition.supports_validation,
+            'architecture_registered': True,
+            'adapter_registered': adapter_registered,
+            'backend_available': backend_available,
+            'model_catalog_available': model_catalog_available,
+            'inference_available': inference_supported,
+            'inference_supported': inference_supported,
+            'training_supported': definition.supports_training,
+            'training_available': available,
         },
         'error': error,
     }
@@ -193,28 +279,34 @@ def get_provider_statuses() -> list[dict[str, Any]]:
     return [get_provider_status(provider.id) for provider in _BUILTIN_TRAINING_PROVIDERS]
 
 
-def load_provider(provider: Optional[str]) -> BaseTrainingProvider:
+def load_provider(provider: Optional[str], check_dependencies: bool = False) -> BaseTrainingProvider:
     """
     Import and instantiate a training provider.
 
     Args:
         provider (Optional[str]): Provider id or alias
+        check_dependencies (bool): Whether to enforce dependency checks before returning instance
 
     Returns:
         BaseTrainingProvider: The provider instance
     """
     definition = get_provider_definition(provider)
     cached = _INSTANCES.get(definition.id)
-    if cached is not None:
+    if cached is not None and not check_dependencies:
         return cached
 
-    missing = [name for name in definition.dependencies if not _has_dependency(name)]
-    if missing:
-        raise RuntimeError(
-            f"Training provider '{definition.id}' is unavailable; "
-            f"missing dependencies: {', '.join(missing)}. "
-            f"Install them with `python install.py --provider {definition.install_provider}`."
-        )
+    if check_dependencies:
+        if not definition.supports_training:
+            raise RuntimeError(
+                f"Training provider '{definition.id}' is unavailable; training is not yet implemented."
+            )
+        missing = [name for name in definition.dependencies if not _has_dependency(name)]
+        if missing:
+            raise RuntimeError(
+                f"Training provider '{definition.id}' is unavailable; "
+                f"missing dependencies: {', '.join(missing)}. "
+                f"Install them with `python install.py --provider {definition.install_provider}`."
+            )
 
     try:
         module = importlib.import_module(definition.module)

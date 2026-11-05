@@ -38,6 +38,10 @@ class TrainingProviderUnavailableError(RuntimeError):
     """Raised when the requested training provider cannot run on this machine."""
 
 
+class TrainingNotSupportedError(TrainingProviderUnavailableError):
+    """Raised when training is not supported / not implemented for a provider."""
+
+
 class TrainingJobManager:
     """Manage training jobs independently from any one training framework."""
 
@@ -120,8 +124,8 @@ class TrainingJobManager:
         Returns:
             dict[str, Any]: Installed, available and official model entries
         """
-        provider_id = cls.ensure_provider_available(provider)
-        instance = load_provider(provider_id)
+        provider_id = resolve_provider_id(provider or DEFAULT_TRAINING_PROVIDER)
+        instance = load_provider(provider_id, check_dependencies=False)
         catalog = instance.base_models()
         return {
             'provider': provider_id,
@@ -143,12 +147,18 @@ class TrainingJobManager:
         """
         provider_id = resolve_provider_id(provider or DEFAULT_TRAINING_PROVIDER)
         status = get_provider_status(provider_id)
-        if not status['available']:
-            raise TrainingProviderUnavailableError(
-                f"Training provider '{provider_id}' is unavailable. {status['error']}. "
-                f"Install its dependencies with `python install.py --provider {status['install_provider']}`."
+        if not status.get('training_supported', status.get('capabilities', {}).get('supports_training', True)):
+            raise TrainingNotSupportedError(
+                f"Training is not supported for provider '{provider_id}'. "
+                f"This architecture is reserved for future implementation (roadmap)."
             )
-        load_provider(provider_id)
+        if not status.get('training_available', status.get('available')):
+            err_msg = status.get('error') or "Missing dependencies"
+            raise TrainingProviderUnavailableError(
+                f"Training provider '{provider_id}' is unavailable: {err_msg}. "
+                f"Install its dependencies with `python install.py --provider {status.get('install_provider', '')}`."
+            )
+        load_provider(provider_id, check_dependencies=True)
         return provider_id
 
     def status(self) -> dict[str, Any]:
@@ -343,6 +353,17 @@ class TrainingJobManager:
         Returns:
             dict[str, Any]: The job descriptor
         """
+        provider_id = resolve_provider_id(provider or DEFAULT_TRAINING_PROVIDER)
+        status = get_provider_status(provider_id)
+        if not status.get('training_supported', status.get('capabilities', {}).get('supports_training', True)):
+            raise TrainingNotSupportedError(
+                f"Training is not supported for provider '{provider_id}'. "
+                f"This architecture is reserved for future implementation (roadmap)."
+            )
+        if not status.get('training_available', status.get('available')):
+            err_msg = status.get('error') or "Missing dependencies"
+            raise TrainingProviderUnavailableError(f"Training provider '{provider_id}' is unavailable: {err_msg}")
+
         request = self.build_request(
             config_name,
             provider=provider,
@@ -358,8 +379,7 @@ class TrainingJobManager:
             dataset_name=dataset_name,
             dataset_export=dataset_export,
         )
-        provider_id = request.provider
-        instance = load_provider(provider_id)
+        instance = load_provider(provider_id, check_dependencies=True)
         job_request = replace(
             request,
             progress_callback=self._on_progress,
@@ -522,8 +542,8 @@ class TrainingJobManager:
         Returns:
             bool: True when the provider owns a source for this checkpoint
         """
-        provider_id = cls.ensure_provider_available(provider)
-        return load_provider(provider_id).supports_base_model(Path(model_name).name)
+        provider_id = resolve_provider_id(provider or DEFAULT_TRAINING_PROVIDER)
+        return load_provider(provider_id, check_dependencies=False).supports_base_model(Path(model_name).name)
 
     def download_base_model(
             self,
@@ -542,8 +562,8 @@ class TrainingJobManager:
         Returns:
             Path: The local checkpoint path
         """
-        provider_id = self.ensure_provider_available(provider)
-        return load_provider(provider_id).download_base_model(model_name, progress_callback=progress_callback)
+        provider_id = resolve_provider_id(provider or DEFAULT_TRAINING_PROVIDER)
+        return load_provider(provider_id, check_dependencies=False).download_base_model(model_name, progress_callback=progress_callback)
 
     def _on_progress(self, payload: dict) -> None:
         """Normalize provider progress into the job and socket contracts."""

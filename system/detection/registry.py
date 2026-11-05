@@ -80,9 +80,9 @@ _BUILTIN_PROVIDERS: tuple[BuiltinProvider, ...] = (
     BuiltinProvider(
         id="rf_detr",
         aliases=("rf_detr", "rfdetr", "rf-detr"),
-        dependencies=("torch",),
-        optional_dependencies=("rfdetr",),
-        tasks=("object_detection", "training"),
+        dependencies=("torch", "rfdetr"),
+        optional_dependencies=(),
+        tasks=("object_detection",),
         architectures=("rf_detr",),
         formats=(".pth", ".pt", ".onnx"),
     ),
@@ -91,16 +91,16 @@ _BUILTIN_PROVIDERS: tuple[BuiltinProvider, ...] = (
         aliases=("d_fine", "dfine", "d-fine"),
         dependencies=("torch",),
         optional_dependencies=(),
-        tasks=("object_detection", "training"),
+        tasks=("object_detection",),
         architectures=("d_fine",),
         formats=(".pth", ".pt", ".onnx"),
     ),
     BuiltinProvider(
         id="rtmdet",
         aliases=("rtmdet", "rtm-det"),
-        dependencies=("torch",),
-        optional_dependencies=("mmdet", "mmcv"),
-        tasks=("object_detection", "training"),
+        dependencies=("torch", "mmdet"),
+        optional_dependencies=("mmcv",),
+        tasks=("object_detection",),
         architectures=("rtmdet",),
         formats=(".pth", ".onnx"),
     ),
@@ -122,9 +122,9 @@ def _has_dependency(module_name: str) -> bool:
 
 
 def is_backend_available(model_type: str) -> bool:
-    """Check if runtime dependencies for an architecture or provider are installed."""
+    """Check if runtime dependencies for an architecture or provider are installed for inference."""
     norm = (model_type or "").strip().lower()
-    return get_provider_status(norm)["available"]
+    return bool(get_provider_status(norm).get("inference_available", False))
 
 
 def is_tensorrt_available() -> bool:
@@ -136,35 +136,68 @@ def get_provider_status(model_type: str) -> dict[str, Any]:
     """Return availability and declared capabilities for one provider."""
     normalized = (model_type or "").strip().lower()
     provider = _PROVIDER_BY_ALIAS.get(normalized)
+
+    # Check if adapter is registered in _DETECTOR_REGISTRY
+    adapter_registered = (
+        normalized in _DETECTOR_REGISTRY
+        or (provider is not None and any(a in _DETECTOR_REGISTRY for a in provider.aliases))
+        or (provider is not None and provider.id in _DETECTOR_REGISTRY)
+    )
+
     if provider is None:
-        available = normalized in _DETECTOR_REGISTRY
+        available = adapter_registered
         return {
             "id": normalized,
             "aliases": [normalized] if normalized else [],
             "status": "available" if available else "unavailable",
             "available": available,
+            "architecture_registered": adapter_registered,
+            "adapter_registered": adapter_registered,
+            "backend_available": _has_dependency("torch"),
+            "inference_available": available,
+            "inference_supported": available,
             "dependencies": {},
             "optional_dependencies": {},
-            "capabilities": {},
+            "capabilities": {
+                "architecture_registered": adapter_registered,
+                "adapter_registered": adapter_registered,
+                "backend_available": _has_dependency("torch"),
+                "inference_available": available,
+                "inference_supported": available,
+            },
             "error": None if available else f"Unknown provider '{model_type}'",
         }
 
     dep_status = {dep: _has_dependency(dep) for dep in provider.dependencies}
     opt_dep_status = {dep: _has_dependency(dep) for dep in provider.optional_dependencies}
     missing = [name for name, installed in dep_status.items() if not installed]
-    available = len(missing) == 0
+
+    architecture_registered = True
+    backend_available = _has_dependency("torch") if ("torch" in provider.dependencies or "torch" in provider.optional_dependencies) else _has_dependency("onnxruntime")
+    inference_available = adapter_registered and (len(missing) == 0)
+    available = inference_available
 
     return {
         "id": provider.id,
         "aliases": list(provider.aliases),
-        "status": "available" if available else "unavailable",
+        "status": "available" if inference_available else "unavailable",
         "available": available,
+        "architecture_registered": architecture_registered,
+        "adapter_registered": adapter_registered,
+        "backend_available": backend_available,
+        "inference_available": inference_available,
+        "inference_supported": inference_available,
         "dependencies": dep_status,
         "optional_dependencies": opt_dep_status,
         "capabilities": {
             "tasks": list(provider.tasks),
             "architectures": list(provider.architectures),
             "formats": list(provider.formats),
+            "architecture_registered": architecture_registered,
+            "adapter_registered": adapter_registered,
+            "backend_available": backend_available,
+            "inference_available": inference_available,
+            "inference_supported": inference_available,
         },
         "error": f"Missing dependencies: {', '.join(missing)}" if missing else None,
     }

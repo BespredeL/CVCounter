@@ -37,6 +37,16 @@ BASE_MODELS: dict[str, dict[str, Any]] = {
             'Faster R-CNN without Ultralytics or AGPL license requirements.'
         ),
         'url': 'https://download.pytorch.org/models/fasterrcnn_resnet50_fpn_v2_coco-dd69338a.pth',
+        'code_license': 'BSD-3-Clause',
+        'code_license_url': 'https://github.com/pytorch/vision/blob/main/LICENSE',
+        'weights_license': 'BSD-3-Clause / CC-BY-4.0 (COCO terms)',
+        'weights_license_url': None,
+        'dataset_license': 'Mixed / Flickr Terms (images) & CC-BY-4.0 (annotations)',
+        'dataset_license_url': 'https://cocodataset.org/#termsofuse',
+        'license_status': 'dataset_dependent',
+        'weights_license_status': 'dataset_dependent',
+        'license_url': 'https://github.com/pytorch/vision/blob/main/LICENSE',
+        'source_url': 'https://github.com/pytorch/vision',
     },
 }
 
@@ -207,6 +217,16 @@ class TorchVisionTrainingProvider(BaseTrainingProvider):
                 'description': info['description'],
                 'installed': installed,
                 'path': str(local) if installed else None,
+                'code_license': info.get('code_license', 'BSD-3-Clause'),
+                'code_license_url': info.get('code_license_url', 'https://github.com/pytorch/vision/blob/main/LICENSE'),
+                'weights_license': info.get('weights_license', 'BSD-3-Clause / CC-BY-4.0 (COCO terms)'),
+                'weights_license_url': info.get('weights_license_url'),
+                'dataset_license': info.get('dataset_license', 'Mixed / Flickr Terms (images) & CC-BY-4.0 (annotations)'),
+                'dataset_license_url': info.get('dataset_license_url', 'https://cocodataset.org/#termsofuse'),
+                'license_status': info.get('license_status', 'dataset_dependent'),
+                'weights_license_status': info.get('weights_license_status', 'dataset_dependent'),
+                'license_url': info.get('license_url'),
+                'source_url': info.get('source_url'),
             })
         return catalog
 

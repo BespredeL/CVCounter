@@ -164,6 +164,16 @@ class BaseTrainingProvider(ABC):
                 "description": info.get("description", ""),
                 "installed": is_installed,
                 "path": str(installed_files[name]) if is_installed else None,
+                "code_license": info.get("code_license", "Unknown"),
+                "code_license_url": info.get("code_license_url", info.get("license_url")),
+                "weights_license": info.get("weights_license", "Unknown"),
+                "weights_license_url": info.get("weights_license_url"),
+                "dataset_license": info.get("dataset_license"),
+                "dataset_license_url": info.get("dataset_license_url"),
+                "license_status": info.get("license_status", info.get("weights_license_status", "unverified")),
+                "weights_license_status": info.get("weights_license_status", info.get("license_status", "unverified")),
+                "license_url": info.get("license_url", info.get("code_license_url")),
+                "source_url": info.get("source_url"),
             })
 
         for name, p_file in installed_files.items():
@@ -180,6 +190,16 @@ class BaseTrainingProvider(ABC):
                     "description": "Custom model found in the models directory.",
                     "installed": True,
                     "path": str(p_file),
+                    "code_license": "Custom/Unknown",
+                    "code_license_url": None,
+                    "weights_license": "Custom/Unknown",
+                    "weights_license_url": None,
+                    "dataset_license": "Custom/Unknown",
+                    "dataset_license_url": None,
+                    "license_status": "unverified",
+                    "weights_license_status": "unverified",
+                    "license_url": None,
+                    "source_url": None,
                 })
         return catalog
 

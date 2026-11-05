@@ -54,6 +54,7 @@ class RFDETRAdapter(IDetector):
         self.classes_map: dict[int, str] = dict(COCO_CLASSES_80)
         self.classes_list: Optional[list[int]] = None
         self._onnx_session = None
+        self.output_format: Optional[str] = None
 
     def is_loaded(self) -> bool:
         return self.model is not None or self._onnx_session is not None
@@ -65,6 +66,7 @@ class RFDETRAdapter(IDetector):
         self.variant = str(kwargs.get("variant", kwargs.get("model_variant", "small"))).lower()
         self.classes_list = kwargs.get("classes_list", None)
         self.backend = str(kwargs.get("backend", "pytorch")).lower()
+        self.output_format = kwargs.get("output_format", kwargs.get("format", None))
 
         insz = kwargs.get("input_size", (640, 640))
         if isinstance(insz, int):
@@ -119,10 +121,41 @@ class RFDETRAdapter(IDetector):
 
     def _load_onnx(self, weights_path: str) -> None:
         from system.detection.backends.onnx import ONNXSession
+        from system.detection.metadata import load_model_manifest
+
         session = ONNXSession()
         session.load(weights_path, device=self.device)
         self._onnx_session = session
         self.backend = "onnx"
+
+        # Check sidecar manifest for output format if not explicitly configured
+        if self.output_format is None:
+            try:
+                manifest = load_model_manifest(weights_path)
+                if manifest is not None:
+                    contract = manifest.output_contract or {}
+                    if "format" in contract:
+                        self.output_format = contract["format"]
+                    elif manifest.decoder == "detr_outputs":
+                        self.output_format = "detr_logits_boxes"
+                    elif manifest.decoder in ("yolo_outputs", "end2end"):
+                        self.output_format = "yolo_e2e" if manifest.is_end2end else "yolo_raw"
+            except Exception:
+                pass
+
+        # Check ONNX model metadata if still not set
+        if self.output_format is None:
+            meta = session.custom_metadata
+            if "output_format" in meta:
+                self.output_format = meta["output_format"]
+            elif "format" in meta:
+                self.output_format = meta["format"]
+            elif "decoder" in meta:
+                dec = meta["decoder"]
+                if dec == "detr_outputs":
+                    self.output_format = "detr_logits_boxes"
+                elif dec in ("yolo_outputs", "end2end"):
+                    self.output_format = "yolo_e2e"
 
     def unload(self) -> None:
         self.model = None
@@ -138,6 +171,8 @@ class RFDETRAdapter(IDetector):
             pass
 
     def configure(self, **kwargs) -> None:
+        if "output_format" in kwargs or "format" in kwargs:
+            self.output_format = kwargs.get("output_format", kwargs.get("format"))
         if "confidence" in kwargs or "conf" in kwargs:
             self.confidence_threshold = float(kwargs.get("confidence", kwargs.get("conf", self.confidence_threshold)))
         if "device" in kwargs:
@@ -186,18 +221,66 @@ class RFDETRAdapter(IDetector):
         if self._onnx_session is not None:
             # Process via ONNX Runtime
             from system.detection.transforms import create_blob
-            from system.detection.postprocessing import parse_detr_outputs
             blob = create_blob(image, self.input_size, {"resize": "letterbox"})
             outputs = self._onnx_session.predict(blob)
-            boxes, confs, clss = parse_detr_outputs(
-                outputs,
-                confidence=conf_thresh,
-                input_size=self.input_size,
-                image_shape=(h, w),
-                classes_list=self.classes_list,
-                num_classes=len(self.classes_map),
-                output_names=self._onnx_session.output_names,
-            )
+            output_list = [outputs] if isinstance(outputs, np.ndarray) else list(outputs)
+
+            # Determine format explicitly
+            fmt = kwargs.get("output_format", kwargs.get("format", self.output_format))
+            if fmt is None:
+                raise ValueError(
+                    f"ONNX output format is unspecified for model '{self.weights}' (model produced {len(output_list)} output tensor(s)). "
+                    "Cannot infer output decoding contract by tensor count or shape. "
+                    "Explicitly configure 'output_format' ('detr_logits_boxes', 'yolo_e2e', 'yolo_raw') "
+                    "or provide a .manifest.json sidecar or ONNX metadata."
+                )
+
+            valid_formats = ("detr_logits_boxes", "yolo_e2e", "yolo_raw")
+            if fmt not in valid_formats:
+                raise ValueError(
+                    f"Unsupported ONNX output format '{fmt}'. Supported formats: {list(valid_formats)}"
+                )
+
+            if fmt == "detr_logits_boxes":
+                from system.detection.postprocessing import parse_detr_outputs
+                try:
+                    boxes, confs, clss = parse_detr_outputs(
+                        outputs,
+                        confidence=conf_thresh,
+                        input_size=self.input_size,
+                        image_shape=(h, w),
+                        classes_list=self.classes_list,
+                        num_classes=len(self.classes_map),
+                        output_names=self._onnx_session.output_names,
+                    )
+                except ValueError as err:
+                    raise ValueError(
+                        f"Failed to decode outputs with 'detr_logits_boxes' contract: {err}"
+                    ) from err
+            elif fmt == "yolo_e2e":
+                from system.detection.postprocessing import parse_yolo_outputs
+                out = output_list[0]
+                boxes, confs, clss = parse_yolo_outputs(
+                    out,
+                    confidence=conf_thresh,
+                    iou=float(kwargs.get("iou", 0.45)),
+                    input_size=self.input_size,
+                    image_shape=(h, w),
+                    classes_list=self.classes_list,
+                    is_end2end=True,
+                )
+            elif fmt == "yolo_raw":
+                from system.detection.postprocessing import parse_yolo_outputs
+                out = output_list[0]
+                boxes, confs, clss = parse_yolo_outputs(
+                    out,
+                    confidence=conf_thresh,
+                    iou=float(kwargs.get("iou", 0.45)),
+                    input_size=self.input_size,
+                    image_shape=(h, w),
+                    classes_list=self.classes_list,
+                    is_end2end=False,
+                )
             for i in range(len(boxes)):
                 cid = int(clss[i])
                 cname = self.classes_map.get(cid, f"class_{cid}")

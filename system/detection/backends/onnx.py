@@ -61,6 +61,16 @@ class ONNXSession:
         """Input tensor shapes declared in model metadata."""
         return list(self._input_shapes)
 
+    @property
+    def custom_metadata(self) -> dict[str, str]:
+        """Custom metadata key-value pairs stored inside the ONNX model."""
+        if self._session is None:
+            return {}
+        try:
+            return dict(self._session.get_modelmeta().custom_metadata_map)
+        except Exception:
+            return {}
+
     def load(
         self,
         weights: Union[str, Path],
