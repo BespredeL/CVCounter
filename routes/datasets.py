@@ -1,12 +1,16 @@
-# -*- coding: utf-8 -*-
 # ! python3
 
 # Developed by: Aleksandr Kireev
 # Website: https://bespredel.name
 
 from __future__ import annotations
+
+import os
+import re
+import threading
 import time
 from pathlib import Path
+
 from flask import (
     Blueprint,
     flash,
@@ -17,41 +21,32 @@ from flask import (
     send_file,
     url_for,
 )
+
 from system.auth import login_required
 from system.datasets.annotation_store import AnnotationStore
-from system.datasets.dataset_service import DatasetService, VALID_TASKS
+from system.datasets.dataset_service import VALID_TASKS, DatasetService
 from system.detection.metadata import extract_class_name, sanitize_classes_list
 from system.managers.training_job_manager import (
     DEFAULT_EPOCHS,
     DEFAULT_IMG_SIZE,
+    TrainingNotSupportedError,
     TrainingProviderUnavailableError,
     training_job_manager,
 )
 from system.utils.app_context import get_app_context, refresh_app_context
 from system.utils.i18n import trans as translate
-from system.utils.paths import get_project_root, resolve_project_path, resolve_training_paths
+from system.utils.logger import Logger
+from system.utils.paths import (
+    get_project_root,
+    resolve_project_path,
+    resolve_training_paths,
+)
 from system.utils.utils import is_ajax
 
-_ultralytics_class = None
-_ultralytics_import_error: Exception | None = None
-
-
-def _get_ultralytics_yolo():
-    global _ultralytics_class, _ultralytics_import_error
-    if _ultralytics_class is not None:
-        return _ultralytics_class
-    try:
-        from ultralytics import YOLO
-        _ultralytics_class = YOLO
-        return _ultralytics_class
-    except Exception as exc:
-        _ultralytics_import_error = exc
-        return None
-
+logger = Logger()
 
 try:
     import cv2
-
     _cv2_import_error: Exception | None = None
 except ImportError as exc:
     cv2 = None
@@ -59,15 +54,23 @@ except ImportError as exc:
 
 datasets_bp = Blueprint('datasets', __name__)
 
+_service_instance: DatasetService | None = None
+_cached_project_root: str | None = None
+
 
 def _service() -> DatasetService:
     """
-    Get the dataset service instance.
+    Get or create the cached dataset service instance.
     
     Returns:
         DatasetService: The dataset service instance
     """
-    return DatasetService(get_project_root())
+    global _service_instance, _cached_project_root
+    root = get_project_root()
+    if _service_instance is None or _cached_project_root != root:
+        _cached_project_root = root
+        _service_instance = DatasetService(root)
+    return _service_instance
 
 
 def _json_error(message: str, status: int = 400):
@@ -84,18 +87,50 @@ def _json_error(message: str, status: int = 400):
     return jsonify({'status': 'error', 'message': message}), status
 
 
-def _list_detector_models() -> list[dict]:
+def _get_detections_config(context: dict | None = None) -> dict:
+    """Safely extract detections dict from app context configuration."""
+    if context is None:
+        context = get_app_context()
+    cfg = context.get('config') if context else None
+    if isinstance(cfg, dict):
+        return cfg.get('detections') or {}
+    if hasattr(cfg, 'get'):
+        return cfg.get('detections') or {}
+    return {}
+
+
+_cached_detector_models: list[dict] | None = None
+_cached_detector_models_time: float = 0.0
+_DETECTOR_MODELS_CACHE_TTL: float = 15.0
+_MODEL_EXTENSIONS = {'.onnx', '.pt', '.engine', '.trt'}
+
+
+def invalidate_detector_models_cache() -> None:
+    """Invalidate detector models memory cache."""
+    global _cached_detector_models, _cached_detector_models_time
+    _cached_detector_models = None
+    _cached_detector_models_time = 0.0
+
+
+def _list_detector_models(force_refresh: bool = False) -> list[dict]:
     """
     Detectors and standalone model files for auto-label model picker.
+    Uses single-pass directory scanning and TTL memory caching.
     
     Returns:
         list: List of detector and model items
     """
+    global _cached_detector_models, _cached_detector_models_time
+    now = time.time()
+    if not force_refresh and _cached_detector_models is not None and (now - _cached_detector_models_time) < _DETECTOR_MODELS_CACHE_TTL:
+        return _cached_detector_models
+
     context = get_app_context()
     items = []
     seen_paths = set()
 
-    for location, cfg in (context.get('config').get('detections') or {}).items():
+    detections = _get_detections_config(context)
+    for location, cfg in detections.items():
         weights = (cfg or {}).get('weights_path')
         if not weights:
             continue
@@ -110,39 +145,105 @@ def _list_detector_models() -> list[dict]:
             'exists': exists,
         })
 
-    # Also list standalone model weights in models directories
+    # Also list standalone model weights in models directories via single-pass scan
     try:
         models_dir = resolve_training_paths(get_project_root())[1]
         model_dirs = [models_dir, Path(get_project_root()) / 'config' / 'models']
         for mdir in model_dirs:
             if not mdir or not mdir.is_dir():
                 continue
-            for ext in ('*.onnx', '*.pt', '*.xml', '*.engine', '*.trt'):
-                for p in sorted(mdir.glob(ext)):
-                    abs_p = str(p.resolve())
-                    if abs_p in seen_paths:
-                        continue
-                    seen_paths.add(abs_p)
-                    items.append({
-                        'location': f'model:{p.name}',
-                        'weights_path': str(p),
-                        'label': f'File: {p.name}',
-                        'exists': True,
-                    })
-    except Exception:
-        pass
+            for p in sorted(mdir.iterdir()):
+                if not p.is_file() or p.suffix.lower() not in _MODEL_EXTENSIONS:
+                    continue
+                abs_p = str(p.resolve())
+                if abs_p in seen_paths:
+                    continue
+                seen_paths.add(abs_p)
+                items.append({
+                    'location': f'model:{p.name}',
+                    'weights_path': str(p),
+                    'label': f'File: {p.name}',
+                    'exists': True,
+                })
+    except Exception as exc:
+        logger.debug(f"Error listing detector models: {exc}")
 
+    _cached_detector_models = items
+    _cached_detector_models_time = now
     return items
 
 
-def _list_available_weights_for_deploy() -> list[dict]:
+_cached_weights_for_deploy: list[dict] | None = None
+_cached_weights_time: float = 0.0
+_WEIGHTS_CACHE_TTL: float = 15.0
+_DEPLOY_EXTENSIONS = {'.pt', '.pth', '.onnx', '.engine'}
+
+
+def invalidate_available_weights_cache() -> None:
+    """Invalidate available deployment weights memory cache."""
+    global _cached_weights_for_deploy, _cached_weights_time
+    _cached_weights_for_deploy = None
+    _cached_weights_time = 0.0
+
+
+def _scan_weights_in_dir(sdir: Path, seen_paths: set[str], root: Path, trained_items: list[dict]) -> None:
+    """Helper for single-pass scanning of trained weights in a directory tree."""
+    if not sdir.is_dir():
+        return
+    for root_path, _, filenames in os.walk(sdir):
+        for fname in filenames:
+            ext = os.path.splitext(fname)[1].lower()
+            if ext not in _DEPLOY_EXTENSIONS:
+                continue
+            p = Path(root_path) / fname
+            abs_p = str(p.resolve())
+            if abs_p in seen_paths:
+                continue
+            seen_paths.add(abs_p)
+
+            try:
+                rel = p.relative_to(root).as_posix()
+            except ValueError:
+                rel = str(p).replace('\\', '/')
+
+            try:
+                stat = p.stat()
+                mtime = stat.st_mtime
+                size_mb = round(stat.st_size / (1024 * 1024), 1)
+                date_str = time.strftime('%d.%m.%Y %H:%M', time.localtime(mtime))
+            except OSError:
+                mtime = 0
+                size_mb = 0
+                date_str = ''
+
+            run_name = p.parent.parent.name if p.parent.name == 'weights' else p.parent.name
+            label = f"{run_name} / {p.name} ({size_mb} MB, {date_str})" if date_str else f"{run_name} / {p.name}"
+
+            trained_items.append({
+                'path': rel,
+                'name': p.name,
+                'run_name': run_name,
+                'label': label,
+                'category': 'trained_runs',
+                'mtime': mtime,
+                'is_best': p.name in ('best.pt', 'best.pth'),
+            })
+
+
+def _list_available_weights_for_deploy(force_refresh: bool = False) -> list[dict]:
     """
     List trained runs (best.pt, last.pt, exports) and current counter detector weights
     for selection in the deploy step.
+    Optimized with single-pass traversal and TTL caching.
     """
+    global _cached_weights_for_deploy, _cached_weights_time
+    now = time.time()
+    if not force_refresh and _cached_weights_for_deploy is not None and (now - _cached_weights_time) < _WEIGHTS_CACHE_TTL:
+        return _cached_weights_for_deploy
+
     root = Path(get_project_root()).resolve()
-    seen_paths = set()
-    trained_items = []
+    seen_paths: set[str] = set()
+    trained_items: list[dict] = []
 
     try:
         _, _, runs_dir, _ = resolve_training_paths(root)
@@ -156,53 +257,17 @@ def _list_available_weights_for_deploy() -> list[dict]:
                         search_dirs.append(r_dir)
 
         for sdir in search_dirs:
-            if not sdir or not sdir.is_dir():
-                continue
-            for ext in ('*.pt', '*.pth', '*.onnx', '*.engine'):
-                for p in sdir.rglob(ext):
-                    if not p.is_file():
-                        continue
-                    abs_p = str(p.resolve())
-                    if abs_p in seen_paths:
-                        continue
-                    seen_paths.add(abs_p)
-
-                    try:
-                        rel = p.relative_to(root).as_posix()
-                    except ValueError:
-                        rel = str(p)
-
-                    try:
-                        stat = p.stat()
-                        mtime = stat.st_mtime
-                        size_mb = round(stat.st_size / (1024 * 1024), 1)
-                        date_str = time.strftime('%d.%m.%Y %H:%M', time.localtime(mtime))
-                    except OSError:
-                        mtime = 0
-                        size_mb = 0
-                        date_str = ''
-
-                    run_name = p.parent.parent.name if p.parent.name == 'weights' else p.parent.name
-                    label = f"{run_name} / {p.name} ({size_mb} MB, {date_str})" if date_str else f"{run_name} / {p.name}"
-
-                    trained_items.append({
-                        'path': rel,
-                        'name': p.name,
-                        'run_name': run_name,
-                        'label': label,
-                        'category': 'trained_runs',
-                        'mtime': mtime,
-                        'is_best': p.name in ('best.pt', 'best.pth'),
-                    })
-    except Exception:
-        pass
+            _scan_weights_in_dir(sdir, seen_paths, root, trained_items)
+    except Exception as exc:
+        logger.debug(f"Error scanning trained runs: {exc}")
 
     trained_items.sort(key=lambda x: (x.get('is_best', False), x.get('mtime', 0)), reverse=True)
 
-    detector_items = []
+    detector_items: list[dict] = []
     try:
         context = get_app_context()
-        for location, cfg in (context.get('config', {}).get('detections') or {}).items():
+        detections = _get_detections_config(context)
+        for location, cfg in detections.items():
             weights = (cfg or {}).get('weights_path')
             if not weights:
                 continue
@@ -225,10 +290,13 @@ def _list_available_weights_for_deploy() -> list[dict]:
                 'mtime': 0,
                 'is_best': False,
             })
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug(f"Error listing detector weights: {exc}")
 
-    return trained_items + detector_items
+    result = trained_items + detector_items
+    _cached_weights_for_deploy = result
+    _cached_weights_time = now
+    return result
 
 
 def _ordered_class_names(classes_map) -> list[str]:
@@ -300,7 +368,7 @@ def _resolve_detector_cfg(detector: str | None = None) -> tuple[dict, str | None
         tuple: (detector config dict, location key)
     """
     context = get_app_context()
-    detections = context.get('config').get('detections') or {}
+    detections = _get_detections_config(context)
 
     location = (detector or '').strip()
     if location.startswith('model:'):
@@ -320,9 +388,13 @@ def _resolve_detector_cfg(detector: str | None = None) -> tuple[dict, str | None
     return {}, None
 
 
+_model_classes_cache: dict[str, tuple[dict, str | None]] = {}
+
+
 def _detector_class_names(detector: str | None = None) -> tuple[list[str], str | None, str | None]:
     """
     Resolve class names for a detector: config `classes` first, then YOLO `names`.
+    Caches parsed classes by weights file path and mtime.
 
     Args:
         detector: Detection location key. Empty/None uses the first detector with weights.
@@ -344,12 +416,21 @@ def _detector_class_names(detector: str | None = None) -> tuple[list[str], str |
         return [], None, location
 
     try:
-        from system.detection.metadata import extract_model_classes
-        classes_dict, source = extract_model_classes(path)
+        p = Path(path)
+        mtime = p.stat().st_mtime
+        cache_key = f"{p.resolve()}:{mtime}"
+        if cache_key in _model_classes_cache:
+            classes_dict, source = _model_classes_cache[cache_key]
+        else:
+            from system.detection.metadata import extract_model_classes
+            classes_dict, source = extract_model_classes(path)
+            _model_classes_cache[cache_key] = (classes_dict, source)
+
         if classes_dict:
             return _ordered_class_names(classes_dict), source or 'weights', location
         return [], None, location
-    except Exception:
+    except Exception as exc:
+        logger.debug(f"Error extracting detector class names: {exc}")
         return [], None, location
 
 
@@ -359,6 +440,7 @@ def _autolabel_label_for_cls(
         dataset_classes: list[str],
         detector_map: dict[int, str],
         model_names: dict,
+        dataset_classes_lower: dict[str, str] | None = None,
 ) -> str | None:
     """
     Map a YOLO class id to a dataset label name.
@@ -371,6 +453,7 @@ def _autolabel_label_for_cls(
         dataset_classes: The dataset classes
         detector_map: The detector map
         model_names: The model names
+        dataset_classes_lower: Optional precomputed lowercased mapping to avoid allocation
     
     Returns:
         str | None: The label name
@@ -393,9 +476,9 @@ def _autolabel_label_for_cls(
         return name
     if name in dataset_classes:
         return name
-    lower_map = {c.lower(): c for c in dataset_classes if isinstance(c, str)}
-    matched = lower_map.get(name.lower())
-    return matched  # None → class not in dataset vocabulary; skip box
+    if dataset_classes_lower is None:
+        dataset_classes_lower = {c.lower(): c for c in dataset_classes if isinstance(c, str)}
+    return dataset_classes_lower.get(name.lower())
 
 
 def _resolve_autolabel_weights(
@@ -419,7 +502,7 @@ def _resolve_autolabel_weights(
         return Path(path) if path else None
 
     context = get_app_context()
-    detections = context.get('config').get('detections') or {}
+    detections = _get_detections_config(context)
     location = (detector or meta.get('autolabel_detector') or '').strip()
     if location.startswith('model:'):
         model_name = location[6:]
@@ -444,22 +527,33 @@ def _resolve_autolabel_weights(
     return None
 
 
+_emitter_wired = False
+
+
 def _wire_training_emitter() -> None:
     """
-    Wire the training progress emitter.
-    
-    Returns:
-        None
+    Wire the training progress emitter once.
     """
+    global _emitter_wired
+    if _emitter_wired:
+        return
+
     context = get_app_context()
-    socketio = context.get('socketio')
+    socketio = context.get('socketio') if context else None
     if not socketio:
         return
 
     def _emit(payload: dict) -> None:
-        socketio.emit('training_progress', payload)
+        ctx = get_app_context()
+        sio = ctx.get('socketio') if ctx else None
+        if sio:
+            sio.emit('training_progress', payload)
+        if isinstance(payload, dict) and payload.get('stage') in ('completed', 'finished', 'exported'):
+            invalidate_available_weights_cache()
+            invalidate_detector_models_cache()
 
     training_job_manager.set_progress_emitter(_emit)
+    _emitter_wired = True
 
 
 @datasets_bp.route('/datasets')
@@ -761,8 +855,7 @@ def api_cameras():
     List configured cameras with status and preview information.
     """
     context = get_app_context()
-    config = context.get('config')
-    detections = config.get('detections') or {}
+    detections = _get_detections_config(context)
     object_counters = context.get('object_counters') or {}
     thread_manager = context.get('thread_manager')
 
@@ -790,9 +883,6 @@ def api_capture_camera(name: str):
     """
     Capture a single frame from a camera directly into dataset inbox.
     """
-    import cv2
-    import re
-    import time
     from system.services.counter_runtime import get_editor_snapshot_frame
 
     data = request.get_json(silent=True) or request.form or {}
@@ -814,6 +904,8 @@ def api_capture_camera(name: str):
     if location in object_counters:
         saved_path = object_counters[location].save_capture(target_dataset=name, split=split)
     else:
+        if cv2 is None:
+            return _json_error(str(_cv2_import_error or 'cv2 not available'))
         frame = get_editor_snapshot_frame(location)
         if frame is not None:
             dest_dir = svc.root(name) / 'images' / split
@@ -949,7 +1041,13 @@ def api_import_upload(name: str):
     if not files:
         return _json_error(translate('No files uploaded'))
     context = get_app_context()
-    max_mb = int(context['config'].get('datasets.max_upload_mb', 512) or 512)
+    cfg = context.get('config') if context else None
+    if isinstance(cfg, dict):
+        max_mb = int(cfg.get('datasets.max_upload_mb') or 512)
+    elif hasattr(cfg, 'get'):
+        max_mb = int(cfg.get('datasets.max_upload_mb', 512) or 512)
+    else:
+        max_mb = 512
     total = 0
     for f in files:
         f.stream.seek(0, 2)
@@ -1095,7 +1193,7 @@ def api_image_file(name: str, image_name: str):
         path = _service().image_path(name, Path(image_name).name)
     except FileNotFoundError:
         return _json_error('Not found', 404)
-    return send_file(path, mimetype=None, conditional=True, max_age=0)
+    return send_file(path, mimetype=None, conditional=True, max_age=300)
 
 
 @datasets_bp.route('/datasets/api/<name>/images')
@@ -1330,6 +1428,8 @@ def api_models_base():
     try:
         catalog = training_job_manager.base_model_catalog(provider_id)
         default_model = training_job_manager.default_base_model(provider_id)
+    except TrainingNotSupportedError as exc:
+        return _json_error(str(exc), 400)
     except TrainingProviderUnavailableError as exc:
         return _json_error(str(exc), 503)
     return jsonify({
@@ -1346,8 +1446,6 @@ def api_models_base_download():
     """
     Download a base model in a background thread with socket updates.
     """
-    import threading
-
     data = request.get_json(silent=True) or request.form or {}
     model_name = (data.get('model_name') or data.get('model') or '').strip()
     if not model_name:
@@ -1356,15 +1454,16 @@ def api_models_base_download():
     clean_name = Path(model_name).name
     provider_id = training_job_manager.resolve_provider(data.get('provider'))
     try:
-        training_job_manager.ensure_provider_available(provider_id)
-        supported = training_job_manager.supports_base_model(clean_name, provider_id)
+        supported = training_job_manager.supports_base_model(clean_name, provider=provider_id)
+    except TrainingNotSupportedError as exc:
+        return _json_error(str(exc), 400)
     except TrainingProviderUnavailableError as exc:
         return _json_error(str(exc), 503)
     if not supported:
         return _json_error(f"Provider '{provider_id}' does not offer the model {clean_name}")
 
     context = get_app_context()
-    socketio = context.get('socketio')
+    socketio = context.get('socketio') if context else None
 
     def _emitter(payload: dict) -> None:
         if socketio:
@@ -1375,6 +1474,8 @@ def api_models_base_download():
             training_job_manager.download_base_model(
                 clean_name, progress_callback=_emitter, provider=provider_id
             )
+            invalidate_available_weights_cache()
+            invalidate_detector_models_cache()
         except Exception as exc:
             _emitter({
                 'status': 'error',
@@ -1426,6 +1527,8 @@ def api_train(name: str):
     provider_id = training_job_manager.resolve_provider(data.get('provider'))
     try:
         training_job_manager.ensure_provider_available(provider_id)
+    except TrainingNotSupportedError as exc:
+        return _json_error(str(exc), 400)
     except TrainingProviderUnavailableError as exc:
         return _json_error(str(exc), 503)
 
@@ -1453,6 +1556,8 @@ def api_train(name: str):
             dataset_name=name,
             dataset_export=export_info,
         )
+    except TrainingNotSupportedError as exc:
+        return _json_error(str(exc), 400)
     except TrainingProviderUnavailableError as exc:
         return _json_error(str(exc), 503)
     except RuntimeError as exc:
@@ -1509,7 +1614,9 @@ def api_apply_weights():
     if not location or not weights:
         return _json_error('location and weights required')
     context = get_app_context()
-    config = context['config']
+    config = context.get('config') if context else None
+    if not config:
+        return _json_error('Configuration not available', 500)
     detections = config.get('detections') or {}
     if location not in detections:
         return _json_error(f'Unknown location: {location}', 404)
@@ -1539,6 +1646,8 @@ def api_apply_weights():
             config.set(f'detections.{location}.classes', class_map)
     config.save_config()
     refresh_app_context(context)
+    invalidate_available_weights_cache()
+    invalidate_detector_models_cache()
     return jsonify({
         'status': 'ok',
         'weights_path': rel,
@@ -1573,6 +1682,7 @@ def api_autolabel(name: str):
     svc = _service()
     meta = svc.load_meta(name)
     dataset_classes = [str(c) for c in (meta.get('classes') or []) if str(c).strip()]
+    dataset_classes_lower = {c.lower(): c for c in dataset_classes}
 
     location = (detector or meta.get('autolabel_detector') or '').strip() or None
     det_cfg, resolved_location = _resolve_detector_cfg(location)
@@ -1590,7 +1700,7 @@ def api_autolabel(name: str):
 
     try:
         model = load_detector(
-            model_type=(det_cfg or {}).get('model_type', 'auto'),
+            architecture=(det_cfg or {}).get('model_type', 'auto'),
             weights=str(weights_path),
             confidence=confidence,
             classes_list=predict_classes,
@@ -1637,6 +1747,7 @@ def api_autolabel(name: str):
                     dataset_classes=dataset_classes,
                     detector_map=detector_map,
                     model_names=model_names,
+                    dataset_classes_lower=dataset_classes_lower,
                 )
                 if not label:
                     continue
@@ -1696,6 +1807,7 @@ def api_active_learning(name: str):
     weights = data.get('weights')
     detector = data.get('detector')
     confidence = float(data.get('confidence') or 0.1)
+    limit = int(data.get('limit') or 200)
     svc = _service()
     meta = svc.load_meta(name)
     location = (detector or meta.get('autolabel_detector') or '').strip() or None
@@ -1723,7 +1835,10 @@ def api_active_learning(name: str):
 
     predictions = []
     try:
-        for item in svc.list_images(name, labeled=False):
+        unlabeled = svc.list_images(name, labeled=False)
+        if limit > 0:
+            unlabeled = unlabeled[:limit]
+        for item in unlabeled:
             path = svc.image_path(name, item['name'], item['split'])
             img = cv2.imread(str(path))
             if img is None:
