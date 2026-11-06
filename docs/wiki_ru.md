@@ -558,7 +558,7 @@ Preprocessing, входной тензор, выход и decoder описыва
 
 ```
 storage/datasets/<name>/
-├── images/{train,val}/…                     # исходные кадры
+├── images/{train,val}/...                     # исходные кадры
 └── coco/annotations/instances_{split}.json  # COCO detection
 ```
 

@@ -316,7 +316,11 @@
                                         {% for field, value in part.items() if field != 'by_class' %}
                                             <div class="col-6 col-sm-4">
                                                 <div class="text-body-secondary fs-xs">{{ trans(field) }}</div>
-                                                <div class="fw-medium text-truncate">{{ value | striptags }}</div>
+                                                {% if value is not none and value|is_date %}
+                                                    <div class="fw-medium text-truncate">{{ value | format_date }}</div>
+                                                {% else %}
+                                                    <div class="fw-medium text-truncate">{{ value | striptags }}</div>
+                                                {% endif %}
                                             </div>
                                         {% endfor %}
                                     </div>
@@ -418,7 +422,7 @@
                                     {% if val is not none %}
                                         <div class="detail-list__row">
                                             <div class="detail-list__label">{{ trans(field_labels.get(key, key)|string) }}</div>
-                                            <div class="detail-list__value">{{ val | striptags }}</div>
+                                            <div class="detail-list__value">{% if val|is_date %}{{ val|format_date }}{% else %}{{ val | striptags }}{% endif %}</div>
                                         </div>
                                     {% endif %}
                                 {% endfor %}
@@ -447,7 +451,7 @@
                 <div class="print-signature-col">
                     <div class="print-signature-label">{{ trans('Date') }}:</div>
                     <div class="print-signature-line">
-                        <span class="print-signature-sub">«____» ________________ 20___ г.</span>
+                        <span class="print-signature-sub">«____» ________________ {{ current_century }}___ г.</span>
                     </div>
                 </div>
             </div>

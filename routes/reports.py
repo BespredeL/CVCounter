@@ -7,6 +7,7 @@
 import json
 import mimetypes
 from threading import Thread
+from datetime import datetime
 
 from flask import Blueprint, abort, jsonify, render_template, request, send_file
 from markupsafe import escape
@@ -480,6 +481,8 @@ def report_show(location: str, report_id: int) -> str:
                 if isinstance(f, dict) and 'name' in f:
                     field_labels[f['name']] = f.get('label', f['name'])
 
+    current_century = str(datetime.now().year)[:2]
+
     return render_template(
         'reports/show.html',
         location=location,
@@ -488,6 +491,7 @@ def report_show(location: str, report_id: int) -> str:
         next_report_id=next_report_id,
         is_counter_active=is_counter_active,
         field_labels=field_labels,
+        current_century=current_century,
         json=json
     )
 

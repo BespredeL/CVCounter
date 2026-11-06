@@ -1061,7 +1061,7 @@
             const payload = selected.length > 0
                 ? { images: selected }
                 : { limit: 100, only_unlabeled: true };
-            toast(t('Auto-label running…'), 'info');
+            toast(t('Auto-label running...'), 'info');
             const data = await api(`/datasets/api/${name}/autolabel`, {
                 method: 'POST',
                 json: payload,
@@ -1092,7 +1092,7 @@
     document.getElementById('btn-active-learning')?.addEventListener('click', withBusy(
         document.getElementById('btn-active-learning'),
         async () => {
-            toast(t('Ranking…'), 'info');
+            toast(t('Ranking...'), 'info');
             const data = await api(`/datasets/api/${name}/active-learning`, { method: 'POST', json: {} });
             document.getElementById('qa-output').textContent = JSON.stringify(data.uncertainty, null, 2);
         },

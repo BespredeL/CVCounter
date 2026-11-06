@@ -43,7 +43,7 @@
 
     const t = (key, params) => (typeof window.trans === "function" ? window.trans(key, params) : key);
 
-    const i18nPreparing = root.dataset.i18nPreparing || t("Preparing video for playback…");
+    const i18nPreparing = root.dataset.i18nPreparing || t("Preparing video for playback...");
     const i18nPlayError = root.dataset.i18nPlayError || t("This video cannot be played in the browser. You can download the original file.");
 
     let pendingVideoUrl = null;

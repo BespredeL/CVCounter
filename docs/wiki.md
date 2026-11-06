@@ -557,7 +557,7 @@ install command from its `install_provider` field.
 
 ```
 storage/datasets/<name>/
-├── images/{train,val}/…                     # source frames
+├── images/{train,val}/...                     # source frames
 └── coco/annotations/instances_{split}.json  # COCO detection
 ```
 

@@ -469,7 +469,7 @@
             this.redoStack = [];
             this.setLoading(true);
             this.emptyEl?.classList.add('d-none');
-            this.setStatus(t('Loading…'));
+            this.setStatus(t('Loading...'));
             this.updateIndex();
             this.renderQueue();
 
@@ -1199,7 +1199,7 @@
         }
 
         async save() {
-            this.setStatus(t('Saving…'), 'info');
+            this.setStatus(t('Saving...'), 'info');
             try {
                 const res = await fetch(`/datasets/api/${this.name}/annotations/${encodeURIComponent(this.currentName)}`, {
                     method: 'POST',
@@ -1303,7 +1303,7 @@
             const btn = document.getElementById('ann-autolabel');
             btn?.classList.add('is-busy');
             this.dirty = false;
-            this.setStatus(t('Auto-label running…'), 'info');
+            this.setStatus(t('Auto-label running...'), 'info');
             try {
                 const res = await fetch(`/datasets/api/${encodeURIComponent(this.name)}/autolabel`, {
                     method: 'POST',

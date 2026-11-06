@@ -22,6 +22,7 @@ from system.managers.database_manager import DatabaseManager
 from system.core.object_counter import ObjectCounter
 from system.managers.thread_manager import ThreadManager
 from system.runtime import AppRuntime
+from system.utils.dates import format_date, is_date
 from system.utils.i18n import load_translations, trans as translate
 from system.utils.paths import resolve_sqlite_uri
 from system.utils.utils import slug, system_check, should_run_startup_system_check
@@ -232,6 +233,33 @@ def register_template_helpers(app: Flask, context: dict):
         if not string:
             return ""
         return slug(string)
+
+    @app.template_filter('is_date')
+    def _is_date(value: Any) -> bool:
+        """
+        Return True when value is a date, a datetime, or a string of either.
+
+        Args:
+            value (Any): Value to check
+
+        Returns:
+            bool: True if the value represents a date or a datetime
+        """
+        return is_date(value)
+
+    @app.template_filter('format_date')
+    def _format_date(value: Any, fmt: str | None = None) -> str:
+        """
+        Format a date or datetime. A string that parses as one is accepted.
+
+        Args:
+            value (Any): Date, datetime, or string
+            fmt (str | None): Optional strftime pattern
+
+        Returns:
+            str: Formatted value
+        """
+        return format_date(value, fmt)
 
     @app.template_global()
     def trans(string: str, **kwargs: dict) -> str:
