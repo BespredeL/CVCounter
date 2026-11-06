@@ -73,11 +73,11 @@
                                 {% set mins = (duration_secs // 60) %}
                                 {% set secs = (duration_secs % 60) %}
                                 {% if mins > 60 %}
-                                    {{ (mins // 60) }}h {{ (mins % 60) }}m {{ secs }}s
+                                    {{ (mins // 60) }}{{ trans('h') }} {{ (mins % 60) }}{{ trans('m') }} {{ secs }}{{ trans('s') }}
                                 {% elif mins > 0 %}
-                                    {{ mins }}m {{ secs }}s
+                                    {{ mins }}{{ trans('m') }} {{ secs }}{{ trans('s') }}
                                 {% else %}
-                                    {{ secs }}s
+                                    {{ secs }}{{ trans('s') }}
                                 {% endif %}
                             {% else %}
                                 -
@@ -392,11 +392,11 @@
                                         {% set mins = (duration_secs // 60) %}
                                         {% set secs = (duration_secs % 60) %}
                                         {% if mins > 60 %}
-                                            {{ (mins // 60) }}h {{ (mins % 60) }}m {{ secs }}s
+                                            {{ (mins // 60) }}{{ trans('h') }} {{ (mins % 60) }}{{ trans('m') }} {{ secs }}{{ trans('s') }}
                                         {% elif mins > 0 %}
-                                            {{ mins }}m {{ secs }}s
+                                            {{ mins }}{{ trans('m') }} {{ secs }}{{ trans('s') }}
                                         {% else %}
-                                            {{ secs }}s
+                                            {{ secs }}{{ trans('s') }}
                                         {% endif %}
                                     </div>
                                 </div>
