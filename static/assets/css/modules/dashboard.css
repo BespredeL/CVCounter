@@ -611,6 +611,10 @@
     z-index: 1070;
 }
 
+#modelExportModal {
+    z-index: 1080;
+}
+
 .counter-settings-form__panel .cv-form-section:last-child {
     margin-bottom: 0;
 }

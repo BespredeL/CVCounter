@@ -53,17 +53,27 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        // Show/hide section containers based on whether they have visible children
+        // Show a section when it has visible cards, or when it is the selected
+        // category and has no cards of its own. A section without cards used to
+        // stay hidden after the chip was cleared.
         topicGroups.forEach(function (group) {
-            if (activeCategory !== 'all' && group.id !== activeCategory && !query) {
+            const items = group.querySelectorAll('.help-searchable-item');
+            const visibleChildren = group.querySelectorAll('.help-searchable-item:not([style*="display: none"])');
+            const categoryMatch = activeCategory === 'all' || group.id === activeCategory;
+            const isWorkflow = group.id === 'sec-workflow';
+            const workflowMatch = isWorkflow && categoryMatch && (!query || 'workflow общая схема'.includes(query));
+            const bareSection = items.length === 0 && categoryMatch && !query;
+
+            if (!categoryMatch && !query) {
                 group.style.display = 'none';
                 return;
             }
 
-            const visibleChildren = group.querySelectorAll('.help-searchable-item:not([style*="display: none"])');
-            const isWorkflow = group.id === 'sec-workflow';
-            if (visibleChildren.length > 0 || (isWorkflow && (!query || 'workflow общая схема'.includes(query)))) {
+            if (visibleChildren.length > 0 || workflowMatch || bareSection) {
                 group.style.display = '';
+                if (visibleChildren.length === 0 && (workflowMatch || bareSection)) {
+                    visibleCount++;
+                }
             } else {
                 group.style.display = 'none';
             }

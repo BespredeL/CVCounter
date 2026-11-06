@@ -223,48 +223,6 @@
             });
         });
 
-        // 3. Built-in inference providers (availability is per-provider, independent of the others)
-        const builtInProviders = r.providers || [];
-        if (builtInProviders.length) {
-            const providerRows = builtInProviders.map(provider => {
-                const available = Boolean(provider.available);
-                const statusLabel = available ? t('Available') : t('Unavailable');
-                const dependencies = Object.entries(provider.dependencies || {})
-                    .filter(([, installed]) => !installed)
-                    .map(([name]) => name);
-                const capabilities = provider.capabilities || {};
-                const capabilityLabels = [
-                    ...(capabilities.tasks || []),
-                    ...(capabilities.architectures || []),
-                    ...(capabilities.formats || [])
-                ];
-                const details = provider.error || (dependencies.length
-                    ? t('Missing dependencies') + ': ' + dependencies.join(', ')
-                    : '');
-                return `
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 py-2 border-bottom">
-                        <div>
-                            <span class="fw-semibold">${escapeHtml(provider.id || t('Provider'))}</span>
-                            <span class="badge ms-2 ${available ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle'}">${escapeHtml(statusLabel)}</span>
-                            ${details ? `<div class="small text-body-secondary mt-1">${escapeHtml(details)}</div>` : ''}
-                        </div>
-                        <div class="d-flex flex-wrap justify-content-end gap-1">
-                            ${capabilityLabels.map(label => `<span class="badge bg-body-tertiary border text-body-secondary">${escapeHtml(label)}</span>`).join('')}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            cardsHtml += `
-                <div class="col-12">
-                    <div class="card h-100 border rounded-3 p-3" style="background: var(--cv-surface-elevated, #1e2128); border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
-                        <div class="fw-bold mb-1">${escapeHtml(t('Built-in inference providers'))}</div>
-                        <div class="small text-body-secondary mb-2">${escapeHtml(t('Provider availability is independent; a missing optional provider does not disable the others.'))}</div>
-                        ${providerRows}
-                    </div>
-                </div>
-            `;
-        }
-
         if (!canInstallPackages) {
             cardsHtml += `
                 <div class="col-12">
