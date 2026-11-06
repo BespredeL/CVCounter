@@ -320,7 +320,9 @@ def extract_classes_from_pytorch(weights_path: Path) -> Optional[Tuple[Dict[int,
     try:
         import torch
 
-        checkpoint = torch.load(str(weights_path), map_location="cpu")
+        # Ultralytics checkpoints pickle the model object, so the torch>=2.6 safe unpickler
+        # cannot read them; the app already unpickles this same file when loading it for inference.
+        checkpoint = torch.load(str(weights_path), map_location="cpu", weights_only=False)
         if isinstance(checkpoint, dict):
             if "model" in checkpoint and hasattr(checkpoint["model"], "names"):
                 parsed = parse_names_dict(checkpoint["model"].names)
@@ -334,6 +336,18 @@ def extract_classes_from_pytorch(weights_path: Path) -> Optional[Tuple[Dict[int,
         pass
 
     return None
+
+
+def _companion_exports(path: Path, suffix: str) -> List[Path]:
+    """Same-stem files that can carry class names, in the order they should be read."""
+    result: List[Path] = []
+    for candidate_suffix in (".onnx", ".pt", ".pth"):
+        if candidate_suffix == suffix:
+            continue
+        candidate = path.with_suffix(candidate_suffix)
+        if candidate.is_file():
+            result.append(candidate)
+    return result
 
 
 def extract_model_classes(weights: Union[str, Path]) -> Tuple[Dict[int, str], Optional[str]]:
@@ -369,6 +383,17 @@ def extract_model_classes(weights: Union[str, Path]) -> Tuple[Dict[int, str], Op
         torch_result = extract_classes_from_pytorch(path)
         if torch_result:
             return torch_result
+
+    # 3. Formats that store no names (.engine, .torchscript, OpenVINO) normally sit next to the
+    #    ONNX or PyTorch export they were built from, and that export does carry them.
+    #    ONNX is tried first because reading it cannot run Python code.
+    for companion in _companion_exports(path, suffix):
+        if companion.suffix.lower() == ".onnx":
+            result = extract_classes_from_onnx(companion)
+        else:
+            result = extract_classes_from_pytorch(companion)
+        if result:
+            return result
 
     return {}, None
 

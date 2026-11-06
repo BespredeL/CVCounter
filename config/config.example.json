@@ -113,7 +113,7 @@
         "video_fps": 0,
         "video_reconnect_attempts": 5,
         "model_type": "auto",
-        "weights_path": "config/ultralytics/models/yolo11n.pt",
+        "weights_path": "",
         "confidence": 0.7,
         "iou": 0.7,
         "device": 0,
