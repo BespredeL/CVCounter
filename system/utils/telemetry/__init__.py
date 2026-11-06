@@ -4,7 +4,7 @@
 # Developed by: Aleksandr Kireev
 # Website: https://bespredel.name
 
-from .constants import *  # noqa: F401,F403
+from .constants import *
 from .doctor import DoctorMixin
 from .events import EventCaptureMixin
 from .feedback import FeedbackMixin
