@@ -66,7 +66,8 @@ class RTMDetAdapter(IDetector):
         except ImportError:
             raise ModelLoadingError(
                 "RTMDet PyTorch backend requires 'mmdet' and 'mmcv'. "
-                "Install via: pip install openmim && mim install mmengine mmcv mmdet. "
+                "Install it with one click on the System Information page (/system_info -> OpenMMLab RTMDet), "
+                "or manually: pip install openmim && mim install mmengine mmcv mmdet. "
                 "Alternatively, load an exported RTMDet .onnx model directly via ONNX Runtime."
             )
 

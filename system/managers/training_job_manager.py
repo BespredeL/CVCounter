@@ -156,7 +156,8 @@ class TrainingJobManager:
             err_msg = status.get('error') or "Missing dependencies"
             raise TrainingProviderUnavailableError(
                 f"Training provider '{provider_id}' is unavailable: {err_msg}. "
-                f"Install its dependencies with `python install.py --provider {status.get('install_provider', '')}`."
+                f"Install its dependencies with one click on the System Information page (/system_info), "
+                f"or with `python install.py --provider {status.get('install_provider', '')}`."
             )
         load_provider(provider_id, check_dependencies=True)
         return provider_id

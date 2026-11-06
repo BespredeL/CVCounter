@@ -141,6 +141,13 @@ OpenCV is included in Core and used for video ingestion and image processing.
    pip install -r requirements-onnx-export.txt
    ```
 
+   **One-click alternative:** all optional packs — including PyTorch (CUDA/CPU build matched to your GPU),
+   ONNX Runtime (CPU and CUDA), ONNX export tools, TensorRT, OpenVINO, Ultralytics, RF-DETR, D-FINE and RTMDet —
+   can be installed from the web interface. Open **System Information** (`/system_info`) and press **Install**
+   on the card of the runtime you need in the *AI Runtimes & Hardware Acceleration* block: the installer runs pip
+   in the background, streams its log, can be cancelled, and asks to restart the server when it finishes.
+   Administrator privileges are required when several users are configured.
+
 4. **Prepare the configuration file:**
    ```bash
    cp config/config.example.json config/config.json

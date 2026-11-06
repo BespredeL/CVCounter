@@ -4,7 +4,11 @@
 #   - NVIDIA GPU (Pascal, Turing, Ampere, Ada Lovelace, Blackwell)
 #   - Compatible NVIDIA driver and CUDA Toolkit
 #
+# TensorRT 11 builds FP16 and INT8 engines only through nvidia-modelopt. That extra
+# replaces the installed PyTorch and ONNX Runtime builds. TensorRT 10.15+ builds FP16
+# engines directly and supports current NVIDIA GPUs, including Blackwell (RTX 50).
+#
 # Install:
 #   pip install -r requirements-tensorrt.txt
-tensorrt>=8.6.0
+tensorrt>=10.15,<11
 

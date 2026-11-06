@@ -227,7 +227,9 @@
         <div id="system-doctor-results" class="d-none cv-card p-3 mb-3"></div>
 
         <!-- START: AI Runtimes & Hardware Acceleration Card -->
-        <div class="cv-card overflow-hidden mb-3" id="ai-runtimes-card">
+        <div class="cv-card overflow-hidden mb-3" id="ai-runtimes-card"
+             data-can-install="{{ '1' if can_install_packages else '0' }}"
+             data-allow-restart="{{ '1' if allow_web_control else '0' }}">
             <div class="p-3 border-start border-primary border-3">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
                     <div>
@@ -237,7 +239,7 @@
                             <span>{{ trans('AI Runtimes & Hardware Acceleration') }}</span>
                         </h2>
                         <p class="text-body-secondary small mb-0">
-                            {{ trans('Status of inference backends (ONNX, TensorRT, PyTorch) and one-click package installation.') }}
+                            {{ trans('Status of inference backends (ONNX, TensorRT, PyTorch), with one-click installation and removal.') }}
                         </p>
                     </div>
                     <button type="button"
@@ -476,16 +478,31 @@
                         </div>
                         <span class="badge bg-primary" id="installBundleBadge">bundle</span>
                     </div>
+                    <div class="progress mb-2" id="installProgressBar" style="height: 6px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated"
+                             id="installProgressFill" role="progressbar"
+                             aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="width: 0%;"></div>
+                    </div>
                     <pre class="bg-dark text-light p-3 rounded mb-0 cv-pre-viewer" id="installLogTerminal"></pre>
+                    <p class="small text-body-secondary mb-0 mt-2 d-none" id="installRestartHint">
+                        {{ trans('The packages were installed into the running environment. Restart the server so the new modules are loaded.') }}
+                    </p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"
-                            id="btn-cancel-install">{{ trans('Close') }}</button>
-                    <button type="button" class="btn btn-primary btn-sm d-none d-inline-flex align-items-center gap-2"
-                            id="btn-refresh-after-install">
+                    <button type="button" class="btn btn-outline-danger btn-sm d-none align-items-center gap-2"
+                            id="btn-cancel-install">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor"
-                             viewBox="0 0 16 16" class="bi bi-arrow-clockwise"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></svg>
-                        <span>{{ trans('Refresh page') }}</span>
+                             viewBox="0 0 16 16" class="bi bi-x-circle"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+                            <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 1 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708"/></svg>
+                        <span id="installCancelLabel">{{ trans('Cancel installation') }}</span>
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"
+                            id="btn-dismiss-install">{{ trans('Close') }}</button>
+                    <button type="button"
+                            class="btn btn-primary btn-sm d-none d-inline-flex align-items-center gap-2"
+                            id="btn-restart-server">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"></path><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"></path></svg>
+                        <span>{{ trans('Restart server') }}</span>
                     </button>
                 </div>
             </div>

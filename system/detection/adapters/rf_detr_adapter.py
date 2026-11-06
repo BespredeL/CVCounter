@@ -86,7 +86,8 @@ class RFDETRAdapter(IDetector):
         except ImportError:
             raise ModelLoadingError(
                 "RF-DETR backend requires the 'rfdetr' package. "
-                "Install it using: pip install rfdetr (or pip install -r requirements-rfdetr.txt). "
+                "Install it with one click on the System Information page (/system_info -> Roboflow RF-DETR), "
+                "or manually: pip install rfdetr (or pip install -r requirements-rfdetr.txt). "
                 "Alternatively, you can export your model to ONNX format to run via ONNX Runtime."
             )
 

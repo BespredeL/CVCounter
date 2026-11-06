@@ -7,7 +7,7 @@
 from flask import flash, redirect, render_template, request, url_for
 
 from routes.settings import settings_bp
-from system.auth import generate_password_hash, login_required
+from system.auth import generate_password_hash, is_admin_user, login_required
 from system.__version__ import APP_VERSION
 from system.utils.app_context import get_app_context, refresh_app_context
 from system.utils.i18n import trans as translate
@@ -103,4 +103,5 @@ def system_info() -> str:
         telemetry_last_send=telemetry_status.get('last_send'),
         telemetry_status=telemetry_status,
         allow_web_control=allow_web_control,
+        can_install_packages=is_admin_user(),
     )

@@ -276,7 +276,8 @@ class RFDETRTrainingProvider(BaseTrainingProvider):
         except ImportError:
             raise RuntimeError(
                 "RF-DETR training is unavailable: missing 'rfdetr' package. "
-                "Install it using: pip install -r requirements-rfdetr.txt"
+                "Install it with one click on the System Information page "
+                "(/system_info -> Roboflow RF-DETR), or manually: pip install -r requirements-rfdetr.txt"
             )
 
         run_dir = request.run_dir or (self.runs_dir(request.project_root) / request.task / request.run_name)

@@ -14,7 +14,8 @@ from typing import Any, Dict, List, Optional
 
 from system.detection.metadata import load_model_manifest
 from system.utils.paths import ensure_dir, get_project_root, resolve_project_path, resolve_training_paths
-from system.utils.runtimes import get_export_provider_capabilities
+from system.utils.i18n import trans as translate
+from system.utils.runtimes import engine_fp16_modelopt_message, get_export_provider_capabilities
 
 
 SUPPORTED_EXPORT_FORMATS = ('onnx', 'engine')
@@ -342,6 +343,11 @@ class ModelExportManager:
                 'capability': capability,
             }
 
+        if fmt == 'engine' and half:
+            modelopt_message = engine_fp16_modelopt_message()
+            if modelopt_message:
+                return {'ok': False, 'error': translate(modelopt_message)}
+
         request = ExportRequest(
             weights_path=weights_path,
             export_format=fmt,
@@ -382,6 +388,8 @@ class ModelExportManager:
     ) -> None:
         """Worker thread executing YOLO export."""
         try:
+            from system.utils.ultralytics_home import prepare_ultralytics
+            prepare_ultralytics()
             from ultralytics import YOLO
 
             fmt = request.export_format
@@ -392,12 +400,16 @@ class ModelExportManager:
             self._append_log(f"Loading YOLO model from: {weights_full_path}")
             model = YOLO(weights_full_path)
 
+            # Use `quantize` instead of the deprecated `half` kwarg (Ultralytics 8.4+).
+            # quantize=16 → FP16; quantize=8 → INT8 (requires calibration dataset).
+            # Omit the key entirely for FP32 so the exporter keeps its own defaults.
             export_kwargs: Dict[str, Any] = {
                 'format': fmt,
                 'imgsz': request.imgsz,
-                'half': request.half,
                 'simplify': True,
             }
+            if request.half:
+                export_kwargs['quantize'] = 16
 
             if fmt == 'onnx':
                 export_kwargs['dynamic'] = request.dynamic
@@ -407,7 +419,14 @@ class ModelExportManager:
                 export_kwargs['workspace'] = request.workspace
 
             self._append_log(f"Running model.export with options: {export_kwargs}")
-            export_result = model.export(**export_kwargs)
+            try:
+                export_result = model.export(**export_kwargs)
+            except ModuleNotFoundError as exc:
+                if 'modelopt' in str(exc).lower():
+                    # TensorRT 11 FP16/INT8 asks Ultralytics to import modelopt. TensorRT 10.x
+                    # builds the same FP16 engine without that package.
+                    raise RuntimeError(translate(engine_fp16_modelopt_message() or str(exc))) from exc
+                raise
 
             if not export_result:
                 raise RuntimeError(f"Ultralytics export returned empty result for format {fmt}")

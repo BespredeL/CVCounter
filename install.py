@@ -10,9 +10,11 @@ import sys
 import platform
 import subprocess
 import shutil
-import re
 import argparse
 from pathlib import Path
+
+from system.utils.hardware import detect_hardware_profile, resolve_pytorch_builds
+import system.utils.ultralytics_home
 
 
 # Configure Windows console for correct font and encoding handling
@@ -176,187 +178,8 @@ def ensure_vcredist() -> bool:
 
 
 # --------------------------------------------------------------------------------
-# Hardware detection (GPU / CPU / OS)
+# Hardware detection (GPU / CPU / OS) lives in system/utils/hardware.py
 # --------------------------------------------------------------------------------
-
-def detect_nvidia_gpu() -> dict:
-    """Detect NVIDIA GPU, driver version, and supported CUDA version."""
-    info = {
-        "available": False,
-        "name": None,
-        "driver_version": None,
-        "cuda_max": None,
-    }
-
-    # Search for nvidia-smi in PATH, System32, NVSMI, and DriverStore (Windows DCH)
-    nvidia_smi_cmd = shutil.which("nvidia-smi")
-    if not nvidia_smi_cmd and sys.platform == "win32":
-        candidates = [
-            r"C:\Windows\System32\nvidia-smi.exe",
-            r"C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe",
-            r"C:\Windows\SysWOW64\nvidia-smi.exe",
-        ]
-        # Search Windows DriverStore repository
-        ds_root = r"C:\Windows\System32\DriverStore\FileRepository"
-        if os.path.isdir(ds_root):
-            try:
-                for entry in os.scandir(ds_root):
-                    if entry.is_dir() and entry.name.lower().startswith("nv"):
-                        cand = os.path.join(entry.path, "nvidia-smi.exe")
-                        if os.path.isfile(cand):
-                            candidates.append(cand)
-            except Exception:
-                pass
-
-        for possible_path in candidates:
-            if os.path.exists(possible_path):
-                nvidia_smi_cmd = possible_path
-                break
-
-    if nvidia_smi_cmd:
-        try:
-            res = subprocess.run(
-                [nvidia_smi_cmd],
-                capture_output=True,
-                text=True,
-                timeout=8,
-                check=False
-            )
-            if res.returncode == 0 and res.stdout:
-                info["available"] = True
-                merged = res.stdout.replace('\n', ' ')
-
-                # Extract driver and CUDA versions
-                m_drv = re.search(r'(?:Driver Version|KMD Version):\s*([\d.]+)', merged, re.I)
-                if m_drv:
-                    info["driver_version"] = m_drv.group(1)
-
-                m_cuda = re.search(r'CUDA(?: UMD)? Version:\s*([\d.]+)', merged, re.I)
-                if m_cuda:
-                    info["cuda_max"] = m_cuda.group(1)
-
-                # Query exact GPU model name
-                name_res = subprocess.run(
-                    [nvidia_smi_cmd, "--query-gpu=name", "--format=csv,noheader"],
-                    capture_output=True,
-                    text=True,
-                    timeout=5,
-                    check=False
-                )
-                if name_res.returncode == 0 and name_res.stdout.strip():
-                    info["name"] = name_res.stdout.strip().splitlines()[0]
-                else:
-                    info["name"] = "NVIDIA GeForce / RTX GPU"
-        except Exception:
-            pass
-
-    return info
-
-
-def detect_all_gpus() -> list[str]:
-    """Retrieve list of all video adapters in the system."""
-    gpus = []
-    if sys.platform == "win32":
-        try:
-            res = subprocess.run(
-                ["powershell", "-NoProfile", "-Command",
-                 "Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name"],
-                capture_output=True,
-                text=True,
-                timeout=5,
-                check=False
-            )
-            if res.returncode == 0:
-                gpus = [line.strip() for line in res.stdout.splitlines() if line.strip()]
-        except Exception:
-            pass
-    elif sys.platform.startswith("linux"):
-        try:
-            res = subprocess.run(
-                ["lspci"],
-                capture_output=True,
-                text=True,
-                timeout=5,
-                check=False
-            )
-            if res.returncode == 0:
-                for line in res.stdout.splitlines():
-                    if any(k in line.lower() for k in ["vga", "3d", "display"]):
-                        gpus.append(line.strip())
-        except Exception:
-            pass
-    return gpus
-
-
-def detect_hardware_profile(force_profile: str = None) -> dict:
-    """Analyze hardware and select optimal acceleration profile."""
-    if force_profile:
-        return {"profile": force_profile, "name": f"User specified ({force_profile})"}
-
-    nv = detect_nvidia_gpu()
-    all_gpus = detect_all_gpus()
-    all_gpus_str = " ".join(all_gpus).lower()
-
-    if nv["available"]:
-        driver = nv.get("driver_version")
-        cuda = nv.get("cuda_max")
-        # Analyze supported CUDA version
-        cuda_major = 12.0
-        if cuda:
-            try:
-                cuda_major = float(cuda.split()[0])
-            except Exception:
-                cuda_major = 12.0
-
-        return {
-            "profile": "nvidia_cuda",
-            "name": nv["name"] or "NVIDIA GPU",
-            "driver_version": driver,
-            "cuda_version": cuda,
-            "cuda_major": cuda_major,
-            "all_gpus": all_gpus
-        }
-
-    # Fallback NVIDIA check via adapter list (e.g., Windows Sandbox, VM, minimal DCH)
-    if any(k in all_gpus_str for k in ["nvidia", "geforce", "rtx", "gtx", "quadro", "tesla"]):
-        nv_name = next((g for g in all_gpus if
-                        any(k in g.lower() for k in ["nvidia", "geforce", "rtx", "gtx", "quadro", "tesla"])),
-                       "NVIDIA GeForce GPU")
-        return {
-            "profile": "nvidia_cuda",
-            "name": nv_name,
-            "driver_version": "NVIDIA Windows Driver",
-            "cuda_version": "12.x",
-            "cuda_major": 12.0,
-            "all_gpus": all_gpus,
-            "driver_missing": True,
-        }
-
-    # Check AMD Radeon
-    if "amd" in all_gpus_str or "radeon" in all_gpus_str:
-        amd_name = next((g for g in all_gpus if "amd" in g.lower() or "radeon" in g.lower()), "AMD Radeon GPU")
-        return {
-            "profile": "amd_directml",
-            "name": amd_name,
-            "all_gpus": all_gpus
-        }
-
-    # Check Intel Arc / Iris Xe / Intel CPU
-    if "intel" in all_gpus_str or "arc" in all_gpus_str:
-        intel_name = next((g for g in all_gpus if "intel" in g.lower() or "arc" in g.lower()), "Intel GPU / CPU")
-        return {
-            "profile": "intel_openvino",
-            "name": intel_name,
-            "all_gpus": all_gpus
-        }
-
-    # CPU only
-    return {
-        "profile": "cpu",
-        "name": "Processor (CPU Inference)",
-        "all_gpus": all_gpus
-    }
-
 
 def prompt_nvidia_driver_guidance(hw: dict):
     """Guide the user when an NVIDIA GPU is detected but official driver or CUDA is missing."""
@@ -485,9 +308,13 @@ def check_torch_cuda_compatibility(hw: dict) -> tuple[bool, str]:
         target_sm = f"sm_{cap[0]}{cap[1]}"
         archs = torch.cuda.get_arch_list()
 
-        # For Blackwell (RTX 50-series: 5070 / 5080 / 5090 - sm_120, sm_100)
-        if cap[0] >= 12 and target_sm not in archs:
-            return False, f"Architecture {target_sm} ({hw.get('name', 'GPU')}) is not supported by installed PyTorch (requires CUDA 12.8+)"
+        # An official wheel built for newer silicon installs cleanly and only fails at inference,
+        # so the arch list has to be compared for every GPU, not just the newest ones.
+        if target_sm not in archs:
+            return False, (
+                f"Architecture {target_sm} ({hw.get('name', 'GPU')}) is not in the installed PyTorch build "
+                f"({torch.__version__}: {', '.join(archs) or 'no CUDA kernels'})"
+            )
 
         # Fast test tensor allocation on CUDA to confirm no driver/kernel errors
         t = torch.zeros(1, device='cuda')
@@ -517,32 +344,26 @@ def install_hardware_pytorch(hw: dict, reinstall: bool = False) -> bool:
 
     pr_info("Selecting optimal PyTorch build...")
 
+    builds = resolve_pytorch_builds(hw)
     if profile == "nvidia_cuda":
-        cuda_major = hw.get("cuda_major", 12)
-        gpu_name = hw.get("name", "").lower()
-        is_blackwell = any(
-            k in gpu_name for k in ["5070", "5080", "5090", "5060", "blackwell", "sm_120", "b100", "b200"])
-
-        if is_blackwell or cuda_major >= 12.0:
-            pr_info(
-                f"Detected NVIDIA GPU ({hw.get('name')}) -> Installing PyTorch with CUDA 12.8+ support (RTX 50xx Blackwell / Ada / Ampere)...")
-            cmd = ["install", "--force-reinstall", "torch", "torchvision", "--index-url",
-                   "https://download.pytorch.org/whl/cu128"]
-            success = run_pip(cmd, "Installing PyTorch and TorchVision (CUDA 12.8)")
-            if not success and not is_blackwell:
-                pr_warn("Failed to install PyTorch via cu128. Trying cu124...")
-                cmd = ["install", "--force-reinstall", "torch", "torchvision", "--index-url",
-                       "https://download.pytorch.org/whl/cu124"]
-                success = run_pip(cmd, "Installing PyTorch and TorchVision (CUDA 12.4)")
-        else:
-            pr_info("Installing PyTorch for CUDA 11.8...")
-            cmd = ["install", "--force-reinstall", "torch", "torchvision", "--index-url",
-                   "https://download.pytorch.org/whl/cu118"]
-            success = run_pip(cmd, "Installing PyTorch and TorchVision (CUDA 11.8)")
+        pr_info(f"Detected NVIDIA GPU ({hw.get('name')}) -> primary build: {builds[0]['label']}")
     else:
         pr_info("Installing lightweight CPU version of PyTorch...")
-        cmd = ["install", "torch", "torchvision", "--index-url", "https://download.pytorch.org/whl/cpu"]
-        success = run_pip(cmd, "Installing PyTorch and TorchVision")
+
+    success = False
+    for position, build in enumerate(builds):
+        cmd = ["install"]
+        if build["force_reinstall"]:
+            cmd.append("--force-reinstall")
+        cmd += list(build.get("packages") or ["torch", "torchvision"])
+        cmd += ["--index-url", build["index_url"]]
+        if build.get("note"):
+            pr_warn(f"      {build['note']}")
+        success = run_pip(cmd, f"Installing PyTorch and TorchVision ({build['label']})")
+        if success:
+            break
+        if position + 1 < len(builds):
+            pr_warn(f"Failed to install PyTorch via {build['label']}. Trying {builds[position + 1]['label']}...")
 
     if not success and profile == "nvidia_cuda":
         pr_warn("Trying universal PyTorch installation...")
@@ -687,7 +508,7 @@ def verify_installation(
                     pr(f"  [!] PyTorch: {torch_ver} | GPU {device_name} is not supported by current build!",
                        Colors.YELLOW, bold=True)
                     pr(f"      Reason: {desc}", Colors.YELLOW)
-                    pr("      Recommended: pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128",
+                    pr(f"      Recommended: pip install torch torchvision --index-url {resolve_pytorch_builds(hw)[0]['index_url']}",
                        Colors.YELLOW)
                     all_ok = False
                 else:
@@ -766,6 +587,8 @@ def verify_installation(
 
     # 5. Check optional Ultralytics YOLO
     try:
+        from system.utils.ultralytics_home import prepare_ultralytics
+        prepare_ultralytics()
         import ultralytics
         pr(f"  [OK] Ultralytics YOLO: {ultralytics.__version__}", Colors.GREEN)
     except Exception as e:

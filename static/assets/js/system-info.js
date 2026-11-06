@@ -11,10 +11,16 @@
 
     const t = (key, params) => (typeof window.trans === 'function' ? window.trans(key, params) : key);
 
+    // Set from the #ai-runtimes-card data attribute; installs are admin-only on the server too.
+    let canInstallPackages = true;
+
     const endpoints = Object.assign({
         runtimesStatus: '/settings/api/runtimes/status',
         runtimesInstall: '/settings/api/runtimes/install',
+        runtimesUninstall: '/settings/api/runtimes/uninstall',
         runtimesInstallStatus: '/settings/api/runtimes/install/status',
+        runtimesInstallCancel: '/settings/api/runtimes/install/cancel',
+        serverRestart: '/settings/api/restart',
         logs: '/settings/api/logs',
         logsClear: '/settings/api/logs/clear',
         systemDoctor: '/settings/system_doctor'
@@ -29,11 +35,267 @@
             .replace(/"/g, '&quot;');
     }
 
+    const ICON = {
+        nvidia: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-nvidia text-success flex-shrink-0" viewBox="0 0 16 16"><path d="M1.635 7.146S3.08 5.012 5.97 4.791v-.774C2.77 4.273 0 6.983 0 6.983s1.57 4.536 5.97 4.952v-.824c-3.23-.406-4.335-3.965-4.335-3.965M5.97 9.475v.753c-2.44-.435-3.118-2.972-3.118-2.972S4.023 5.958 5.97 5.747v.828h-.004c-1.021-.123-1.82.83-1.82.83s.448 1.607 1.824 2.07M6 2l-.03 2.017A7 7 0 0 1 6.252 4c3.637-.123 6.007 2.983 6.007 2.983s-2.722 3.31-5.557 3.31q-.39-.002-.732-.065v.883q.292.039.61.04c2.638 0 4.546-1.348 6.394-2.943.307.246 1.561.842 1.819 1.104-1.757 1.47-5.852 2.657-8.173 2.657a7 7 0 0 1-.65-.034V14H16l.03-12zm-.03 3.747v-.956a6 6 0 0 1 .282-.015c2.616-.082 4.332 2.248 4.332 2.248S8.73 9.598 6.743 9.598c-.286 0-.542-.046-.773-.123v-2.9c1.018.123 1.223.572 1.835 1.593L9.167 7.02s-.994-1.304-2.67-1.304a5 5 0 0 0-.527.031"/></svg>',
+        box: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box text-primary flex-shrink-0" viewBox="0 0 16 16"><path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5 8 5.961 14.154 3.5zM15 4.239l-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464z"/></svg>',
+        lightning: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-lightning-charge-fill text-warning flex-shrink-0" viewBox="0 0 16 16"><path d="M11.251.068a.5.5 0 0 1 .227.58L9.677 6.5H13a.5.5 0 0 1 .364.843l-8 8.5a.5.5 0 0 1-.842-.49L6.323 9.5H3a.5.5 0 0 1-.364-.843l8-8.5a.5.5 0 0 1 .615-.09z"/></svg>',
+        speedometer: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-speedometer2 text-info flex-shrink-0" viewBox="0 0 16 16"><path d="M8 4a.5.5 0 0 1 .5.5V6a.5.5 0 0 1-1 0V4.5A.5.5 0 0 1 8 4M3.732 5.732a.5.5 0 0 1 .707 0l.915.914a.5.5 0 1 1-.708.708l-.914-.915a.5.5 0 0 1 0-.707M2 10a.5.5 0 0 1 .5-.5h1.586a.5.5 0 0 1 0 1H2.5A.5.5 0 0 1 2 10m9.5 0a.5.5 0 0 1 .5-.5h1.5a.5.5 0 0 1 0 1H12a.5.5 0 0 1-.5-.5m.754-4.246a.39.39 0 0 0-.527-.02L7.547 9.31a.91.91 0 1 0 1.302 1.258l3.434-4.297a.39.39 0 0 0-.029-.518z"/><path fill-rule="evenodd" d="M0 10a8 8 0 1 1 15.547 2.661c-.442 1.253-1.845 1.602-2.932 1.25C11.309 13.488 9.475 13 8 13c-1.474 0-3.31.488-4.615.911-1.087.352-2.49.003-2.932-1.25A8 8 0 0 1 0 10m8-7a7 7 0 0 0-6.603 9.329c.203.575.923.876 1.68.63C4.397 12.533 6.358 12 8 12s3.604.532 4.923.96c.757.245 1.477-.056 1.68-.631A7 7 0 0 0 8 3"/></svg>',
+        cpu: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cpu text-body flex-shrink-0" viewBox="0 0 16 16"><path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14a2.5 2.5 0 0 1-2.5 2.5v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0m-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3zM5 6.5A1.5 1.5 0 0 1 6.5 5h3A1.5 1.5 0 0 1 11 6.5v3A1.5 1.5 0 0 1 9.5 11h-3A1.5 1.5 0 0 1 5 9.5zM6.5 6a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5z"/></svg>',
+        download: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" class="bi bi-download flex-shrink-0"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></svg>',
+        trash: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" class="bi bi-trash flex-shrink-0"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg>'
+    };
+
+    const BUNDLE_ICONS = {
+        onnxruntime: ICON.box,
+        onnx_runtime_gpu: ICON.box,
+        onnx_runtime_directml: ICON.box,
+        onnx_export: ICON.box,
+        tensorrt: ICON.lightning,
+        openvino: ICON.speedometer,
+        ultralytics: ICON.cpu,
+        rf_detr: ICON.cpu,
+        d_fine: ICON.cpu,
+        rtmdet: ICON.cpu
+    };
+
+    const CARD_ORDER = ['onnxruntime', 'onnx_runtime_gpu', 'onnx_runtime_directml', 'onnx_export',
+        'tensorrt', 'openvino', 'ultralytics', 'rf_detr', 'd_fine', 'rtmdet'];
+
+    function cardShell(options) {
+        return `
+            <div class="col-12 col-md-6 col-xl-3">
+                <div class="card h-100 border rounded-3 p-3 d-flex flex-column" style="background: var(--cv-surface-elevated, #1e2128); border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
+                    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                        <span class="fw-bold d-flex align-items-center gap-2 text-body">${options.icon}<span>${escapeHtml(options.title)}</span></span>
+                        ${options.badge}
+                    </div>
+                    <div class="mb-3">${options.body}</div>
+                    <div class="pt-2 border-top mt-auto" style="border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
+                        ${options.footer}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function statusBadge(bundle) {
+        if (bundle.installed) {
+            const label = bundle.version ? 'v' + bundle.version : t('Installed');
+            return `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">${escapeHtml(label)}</span>`;
+        }
+        if (!bundle.available) {
+            const reason = bundle.reasons && bundle.reasons.length ? t(bundle.reasons[0]) : t('Not available');
+            return `<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">${escapeHtml(reason)}</span>`;
+        }
+        return `<span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">${escapeHtml(t('Not installed'))}</span>`;
+    }
+
+    function installButton(bundle, cssClass) {
+        const label = (bundle.installed ? t('Update') : t('Install')) + ' ' + bundle.name;
+        const blocked = (bundle.reasons || []).map(reason => t(reason)).join('; ');
+        const disabled = !bundle.available || !canInstallPackages;
+        const title = disabled ? (blocked || t('Administrator privileges required')) : '';
+        return `
+            <button type="button"
+                    class="btn ${cssClass || 'btn-outline-primary'} btn-sm w-100 btn-install-bundle d-inline-flex align-items-center justify-content-center gap-2"
+                    data-bundle="${escapeHtml(bundle.key)}" data-label="${escapeHtml(bundle.name)}"
+                    ${disabled ? 'disabled' : ''} ${title ? 'title="' + escapeHtml(title) + '"' : ''}>
+                ${ICON.download}
+                <span>${escapeHtml(label)}</span>
+            </button>
+        `;
+    }
+
+    function removeButton(bundle) {
+        if (!bundle.installed) return '';
+        const disabled = !canInstallPackages;
+        const title = disabled ? t('Administrator privileges required') : t('Remove package');
+        return `
+            <button type="button"
+                    class="btn btn-outline-danger btn-sm w-100 btn-remove-bundle d-inline-flex align-items-center justify-content-center gap-2"
+                    data-bundle="${escapeHtml(bundle.key)}" data-label="${escapeHtml(bundle.name)}"
+                    ${disabled ? 'disabled' : ''} title="${escapeHtml(title)}">
+                ${ICON.trash}
+                <span>${escapeHtml(t('Remove'))}</span>
+            </button>
+        `;
+    }
+
+    function bundleActions(bundle, cssClass) {
+        const remove = removeButton(bundle);
+        const install = installButton(bundle, cssClass);
+        if (!remove) return install;
+        return `<div class="d-grid gap-2">${install}${remove}</div>`;
+    }
+
+    function formatProviders(providers) {
+        if (!providers || !Array.isArray(providers) || providers.length === 0) {
+            return '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">CPU</span>';
+        }
+        return providers.map(p => {
+            if (p === 'TensorrtExecutionProvider') return '<span class="badge bg-warning-subtle text-warning border border-warning-subtle me-1 mb-1">TensorRT</span>';
+            if (p === 'CUDAExecutionProvider') return '<span class="badge bg-success-subtle text-success border border-success-subtle me-1 mb-1">CUDA</span>';
+            if (p === 'DmlExecutionProvider') return '<span class="badge bg-info-subtle text-info border border-info-subtle me-1 mb-1">DirectML</span>';
+            if (p === 'OpenVINOExecutionProvider') return '<span class="badge bg-info-subtle text-info border border-info-subtle me-1 mb-1">OpenVINO</span>';
+            if (p === 'CPUExecutionProvider') return '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle me-1 mb-1">CPU</span>';
+            return `<span class="badge bg-light text-dark border me-1 mb-1">${escapeHtml(p.replace('ExecutionProvider', ''))}</span>`;
+        }).join('');
+    }
+
+    function bundleDetailRows(bundle, r) {
+        const pkgs = r.packages || {};
+        const exportCapabilities = r.export_capabilities || {};
+        const rows = [];
+
+        if (bundle.license) {
+            rows.push(`<span class="badge bg-body-tertiary border text-body-secondary font-monospace me-1 mb-1" style="font-size: 0.7rem;">${escapeHtml(bundle.license)}</span>`);
+        }
+        if (bundle.key === 'onnxruntime') {
+            rows.push(`<div class="small text-body-secondary mb-1">${escapeHtml(t('Execution Providers'))}:</div>
+                        <div class="d-flex flex-wrap">${formatProviders((pkgs.onnxruntime || {}).providers)}</div>`);
+        }
+        if (bundle.key === 'onnx_export') {
+            const capability = exportCapabilities.onnx || {};
+            const ready = Boolean(capability.available);
+            rows.push(`<p class="small mb-0 text-body-secondary">${escapeHtml(t('Export Tools'))}: <strong class="${ready ? 'text-success' : 'text-warning'}">${escapeHtml(ready ? t('Ready') : t('Unavailable'))}</strong></p>`);
+        }
+        if (bundle.key === 'tensorrt') {
+            const capability = exportCapabilities.engine || {};
+            const reason = (capability.reasons || []).join('; ');
+            rows.push(`<p class="small mb-0 text-body-secondary">${escapeHtml(t('Engine export'))}: <strong class="${capability.available ? 'text-success' : 'text-warning'}">${escapeHtml(capability.available ? t('Ready') : (reason || t('Unavailable')))}</strong></p>`);
+        }
+        if (bundle.requires_pytorch) {
+            rows.push(`<p class="small mb-0 text-body-secondary">${escapeHtml(t('Requires PyTorch'))}</p>`);
+        }
+        (bundle.warnings || []).forEach(text => {
+            rows.push(`<p class="small mb-0 text-warning">${escapeHtml(t(text))}</p>`);
+        });
+        if (bundle.steps && bundle.steps.length > 1) {
+            const steps = bundle.steps.map(step => escapeHtml(step)).join(' → ');
+            rows.push(`<p class="small mb-0 text-body-secondary">${escapeHtml(t('Installation steps'))}: ${steps}</p>`);
+        }
+        return rows.join('');
+    }
+
+    function renderRuntimes(r, container, onInstall, onRemove) {
+        const gpu = r.gpu || {};
+        const hw = r.hardware || {};
+        const pkgs = r.packages || {};
+        const bundles = r.bundles || {};
+        const torchPkg = pkgs.torch || {};
+        const pytorchBundle = bundles.pytorch;
+
+        let cardsHtml = '';
+
+        // 1. Hardware profile + PyTorch build (the base every torch plugin depends on)
+        if (pytorchBundle) {
+            const cudaOk = Boolean(gpu.cuda_available);
+            const pytorchWarnings = (pytorchBundle.warnings || [])
+                .map(text => `<p class="small mb-0 text-warning mt-1">${escapeHtml(t(text))}</p>`)
+                .join('');
+            const body = `
+                <p class="small mb-1 text-body-secondary">${escapeHtml(t('Device'))}: <strong class="text-body">${escapeHtml(gpu.device_name || hw.gpu_name || t('Not detected'))}</strong></p>
+                <p class="small mb-1 text-body-secondary">${escapeHtml(t('Hardware profile'))}: <strong class="text-body">${escapeHtml(hw.profile_label ? t(hw.profile_label) : '-')}</strong></p>
+                <p class="small mb-1 text-body-secondary">${escapeHtml(t('GPU architecture'))}: <strong class="text-body">${escapeHtml(gpu.device_arch || hw.device_arch || t('Not detected'))}</strong></p>
+                <p class="small mb-1 text-body-secondary">${escapeHtml(t('Installer build'))}: <strong class="text-body">${escapeHtml(hw.pytorch_build || '-')}</strong></p>
+                <p class="small mb-0 text-body-secondary">PyTorch: <strong class="text-body">${escapeHtml(torchPkg.version || t('Not installed'))}</strong>${cudaOk ? ' <span class="badge bg-success-subtle text-success border border-success-subtle ms-1">CUDA ' + escapeHtml(gpu.cuda_version || '') + '</span>' : ''}</p>
+                ${pytorchWarnings}
+            `;
+            cardsHtml += cardShell({
+                icon: ICON.nvidia,
+                title: 'PyTorch',
+                badge: statusBadge(pytorchBundle),
+                body: body,
+                footer: bundleActions(pytorchBundle, cudaOk ? 'btn-outline-success' : 'btn-outline-secondary')
+            });
+        }
+
+        // 2. One card per installable runtime or plugin bundle
+        CARD_ORDER.forEach(key => {
+            const bundle = bundles[key];
+            if (!bundle) return;
+            cardsHtml += cardShell({
+                icon: BUNDLE_ICONS[key] || ICON.cpu,
+                title: bundle.name,
+                badge: statusBadge(bundle),
+                body: `<p class="small text-body-secondary mb-2">${escapeHtml(t(bundle.description || ''))}</p>${bundleDetailRows(bundle, r)}`,
+                footer: bundleActions(bundle)
+            });
+        });
+
+        // 3. Built-in inference providers (availability is per-provider, independent of the others)
+        const builtInProviders = r.providers || [];
+        if (builtInProviders.length) {
+            const providerRows = builtInProviders.map(provider => {
+                const available = Boolean(provider.available);
+                const statusLabel = available ? t('Available') : t('Unavailable');
+                const dependencies = Object.entries(provider.dependencies || {})
+                    .filter(([, installed]) => !installed)
+                    .map(([name]) => name);
+                const capabilities = provider.capabilities || {};
+                const capabilityLabels = [
+                    ...(capabilities.tasks || []),
+                    ...(capabilities.architectures || []),
+                    ...(capabilities.formats || [])
+                ];
+                const details = provider.error || (dependencies.length
+                    ? t('Missing dependencies') + ': ' + dependencies.join(', ')
+                    : '');
+                return `
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 py-2 border-bottom">
+                        <div>
+                            <span class="fw-semibold">${escapeHtml(provider.id || t('Provider'))}</span>
+                            <span class="badge ms-2 ${available ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle'}">${escapeHtml(statusLabel)}</span>
+                            ${details ? `<div class="small text-body-secondary mt-1">${escapeHtml(details)}</div>` : ''}
+                        </div>
+                        <div class="d-flex flex-wrap justify-content-end gap-1">
+                            ${capabilityLabels.map(label => `<span class="badge bg-body-tertiary border text-body-secondary">${escapeHtml(label)}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            cardsHtml += `
+                <div class="col-12">
+                    <div class="card h-100 border rounded-3 p-3" style="background: var(--cv-surface-elevated, #1e2128); border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
+                        <div class="fw-bold mb-1">${escapeHtml(t('Built-in inference providers'))}</div>
+                        <div class="small text-body-secondary mb-2">${escapeHtml(t('Provider availability is independent; a missing optional provider does not disable the others.'))}</div>
+                        ${providerRows}
+                    </div>
+                </div>
+            `;
+        }
+
+        if (!canInstallPackages) {
+            cardsHtml += `
+                <div class="col-12">
+                    <div class="alert alert-secondary small mb-0" role="alert">${escapeHtml(t('Package installation requires administrator privileges.'))}</div>
+                </div>
+            `;
+        }
+
+        container.innerHTML = cardsHtml;
+
+        container.querySelectorAll('.btn-install-bundle').forEach(btn => {
+            btn.addEventListener('click', function () {
+                onInstall(this.getAttribute('data-bundle'), this.getAttribute('data-label'));
+            });
+        });
+        container.querySelectorAll('.btn-remove-bundle').forEach(btn => {
+            btn.addEventListener('click', function () {
+                onRemove(this.getAttribute('data-bundle'), this.getAttribute('data-label'));
+            });
+        });
+    }
+
     function initSystemInfo() {
         const runtimesContainer = document.getElementById('runtimes-container');
+        const runtimesCard = document.getElementById('ai-runtimes-card');
         const refreshBtn = document.getElementById('btn-refresh-runtimes');
         const installModalEl = document.getElementById('runtimeInstallModal');
         if (!runtimesContainer || !installModalEl) return;
+
+        canInstallPackages = !(runtimesCard && runtimesCard.dataset.canInstall === '0');
+        const allowRestart = !(runtimesCard && runtimesCard.dataset.allowRestart === '0');
 
         const installModal = new bootstrap.Modal(installModalEl);
         const installLogTerminal = document.getElementById('installLogTerminal');
@@ -41,11 +303,39 @@
         const installSpinner = document.getElementById('installSpinner');
         const installBundleBadge = document.getElementById('installBundleBadge');
         const installModalTitle = document.getElementById('installModalTitle');
-        const refreshAfterInstallBtn = document.getElementById('btn-refresh-after-install');
-        const closeInstallBtn = document.getElementById('btn-close-install-modal');
+        const installProgressFill = document.getElementById('installProgressFill');
+        const installRestartHint = document.getElementById('installRestartHint');
         const cancelInstallBtn = document.getElementById('btn-cancel-install');
+        const restartServerBtn = document.getElementById('btn-restart-server');
 
         let pollInterval = null;
+        let jobAction = 'install';
+
+        function isRemoval(action) {
+            return action === 'uninstall';
+        }
+
+        function setJobChrome(action, label) {
+            jobAction = isRemoval(action) ? 'uninstall' : 'install';
+            const removing = jobAction === 'uninstall';
+            installBundleBadge.textContent = label || '';
+            installModalTitle.textContent = (removing ? t('Removing') : t('Installing')) + ' ' + (label || '');
+            installLogTerminal.textContent = (removing ? t('Preparing the removal...') : t('Preparing the installation...')) + '\n';
+            installStatusText.textContent = removing ? t('Removal in progress...') : t('Installation in progress...');
+            installStatusText.className = 'fw-semibold';
+            const cancelLabel = document.getElementById('installCancelLabel');
+            if (cancelLabel) {
+                cancelLabel.textContent = removing ? t('Cancel removal') : t('Cancel installation');
+            }
+        }
+
+        function setModalIdle(running) {
+            cancelInstallBtn.classList.toggle('d-none', !running);
+            cancelInstallBtn.classList.toggle('d-inline-flex', running);
+            if (installProgressFill) {
+                installProgressFill.parentElement.classList.toggle('d-none', !running);
+            }
+        }
 
         function loadRuntimes() {
             runtimesContainer.innerHTML = `
@@ -62,288 +352,94 @@
                         runtimesContainer.innerHTML = `<div class="col-12 text-danger">${escapeHtml(t('Failed to load runtime information.'))}</div>`;
                         return;
                     }
-                    renderRuntimes(data.runtimes);
+                    renderRuntimes(data.runtimes, runtimesContainer, startBundleInstall, startBundleRemove);
+                    const job = data.install_job;
+                    if (job && job.status === 'running' && !pollInterval) {
+                        setJobChrome(job.action, job.bundle || '');
+                        setModalIdle(true);
+                        installModal.show();
+                        startPolling();
+                    }
                 })
                 .catch(err => {
                     runtimesContainer.innerHTML = `<div class="col-12 text-danger">${escapeHtml(t('Error loading runtime information'))}: ${escapeHtml(err.message)}</div>`;
                 });
         }
 
-        function formatProviders(providers) {
-            if (!providers || !Array.isArray(providers) || providers.length === 0) {
-                return '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">CPU</span>';
-            }
-            return providers.map(p => {
-                if (p === 'TensorrtExecutionProvider') return '<span class="badge bg-warning-subtle text-warning border border-warning-subtle me-1 mb-1">TensorRT</span>';
-                if (p === 'CUDAExecutionProvider') return '<span class="badge bg-success-subtle text-success border border-success-subtle me-1 mb-1">CUDA</span>';
-                if (p === 'DmlExecutionProvider') return '<span class="badge bg-info-subtle text-info border border-info-subtle me-1 mb-1">DirectML</span>';
-                if (p === 'OpenVINOExecutionProvider') return '<span class="badge bg-info-subtle text-info border border-info-subtle me-1 mb-1">OpenVINO</span>';
-                if (p === 'CPUExecutionProvider') return '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle me-1 mb-1">CPU</span>';
-                return `<span class="badge bg-light text-dark border me-1 mb-1">${escapeHtml(p.replace('ExecutionProvider', ''))}</span>`;
-            }).join('');
-        }
-
-        function renderRuntimes(r) {
-            const gpu = r.gpu || {};
-            const pkgs = r.packages || {};
-            const onnx = r.onnx || {};
-            const trt = r.tensorrt || {};
-            const exportCapabilities = r.export_capabilities || {};
-
-            let cardsHtml = '';
-
-            // 1. GPU & PyTorch CUDA
-            const cudaOk = gpu.cuda_available;
-            const torchPkg = pkgs.torch || {};
-            cardsHtml += `
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="card h-100 border rounded-3 p-3 d-flex flex-column" style="background: var(--cv-surface-elevated, #1e2128); border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <span class="fw-bold d-flex align-items-center gap-2 text-body">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-nvidia text-success flex-shrink-0" viewBox="0 0 16 16"><path d="M1.635 7.146S3.08 5.012 5.97 4.791v-.774C2.77 4.273 0 6.983 0 6.983s1.57 4.536 5.97 4.952v-.824c-3.23-.406-4.335-3.965-4.335-3.965M5.97 9.475v.753c-2.44-.435-3.118-2.972-3.118-2.972S4.023 5.958 5.97 5.747v.828h-.004c-1.021-.123-1.82.83-1.82.83s.448 1.607 1.824 2.07M6 2l-.03 2.017A7 7 0 0 1 6.252 4c3.637-.123 6.007 2.983 6.007 2.983s-2.722 3.31-5.557 3.31q-.39-.002-.732-.065v.883q.292.039.61.04c2.638 0 4.546-1.348 6.394-2.943.307.246 1.561.842 1.819 1.104-1.757 1.47-5.852 2.657-8.173 2.657a7 7 0 0 1-.65-.034V14H16l.03-12zm-.03 3.747v-.956a6 6 0 0 1 .282-.015c2.616-.082 4.332 2.248 4.332 2.248S8.73 9.598 6.743 9.598c-.286 0-.542-.046-.773-.123v-2.9c1.018.123 1.223.572 1.835 1.593L9.167 7.02s-.994-1.304-2.67-1.304a5 5 0 0 0-.527.031"/></svg>
-                                <span>NVIDIA CUDA</span>
-                            </span>
-                            ${cudaOk
-                                ? `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">${escapeHtml(t('Active'))}</span>`
-                                : `<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">${escapeHtml(t('CPU Mode'))}</span>`}
-                        </div>
-                        <div class="mb-3">
-                            <p class="small mb-1 text-body-secondary">${escapeHtml(t('Device'))}: <strong class="text-body">${escapeHtml(gpu.device_name || t('Not detected'))}</strong></p>
-                            <p class="small mb-1 text-body-secondary">${escapeHtml(t('CUDA Version'))}: <strong class="text-body">${escapeHtml(gpu.cuda_version || '-')}</strong></p>
-                            <p class="small mb-0 text-body-secondary">PyTorch: <strong class="text-body">${escapeHtml(torchPkg.version || '-')}</strong></p>
-                        </div>
-                        <div class="pt-2 border-top mt-auto" style="border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
-                            <div class="btn btn-sm w-100 disabled d-inline-flex align-items-center justify-content-center gap-2 ${cudaOk ? 'btn-outline-success text-success border-success-subtle' : 'btn-outline-secondary text-body-secondary'}" style="pointer-events: none; opacity: 0.95;">
-                                ${cudaOk
-                                    ? `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-check-circle-fill" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>`
-                                    : `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-cpu flex-shrink-0" viewBox="0 0 16 16"><path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14a2.5 2.5 0 0 1-2.5 2.5v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0m-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3zM5 6.5A1.5 1.5 0 0 1 6.5 5h3A1.5 1.5 0 0 1 11 6.5v3A1.5 1.5 0 0 1 9.5 11h-3A1.5 1.5 0 0 1 5 9.5zM6.5 6a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5z"/></svg>`}
-                                <span>${escapeHtml(cudaOk ? t('CUDA is ready for GPU acceleration') : t('CPU Mode'))}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // 2. ONNX & ONNX Runtime
-            const onnxSlimPkg = pkgs.onnxslim || {};
-            const onnxPkg = pkgs.onnx || {};
-            const ortPkg = pkgs.onnxruntime || {};
-            const onnxExportCapability = exportCapabilities.onnx || {};
-            const onnxExportReady = onnxExportCapability.available !== undefined
-                ? onnxExportCapability.available
-                : onnx.export_ready;
-            const onnxExportReason = (onnxExportCapability.reasons || []).join('; ');
-            const ultralyticsExporterAvailable = (r.providers || []).some(provider =>
-                provider.id === 'ultralytics' && provider.available
-            );
-            const canInstallOnnxTools = !onnxExportReady
-                && ultralyticsExporterAvailable
-                && !onnxPkg.installed;
-            const onnxToolsButtonLabel = onnxExportReady
-                ? t('Update ONNX Tools')
-                : (canInstallOnnxTools ? t('Install ONNX Tools') : t('Exporter unavailable'));
-            cardsHtml += `
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="card h-100 border rounded-3 p-3 d-flex flex-column" style="background: var(--cv-surface-elevated, #1e2128); border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <span class="fw-bold d-flex align-items-center gap-2 text-body">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box text-primary flex-shrink-0" viewBox="0 0 16 16"><path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5 8 5.961 14.154 3.5zM15 4.239l-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464z"/></svg>
-                                <span>ONNX Runtime</span>
-                            </span>
-                            ${ortPkg.installed
-                                ? `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">v${escapeHtml(ortPkg.version || 'OK')}</span>`
-                                : `<span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">${escapeHtml(t('Not installed'))}</span>`}
-                        </div>
-                        <div class="mb-3">
-                            <div class="small mb-1 text-body-secondary d-flex align-items-center gap-1">
-                                <span>${escapeHtml(t('Export Tools'))}:</span>
-                                <span class="badge ${onnxExportReady ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-danger-subtle text-danger border border-danger-subtle'}"
-                                      ${onnxExportReason ? 'title="' + escapeHtml(onnxExportReason) + '"' : ''}>
-                                    ${escapeHtml(onnxExportReady ? t('Ready') : t('Unavailable'))}
-                                </span>
-                                ${onnxSlimPkg.installed ? '<span class="badge bg-body-tertiary border text-body-secondary font-monospace" style="font-size: 0.7rem;">slim</span>' : ''}
-                            </div>
-                            <div class="small mb-0 text-body-secondary">
-                                <div class="mb-1">${escapeHtml(t('Execution Providers'))}:</div>
-                                <div class="d-flex flex-wrap align-items-center pt-0.5">
-                                    ${formatProviders(ortPkg.providers)}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="pt-2 border-top mt-auto" style="border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
-                            <button type="button" class="btn btn-outline-primary btn-sm w-100 btn-install-bundle d-inline-flex align-items-center justify-content-center gap-2"
-                                    data-bundle="onnx_export" ${!onnxExportReady && !canInstallOnnxTools ? 'disabled' : ''}
-                                    ${onnxExportReason ? 'title="' + escapeHtml(onnxExportReason) + '"' : ''}>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" class="bi bi-download"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></svg>
-                                <span>${escapeHtml(onnxToolsButtonLabel)}</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // 3. TensorRT (.engine)
-            const trtPkg = pkgs.tensorrt || {};
-            const trtSupported = trt.supported_on_hardware;
-            const trtExportCapability = exportCapabilities.engine || {};
-            const trtReady = trtExportCapability.available !== undefined
-                ? trtExportCapability.available
-                : trt.export_ready;
-            const trtExportReason = (trtExportCapability.reasons || []).join('; ');
-            cardsHtml += `
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="card h-100 border rounded-3 p-3 d-flex flex-column" style="background: var(--cv-surface-elevated, #1e2128); border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <span class="fw-bold d-flex align-items-center gap-2 text-body">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-lightning-charge-fill text-warning flex-shrink-0" viewBox="0 0 16 16"><path d="M11.251.068a.5.5 0 0 1 .227.58L9.677 6.5H13a.5.5 0 0 1 .364.843l-8 8.5a.5.5 0 0 1-.842-.49L6.323 9.5H3a.5.5 0 0 1-.364-.843l8-8.5a.5.5 0 0 1 .615-.09z"/></svg>
-                                <span>TensorRT</span>
-                            </span>
-                            ${trtPkg.installed
-                                ? `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">v${escapeHtml(trtPkg.version || 'OK')}</span>`
-                                : (trtSupported
-                                    ? `<span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">${escapeHtml(t('Not installed'))}</span>`
-                                    : `<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">${escapeHtml(t('GPU Required'))}</span>`)}
-                        </div>
-                        <div class="mb-3">
-                            <p class="small mb-1 text-body-secondary">${escapeHtml(t('Format'))}: <strong class="text-body font-monospace">.engine / .trt</strong></p>
-                            <p class="small mb-0 text-body-secondary">
-                                ${escapeHtml(t('Status'))}: 
-                                <strong class="${trtReady ? 'text-success' : (trtSupported ? 'text-warning' : 'text-secondary')}">
-                                    ${escapeHtml(trtReady ? t('Ready for Engine Export') : (trtExportReason || (trtSupported ? t('Requires tensorrt package') : t('NVIDIA GPU required'))))}
-                                </strong>
-                            </p>
-                        </div>
-                        <div class="pt-2 border-top mt-auto" style="border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
-                            <button type="button" class="btn btn-outline-warning btn-sm w-100 btn-install-bundle d-inline-flex align-items-center justify-content-center gap-2" 
-                                    data-bundle="tensorrt" ${trtSupported ? '' : 'disabled title="' + escapeHtml(t('Requires NVIDIA GPU')) + '"'}>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" class="bi bi-download"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></svg>
-                                <span>${escapeHtml(trtPkg.installed ? t('Update TensorRT') : t('Install TensorRT'))}</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // 4. OpenVINO
-            const ovPkg = pkgs.openvino || {};
-            cardsHtml += `
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="card h-100 border rounded-3 p-3 d-flex flex-column" style="background: var(--cv-surface-elevated, #1e2128); border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <span class="fw-bold d-flex align-items-center gap-2 text-body">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-speedometer2 text-info flex-shrink-0" viewBox="0 0 16 16"><path d="M8 4a.5.5 0 0 1 .5.5V6a.5.5 0 0 1-1 0V4.5A.5.5 0 0 1 8 4M3.732 5.732a.5.5 0 0 1 .707 0l.915.914a.5.5 0 1 1-.708.708l-.914-.915a.5.5 0 0 1 0-.707M2 10a.5.5 0 0 1 .5-.5h1.586a.5.5 0 0 1 0 1H2.5A.5.5 0 0 1 2 10m9.5 0a.5.5 0 0 1 .5-.5h1.5a.5.5 0 0 1 0 1H12a.5.5 0 0 1-.5-.5m.754-4.246a.39.39 0 0 0-.527-.02L7.547 9.31a.91.91 0 1 0 1.302 1.258l3.434-4.297a.39.39 0 0 0-.029-.518z"/><path fill-rule="evenodd" d="M0 10a8 8 0 1 1 15.547 2.661c-.442 1.253-1.845 1.602-2.932 1.25C11.309 13.488 9.475 13 8 13c-1.474 0-3.31.488-4.615.911-1.087.352-2.49.003-2.932-1.25A8 8 0 0 1 0 10m8-7a7 7 0 0 0-6.603 9.329c.203.575.923.876 1.68.63C4.397 12.533 6.358 12 8 12s3.604.532 4.923.96c.757.245 1.477-.056 1.68-.631A7 7 0 0 0 8 3"/></svg>
-                                <span>OpenVINO</span>
-                            </span>
-                            ${ovPkg.installed
-                                ? `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">v${escapeHtml(ovPkg.version || 'OK')}</span>`
-                                : `<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">${escapeHtml(t('Not installed'))}</span>`}
-                        </div>
-                        <div class="mb-3">
-                            <p class="small mb-1 text-body-secondary">${escapeHtml(t('Acceleration'))}: <strong class="text-body">${escapeHtml(t('Intel CPU / iGPU'))}</strong></p>
-                            <p class="small mb-0 text-body-secondary">${escapeHtml(t('Format'))}: <strong class="text-body font-monospace">.xml / .bin</strong></p>
-                        </div>
-                        <div class="pt-2 border-top mt-auto" style="border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
-                            <button type="button" class="btn btn-outline-info btn-sm w-100 btn-install-bundle d-inline-flex align-items-center justify-content-center gap-2" data-bundle="openvino">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" class="bi bi-download"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></svg>
-                                <span>${escapeHtml(ovPkg.installed ? t('Update OpenVINO') : t('Install OpenVINO'))}</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            const builtInProviders = r.providers || [];
-            if (builtInProviders.length) {
-                const providerRows = builtInProviders.map(provider => {
-                    const available = Boolean(provider.available);
-                    const statusLabel = available ? t('Available') : t('Unavailable');
-                    const dependencies = Object.entries(provider.dependencies || {})
-                        .filter(([, installed]) => !installed)
-                        .map(([name]) => name);
-                    const capabilities = provider.capabilities || {};
-                    const capabilityLabels = [
-                        ...(capabilities.tasks || []),
-                        ...(capabilities.architectures || []),
-                        ...(capabilities.formats || [])
-                    ];
-                    const details = provider.error || (dependencies.length
-                        ? t('Missing dependencies') + ': ' + dependencies.join(', ')
-                        : '');
-                    return `
-                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 py-2 border-bottom">
-                            <div>
-                                <span class="fw-semibold">${escapeHtml(provider.id || t('Provider'))}</span>
-                                <span class="badge ms-2 ${available ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle'}">${escapeHtml(statusLabel)}</span>
-                                ${details ? `<div class="small text-body-secondary mt-1">${escapeHtml(details)}</div>` : ''}
-                            </div>
-                            <div class="d-flex flex-wrap justify-content-end gap-1">
-                                ${capabilityLabels.map(label => `<span class="badge bg-body-tertiary border text-body-secondary">${escapeHtml(label)}</span>`).join('')}
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-                cardsHtml += `
-                    <div class="col-12">
-                        <div class="card h-100 border rounded-3 p-3" style="background: var(--cv-surface-elevated, #1e2128); border-color: var(--cv-border, rgba(255,255,255,0.08)) !important;">
-                            <div class="fw-bold mb-1">${escapeHtml(t('Built-in inference providers'))}</div>
-                            <div class="small text-body-secondary mb-2">${escapeHtml(t('Provider availability is independent; a missing optional provider does not disable the others.'))}</div>
-                            ${providerRows}
-                        </div>
-                    </div>
-                `;
-            }
-
-            runtimesContainer.innerHTML = cardsHtml;
-
-            // Attach install button listeners
-            document.querySelectorAll('.btn-install-bundle').forEach(btn => {
-                btn.addEventListener('click', function () {
-                    const bundle = this.getAttribute('data-bundle');
-                    startBundleInstall(bundle);
-                });
-            });
-        }
-
-        function startBundleInstall(bundle) {
-            if (!bundle) return;
-            installBundleBadge.textContent = bundle;
-            installModalTitle.textContent = t('Installing') + ' ' + bundle;
-            installLogTerminal.textContent = t('Initializing pip installation...') + '\n';
-            installStatusText.textContent = t('Installation in progress...');
+        function openJobModal(action, bundle, label) {
+            setJobChrome(action, label || bundle);
             installSpinner.classList.remove('d-none');
-            refreshAfterInstallBtn.classList.add('d-none');
-            closeInstallBtn.disabled = true;
-            cancelInstallBtn.disabled = true;
-
+            installRestartHint.classList.add('d-none');
+            restartServerBtn.classList.add('d-none');
+            restartServerBtn.disabled = false;
+            cancelInstallBtn.disabled = false;
+            if (installProgressFill) {
+                installProgressFill.style.width = '0%';
+                installProgressFill.setAttribute('aria-valuenow', '0');
+            }
+            setModalIdle(true);
             installModal.show();
+        }
 
-            fetch(endpoints.runtimesInstall, {
+        function postBundleJob(url, bundle, label, fallbackError) {
+            fetch(url, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
                 body: JSON.stringify({bundle: bundle}),
             })
                 .then(res => res.json())
                 .then(data => {
                     if (!data.ok) {
-                        installStatusText.textContent = t('Error') + ': ' + (data.error || 'Failed to start');
-                        installSpinner.classList.add('d-none');
-                        closeInstallBtn.disabled = false;
-                        cancelInstallBtn.disabled = false;
+                        showJobError(data.error || fallbackError);
                         return;
                     }
+                    const suffix = data.hardware && data.hardware.pytorch_build
+                        ? ' · ' + data.hardware.pytorch_build
+                        : '';
+                    installBundleBadge.textContent = (label || bundle) + suffix;
                     startPolling();
                 })
-                .catch(err => {
-                    installStatusText.textContent = t('Error') + ': ' + err.message;
-                    installSpinner.classList.add('d-none');
-                    closeInstallBtn.disabled = false;
-                    cancelInstallBtn.disabled = false;
-                });
+                .catch(err => showJobError(err.message));
+        }
+
+        function startBundleInstall(bundle, label) {
+            if (!bundle || !canInstallPackages) return;
+            openJobModal('install', bundle, label);
+            postBundleJob(endpoints.runtimesInstall, bundle, label, t('Failed to start installation'));
+        }
+
+        async function startBundleRemove(bundle, label) {
+            if (!bundle || !canInstallPackages) return;
+            const message = t('Remove {name}? Packages that belong only to this component will be uninstalled. Packages still required by the application or another installed component are kept. If a file is in use, restart the server and try again.', {name: label || bundle});
+            const confirmed = typeof window.appConfirm === 'function'
+                ? await window.appConfirm({
+                    title: t('Remove package'),
+                    message: message,
+                    confirmText: t('Remove'),
+                    tone: 'danger',
+                })
+                : window.confirm(message);
+            if (!confirmed) return;
+            openJobModal('uninstall', bundle, label);
+            postBundleJob(endpoints.runtimesUninstall, bundle, label, t('Removal failed'));
+        }
+
+        function showJobError(message) {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+            installSpinner.classList.add('d-none');
+            setModalIdle(false);
+            installStatusText.className = 'fw-semibold text-danger';
+            const failedLabel = jobAction === 'uninstall' ? t('Removal failed') : t('Installation failed');
+            installStatusText.innerHTML = `<span class="d-inline-flex align-items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16" class="bi bi-exclamation-triangle-fill"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg><span>${escapeHtml(failedLabel)}: ${escapeHtml(message || '')}</span></span>`;
         }
 
         function startPolling() {
             if (pollInterval) clearInterval(pollInterval);
             pollInterval = setInterval(checkInstallStatus, 1500);
+            checkInstallStatus();
         }
 
         function checkInstallStatus() {
@@ -352,28 +448,53 @@
                 .then(data => {
                     if (!data.ok || !data.job) return;
                     const job = data.job;
+                    if (job.action) {
+                        jobAction = job.action === 'uninstall' ? 'uninstall' : 'install';
+                    }
+                    const removing = jobAction === 'uninstall';
 
                     if (job.logs && job.logs.length > 0) {
                         installLogTerminal.textContent = job.logs.join('\n');
                         installLogTerminal.scrollTop = installLogTerminal.scrollHeight;
+                    }
+                    if (installProgressFill && job.step_total) {
+                        const percent = Math.min(100, Math.round((job.step_index / job.step_total) * 100));
+                        installProgressFill.style.width = percent + '%';
+                        installProgressFill.setAttribute('aria-valuenow', String(percent));
+                        if (job.status === 'running' && job.current_step) {
+                            installStatusText.textContent =
+                                `${t('Step')} ${job.step_index}/${job.step_total}: ${job.current_step}`;
+                        }
                     }
 
                     if (job.status === 'success') {
                         clearInterval(pollInterval);
                         pollInterval = null;
                         installSpinner.classList.add('d-none');
-                        installStatusText.innerHTML = '<span class="text-success d-inline-flex align-items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16" class="bi bi-check-circle-fill"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg><span>' + escapeHtml(t('Installation completed successfully!')) + '</span></span>';
-                        refreshAfterInstallBtn.classList.remove('d-none');
-                        closeInstallBtn.disabled = false;
-                        cancelInstallBtn.disabled = false;
+                        setModalIdle(false);
+                        installStatusText.className = 'fw-semibold';
+                        installStatusText.innerHTML = '<span class="text-success d-inline-flex align-items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16" class="bi bi-check-circle-fill"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg><span>' + escapeHtml(removing ? t('Package removed successfully!') : t('Installation completed successfully!')) + '</span></span>';
+                        installRestartHint.classList.remove('d-none');
+                        installRestartHint.textContent = allowRestart
+                            ? (removing
+                                ? t('The packages were removed from the running environment. Restart the server so they are unloaded.')
+                                : t('The packages were installed into the running environment. Restart the server so the new modules are loaded.'))
+                            : t('Server control via web interface is disabled in configuration. Restart the server manually.');
+                        if (allowRestart) {
+                            restartServerBtn.classList.remove('d-none');
+                            restartServerBtn.classList.add('d-inline-flex');
+                        }
                         loadRuntimes();
                     } else if (job.status === 'error') {
+                        showJobError(job.error);
+                    } else if (job.status === 'cancelled') {
                         clearInterval(pollInterval);
                         pollInterval = null;
                         installSpinner.classList.add('d-none');
-                        installStatusText.innerHTML = `<span class="text-danger d-inline-flex align-items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16" class="bi bi-exclamation-triangle-fill"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg><span>${escapeHtml(t('Installation failed'))}: ${escapeHtml(job.error || '')}</span></span>`;
-                        closeInstallBtn.disabled = false;
-                        cancelInstallBtn.disabled = false;
+                        setModalIdle(false);
+                        installStatusText.className = 'fw-semibold text-warning';
+                        installStatusText.textContent = removing ? t('Removal cancelled') : t('Installation cancelled');
+                        loadRuntimes();
                     }
                 })
                 .catch(() => {
@@ -384,9 +505,48 @@
             refreshBtn.addEventListener('click', loadRuntimes);
         }
 
-        if (refreshAfterInstallBtn) {
-            refreshAfterInstallBtn.addEventListener('click', function () {
-                window.location.reload();
+        if (cancelInstallBtn) {
+            cancelInstallBtn.addEventListener('click', function () {
+                cancelInstallBtn.disabled = true;
+                fetch(endpoints.runtimesInstallCancel, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'}
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        cancelInstallBtn.disabled = false;
+                        if (!data.ok && data.error) {
+                            installLogTerminal.textContent += '\n' + data.error;
+                        }
+                        if (!pollInterval) startPolling();
+                    })
+                    .catch(err => {
+                        cancelInstallBtn.disabled = false;
+                        installLogTerminal.textContent += '\n' + err.message;
+                    });
+            });
+        }
+
+        if (restartServerBtn) {
+            restartServerBtn.addEventListener('click', function () {
+                restartServerBtn.disabled = true;
+                restartServerBtn.querySelector('span').textContent = t('Restarting...');
+                fetch(endpoints.serverRestart, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'}
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (!data.ok) {
+                            restartServerBtn.disabled = false;
+                            installRestartHint.textContent = data.error || t('Failed to restart the server');
+                            return;
+                        }
+                        setTimeout(() => window.location.reload(), 6000);
+                    })
+                    .catch(() => {
+                        restartServerBtn.disabled = false;
+                    });
             });
         }
 

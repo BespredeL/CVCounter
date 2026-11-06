@@ -1,4 +1,4 @@
 # Optional ONNX export and graph optimization tools.
-onnx==1.17
-onnxsim==0.4.36
-onnxslim==0.1.57
+# Installable from the web UI: /system_info -> "ONNX Export & Tools".
+onnx>=1.16.0
+onnxslim>=0.1.30
