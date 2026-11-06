@@ -23,7 +23,9 @@
 
 # Core Web & App -----------------------------
 filterpy==1.4.5
-Flask-SocketIO==5.6.*
+Flask-SocketIO==5.7.0
+python-socketio==5.17.*
+python-engineio==4.13.3
 simple-websocket>=1.1.0
 Flask==3.1.*
 imutils==0.5.4
