@@ -80,6 +80,12 @@
                 <button type="button" class="help-chip" data-filter="sec-recording">
                     <span>{{ trans('Recording') }}</span>
                 </button>
+                <button type="button" class="help-chip" data-filter="sec-reports">
+                    <span>{{ trans('Reports') }}</span>
+                </button>
+                <button type="button" class="help-chip" data-filter="sec-settings">
+                    <span>{{ trans('Settings') }}</span>
+                </button>
                 <button type="button" class="help-chip" data-filter="sec-shortcuts">
                     <span>{{ trans('Keyboard shortcuts') }}</span>
                 </button>
@@ -109,7 +115,7 @@
                             </a>
                             <a href="#sec-video" class="help-toc-link">
                                 <span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="help-toc-link__icon bi bi-camera-video" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2zm11.5 5.175 3.5 1.556V4.269l-3.5 1.556zM2 4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h7.5a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z"/></svg>{{ trans('Video') }} / {{ trans('Text') }}</span>
-                                <span class="help-toc-link__badge">6</span>
+                                <span class="help-toc-link__badge">7</span>
                             </a>
                             <a href="#sec-zones" class="help-toc-link">
                                 <span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="help-toc-link__icon bi bi-bounding-box-circles" viewBox="0 0 16 16"><path d="M2 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2M0 2a2 2 0 0 1 3.937-.5h8.126A2 2 0 1 1 14.5 3.937v8.126a2 2 0 1 1-2.437 2.437H3.937A2 2 0 1 1 1.5 12.063V3.937A2 2 0 0 1 0 2m2.5 1.937v8.126c.703.18 1.256.734 1.437 1.437h8.126a2 2 0 0 1 1.437-1.437V3.937A2 2 0 0 1 12.063 2.5H3.937A2 2 0 0 1 2.5 3.937M14 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2M2 13a1 1 0 1 0 0 2 1 1 0 0 0 0-2m12 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2"/></svg>{{ trans('Counting zone editor') }}</span>
@@ -117,7 +123,7 @@
                             </a>
                             <a href="#sec-multi" class="help-toc-link">
                                 <span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="help-toc-link__icon bi bi-columns-gap" viewBox="0 0 16 16"><path d="M6 1v3H1V1zM1 0a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1zm14 12v3h-5v-3zm-5-1a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1zM6 8v7H1V8zm-5-1a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1zm14-6v7h-5V1zm-5-1a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1z"/></svg>{{ trans('Multi counter view') }}</span>
-                                <span class="help-toc-link__badge">1</span>
+                                <span class="help-toc-link__badge">2</span>
                             </a>
                             <a href="#sec-toolbar" class="help-toc-link">
                                 <span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="help-toc-link__icon bi bi-sliders" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M11.5 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M9.05 3a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0V3zM4.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M2.05 8a2.5 2.5 0 0 1 4.9 0H16v1H6.95a2.5 2.5 0 0 1-4.9 0H0V8zm9.45 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m-2.45 1a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0v-1z"/></svg>{{ trans('Help toolbar') }}</span>
@@ -131,9 +137,17 @@
                                 <span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="help-toc-link__icon bi bi-record-circle" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/><path d="M11 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/></svg>{{ trans('Recording') }}</span>
                                 <span class="help-toc-link__badge">3</span>
                             </a>
+                            <a href="#sec-reports" class="help-toc-link">
+                                <span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="help-toc-link__icon bi bi-file-earmark-bar-graph" viewBox="0 0 16 16"><path d="M10 13.5a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-6a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5zm-2.5.5a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5zm-3 0a.5.5 0 0 1-.5-.5v-2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5z"/><path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/></svg>{{ trans('Reports') }}</span>
+                                <span class="help-toc-link__badge">2</span>
+                            </a>
+                            <a href="#sec-settings" class="help-toc-link">
+                                <span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="help-toc-link__icon bi bi-gear" viewBox="0 0 16 16"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z"/></svg>{{ trans('Settings') }}</span>
+                                <span class="help-toc-link__badge">2</span>
+                            </a>
                             <a href="#sec-shortcuts" class="help-toc-link">
                                 <span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="help-toc-link__icon bi bi-keyboard" viewBox="0 0 16 16"><path d="M14 5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM2 4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><path d="M13 10.25a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm0-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5 0A.25.25 0 0 1 8.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 8 8.75zm2 0a.25.25 0 0 1 .25-.25h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5a.25.25 0 0 1-.25-.25zm1 2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5-2A.25.25 0 0 1 6.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 6 8.75zm-2 0A.25.25 0 0 1 4.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 4 8.75zm-2 0A.25.25 0 0 1 2.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 2 8.75zm11-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0A.25.25 0 0 1 9.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 9 6.75zm-2 0A.25.25 0 0 1 7.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 7 6.75zm-2 0A.25.25 0 0 1 5.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 5 6.75zm-3 0A.25.25 0 0 1 2.25 6h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5A.25.25 0 0 1 2 6.75zm0 4a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm2 0a.25.25 0 0 1 .25-.25h5.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-5.5a.25.25 0 0 1-.25-.25z"/></svg>{{ trans('Keyboard shortcuts') }}</span>
-                                <span class="help-toc-link__badge">8</span>
+                                <span class="help-toc-link__badge">14</span>
                             </a>
                             <a href="#sec-about" class="help-toc-link">
                                 <span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="help-toc-link__icon bi bi-info-circle" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/><path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/></svg>{{ trans('Developer') }}</span>
@@ -320,13 +334,15 @@
                                     </div>
                                 </article>
                                 <!-- Interactive state label -->
-                                <div class="btn-group btn-group-sm mt-2 help-demo-card--270 w-100" role="group">
+                                <div class="btn-group btn-group-sm mt-2 w-100" role="group">
                                     <button type="button" class="btn btn-outline-success active"
                                             id="btn-mock-running">{{ trans('Running') }}</button>
                                     <button type="button" class="btn btn-outline-warning"
                                             id="btn-mock-paused">{{ trans('Paused') }}</button>
                                     <button type="button" class="btn btn-outline-secondary"
                                             id="btn-mock-stopped">{{ trans('Stopped') }}</button>
+                                    <button type="button" class="btn btn-outline-info"
+                                            id="btn-mock-collection">{{ trans('Data collection (no model)') }}</button>
                                 </div>
                             </div>
                             <div class="help-card__body">
@@ -344,6 +360,9 @@
                                     </li>
                                     <li>
                                         <strong>{{ trans('Counter not running') }}:</strong> {{ trans('Detection process is stopped, resources released.') }}
+                                    </li>
+                                    <li>
+                                        <strong>{{ trans('Data collection (no model)') }}:</strong> {{ trans('Help data collection status') }}
                                     </li>
                                 </ul>
                                 <div class="help-card__tip">
@@ -428,8 +447,7 @@
                             </div>
                             <div class="help-card__body">
                                 <div class="help-card__header">
-                                    <h3 class="help-card__title">{{ trans('Open') }} ({{ trans('Video') }}
-                                        / {{ trans('Text') }} / {{ trans('Settings') }})</h3>
+                                    <h3 class="help-card__title">{{ trans('Open') }} ({{ trans('Video') }} / {{ trans('Text') }} / {{ trans('Settings') }})</h3>
                                     <span class="help-card__badge">{{ trans('Navigation') }}</span>
                                 </div>
                                 <p class="help-card__desc">{{ trans('Help card open menu') }}</p>
@@ -480,7 +498,7 @@
                             </h2>
                             <p class="help-section__desc">{{ trans('Help counter totals') }}</p>
                         </div>
-                        <span class="help-section__badge">6 {{ trans('Element') }}</span>
+                        <span class="help-section__badge">7 {{ trans('Element') }}</span>
                     </div>
 
                     <!-- Item 2.1: Counting zone link -->
@@ -489,13 +507,15 @@
                         <div class="help-card__inner">
                             <div class="help-card__preview">
                                 <span class="help-card__preview-label">{{ trans('Element') }}</span>
-                                <span class="btn btn-sm btn-dark">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                         class="bi bi-intersect me-1 text-primary" viewBox="0 0 16 16">
-                                        <path d="M0 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2H2a2 2 0 0 1-2-2zm5 10v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2v5a2 2 0 0 1-2 2zm6-8V2a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2V6a2 2 0 0 1 2-2z"/>
-                                    </svg>
-                                    {{ trans('Counting zone') }}
-                                </span>
+                                <div class="help-video-overlay-stage">
+                                    <span class="btn btn-sm btn-dark counter-overlay-btn shadow">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                             class="bi bi-intersect" viewBox="0 0 16 16">
+                                            <path d="M0 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2H2a2 2 0 0 1-2-2zm5 10v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2v5a2 2 0 0 1-2 2zm6-8V2a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2V6a2 2 0 0 1 2-2z"/>
+                                        </svg>
+                                        <span class="ms-1">{{ trans('Counting zone') }}</span>
+                                    </span>
+                                </div>
                             </div>
                             <div class="help-card__body">
                                 <div class="help-card__header">
@@ -503,6 +523,44 @@
                                     <span class="help-card__badge">{{ trans('Navigation') }}</span>
                                 </div>
                                 <p class="help-card__desc">{{ trans('Help counting zone link') }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Item 2.1b: Detection indicator -->
+                    <div class="help-card help-searchable-item"
+                         data-keywords="indicator bounding box dot рамка точка детекция">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Element') }}</span>
+                                <div class="help-video-overlay-stage">
+                                    <span class="btn btn-sm btn-dark counter-overlay-btn shadow me-3"
+                                          title="{{ trans('Toggle indicator mode') }}">
+                                        <span class="d-inline-flex align-items-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bounding-box" viewBox="0 0 16 16">
+                                                <path d="M5 2V0H0v5h2v6H0v5h5v-2h6v2h5v-5h-2V5h2V0h-5v2H5zm6 1v2h2v6h-2v2H5v-2H3V5h2V3h6zm1-2h3v3h-3V1zm3 11v3h-3v-3h3zM4 15H1v-3h3v3zM1 4V1h3v3H1z"/>
+                                            </svg>
+                                        </span>
+                                        <span class="ms-1">{{ trans('Bounding box') }}</span>
+                                    </span>
+
+                                    <span class="btn btn-sm btn-dark counter-overlay-btn shadow"
+                                          title="{{ trans('Toggle indicator mode') }}">
+                                        <span class="d-inline-flex align-items-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-record-circle" viewBox="0 0 16 16">
+                                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M11 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/>
+                                            </svg>
+                                        </span>
+                                        <span class="ms-1">{{ trans('Dot') }}</span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">{{ trans('Toggle indicator mode') }}</h3>
+                                    <span class="help-card__badge">{{ trans('Video') }}</span>
+                                </div>
+                                <p class="help-card__desc">{{ trans('Help indicator mode') }}</p>
                             </div>
                         </div>
                     </div>
@@ -980,16 +1038,14 @@
                                 <span class="help-card__preview-label">{{ trans('Element') }}</span>
                                 <div class="d-flex flex-column gap-2 align-items-center w-100">
                                     <div class="d-flex flex-wrap gap-1 justify-content-center">
-                                        <span class="btn btn-outline-primary btn-sm">{{ trans('Add zone') }}</span>
-                                        <span class="btn btn-outline-danger btn-sm">{{ trans('Delete zone') }}</span>
-                                        <span class="btn btn-primary btn-sm">{{ trans('Zone {index}', index=1) }}</span>
-                                        <span class="btn btn-outline-secondary btn-sm">{{ trans('Zone {index}', index=2) }}</span>
+                                        <span class="btn btn-primary btn-sm">V · {{ trans('Select & Edit') }}</span>
+                                        <span class="btn btn-outline-primary btn-sm">P · {{ trans('Draw polygon') }}</span>
+                                        <span class="btn btn-outline-primary btn-sm">R · {{ trans('Draw rectangle') }}</span>
                                     </div>
                                     <div class="d-flex flex-wrap gap-1 justify-content-center">
                                         <span class="btn btn-outline-secondary btn-sm">{{ trans('Undo') }}</span>
-                                        <span class="btn btn-outline-secondary btn-sm">{{ trans('Clear') }}</span>
-                                        <span class="btn btn-outline-secondary btn-sm">{{ trans('Full frame') }}</span>
-                                        <span class="btn btn-outline-secondary btn-sm">{{ trans('Rectangle') }}</span>
+                                        <span class="btn btn-outline-secondary btn-sm">{{ trans('Redo') }}</span>
+                                        <span class="btn btn-outline-info btn-sm">{{ trans('Refresh frame') }}</span>
                                         <span class="btn btn-success btn-sm">{{ trans('Save zone') }}</span>
                                     </div>
                                 </div>
@@ -1007,6 +1063,39 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="help-card help-searchable-item"
+                         data-keywords="zone color direction full frame center rectangle цвет направление зона">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Element') }}</span>
+                                <div class="d-flex flex-column gap-2 align-items-center w-100">
+                                    <div class="d-flex flex-wrap gap-1 justify-content-center">
+                                        <span class="btn btn-outline-primary btn-sm">{{ trans('Add zone') }}</span>
+                                        <span class="btn btn-outline-secondary btn-sm">{{ trans('Rectangle') }}</span>
+                                        <span class="btn btn-outline-secondary btn-sm">{{ trans('Full frame') }}</span>
+                                        <span class="btn btn-outline-secondary btn-sm">{{ trans('Center box') }}</span>
+                                        <span class="btn btn-outline-danger btn-sm">{{ trans('Clear') }}</span>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-1 justify-content-center align-items-center">
+                                        <span class="badge text-bg-info">{{ trans('Zone color') }}</span>
+                                        <span class="btn btn-outline-secondary btn-sm">{{ trans('Any direction') }}</span>
+                                        <span class="btn btn-outline-secondary btn-sm">⬅️</span>
+                                        <span class="btn btn-outline-secondary btn-sm">➡️</span>
+                                        <span class="btn btn-outline-secondary btn-sm">⬆️</span>
+                                        <span class="btn btn-outline-secondary btn-sm">⬇️</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">{{ trans('Zone color') }} &amp; {{ trans('Counting direction') }}</h3>
+                                    <span class="help-card__badge">{{ trans('Geometry') }}</span>
+                                </div>
+                                <p class="help-card__desc">{{ trans('Help zone appearance') }}</p>
+                            </div>
+                        </div>
+                    </div>
                 </section>
 
                 <!-- Section 4: Multi counter view -->
@@ -1019,7 +1108,7 @@
                             </h2>
                             <p class="help-section__desc">{{ trans('Multi counter hint short') }}</p>
                         </div>
-                        <span class="help-section__badge">1 {{ trans('Element') }}</span>
+                        <span class="help-section__badge">2 {{ trans('Element') }}</span>
                     </div>
 
                     <!-- Item 4.1: Multi counter card -->
@@ -1059,6 +1148,28 @@
                                 <p class="help-card__desc small text-secondary mb-0">
                                     {{ trans('Ideal for dispatcher and operator displays: combines multiple conveyor lines into one control panel.') }}
                                 </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="help-card help-searchable-item"
+                         data-keywords="select visible select all clear multi view выбор видимые все">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Element') }}</span>
+                                <div class="d-flex flex-wrap gap-1 justify-content-center">
+                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('Select visible') }}</span>
+                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('Select all') }}</span>
+                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('Clear selection') }}</span>
+                                    <span class="btn btn-primary btn-sm">{{ trans('Open multi view') }}</span>
+                                </div>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">{{ trans('Open multi view') }}</h3>
+                                    <span class="help-card__badge">{{ trans('Dashboard') }}</span>
+                                </div>
+                                <p class="help-card__desc">{{ trans('Help multi select') }}</p>
                             </div>
                         </div>
                     </div>
@@ -1319,10 +1430,14 @@
                             <div class="help-card__preview">
                                 <span class="help-card__preview-label">{{ trans('Element') }}</span>
                                 <div class="d-flex flex-wrap gap-1 justify-content-center">
-                                    <span class="btn btn-outline-primary btn-sm">{{ trans('Box') }}</span>
-                                    <span class="btn btn-outline-primary btn-sm">{{ trans('Polygon') }}</span>
+                                    <span class="btn btn-outline-secondary btn-sm">A · {{ trans('Previous') }}</span>
+                                    <span class="btn btn-outline-secondary btn-sm">D · {{ trans('Next') }}</span>
+                                    <span class="btn btn-outline-primary btn-sm">W · {{ trans('Box') }}</span>
+                                    <span class="btn btn-outline-primary btn-sm">P · {{ trans('Polygon') }}</span>
                                     <span class="btn btn-outline-secondary btn-sm">{{ trans('Track ID') }}</span>
                                     <span class="btn btn-outline-secondary btn-sm">{{ trans('Attributes') }}</span>
+                                    <span class="btn btn-primary btn-sm">{{ trans('Auto-label') }}</span>
+                                    <span class="btn btn-success btn-sm">{{ trans('Save') }}</span>
                                 </div>
                             </div>
                             <div class="help-card__body">
@@ -1459,6 +1574,121 @@
                     </div>
                 </section>
 
+                <!-- Section: Reports -->
+                <section id="sec-reports" class="help-section help-topic-group">
+                    <div class="help-section__header">
+                        <div>
+                            <h2 class="help-section__title">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-file-earmark-bar-graph text-primary me-2 flex-shrink-0" viewBox="0 0 16 16"><path d="M10 13.5a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-6a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5zm-2.5.5a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5zm-3 0a.5.5 0 0 1-.5-.5v-2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5z"/><path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/></svg>
+                                {{ trans('Reports') }}
+                            </h2>
+                            <p class="help-section__desc">{{ trans('History and statistics') }}</p>
+                        </div>
+                        <span class="help-section__badge">2 {{ trans('Element') }}</span>
+                    </div>
+
+                    <div class="help-card help-searchable-item"
+                         data-keywords="reports locations sessions images videos отчеты площадки сессии">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Element') }}</span>
+                                <div class="d-flex flex-wrap gap-1 justify-content-center">
+                                    <a href="{{ url_for('reports.reports') }}" class="btn btn-outline-primary btn-sm">{{ trans('Reports') }}</a>
+                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('Locations') }}</span>
+                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('Sessions') }}</span>
+                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('Images') }}</span>
+                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('Videos') }}</span>
+                                </div>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">{{ trans('Go to reports') }}</h3>
+                                    <span class="help-card__badge">{{ trans('Archive') }}</span>
+                                </div>
+                                <p class="help-card__desc">{{ trans('Help reports index') }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="help-card help-searchable-item"
+                         data-keywords="report session print delete class timeline отчет печать удалить">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Element') }}</span>
+                                <div class="d-flex flex-wrap gap-1 justify-content-center">
+                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('Total') }}</span>
+                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('Correct') }}</span>
+                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('Defect') }}</span>
+                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('By class') }}</span>
+                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('Print report') }}</span>
+                                    <span class="btn btn-outline-danger btn-sm">{{ trans('Delete') }}</span>
+                                </div>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">{{ trans('Count Session Report') }}</h3>
+                                    <span class="help-card__badge">{{ trans('Sessions') }}</span>
+                                </div>
+                                <p class="help-card__desc">{{ trans('Help report session') }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section: Settings and system info -->
+                <section id="sec-settings" class="help-section help-topic-group">
+                    <div class="help-section__header">
+                        <div>
+                            <h2 class="help-section__title">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-gear text-primary me-2 flex-shrink-0" viewBox="0 0 16 16"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z"/></svg>
+                                {{ trans('Settings') }}
+                            </h2>
+                            <p class="help-section__desc">{{ trans('Configuration') }}</p>
+                        </div>
+                        <span class="help-section__badge">2 {{ trans('Element') }}</span>
+                    </div>
+
+                    <div class="help-card help-searchable-item"
+                         data-keywords="settings cameras detectors api users telemetry настройки камеры">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Element') }}</span>
+                                <div class="d-flex flex-wrap gap-1 justify-content-center">
+                                    <a href="{{ url_for('settings.settings') }}" class="btn btn-outline-primary btn-sm">{{ trans('Settings') }}</a>
+                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('General') }}</span>
+                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('Cameras') }}</span>
+                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('Detections') }}</span>
+                                    <span class="btn btn-outline-secondary btn-sm">{{ trans('REST API') }}</span>
+                                </div>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">{{ trans('Configuration') }}</h3>
+                                    <span class="help-card__badge">{{ trans('Settings') }}</span>
+                                </div>
+                                <p class="help-card__desc">{{ trans('Help settings page') }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="help-card help-searchable-item"
+                         data-keywords="system info gpu cuda diagnostics система диагностика">
+                        <div class="help-card__inner">
+                            <div class="help-card__preview">
+                                <span class="help-card__preview-label">{{ trans('Element') }}</span>
+                                <a href="{{ url_for('settings.system_info') }}" class="btn btn-outline-info btn-sm">{{ trans('System info') }}</a>
+                            </div>
+                            <div class="help-card__body">
+                                <div class="help-card__header">
+                                    <h3 class="help-card__title">{{ trans('System info') }}</h3>
+                                    <span class="help-card__badge">{{ trans('Environment') }}</span>
+                                </div>
+                                <p class="help-card__desc">{{ trans('Help system info') }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Section 8: Keyboard Shortcuts Cheat Sheet -->
                 <section id="sec-shortcuts" class="help-section help-topic-group">
                     <div class="help-section__header">
@@ -1469,42 +1699,66 @@
                             </h2>
                             <p class="help-section__desc">{{ trans('Fast navigation and operation via keyboard') }}</p>
                         </div>
-                        <span class="help-section__badge">8 {{ trans('Shortcuts') }}</span>
+                        <span class="help-section__badge">14 {{ trans('Shortcuts') }}</span>
                     </div>
 
+                    <p class="help-section__desc">{{ trans('Help shortcuts scope') }}</p>
                     <div class="help-shortcuts-grid">
-                        <div class="help-shortcut-card help-searchable-item" data-keywords="space пробел пауза старт">
+                        <div class="help-shortcut-card help-searchable-item" data-keywords="space пробел пауза старт dashboard counter">
                             <span class="help-shortcut-card__label">{{ trans('Pause') }} / {{ trans('Start') }}</span>
                             <span class="help-kbd">Space</span>
                         </div>
-                        <div class="help-shortcut-card help-searchable-item" data-keywords="1-9 цифры класс ввод">
-                            <span class="help-shortcut-card__label">{{ trans('Class / quick input') }}</span>
-                            <span class="help-kbd">1 – 9</span>
-                        </div>
-                        <div class="help-shortcut-card help-searchable-item" data-keywords="ctrl k поиск find search">
-                            <span class="help-shortcut-card__label">{{ trans('Search help...') }}</span>
-                            <span class="help-kbd">Ctrl + K</span>
-                        </div>
-                        <div class="help-shortcut-card help-searchable-item"
-                             data-keywords="f f11 fullscreen полноэкранный">
-                            <span class="help-shortcut-card__label">{{ trans('Switch fullscreen mode') }}</span>
-                            <span class="help-kbd">F11</span>
-                        </div>
-                        <div class="help-shortcut-card help-searchable-item" data-keywords="esc escape закрыть отмена">
-                            <span class="help-shortcut-card__label">{{ trans('Cancel') }} / {{ trans('Close') }}</span>
-                            <span class="help-kbd">Esc</span>
-                        </div>
-                        <div class="help-shortcut-card help-searchable-item" data-keywords="enter сохранить применить">
-                            <span class="help-shortcut-card__label">{{ trans('Save') }} / {{ trans('Apply') }}</span>
+                        <div class="help-shortcut-card help-searchable-item" data-keywords="enter сохранить сессия counter save">
+                            <span class="help-shortcut-card__label">{{ trans('Save') }}</span>
                             <span class="help-kbd">Enter</span>
                         </div>
-                        <div class="help-shortcut-card help-searchable-item" data-keywords="+ - плюс минус количество">
-                            <span class="help-shortcut-card__label">{{ trans('Step ± 1 (Defect / Correction)') }}</span>
-                            <span class="help-kbd">+ / -</span>
+                        <div class="help-shortcut-card help-searchable-item" data-keywords="+ - плюс минус брак defect">
+                            <span class="help-shortcut-card__label">{{ trans('Defective products') }}</span>
+                            <span class="help-kbd">+ / −</span>
                         </div>
-                        <div class="help-shortcut-card help-searchable-item" data-keywords="slash слэш поиск">
-                            <span class="help-shortcut-card__label">{{ trans('Focus search') }}</span>
-                            <span class="help-kbd">/</span>
+                        <div class="help-shortcut-card help-searchable-item" data-keywords="v p r zone polygon rectangle select">
+                            <span class="help-shortcut-card__label">{{ trans('Select & Edit') }} / {{ trans('Draw polygon') }} / {{ trans('Draw rectangle') }}</span>
+                            <span class="help-kbd">V · P · R</span>
+                        </div>
+                        <div class="help-shortcut-card help-searchable-item" data-keywords="ctrl z y undo redo отмена повтор">
+                            <span class="help-shortcut-card__label">{{ trans('Undo') }} / {{ trans('Redo') }}</span>
+                            <span class="help-kbd">Ctrl+Z / Ctrl+Y</span>
+                        </div>
+                        <div class="help-shortcut-card help-searchable-item" data-keywords="ctrl s save zone annotate сохранить">
+                            <span class="help-shortcut-card__label">{{ trans('Save zone') }} / {{ trans('Annotate') }}</span>
+                            <span class="help-kbd">Ctrl+S</span>
+                        </div>
+                        <div class="help-shortcut-card help-searchable-item" data-keywords="f esc fit cancel zone">
+                            <span class="help-shortcut-card__label">{{ trans('Fit to view') }} / {{ trans('Cancel drawing / return to edit mode') }}</span>
+                            <span class="help-kbd">F / Esc</span>
+                        </div>
+                        <div class="help-shortcut-card help-searchable-item" data-keywords="delete backspace vertex shape зона">
+                            <span class="help-shortcut-card__label">{{ trans('Delete') }}</span>
+                            <span class="help-kbd">Del</span>
+                        </div>
+                        <div class="help-shortcut-card help-searchable-item" data-keywords="a d previous next annotator кадр">
+                            <span class="help-shortcut-card__label">{{ trans('Previous') }} / {{ trans('Next') }}</span>
+                            <span class="help-kbd">A / D</span>
+                        </div>
+                        <div class="help-shortcut-card help-searchable-item" data-keywords="w p v box polygon select annotator">
+                            <span class="help-shortcut-card__label">{{ trans('Box') }} / {{ trans('Polygon') }} / {{ trans('Select') }}</span>
+                            <span class="help-kbd">W · P · V</span>
+                        </div>
+                        <div class="help-shortcut-card help-searchable-item" data-keywords="1-9 class annotator класс">
+                            <span class="help-shortcut-card__label">{{ trans('Classes') }}</span>
+                            <span class="help-kbd">1 – 9</span>
+                        </div>
+                        <div class="help-shortcut-card help-searchable-item" data-keywords="ctrl a auto-label авторазметка">
+                            <span class="help-shortcut-card__label">{{ trans('Auto-label') }}</span>
+                            <span class="help-kbd">Ctrl+A</span>
+                        </div>
+                        <div class="help-shortcut-card help-searchable-item" data-keywords="space pan skip annotator zone пробел">
+                            <span class="help-shortcut-card__label">{{ trans('Pan canvas') }} / {{ trans('Skip') }}</span>
+                            <span class="help-kbd">Space</span>
+                        </div>
+                        <div class="help-shortcut-card help-searchable-item" data-keywords="ctrl k slash поиск help search">
+                            <span class="help-shortcut-card__label">{{ trans('Search help...') }}</span>
+                            <span class="help-kbd">Ctrl+K /</span>
                         </div>
                     </div>
                 </section>
@@ -1552,18 +1806,47 @@
                                 </div>
                                 <h3 class="h6 fw-bold mb-1">{{ trans('References') }} &amp; {{ trans('License') }}</h3>
                                 <p class="text-secondary small mb-2">
-                                    {{ trans('Based on open-source computer vision and object detection algorithms.') }}
+                                    {{ trans('Help project license') }}
                                 </p>
-                                <div class="mb-3">
-                                    <a href="https://github.com/ultralytics" target="_blank" rel="noopener"
-                                       class="help-about-link mb-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cpu me-1" viewBox="0 0 16 16"><path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14a2.5 2.5 0 0 1-2.5 2.5v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0m-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3zM5 6.5A1.5 1.5 0 0 1 6.5 5h3A1.5 1.5 0 0 1 11 6.5v3A1.5 1.5 0 0 1 9.5 11h-3A1.5 1.5 0 0 1 5 9.5zM6.5 6a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5z"/></svg> Ultralytics YOLO Engine
+                                <div class="d-flex flex-wrap gap-2 mb-3">
+                                    <a href="https://cvcounter.createdby.ru" target="_blank" rel="noopener"
+                                       class="help-about-link">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-globe" viewBox="0 0 16 16"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.5-6.923c-.67.204-1.335.82-1.887 1.855A8 8 0 0 0 5.145 4H7.5zM4.09 4a9.3 9.3 0 0 1 .64-1.539 7 7 0 0 1 .597-.933A7.03 7.03 0 0 0 2.255 4zm-.582 3.5c.03-.877.138-1.718.312-2.5H1.674a7 7 0 0 0-.656 2.5zM4.847 5a12.5 12.5 0 0 0-.338 2.5H7.5V5zM8.5 5v2.5h2.99a12.5 12.5 0 0 0-.337-2.5zM4.51 8.5a12.5 12.5 0 0 0 .337 2.5H7.5V8.5zm3.99 0V11h2.653c.187-.765.306-1.608.338-2.5zM5.145 12q.208.58.468 1.068c.552 1.035 1.218 1.65 1.887 1.855V12zm.182 2.472a7 7 0 0 1-.597-.933A9.3 9.3 0 0 1 4.09 12H2.255a7 7 0 0 0 3.072 2.472M3.82 11a13.7 13.7 0 0 1-.312-2.5h-2.49c.062.89.291 1.733.656 2.5zm6.853 3.472A7 7 0 0 0 13.745 12H11.91a9.3 9.3 0 0 1-.64 1.539 7 7 0 0 1-.597.933M8.5 12v2.923c.67-.204 1.335-.82 1.887-1.855q.26-.487.468-1.068zm3.68-1h2.146c.365-.767.594-1.61.656-2.5h-2.49a13.7 13.7 0 0 1-.312 2.5m2.802-3.5a7 7 0 0 0-.656-2.5H12.18c.174.782.282 1.623.312 2.5zM11.27 2.461c.247.464.462.98.64 1.539h1.835a7 7 0 0 0-3.072-2.472c.218.284.418.598.597.933M10.855 4a8 8 0 0 0-.468-1.068C9.835 1.897 9.17 1.282 8.5 1.077V4z"/></svg>
+                                        {{ trans('Website') }}
+                                    </a>
+                                    <a href="https://github.com/BespredeL/CVCounter" target="_blank" rel="noopener"
+                                       class="help-about-link">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-github" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg>
+                                        GitHub
+                                    </a>
+                                    <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener"
+                                       class="help-about-link">
+                                        AGPL-3.0
                                     </a>
                                 </div>
-                                <a href="https://www.gnu.org/licenses/agpl-3.0.en.html" target="_blank" rel="noopener"
-                                   class="text-decoration-none small text-muted">
-                                    📄 GNU Affero General Public License v3.0
-                                </a>
+                                <p class="text-secondary small mb-2">{{ trans('Help engine licenses') }}</p>
+                                <ul class="help-license-list">
+                                    <li>
+                                        <a href="https://onnxruntime.ai/" target="_blank" rel="noopener">ONNX Runtime</a>
+                                        <span class="help-license-list__tag">MIT</span>
+                                    </li>
+                                    <li>
+                                        <a href="https://github.com/ultralytics/ultralytics" target="_blank" rel="noopener">Ultralytics YOLO</a>
+                                        <span class="help-license-list__tag">AGPL-3.0</span>
+                                    </li>
+                                    <li>
+                                        <a href="https://github.com/roboflow/rf-detr" target="_blank" rel="noopener">Roboflow RF-DETR</a>
+                                        <span class="help-license-list__tag">Apache-2.0</span>
+                                    </li>
+                                    <li>
+                                        <a href="https://github.com/Peterande/D-FINE" target="_blank" rel="noopener">D-FINE</a>
+                                        <span class="help-license-list__tag">Apache-2.0</span>
+                                    </li>
+                                    <li>
+                                        <a href="https://github.com/open-mmlab/mmdetection" target="_blank" rel="noopener">OpenMMLab RTMDet</a>
+                                        <span class="help-license-list__tag">Apache-2.0</span>
+                                    </li>
+                                </ul>
                             </div>
                         </div>
                     </div>

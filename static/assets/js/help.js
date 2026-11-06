@@ -145,24 +145,27 @@ document.addEventListener('DOMContentLoaded', function () {
     const btnRunning = document.getElementById('btn-mock-running');
     const btnPaused = document.getElementById('btn-mock-paused');
     const btnStopped = document.getElementById('btn-mock-stopped');
+    const btnCollection = document.getElementById('btn-mock-collection');
 
     if (mockCard && mockBadge && btnRunning && btnPaused && btnStopped) {
         const mockToggle = document.getElementById('help-mock-toggle');
         const mockStop = document.getElementById('help-mock-stop');
+        const statusButtons = [btnRunning, btnPaused, btnStopped, btnCollection].filter(Boolean);
 
         function setMockStatus(statusClass, badgeText, activeBtn) {
-            mockCard.classList.remove('counter-card--running', 'counter-card--paused', 'counter-card--stopped');
+            mockCard.classList.remove('counter-card--running', 'counter-card--paused', 'counter-card--stopped', 'counter-card--collection');
             mockCard.classList.add(statusClass);
             mockBadge.textContent = badgeText;
 
-            [btnRunning, btnPaused, btnStopped].forEach(b => b.classList.remove('active'));
+            statusButtons.forEach(b => b.classList.remove('active'));
             activeBtn.classList.add('active');
 
-            // Update toggle icon: running → show pause, else → show play
+            // Update toggle icon: live stream → show pause, else → show play
             if (mockToggle) {
                 const iconPlay = mockToggle.querySelector('.icon-play');
                 const iconPause = mockToggle.querySelector('.icon-pause');
-                if (statusClass === 'counter-card--running') {
+                const live = statusClass === 'counter-card--running' || statusClass === 'counter-card--collection';
+                if (live) {
                     iconPlay && iconPlay.classList.add('d-none');
                     iconPause && iconPause.classList.remove('d-none');
                 } else {
@@ -199,6 +202,9 @@ document.addEventListener('DOMContentLoaded', function () {
         btnRunning.addEventListener('click', () => setMockStatus('counter-card--running', t('Counter running'), btnRunning));
         btnPaused.addEventListener('click', () => setMockStatus('counter-card--paused', t('Counter paused'), btnPaused));
         btnStopped.addEventListener('click', () => setMockStatus('counter-card--stopped', t('Counter stopped'), btnStopped));
+        if (btnCollection) {
+            btnCollection.addEventListener('click', () => setMockStatus('counter-card--collection', t('Data collection (no model)'), btnCollection));
+        }
     }
 
     // 3. Interactive Defective Keyboard Mock

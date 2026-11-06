@@ -108,14 +108,14 @@
         }
     },
     "detection_default": {
-        "video_show_scale": 70,
+        "video_show_scale": 80,
         "video_show_quality": 50,
         "video_fps": 0,
         "video_reconnect_attempts": 5,
         "model_type": "auto",
         "weights_path": "",
-        "confidence": 0.7,
-        "iou": 0.7,
+        "confidence": 0.5,
+        "iou": 0.6,
         "device": 0,
         "vid_stride": 1,
         "tracker": "sort",
@@ -183,14 +183,14 @@
             "label": "Label ExampleCam",
             "start_total_count": 0,
             "video_path": "",
-            "video_show_scale": 70,
-            "video_show_quality": 30,
+            "video_show_scale": 80,
+            "video_show_quality": 50,
             "video_fps": 0,
             "video_reconnect_attempts": 5,
             "model_type": "yolo",
             "weights_path": "config/ultralytics/models/yolo11n.pt",
-            "confidence": 0.7,
-            "iou": 0.7,
+            "confidence": 0.5,
+            "iou": 0.6,
             "device": 0,
             "vid_stride": 1,
             "tracker": "sort",
@@ -248,12 +248,12 @@
                 }
             },
             "dataset_create": {
-                "enable": true,
+                "enable": false,
                 "probability": 0.05,
                 "path": "storage/saved_images"
             },
             "recording": {
-                "enable": true,
+                "enable": false,
                 "scale": 80,
                 "quality": 60,
                 "idle_timeout": 15
