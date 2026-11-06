@@ -29,6 +29,8 @@ from typing import Optional
 
 import yaml
 
+import system.utils.ultralytics_home
+
 from system.managers.training_job_manager import (
     DEFAULT_EPOCHS,
     DEFAULT_IMG_SIZE,

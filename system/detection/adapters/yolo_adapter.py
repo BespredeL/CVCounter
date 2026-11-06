@@ -20,7 +20,10 @@ try:
 except ImportError:
     torch = None
 
+from system.utils.ultralytics_home import prepare_ultralytics
+
 try:
+    prepare_ultralytics()
     from ultralytics import YOLO, settings
 
     try:

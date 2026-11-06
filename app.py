@@ -9,6 +9,8 @@
 import os
 import sys
 
+import system.utils.ultralytics_home
+
 try:
     import colorama
     colorama.init()

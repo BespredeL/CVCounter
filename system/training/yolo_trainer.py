@@ -362,6 +362,8 @@ def download_base_model(
     # Fallback to Ultralytics built-in downloader
     logger.info(f"Trying Ultralytics fallback for {clean_name}...")
     try:
+        from system.utils.ultralytics_home import prepare_ultralytics
+        prepare_ultralytics()
         from ultralytics import YOLO
         _ = YOLO(clean_name)
         cwd_cand = Path(clean_name)
@@ -539,6 +541,8 @@ def load_model(model_path: Path):
     """
     if not model_path.is_file():
         raise FileNotFoundError(f'Model not found: {model_path}')
+    from system.utils.ultralytics_home import prepare_ultralytics
+    prepare_ultralytics()
     from ultralytics import YOLO
     return YOLO(str(model_path))
 
