@@ -16,6 +16,7 @@
 {% block footer_assets %}
     {% if not auth_enabled or auth_user %}
         <script src="{{ url_for('static', filename='assets/js/device-picker.js') }}"></script>
+        <script src="{{ url_for('static', filename='assets/js/classes-editor.js') }}"></script>
         <script src="{{ url_for('static', filename='assets/js/counter-settings-modal.js') }}"></script>
     {% endif %}
     <script src="{{ url_for('static', filename='assets/js/dashboard-counters.js') }}"></script>
