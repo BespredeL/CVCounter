@@ -1,9 +1,10 @@
 {# Counter dashboard card #}
 <!-- START: Counter dashboard card -->
-<article class="counter-card counter-card--{{ status }}"
+<article class="counter-card counter-card--{{ status }} counter-card--setup-{{ setup_status|default('unconfigured') }}"
          id="counter_card_{{ location|slug }}"
          data-location="{{ location }}"
          data-status="{{ status }}"
+         data-setup-status="{{ setup_status|default('unconfigured') }}"
          data-video-url="{{ url_for('counters.counter_video', location=location) }}"
          data-text-url="{{ url_for('counters.counter_text', location=location) }}"
          data-zone-url="{{ url_for('counters.counting_area_edit', location=location) }}"
@@ -48,6 +49,17 @@
             <span class="counter-card__badge"
                   data-role="status-badge">{% if status == 'collection' %}{{ trans('Data collection (no model)') }}{% elif status == 'stopped' %}{{ trans('Counter stopped') }}{% elif status == 'paused' %}{{ trans('Counter paused') }}{% else %}{{ trans('Counter running') }}{% endif %}</span>
         </div>
+        {% if setup_status and setup_status != 'ready' %}
+            <p class="counter-card__setup-hint small mb-1">
+                {% if setup_status == 'unconfigured' %}
+                    <span class="badge text-bg-warning">{{ trans('Needs setup') }}</span>
+                {% elif setup_status == 'missing_deps' %}
+                    <span class="badge text-bg-danger">{{ trans('Missing components') }}</span>
+                {% elif setup_status == 'template' %}
+                    <span class="badge text-bg-secondary">{{ trans('Example template') }}</span>
+                {% endif %}
+            </p>
+        {% endif %}
         <p class="counter-card__location text-muted">{{ location }}</p>
         <div class="counter-card__actions">
             <div class="btn-group counter-card__transport" role="group" aria-label="{{ trans('Counter control') }}">

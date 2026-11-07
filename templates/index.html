@@ -5,6 +5,7 @@
 {% block head_assets %}
     <link href="{{ url_for('static', filename='assets/css/modules/dashboard.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='assets/css/modules/settings.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='assets/css/modules/setup-wizard.css') }}" rel="stylesheet">
 {% endblock %}
 
 {% block header %}
@@ -19,6 +20,7 @@
         <script src="{{ url_for('static', filename='assets/js/classes-editor.js') }}"></script>
         <script src="{{ url_for('static', filename='assets/js/model-export.js') }}"></script>
         <script src="{{ url_for('static', filename='assets/js/counter-settings-modal.js') }}"></script>
+        <script src="{{ url_for('static', filename='assets/js/onboarding-welcome.js') }}"></script>
     {% endif %}
     <script src="{{ url_for('static', filename='assets/js/dashboard-counters.js') }}"></script>
 {% endblock %}
@@ -26,7 +28,21 @@
 {% block content %}
     {% include 'partials/app_nav_cards.html' %}
 
-    {% if not has_detections %}
+    {% if show_onboarding_welcome %}
+        <div class="onboarding-panel my-3" id="onboarding-welcome-banner" role="region"
+             aria-label="{{ trans('Welcome to CVCounter') }}">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                <div class="min-w-0">
+                    <h2 class="h5 mb-1">{{ trans('Welcome to CVCounter') }}</h2>
+                    <p class="mb-0 text-body-secondary small">{{ trans('Setup wizard intro') }}</p>
+                </div>
+                <div class="d-flex gap-2 flex-shrink-0">
+                    <a href="{{ url_for('settings.setup_wizard_page') }}" class="btn btn-primary btn-sm">{{ trans('Open setup wizard') }}</a>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-onboarding-action="skip">{{ trans('Skip for now') }}</button>
+                </div>
+            </div>
+        </div>
+    {% elif not has_detections %}
         <div class="alert alert-info border-info-subtle shadow-sm my-3 p-3 rounded-3" id="first-run-banner" role="region" aria-label="{{ trans('Getting Started') }}">
             <div class="d-flex justify-content-between align-items-start mb-2">
                 <div class="d-flex align-items-center gap-2">
@@ -35,35 +51,9 @@
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-            <p class="mb-3 text-body-secondary small">
+            <p class="mb-0 text-body-secondary small">
                 {{ trans('No trained models detected yet. You can collect frames from your cameras, annotate them, and train a model directly through the web interface!') }}
             </p>
-            <div class="row g-2 text-start small">
-                <div class="col-md-3">
-                    <div class="p-2 border rounded bg-body-tertiary h-100">
-                        <strong class="text-primary d-block mb-1">1. {{ trans('Connect Camera') }}</strong>
-                        <span>{{ trans('Configure camera in Settings. Models are not needed to start collecting frames.') }}</span>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="p-2 border rounded bg-body-tertiary h-100">
-                        <strong class="text-primary d-block mb-1">2. {{ trans('Create Dataset') }}</strong>
-                        <a href="{{ url_for('datasets.datasets_index') }}" class="text-decoration-none d-block">{{ trans('Go to Datasets') }} →</a>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="p-2 border rounded bg-body-tertiary h-100">
-                        <strong class="text-primary d-block mb-1">3. {{ trans('Collect & Annotate') }}</strong>
-                        <span>{{ trans('Capture frames directly to dataset Inbox, then label objects in the editor.') }}</span>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="p-2 border rounded bg-body-tertiary h-100">
-                        <strong class="text-primary d-block mb-1">4. {{ trans('Train & Apply') }}</strong>
-                        <span>{{ trans('Select a base model (auto-downloaded) and apply resulting weights in 1 click.') }}</span>
-                    </div>
-                </div>
-            </div>
         </div>
     {% endif %}
 
@@ -110,7 +100,7 @@
         {% if object_counters %}
             <div class="counter-card-grid" id="counter-dashboard">
                 {% for location, label in object_counters.items() %}
-                    {% with status=counter_status(location) %}
+                    {% with status=counter_status(location), setup_status=(setup_statuses or {}).get(location, 'unconfigured') %}
                         {% include 'partials/counter_dashboard_card.html' %}
                     {% endwith %}
                 {% endfor %}

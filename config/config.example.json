@@ -1,5 +1,13 @@
 {
     "general": {
+        "onboarding": {
+            "version": 1,
+            "state": "pending",
+            "provenance": "install_seed",
+            "scenario": null,
+            "completed_at": null,
+            "skipped_at": null
+        },
         "debug": true,
         "system_check": true,
         "log_path": "storage/logs/cvcounter.log",
@@ -114,6 +122,7 @@
         "video_reconnect_attempts": 5,
         "model_type": "auto",
         "weights_path": "",
+        "inference_intent": "collection",
         "confidence": 0.5,
         "iou": 0.6,
         "device": 0,
@@ -178,86 +187,5 @@
             "idle_timeout": 30
         }
     },
-    "detections": {
-        "ExampleCam": {
-            "label": "Label ExampleCam",
-            "start_total_count": 0,
-            "video_path": "",
-            "video_show_scale": 80,
-            "video_show_quality": 50,
-            "video_fps": 0,
-            "video_reconnect_attempts": 5,
-            "model_type": "yolo",
-            "weights_path": "config/ultralytics/models/yolo11n.pt",
-            "confidence": 0.5,
-            "iou": 0.6,
-            "device": 0,
-            "vid_stride": 1,
-            "tracker": "sort",
-            "tracker_iou": 0.3,
-            "tracker_max_age": 60,
-            "tracker_min_hits": 3,
-            "tracker_track_thresh": 0,
-            "tracker_low_thresh": 0.1,
-            "indicator_mode": "circle",
-            "indicator_size": 10,
-            "indicator_detected_color": [
-                255,
-                0,
-                255
-            ],
-            "indicator_counted_color": [
-                0,
-                255,
-                0
-            ],
-            "counting_areas": [
-                {
-                    "points": [
-                        [
-                            0,
-                            0
-                        ],
-                        [
-                            100,
-                            0
-                        ],
-                        [
-                            100,
-                            100
-                        ],
-                        [
-                            0,
-                            100
-                        ]
-                    ],
-                    "color": [
-                        255,
-                        64,
-                        0
-                    ]
-                }
-            ],
-            "classes": {},
-            "custom_fields": {
-                "batch_number": {
-                    "name": "batch_number",
-                    "label": "Batch / Lot Number",
-                    "type": "text",
-                    "default_value": "LOT-01"
-                }
-            },
-            "dataset_create": {
-                "enable": false,
-                "probability": 0.05,
-                "path": "storage/saved_images"
-            },
-            "recording": {
-                "enable": false,
-                "scale": 80,
-                "quality": 60,
-                "idle_timeout": 15
-            }
-        }
-    }
+    "detections": {}
 }

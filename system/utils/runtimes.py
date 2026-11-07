@@ -779,6 +779,211 @@ def get_runtime_status() -> Dict[str, Any]:
     }
 
 
+_COLLECTION_INTENTS = frozenset({
+    'video_test', 'collect_dataset', 'explore', 'collection', 'none', '',
+})
+
+_PROVIDER_PRIMARY_BUNDLE: Dict[str, str] = {
+    'ultralytics': 'ultralytics',
+    'onnxruntime': 'onnxruntime',
+    'onnx': 'onnxruntime',
+    'rf_detr': 'rf_detr',
+    'd_fine': 'd_fine',
+    'rtmdet': 'rtmdet',
+}
+
+
+def _dependency_to_bundle_index() -> Dict[str, List[str]]:
+    index: Dict[str, List[str]] = {}
+    for bundle_name in PACKAGE_BUNDLES:
+        for dist in bundle_provides(bundle_name):
+            key = _norm_dist(dist)
+            index.setdefault(key, [])
+            if bundle_name not in index[key]:
+                index[key].append(bundle_name)
+    return index
+
+
+def _pick_onnx_bundle(hw: Dict[str, Any], gpu: Dict[str, Any]) -> str:
+    for candidate in ('onnx_runtime_gpu', 'onnx_runtime_directml', 'onnxruntime'):
+        status = get_bundle_status(candidate, hw, gpu)
+        if status and status.get('available'):
+            return candidate
+    return 'onnxruntime'
+
+
+def _bundle_plan_items(keys: List[str], hw: Dict[str, Any], gpu: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Full install-time status of every planned bundle, in plan order."""
+    items: List[Dict[str, Any]] = []
+    for key in keys:
+        status = get_bundle_status(key, hw, gpu)
+        if status:
+            items.append(status)
+    return items
+
+
+def _add_needed_bundle(key: str, required: List[str], blocked: List[str],
+                       hw: Dict[str, Any], gpu: Dict[str, Any]) -> bool:
+    """Record a bundle the plan needs.
+
+    Returns True when the bundle can be installed here; a bundle that this hardware or
+    operating system cannot run is recorded as blocked so the UI can explain the dead end
+    instead of silently dropping it from the list.
+    """
+    status = get_bundle_status(key, hw, gpu)
+    if not status or status.get('installed'):
+        return False
+    if not status.get('available'):
+        if key not in blocked:
+            blocked.append(key)
+        return False
+    if key not in required:
+        required.append(key)
+    return True
+
+
+def _core_only_plan(note: str) -> Dict[str, Any]:
+    """Empty bundle plan for collection and preview modes."""
+    return {
+        'required': [],
+        'items': [],
+        'blocked': [],
+        'optional': [],
+        'provider': None,
+        'missing_deps': [],
+        'notes': [note],
+        'warnings': [],
+    }
+
+
+def resolve_bundles_for_inference(
+        inference_intent: Optional[str] = None,
+        model_type: Optional[str] = None,
+        weights_path: Optional[str] = None,
+        target_mode: Optional[str] = None,
+        hw: Optional[Dict[str, Any]] = None,
+        gpu: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Compute minimal runtime bundles still required for the requested inference profile.
+    Collection / video-only intents return an empty required set.
+
+    ``required`` lists bundles the installer can run here, ``blocked`` the ones this
+    machine cannot run. Both are expanded into ``items``/``blocked`` status records so a
+    client does not need a second request to render names, licences and pip steps.
+    """
+    from pathlib import Path
+
+    intent = (inference_intent or '').strip().lower()
+    mode = (target_mode or '').strip().lower()
+    weights = (weights_path or '').strip()
+    model = (model_type or '').strip().lower()
+
+    if mode == 'collection' or intent in _COLLECTION_INTENTS:
+        return _core_only_plan('Core runtime only (no ML bundles needed).')
+
+    from system.detection.registry import get_provider_status, resolve_architecture
+
+    hardware = hw or get_hardware_profile()
+    gpu_info = gpu or get_gpu_info()
+
+    # Training needs the torch stack whether or not a weights file was chosen yet.
+    if intent == 'train':
+        required: List[str] = []
+        blocked: List[str] = []
+        for key in ('pytorch', 'ultralytics'):
+            _add_needed_bundle(key, required, blocked, hardware, gpu_info)
+        return {
+            'required': required,
+            'items': _bundle_plan_items(required, hardware, gpu_info),
+            'blocked': _bundle_plan_items(blocked, hardware, gpu_info),
+            'optional': [],
+            'provider': 'ultralytics',
+            'missing_deps': [],
+            'notes': ['Training requires PyTorch and Ultralytics when not already installed.'],
+            'warnings': [],
+        }
+
+    if not weights or model in ('none', 'preview'):
+        return _core_only_plan('Core runtime only (no ML bundles needed).')
+
+    resolved = resolve_architecture(model_type, weights_path)
+    if model in ('none', 'preview'):
+        return _core_only_plan('Preview/collection — no inference bundles.')
+
+    provider = get_provider_status(resolved)
+    missing = [name for name, ok in (provider.get('dependencies') or {}).items() if not ok]
+    dep_index = _dependency_to_bundle_index()
+    required = []
+    blocked = []
+    notes: List[str] = []
+    warnings: List[str] = []
+
+    provider_bundle = _PROVIDER_PRIMARY_BUNDLE.get(resolved)
+    if provider_bundle in ('onnxruntime', 'onnx'):
+        provider_bundle = _pick_onnx_bundle(hardware, gpu_info)
+
+    for dep in missing:
+        bundles_for_dep = list(dep_index.get(_norm_dist(dep), []))
+        if _norm_dist(dep) == 'onnxruntime' and provider_bundle:
+            bundles_for_dep = [provider_bundle]
+        if _norm_dist(dep) == 'torch' and 'pytorch' not in bundles_for_dep:
+            bundles_for_dep.insert(0, 'pytorch')
+        unavailable: List[str] = []
+        for candidate in bundles_for_dep:
+            status = get_bundle_status(candidate, hardware, gpu_info)
+            if not status or status.get('installed'):
+                continue
+            if status.get('available'):
+                if candidate not in required:
+                    required.append(candidate)
+                    warnings.extend(status.get('warnings') or [])
+                break
+            if candidate not in unavailable:
+                unavailable.append(candidate)
+        else:
+            # Nothing could be installed for this dependency: report the dead end instead of
+            # dropping it, otherwise the wizard lists no component while inference still fails.
+            for candidate in unavailable:
+                if candidate not in required and candidate not in blocked:
+                    blocked.append(candidate)
+
+    if provider_bundle:
+        _add_needed_bundle(provider_bundle, required, blocked, hardware, gpu_info)
+
+    suffix = Path(weights).suffix.lower()
+    if suffix in ('.engine', '.trt'):
+        _add_needed_bundle('tensorrt', required, blocked, hardware, gpu_info)
+
+    if _needs_pytorch_build(hardware, gpu_info):
+        needs_torch_bundle = any(
+            PACKAGE_BUNDLES.get(b, {}).get('requires_pytorch') for b in required
+        )
+        if needs_torch_bundle or resolved in ('ultralytics', 'rf_detr', 'd_fine', 'rtmdet'):
+            _add_needed_bundle('pytorch', required, blocked, hardware, gpu_info)
+
+    if 'pytorch' in required:
+        # Every torch-dependent plugin installs on top of it, so the client must run it first.
+        required.remove('pytorch')
+        required.insert(0, 'pytorch')
+
+    if missing:
+        notes.append(f"Provider {resolved}: missing {', '.join(missing)}")
+    elif not provider.get('inference_available'):
+        notes.append(provider.get('error') or f"Provider {resolved} unavailable")
+
+    return {
+        'required': required,
+        'items': _bundle_plan_items(required, hardware, gpu_info),
+        'blocked': _bundle_plan_items(blocked, hardware, gpu_info),
+        'optional': [],
+        'provider': resolved,
+        'missing_deps': missing,
+        'notes': notes,
+        'warnings': warnings,
+    }
+
+
 class RuntimeManager:
     """Manager for installing and removing AI runtime dependencies in the background."""
 

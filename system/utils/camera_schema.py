@@ -189,6 +189,12 @@ def align_camera_dict(
         if key not in src:
             if key in fallback:
                 src[key] = copy.deepcopy(fallback[key])
+            elif (
+                key == "weights_path"
+                and isinstance(fallback, dict)
+                and fallback.get("weights_path", "__missing__") == ""
+            ):
+                src[key] = ""
             else:
                 src[key] = copy.deepcopy(default_val)
 

@@ -70,6 +70,11 @@ def api_add_detection():
         except (ValueError, TypeError):
             pass
 
+    if not weights_path:
+        new_cam['inference_intent'] = 'collection'
+    else:
+        new_cam['inference_intent'] = 'inference'
+
     aligned = align_camera_dict(new_cam, default_template=default_template, location_id=location)
     config.set(f'detections.{location}', aligned)
     config.save_config()

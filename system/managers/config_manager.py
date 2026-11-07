@@ -65,8 +65,10 @@ class ConfigManager:
                 # Transitional migration: upgrades legacy items (e.g. counting_area -> counting_areas).
                 # Easily removable in a future major version by deleting config_migrator.py
                 # and this 2-line block.
-                from system.managers.config_migrator import migrate_legacy_config
+                from system.managers.config_migrator import migrate_legacy_config, migrate_onboarding
                 config_data, migrated = migrate_legacy_config(config_data)
+                config_data, onboarding_migrated = migrate_onboarding(config_data)
+                migrated = migrated or onboarding_migrated
                 # -----------------------------------------
 
                 from system.utils.camera_schema import align_full_config

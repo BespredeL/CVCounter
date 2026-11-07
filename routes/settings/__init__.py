@@ -8,6 +8,6 @@ from flask import Blueprint
 
 settings_bp = Blueprint('settings', __name__)
 
-from . import api_keys, cameras, logs, models, pages, runtimes, server, telemetry
+from . import api_keys, cameras, logs, models, onboarding, pages, runtimes, server, telemetry
 
 __all__ = ['settings_bp']

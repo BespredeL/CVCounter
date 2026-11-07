@@ -32,11 +32,14 @@ from __future__ import annotations
 
 import copy
 import re
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Tuple
 
 from system.utils.logger import Logger
 
 _logger = Logger()
+
+ONBOARDING_VERSION = 1
 
 DEFAULT_COUNTING_AREA_COLOR: List[int] = [67, 211, 255]
 LEGACY_DETECTION_KEYS: Tuple[str, ...] = (
@@ -242,4 +245,35 @@ def migrate_legacy_config(config_data: Dict[str, Any], in_place: bool = True) ->
         _logger.info("[LegacyMigrator] Successfully migrated legacy configuration fields to modern canonical format.")
 
     return cfg, total_migrated
+
+
+def migrate_onboarding(config_data: Dict[str, Any], in_place: bool = True) -> Tuple[Dict[str, Any], bool]:
+    """
+    Ensure general.onboarding exists for upgraded installations.
+
+    New installs receive onboarding from config.example (install_seed). When the block is
+    missing entirely, treat the config as an upgrade and mark onboarding completed.
+    """
+    if not isinstance(config_data, dict):
+        return config_data, False
+
+    cfg = config_data if in_place else copy.deepcopy(config_data)
+    general = cfg.get("general")
+    if not isinstance(general, dict):
+        general = {}
+        cfg["general"] = general
+
+    if isinstance(general.get("onboarding"), dict) and general["onboarding"].get("state"):
+        return cfg, False
+
+    general["onboarding"] = {
+        "version": ONBOARDING_VERSION,
+        "state": "completed",
+        "provenance": "upgraded",
+        "scenario": None,
+        "completed_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "skipped_at": None,
+    }
+    _logger.info("[OnboardingMigrator] Marked onboarding as completed for upgraded configuration.")
+    return cfg, True
 

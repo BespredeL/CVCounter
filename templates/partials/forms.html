@@ -81,6 +81,8 @@
 
 {% macro generate_form_fields(key, value, prefix='', depth=0) %}
     <!-- START: Generate form fields -->
+    {% if key == 'onboarding' %}
+    {% else %}
     {% set field_id = prefix ~ key %}
     {% if value is mapping %}
         {% if prefix == 'detections-' and depth == 0 %}
@@ -722,6 +724,7 @@
         {% endif %}
     {% endif %}
     <!-- END: Generate form fields -->
+    {% endif %}
 {% endmacro %}
 
 

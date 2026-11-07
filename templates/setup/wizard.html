@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ trans('Setup wizard') }}{% endblock %}
+
+{% block head_assets %}
+    <link href="{{ url_for('static', filename='assets/css/modules/settings.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='assets/css/modules/setup-wizard.css') }}" rel="stylesheet">
+{% endblock %}
+
+{% block header %}
+    {% with page_title=trans('Setup wizard'), page_subtitle=trans('Setup wizard intro') %}
+        {% include 'partials/page_header.html' %}
+    {% endwith %}
+{% endblock %}
+
+{% block breadcrumb %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">{{ trans('Home') }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('settings.settings') }}">{{ trans('Settings') }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ trans('Setup wizard') }}</li>
+        </ol>
+    </nav>
+{% endblock %}
+
+{% block content %}
+    <div class="setup-shell cv-card p-3 p-md-4 mb-3" id="setup-wizard-root"
+         data-is-admin="{{ 'true' if is_admin else 'false' }}"
+         data-onboarding-state="{{ onboarding.state }}">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+            <div class="flex-grow-1 min-w-0">
+                <div class="setup-progress mb-2" aria-hidden="true">
+                    <div class="setup-progress__bar" id="setup-wizard-progress"></div>
+                </div>
+                <div class="setup-stepper" id="setup-wizard-stepper" role="tablist" aria-label="{{ trans('Setup wizard') }}">
+                    {% for n, label in [
+                        (1, 'System check'),
+                        (2, 'Goal'),
+                        (3, 'Video'),
+                        (4, 'Model'),
+                        (5, 'Components'),
+                        (6, 'Readiness'),
+                        (7, 'Finish')
+                    ] %}
+                        <button type="button" class="setup-stepper__item" data-goto="{{ n }}" role="tab">{{ n }}. {{ trans(label) }}</button>
+                    {% endfor %}
+                </div>
+                <p class="small text-body-secondary mb-0 mt-2" id="setup-wizard-step-label"></p>
+            </div>
+            <div class="d-flex gap-2 flex-shrink-0">
+                <a href="{{ url_for('settings.settings') }}" class="btn btn-outline-secondary btn-sm">{{ trans('Back to settings') }}</a>
+                <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary btn-sm">{{ trans('Back to dashboard') }}</a>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="setup-wizard-skip">{{ trans('Skip for now') }}</button>
+            </div>
+        </div>
+
+        <section class="setup-wizard-step" data-step="1">
+            <h2 class="h5 mb-1">{{ trans('System check') }}</h2>
+            <p class="text-body-secondary small mb-3">{{ trans('Setup step system check help') }}</p>
+            <div id="setup-wizard-readiness" class="d-grid gap-2" aria-live="polite"></div>
+            <button type="button" class="btn btn-outline-primary btn-sm mt-3" id="setup-wizard-refresh-readiness">{{ trans('Refresh') }}</button>
+        </section>
+
+        <section class="setup-wizard-step d-none" data-step="2">
+            <h2 class="h5 mb-1">{{ trans('Choose your goal') }}</h2>
+            <p class="text-body-secondary small mb-3">{{ trans('Setup goal help') }}</p>
+            <div class="row g-2">
+                {% for sid, title, hint in [
+                    ('count_objects', 'Count objects with a model', 'Setup hint count'),
+                    ('test_camera', 'Test camera / video', 'Setup hint camera'),
+                    ('collect_dataset', 'Collect dataset images', 'Setup hint collect'),
+                    ('train', 'Train a model', 'Setup hint train'),
+                    ('explore', 'Explore the app', 'Setup hint explore')
+                ] %}
+                <div class="col-md-6">
+                    <button type="button" class="setup-scenario{% if onboarding.scenario == sid %} is-selected{% endif %}" data-scenario="{{ sid }}">
+                        <span class="setup-scenario__title">{{ trans(title) }}</span>
+                        <span class="setup-scenario__hint">{{ trans(hint) }}</span>
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="setup-wizard-step d-none" data-step="3">
+            <h2 class="h5 mb-1">{{ trans('Video source') }}</h2>
+            <p class="text-body-secondary small mb-3">{{ trans('Setup video path hint') }}</p>
+            <div class="d-flex flex-wrap gap-2 mb-3" id="setup-source-chips">
+                <button type="button" class="btn btn-sm btn-outline-secondary setup-source-chip" data-fill="0">USB 0</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary setup-source-chip" data-fill="1">USB 1</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary setup-source-chip" data-fill="rtsp://">RTSP</button>
+            </div>
+            <label class="form-label" for="setup-camera-name">{{ trans('Camera name') }}</label>
+            <input type="text" class="form-control mb-3" id="setup-camera-name" autocomplete="off"
+                   value="{{ onboarding.fields.label or trans('Camera') }}">
+            <label class="form-label" for="setup-video-path">{{ trans('Video path') }}</label>
+            <input type="text" class="form-control form-control-lg" id="setup-video-path" autocomplete="off"
+                   placeholder="0" value="{{ onboarding.fields.video_path }}">
+        </section>
+
+        <section class="setup-wizard-step d-none" data-step="4">
+            <h2 class="h5 mb-1">{{ trans('Model') }}</h2>
+            <p class="text-body-secondary small mb-3">{{ trans('Setup model skip hint') }}</p>
+            <label class="form-label" for="setup-weights-path">{{ trans('Weights path') }}</label>
+            <input type="text" class="form-control" id="setup-weights-path" autocomplete="off"
+                   placeholder="config/ultralytics/models/model.pt" value="{{ onboarding.fields.weights_path }}">
+        </section>
+
+        <section class="setup-wizard-step d-none" data-step="5">
+            <h2 class="h5 mb-1">{{ trans('Runtime components') }}</h2>
+            <p class="text-body-secondary small mb-3">{{ trans('Setup runtime help') }}</p>
+            <div id="setup-wizard-bundles" class="d-grid gap-2" aria-live="polite"></div>
+            <button type="button" class="btn btn-outline-primary btn-sm mt-3" id="setup-wizard-refresh-bundles">{{ trans('Refresh') }}</button>
+            {% if not is_admin %}
+                <p class="alert alert-warning small mt-3 mb-0">{{ trans('Setup admin install hint') }}</p>
+            {% endif %}
+        </section>
+
+        <section class="setup-wizard-step d-none" data-step="6">
+            <h2 class="h5 mb-1">{{ trans('Readiness') }}</h2>
+            <p class="text-body-secondary small mb-3">{{ trans('Setup readiness help') }}</p>
+            <div id="setup-wizard-preflight" class="d-grid gap-2" aria-live="polite"></div>
+        </section>
+
+        <section class="setup-wizard-step d-none" data-step="7">
+            <h2 class="h5 mb-2">{{ trans('Finish') }}</h2>
+            <p class="text-body-secondary">{{ trans('Setup finish creates counter') }}</p>
+            <button type="button" class="btn btn-primary" id="setup-wizard-complete">{{ trans('Complete setup') }}</button>
+        </section>
+
+        <div id="setup-install-panel" class="d-none border rounded p-3 mt-3"
+             data-allow-restart="{{ '1' if allow_web_control else '0' }}">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                <button type="button" class="btn btn-primary btn-sm" id="setup-install-start">{{ trans('Install missing components') }}</button>
+                <span class="small text-body-secondary" id="setup-install-count"></span>
+                <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="setup-install-cancel">{{ trans('Cancel') }}</button>
+            </div>
+            <div class="progress mb-2" style="height: 6px;" aria-hidden="true">
+                <div class="progress-bar" id="setup-install-bar" style="width: 0;"></div>
+            </div>
+            <p class="small mb-2" id="setup-install-status"></p>
+            <button type="button" class="btn btn-outline-warning btn-sm d-none" id="setup-install-restart">{{ trans('Restart server') }}</button>
+            <pre class="small bg-body-tertiary rounded p-2 mb-0 d-none" id="setup-install-log" style="max-height: 180px; overflow: auto;"></pre>
+        </div>
+
+        <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+            <button type="button" class="btn btn-outline-secondary" id="setup-wizard-prev">{{ trans('Back') }}</button>
+            <button type="button" class="btn btn-primary" id="setup-wizard-next">{{ trans('Next') }}</button>
+        </div>
+    </div>
+{% endblock %}
+
+{% block footer_assets %}
+    <script src="{{ url_for('static', filename='assets/js/setup-wizard.js') }}"></script>
+{% endblock %}

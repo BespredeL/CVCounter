@@ -814,6 +814,16 @@ def counter_bootstrap(location: str = None):
     location = str(location).strip()
     require_detection_location(location)
 
+    context = get_app_context()
+    cam_cfg = (context['config'].get('detections') or {}).get(location) or {}
+    if not str(cam_cfg.get('video_path') or '').strip():
+        return jsonify({
+            'status': 'error',
+            'location': location,
+            'code': 'video_not_configured',
+            'message': translate('Configure a video source for this counter in Settings or the setup wizard.'),
+        }), 400
+
     try:
         result = ensure_counter_running(location)
     except Exception as e:
@@ -822,10 +832,10 @@ def counter_bootstrap(location: str = None):
         return jsonify({
             'status': 'error',
             'location': location,
+            'code': 'stream_error',
             'message': translate('Lost connection to camera!'),
         }), 500
 
-    context = get_app_context()
     object_counters = context.get('object_counters', {})
     counter = object_counters.get(location)
     is_coll = getattr(counter, 'preview_mode', False) if counter else False

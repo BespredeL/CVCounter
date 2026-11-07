@@ -623,8 +623,8 @@ def verify_installation(
         pr(f"  [OK] Available detection models: {len(available_models)} ({', '.join(m.name for m in available_models[:3])}...)",
            Colors.GREEN)
     else:
-        pr("  [INFO] Pre-trained models in config/ultralytics/models will be downloaded automatically on first launch.",
-           Colors.BLUE)
+        pr("  [INFO] No local model weights in config/ultralytics/models yet.", Colors.BLUE)
+        pr("       Use the web Setup wizard or Settings to add a model, or train one in Datasets.", Colors.BLUE)
 
     print()
     if all_ok:

@@ -19,6 +19,12 @@ from system.auth import (
 from system.utils.app_context import get_app_context
 from system.utils.counter_preview import preview_exists
 from system.utils.i18n import trans as translate
+from system.services.counter_readiness import build_setup_status_map
+from system.utils.paths import resolve_project_path
+from system.services.onboarding import (
+    onboarding_payload,
+    should_show_welcome,
+)
 
 main_bp = Blueprint('main', __name__)
 
@@ -36,11 +42,19 @@ def index() -> str:
     thread_manager = context['thread_manager']
     detections_cfg = (context.get('config') or {}).get('detections') or {}
     has_detections = bool(detections_cfg)
+    config_mgr = context.get('config')
+    def _weights_file_exists(wpath: str) -> bool:
+        if not wpath:
+            return False
+        resolved = resolve_project_path(wpath) or wpath
+        return os.path.isfile(resolved)
+
     has_valid_weights = any(
-        (cfg.get('detector') or {}).get('weights_path')
-        and os.path.isfile(cfg.get('detector', {}).get('weights_path'))
+        isinstance(cfg, dict) and _weights_file_exists(str(cfg.get('weights_path') or '').strip())
         for cfg in detections_cfg.values()
     )
+    setup_statuses = build_setup_status_map(config_mgr) if config_mgr else {}
+    onboarding = onboarding_payload(config_mgr)
 
     return render_template(
         'index.html',
@@ -49,6 +63,9 @@ def index() -> str:
         counter_previews={loc: preview_exists(loc) for loc in locations_dict},
         has_detections=has_detections,
         has_valid_weights=has_valid_weights,
+        setup_statuses=setup_statuses,
+        onboarding=onboarding,
+        show_onboarding_welcome=should_show_welcome(config_mgr),
     )
 
 
