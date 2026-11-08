@@ -5,12 +5,13 @@
 # Website: https://bespredel.name
 
 import json
+from contextlib import contextmanager
 from datetime import datetime
-from typing import Optional
+from typing import Any, Iterator, Optional, Tuple
 
-from sqlalchemy import create_engine, func, inspect as sa_inspect, text
+from sqlalchemy import create_engine, event, func, inspect as sa_inspect, text
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 from system.utils.logger import Logger
 from system.db.models.base_model import Base
@@ -30,14 +31,32 @@ class DatabaseManager:
         self.__logger: Logger = Logger()
         try:
             connect_args = {}
-            if uri.startswith('sqlite'):
-                connect_args['timeout'] = 15
+            engine_kwargs: dict[str, Any] = {}
 
-            self.__engine: any = create_engine(uri, connect_args=connect_args)
+            is_sqlite = uri.startswith('sqlite')
+            if is_sqlite:
+                connect_args['timeout'] = 15
+            else:
+                engine_kwargs['pool_pre_ping'] = True
+                engine_kwargs['pool_recycle'] = 1800
+
+            self.__engine: any = create_engine(uri, connect_args=connect_args, **engine_kwargs)
             self.__prefix: str = prefix
             self.__sessionmaker: any = sessionmaker(bind=self.__engine, expire_on_commit=False)
 
-            if uri.startswith('sqlite'):
+            if is_sqlite:
+                @event.listens_for(self.__engine, "connect")
+                def _set_sqlite_pragmas(dbapi_connection, connection_record):
+                    try:
+                        cursor = dbapi_connection.cursor()
+                        cursor.execute("PRAGMA busy_timeout = 15000;")
+                        cursor.execute("PRAGMA journal_mode = WAL;")
+                        cursor.execute("PRAGMA synchronous = NORMAL;")
+                        cursor.execute("PRAGMA foreign_keys = ON;")
+                        cursor.close()
+                    except Exception as pragma_err:
+                        self.__logger.warning(f"Could not configure SQLite pragmas: {pragma_err}")
+
                 try:
                     with self.__engine.connect() as conn:
                         conn.execute(text("PRAGMA journal_mode=WAL;"))
@@ -50,17 +69,48 @@ class DatabaseManager:
             self.__logger.error(str(error))
             self.__logger.log_exception()
 
-    def create_session(self) -> any:
+    def create_session(self) -> Session:
         """
         Creates and returns a new session.
 
-        Args:
-            None
-
         Returns:
-            any: A new session.
+            Session: A new SQLAlchemy session.
         """
         return self.__sessionmaker()
+
+    @contextmanager
+    def session_scope(self) -> Iterator[Session]:
+        """
+        Provide a transactional scope around a series of operations.
+        Automatically commits on successful exit or rolls back on exception,
+        and always ensures the session is closed.
+        """
+        session: Session = self.create_session()
+        try:
+            yield session
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+    @staticmethod
+    def _parse_json(value: Optional[str], default: Any = None) -> Any:
+        """Safely parse JSON string, returning default if invalid or empty."""
+        if not value:
+            return default
+        try:
+            return json.loads(value)
+        except (ValueError, TypeError):
+            return default
+
+    @staticmethod
+    def _serialize_json(value: Any) -> Optional[str]:
+        """Serialize data structure to JSON string, or None if value is None."""
+        if value is None:
+            return None
+        return json.dumps(value)
 
     @staticmethod
     def _serialize_class_counts(class_counts: Optional[list | dict] = None) -> str | None:
@@ -98,34 +148,45 @@ class DatabaseManager:
         """
         session = self.create_session()
         try:
-            result = session.query(CVCounter).filter_by(location=location, active=True).first()
+            active_records = session.query(CVCounter).filter_by(location=location, active=True).all()
+            result = active_records[0] if active_records else None
+            if len(active_records) > 1:
+                for stale in active_records[1:]:
+                    stale.active = False
+
             class_counts_json = self._serialize_class_counts(class_counts)
 
             new_custom_fields = {}
             if custom_fields:
-                new_custom_fields = json.loads(custom_fields if custom_fields else '{}')
+                if isinstance(custom_fields, dict):
+                    new_custom_fields = custom_fields
+                elif isinstance(custom_fields, str):
+                    new_custom_fields = self._parse_json(custom_fields, {})
 
             if result:
-                # Updating existing custom_fields
-                existing_custom_fields = json.loads(result.custom_fields if result.custom_fields else '{}')
+                # Merge existing custom_fields
+                existing_custom_fields = self._parse_json(result.custom_fields, {})
                 if new_custom_fields:
-                    # Combining new and existing vocabulary
                     existing_custom_fields.update(new_custom_fields)
-                    custom_fields = json.dumps(existing_custom_fields)
+                    custom_fields_to_save = json.dumps(existing_custom_fields)
+                elif existing_custom_fields:
+                    custom_fields_to_save = json.dumps(existing_custom_fields)
+                else:
+                    custom_fields_to_save = ''
 
-            if result:
                 # Updating an existing record
                 result.active = active
                 result.total_count = total_count
                 result.source_count = source_count
                 result.defects_count = defects_count
                 result.correct_count = correct_count
-                result.custom_fields = custom_fields
+                result.custom_fields = custom_fields_to_save
                 if class_counts_json is not None:
                     result.class_counts = class_counts_json
                 result.updated_at = datetime.now()
             else:
                 # Insert a new record
+                custom_fields_to_save = json.dumps(new_custom_fields) if new_custom_fields else ''
                 new_result = CVCounter(
                     active=active,
                     location=location,
@@ -133,7 +194,7 @@ class DatabaseManager:
                     source_count=source_count,
                     defects_count=defects_count,
                     correct_count=correct_count,
-                    custom_fields=custom_fields,
+                    custom_fields=custom_fields_to_save,
                     class_counts=class_counts_json,
                     created_at=datetime.now(),
                     updated_at=datetime.now()
@@ -169,28 +230,54 @@ class DatabaseManager:
         """
         session = self.create_session()
         try:
-            result = session.query(CVCounter).filter_by(location=location, active=True).first()
+            active_records = session.query(CVCounter).filter_by(location=location, active=True).all()
+            result = active_records[0] if active_records else None
+            if len(active_records) > 1:
+                for stale in active_records[1:]:
+                    stale.active = False
+
+            part_entry = {
+                'current': current_count,
+                'total': total_count,
+                'defects': defects_count,
+                'correct': correct_count,
+                'created_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+            if by_class is not None:
+                part_entry['by_class'] = by_class
+            class_counts_json = self._serialize_class_counts(class_counts)
+
+            now = datetime.now()
             if result:
-                # Update the parts field
-                parts = json.loads(result.parts) if result.parts else []
-                part_entry = {
-                    'current': current_count,
-                    'total': total_count,
-                    'defects': defects_count,
-                    'correct': correct_count,
-                    'created_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                }
-                if by_class is not None:
-                    part_entry['by_class'] = by_class
+                # Update existing active record with new part and current totals
+                parts = self._parse_json(result.parts, [])
                 parts.append(part_entry)
                 parts = sorted(parts, key=lambda x: x['created_at'], reverse=False)
                 result.parts = json.dumps(parts)
-                if class_counts is not None:
-                    result.class_counts = self._serialize_class_counts(class_counts)
-                result.updated_at = datetime.now()
-                session.commit()
-                return True
-            return False
+                result.total_count = total_count
+                result.source_count = total_count
+                result.defects_count = (result.defects_count or 0) + defects_count
+                result.correct_count = (result.correct_count or 0) + correct_count
+                if class_counts_json is not None:
+                    result.class_counts = class_counts_json
+                result.updated_at = now
+            else:
+                # Create a new active record seeded with the completed batch
+                new_result = CVCounter(
+                    active=True,
+                    location=location,
+                    total_count=total_count,
+                    source_count=total_count,
+                    defects_count=defects_count,
+                    correct_count=correct_count,
+                    parts=json.dumps([part_entry]),
+                    class_counts=class_counts_json,
+                    created_at=now,
+                    updated_at=now
+                )
+                session.add(new_result)
+            session.commit()
+            return True
         except SQLAlchemyError as error:
             session.rollback()
             self.__logger.error(str(error))
@@ -212,12 +299,15 @@ class DatabaseManager:
         """
         session = self.create_session()
         try:
-            result = session.query(CVCounter).filter_by(location=location, active=True).first()
-            if result:
-                if class_counts is not None:
-                    result.class_counts = self._serialize_class_counts(class_counts)
-                result.active = False
-                result.updated_at = datetime.now()
+            active_records = session.query(CVCounter).filter_by(location=location, active=True).all()
+            if active_records:
+                now = datetime.now()
+                class_counts_json = self._serialize_class_counts(class_counts)
+                for rec in active_records:
+                    if class_counts_json is not None:
+                        rec.class_counts = class_counts_json
+                    rec.active = False
+                    rec.updated_at = now
                 session.commit()
                 return True
             return False
@@ -293,21 +383,57 @@ class DatabaseManager:
         finally:
             session.close()
 
+    def get_adjacent_report_ids(self, report_id: int, location: str) -> tuple[Optional[int], Optional[int]]:
+        """
+        Returns previous and next report IDs for a location, or (None, None).
+        
+        Args:
+            report_id (int): The current report ID.
+            location (str): Detection location.
+
+        Returns:
+            tuple[Optional[int], Optional[int]]: (prev_report_id, next_report_id)
+        """
+        session = self.create_session()
+        try:
+            prev_row = session.query(CVCounter.id).filter(
+                CVCounter.location == location,
+                CVCounter.id < report_id
+            ).order_by(CVCounter.id.desc()).first()
+
+            next_row = session.query(CVCounter.id).filter(
+                CVCounter.location == location,
+                CVCounter.id > report_id
+            ).order_by(CVCounter.id.asc()).first()
+
+            prev_id = prev_row[0] if prev_row else None
+            next_id = next_row[0] if next_row else None
+            return prev_id, next_id
+        except SQLAlchemyError as error:
+            self.__logger.error(f"Error fetching adjacent report ids for #{report_id}: {error}")
+            return None, None
+        finally:
+            session.close()
+
     def get_paginated(self, key: str = '', page: int = 1, per_page: int = 10) -> dict | None:
         """
-        Returns all counters for the given key.
+        Returns all counters for the given key (or all counters if key is empty).
 
         Args:
-            key (str, optional): The key. Defaults to ''.
+            key (str, optional): The location key. If empty, paginates all locations. Defaults to ''.
             page (int, optional): The page number. Defaults to 1.
             per_page (int, optional): The number of records per page. Defaults to 10.
 
         Returns:
-            list: A list of counters.
+            dict | None: Dictionary with total, page, per_page, results, has_next, has_prev.
         """
         session = self.create_session()
         try:
-            query = session.query(CVCounter).filter_by(location=key).order_by(CVCounter.created_at.desc())
+            query = session.query(CVCounter)
+            if key:
+                query = query.filter_by(location=key)
+            query = query.order_by(CVCounter.created_at.desc())
+
             total = query.count()  # Getting the total number of records
             results = query.offset((page - 1) * per_page).limit(per_page).all()  # Applying offset and limit
 

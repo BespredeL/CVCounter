@@ -4,7 +4,8 @@
 # Developed by: Aleksandr Kireev
 # Website: https://bespredel.name
 
-from flask import jsonify, request
+import os
+from flask import Response, jsonify, request
 
 from routes.settings import settings_bp
 from system.auth import login_required
@@ -87,3 +88,16 @@ def api_toggle():
         'enabled': enabled,
         'message': translate('REST API status updated')
     })
+
+
+@settings_bp.route('/settings/api/docs/raw', methods=['GET'])
+@login_required
+def api_docs_raw():
+    """Return raw markdown documentation for REST API."""
+    docs_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'docs', 'api.md')
+    if os.path.exists(docs_path):
+        with open(docs_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return Response(content, mimetype='text/markdown; charset=utf-8', headers={'Content-Disposition': 'inline; filename="api_v1_docs.md"'})
+    return jsonify({'ok': False, 'error': translate('Documentation file not found')}), 404
+

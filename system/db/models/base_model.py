@@ -4,8 +4,7 @@
 # Developed by: Aleksandr Kireev
 # Website: https://bespredel.name
 
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import declared_attr
+from sqlalchemy.orm import declarative_base, declared_attr
 
 
 class TablePrefixBase:

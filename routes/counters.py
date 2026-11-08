@@ -675,11 +675,16 @@ def reset_count_current(location: str = None) -> dict:
         # Validate request data
         validated_data = validate_reset_count_current_request(location, locations)
 
+        if location not in object_counters:
+            from system.services.counter_runtime import init_counter_for_location
+            init_counter_for_location(location)
+
         object_counters[location].reset_count_current(
             location=validated_data['location'],
             correct_count=validated_data['correct_count'],
             defect_count=validated_data['defect_count']
         )
+        get_telemetry().track('counter_batch_reset', {'location': location})
         return object_counters[location].get_live_counts()
     except ValidationError as e:
         abort(400, str(e))

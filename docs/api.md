@@ -208,6 +208,48 @@ curl -X POST -H "X-API-Key: YOUR_API_KEY" http://127.0.0.1/api/v1/counters/cam_e
 
 ---
 
+#### Complete Batch & Reset Current Counts
+- **Method:** `POST`
+- **Path:** `/api/v1/counters/{location}/batch/new` *(alias: `/api/v1/counters/{location}/reset-current`)*
+- **Required Role:** `write`
+- **Description:** Completes the current production batch: persists batch metrics and class breakdown into the database parts table (with optional manual corrections/defects) and resets the current batch counter to 0, while keeping the total session counter running. Ideal for MES, SCADA, and PLC conveyor line automation.
+- **Payload (Optional):**
+  ```json
+  {
+    "correct_count": 0,
+    "defect_count": 0
+  }
+  ```
+
+**Example Request:**
+```bash
+curl -X POST \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"defect_count": 1, "correct_count": 0}' \
+  http://127.0.0.1/api/v1/counters/cam_entrance/batch/new
+```
+
+**Example Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "cam_entrance",
+    "batch_completed": true,
+    "counts": {
+      "total": 150,
+      "current": 0,
+      "defect": 1,
+      "correct": 0,
+      "by_class": []
+    }
+  }
+}
+```
+
+---
+
 #### Save Report
 - **Method:** `POST`
 - **Path:** `/api/v1/counters/{location}/save`
@@ -255,6 +297,7 @@ curl -X POST -H "X-API-Key: YOUR_API_KEY" http://127.0.0.1/api/v1/counters/cam_e
 - **Required Role:** `read`
 - **Query Parameters:**
   - `annotated`: `true` or `false` (default: `false`). When `true` and the counter is running, returns frame with detected bounding boxes and tracking polygons.
+  - `quality`: JPEG compression quality from `1` to `100` (default: `85`).
 - **Response:** Raw binary image with `Content-Type: image/jpeg`.
 
 **Example Request:**

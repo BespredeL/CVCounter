@@ -212,30 +212,32 @@ def validate_save_count_request(location: str, available_locations: list[str]) -
     # Validate location
     validated_location = validator.validate_location(location, available_locations)
 
-    # Validate form data
-    if not request.form:
-        raise ValidationError("Request must contain form data")
+    # Extract request payload (form data or JSON)
+    data = request.get_json(silent=True) if request.is_json else (request.form or {})
 
-    # Validate counts (must be non-negative integers)
+    # Validate counts (must be non-negative integers; default to 0 if not provided)
     correct_count = validator.validate_integer(
-        request.form.get('correct_count'),
+        data.get('correct_count'),
         'correct_count',
         min_value=-9999999,
         max_value=9999999,
-        required=True
+        required=False
     )
 
     defect_count = validator.validate_integer(
-        request.form.get('defect_count'),
+        data.get('defect_count'),
         'defect_count',
         min_value=0,
         max_value=9999999,
-        required=True
+        required=False
     )
 
-    # Validate custom_fields (optional JSON string)
-    custom_fields_str = request.form.get('custom_fields', '')
-    custom_fields = validator.validate_json_string(custom_fields_str, 'custom_fields', required=False)
+    # Validate custom_fields (optional JSON string or dict)
+    raw_custom_fields = data.get('custom_fields', '')
+    if isinstance(raw_custom_fields, dict):
+        custom_fields = raw_custom_fields
+    else:
+        custom_fields = validator.validate_json_string(str(raw_custom_fields or ''), 'custom_fields', required=False)
 
     return {
         'location': validated_location,
@@ -264,25 +266,24 @@ def validate_reset_count_current_request(location: str, available_locations: lis
     # Validate location
     validated_location = validator.validate_location(location, available_locations)
 
-    # Validate form data
-    if not request.form:
-        raise ValidationError("Request must contain form data")
+    # Extract request payload (form data or JSON)
+    data = request.get_json(silent=True) if request.is_json else (request.form or {})
 
-    # Validate counts (must be non-negative integers)
+    # Validate counts (must be non-negative integers; default to 0 if not provided)
     correct_count = validator.validate_integer(
-        request.form.get('correct_count'),
+        data.get('correct_count'),
         'correct_count',
         min_value=-9999999,
         max_value=9999999,
-        required=True
+        required=False
     )
 
     defect_count = validator.validate_integer(
-        request.form.get('defect_count'),
+        data.get('defect_count'),
         'defect_count',
         min_value=0,
         max_value=9999999,
-        required=True
+        required=False
     )
 
     return {

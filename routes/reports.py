@@ -439,28 +439,7 @@ def report_show(location: str, report_id: int) -> str:
     if counter.location != location:
         abort(404, translate('Page not found'))
 
-    prev_report_id = None
-    next_report_id = None
-    session = db_manager.create_session()
-    try:
-        from system.db.models.cvcounter import CVCounter
-        prev_row = session.query(CVCounter.id).filter(
-            CVCounter.location == location,
-            CVCounter.id < report_id
-        ).order_by(CVCounter.id.desc()).first()
-        if prev_row:
-            prev_report_id = prev_row[0]
-
-        next_row = session.query(CVCounter.id).filter(
-            CVCounter.location == location,
-            CVCounter.id > report_id
-        ).order_by(CVCounter.id.asc()).first()
-        if next_row:
-            next_report_id = next_row[0]
-    except Exception:
-        pass
-    finally:
-        session.close()
+    prev_report_id, next_report_id = db_manager.get_adjacent_report_ids(report_id, location)
 
     is_counter_active = location in context.get('object_counters', {})
 

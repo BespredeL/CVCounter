@@ -12,7 +12,7 @@ from system.db.models.base_model import Base
 class CVCounter(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     active = Column(Boolean, default=True, index=True)
-    location = Column(String(255), nullable=False, index=True)
+    location = Column(String(255), nullable=False)
     total_count = Column(Integer, default=0)
     source_count = Column(Integer, default=0)
     defects_count = Column(Integer, default=0)

@@ -33,6 +33,13 @@ def _serialize_report(record: CVCounter) -> Dict[str, Any]:
         except Exception:
             class_counts = record.class_counts
 
+    parts = []
+    if record.parts:
+        try:
+            parts = json.loads(record.parts)
+        except Exception:
+            parts = record.parts
+
     def _safe_int(val, default=0):
         try:
             return int(val)
@@ -46,6 +53,7 @@ def _serialize_report(record: CVCounter) -> Dict[str, Any]:
         'source_count': _safe_int(record.source_count),
         'defects_count': _safe_int(record.defects_count),
         'correct_count': _safe_int(record.correct_count),
+        'parts': parts,
         'custom_fields': custom_fields,
         'class_counts': class_counts,
         'active': bool(record.active),

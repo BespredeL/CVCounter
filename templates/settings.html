@@ -416,7 +416,14 @@
                                                          <p class="text-body-secondary small mb-0">{{ trans('Quick reference and ready-to-use cURL commands for all available REST API endpoints.') }}</p>
                                                      </div>
                                                      <div class="d-flex align-items-center gap-2">
-                                                         <button type="button" class="btn btn-outline-secondary btn-sm py-1 px-3 fs-xs d-inline-flex align-items-center gap-1 shadow-xs" id="btn-copy-all-curl" title="{{ trans('Copy all') }}">
+                                                         <a href="{{ url_for('settings.api_docs_raw') }}" target="_blank" class="btn btn-outline-secondary btn-sm py-1 px-3 fs-xs d-inline-flex align-items-center gap-1 shadow-xs" title="{{ trans('View full Markdown API specification') }}">
+                                                              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-file-earmark-text" viewBox="0 0 16 16">
+                                                                  <path d="M5.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zM5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5"/>
+                                                                  <path d="M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5zm0 1v2A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/>
+                                                              </svg>
+                                                              <span>{{ trans('Full Docs (.md)') }}</span>
+                                                          </a>
+                                                          <button type="button" class="btn btn-outline-secondary btn-sm py-1 px-3 fs-xs d-inline-flex align-items-center gap-1 shadow-xs" id="btn-copy-all-curl" title="{{ trans('Copy all') }}">
                                                              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16">
                                                                  <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/>
                                                                  <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/>
@@ -472,7 +479,7 @@
                                                          <!-- GROUP 2: COUNTERS & CONTROL -->
                                                          <div class="cv-terminal__group-header d-flex align-items-center justify-content-between">
                                                              <span class="text-uppercase font-monospace fw-semibold fs-3xs text-secondary-emphasis">// {{ trans('Counters & Control') }}</span>
-                                                             <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace fs-3xs">8 endpoints</span>
+                                                             <span class="badge bg-secondary-subtle text-secondary-emphasis font-monospace fs-3xs">9 endpoints</span>
                                                          </div>
 
                                                          <!-- 3. List Counters -->
@@ -560,6 +567,23 @@
                                                              <div class="cv-terminal__code"><span class="cv-terminal__prompt">$ </span><span class="cv-terminal__cmd">curl</span> <span class="cv-terminal__flag">-X POST -H</span> <span class="cv-terminal__header-val">"X-API-Key: YOUR_KEY"</span> <span class="cv-terminal__url">{{ request.host_url }}api/v1/counters/CAMERA_ID/reset</span></div>
                                                          </div>
 
+                                                         <!-- 8. Complete Batch & Reset Current Counts -->
+                                                         <div class="cv-terminal__snippet">
+                                                             <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-1">
+                                                                 <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                     <span class="cv-badge-method cv-badge-method--post">POST</span>
+                                                                     <span class="font-monospace fw-semibold text-light fs-xs">/api/v1/counters/{location}/batch/new</span>
+                                                                     <span class="cv-badge-role">write</span>
+                                                                     <span class="text-secondary small d-none d-md-inline">— {{ trans('Complete current batch, save to DB parts & reset batch count') }}</span>
+                                                                 </div>
+                                                                 <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fs-3xs cv-terminal__copy-btn btn-copy-single-curl" data-raw-cmd="curl -X POST -H &quot;X-API-Key: YOUR_KEY&quot; -H &quot;Content-Type: application/json&quot; -d '{&quot;defect_count&quot;:0,&quot;correct_count&quot;:0}' {{ request.host_url }}api/v1/counters/CAMERA_ID/batch/new" title="{{ trans('Copy cURL') }}">
+                                                                     <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="currentColor" class="bi bi-clipboard me-1" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/></svg>
+                                                                     <span>{{ trans('Copy') }}</span>
+                                                                 </button>
+                                                             </div>
+                                                             <div class="cv-terminal__code"><span class="cv-terminal__prompt">$ </span><span class="cv-terminal__cmd">curl</span> <span class="cv-terminal__flag">-X POST -H</span> <span class="cv-terminal__header-val">"X-API-Key: YOUR_KEY"</span> <span class="cv-terminal__flag">-H</span> <span class="cv-terminal__header-val">"Content-Type: application/json"</span> <span class="cv-terminal__flag">-d</span> <span class="cv-terminal__header-val">'{"defect_count":0,"correct_count":0}'</span> <span class="cv-terminal__url">{{ request.host_url }}api/v1/counters/CAMERA_ID/batch/new</span></div>
+                                                         </div>
+
                                                          <!-- 8. Save Counts Report -->
                                                          <div class="cv-terminal__snippet">
                                                              <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-1">
@@ -569,12 +593,12 @@
                                                                      <span class="cv-badge-role">write</span>
                                                                      <span class="text-secondary small d-none d-md-inline">— {{ trans('Save counts session to report in database') }}</span>
                                                                  </div>
-                                                                 <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fs-3xs cv-terminal__copy-btn btn-copy-single-curl" data-raw-cmd="curl -X POST -H &quot;X-API-Key: YOUR_KEY&quot; -H &quot;Content-Type: application/json&quot; -d '{&quot;defect_count&quot;:0}' {{ request.host_url }}api/v1/counters/CAMERA_ID/save" title="{{ trans('Copy cURL') }}">
+                                                                 <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fs-3xs cv-terminal__copy-btn btn-copy-single-curl" data-raw-cmd="curl -X POST -H &quot;X-API-Key: YOUR_KEY&quot; -H &quot;Content-Type: application/json&quot; -d '{&quot;defect_count&quot;:0,&quot;correct_count&quot;:0,&quot;custom_fields&quot;:{&quot;operator&quot;:&quot;User&quot;}}' {{ request.host_url }}api/v1/counters/CAMERA_ID/save" title="{{ trans('Copy cURL') }}">
                                                                      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="currentColor" class="bi bi-clipboard me-1" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/></svg>
                                                                      <span>{{ trans('Copy') }}</span>
                                                                  </button>
                                                              </div>
-                                                             <div class="cv-terminal__code"><span class="cv-terminal__prompt">$ </span><span class="cv-terminal__cmd">curl</span> <span class="cv-terminal__flag">-X POST -H</span> <span class="cv-terminal__header-val">"X-API-Key: YOUR_KEY"</span> <span class="cv-terminal__flag">-H</span> <span class="cv-terminal__header-val">"Content-Type: application/json"</span> <span class="cv-terminal__flag">-d</span> <span class="cv-terminal__header-val">'{"defect_count":0}'</span> <span class="cv-terminal__url">{{ request.host_url }}api/v1/counters/CAMERA_ID/save</span></div>
+                                                             <div class="cv-terminal__code"><span class="cv-terminal__prompt">$ </span><span class="cv-terminal__cmd">curl</span> <span class="cv-terminal__flag">-X POST -H</span> <span class="cv-terminal__header-val">"X-API-Key: YOUR_KEY"</span> <span class="cv-terminal__flag">-H</span> <span class="cv-terminal__header-val">"Content-Type: application/json"</span> <span class="cv-terminal__flag">-d</span> <span class="cv-terminal__header-val">'{"defect_count":0,"correct_count":0,"custom_fields":{"operator":"User"}}'</span> <span class="cv-terminal__url">{{ request.host_url }}api/v1/counters/CAMERA_ID/save</span></div>
                                                          </div>
 
                                                          <!-- 9. Stop Counter -->
@@ -695,8 +719,11 @@ curl -X POST -H "X-API-Key: YOUR_KEY" -H "Content-Type: application/json" -d '{"
 # Reset counter values to zero
 curl -X POST -H "X-API-Key: YOUR_KEY" {{ request.host_url }}api/v1/counters/CAMERA_ID/reset
 
+# Complete current batch & save part to database
+curl -X POST -H "X-API-Key: YOUR_KEY" -H "Content-Type: application/json" -d '{"defect_count":0,"correct_count":0}' {{ request.host_url }}api/v1/counters/CAMERA_ID/batch/new
+
 # Save counts session to report in database
-curl -X POST -H "X-API-Key: YOUR_KEY" -H "Content-Type: application/json" -d '{"defect_count":0}' {{ request.host_url }}api/v1/counters/CAMERA_ID/save
+curl -X POST -H "X-API-Key: YOUR_KEY" -H "Content-Type: application/json" -d '{"defect_count":0,"correct_count":0,"custom_fields":{"operator":"User"}}' {{ request.host_url }}api/v1/counters/CAMERA_ID/save
 
 # Stop counter stream & free resources
 curl -X POST -H "X-API-Key: YOUR_KEY" {{ request.host_url }}api/v1/counters/CAMERA_ID/stop

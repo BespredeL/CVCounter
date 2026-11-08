@@ -219,6 +219,69 @@ def reset_counter(location: str):
     })
 
 
+@api_v1_bp.route('/counters/<string:location>/batch/new', methods=['POST'])
+@api_v1_bp.route('/counters/<string:location>/reset-current', methods=['POST'])
+@api_key_required(role='write')
+def reset_counter_batch(location: str):
+    """
+    Complete current production batch: persist batch part metrics to DB (with optional
+    manual corrections/defects) and reset current batch counts to 0 while keeping total session counts.
+
+    Payload (optional):
+    {
+        "correct_count": int,
+        "defect_count": int
+    }
+    """
+    location = str(location).strip()
+    require_detection_location(location)
+
+    context = get_app_context()
+    object_counters = context['object_counters']
+
+    if location not in object_counters:
+        return jsonify({
+            'success': False,
+            'error': {
+                'code': 'counter_not_running',
+                'message': 'Counter is not running. Start it first before resetting batch.',
+            }
+        }), 400
+
+    counter = object_counters[location]
+    body = request.get_json(silent=True) or {}
+
+    try:
+        defect_count = int(body.get('defect_count') or 0)
+        correct_count = int(body.get('correct_count') or 0)
+        if defect_count < 0 or correct_count < 0:
+            raise ValueError("Counts must be non-negative")
+    except (ValueError, TypeError) as exc:
+        return jsonify({
+            'success': False,
+            'error': {
+                'code': 'invalid_payload',
+                'message': f'Invalid counts payload: {exc}',
+            }
+        }), 400
+
+    counter.reset_count_current(
+        location=location,
+        correct_count=correct_count,
+        defect_count=defect_count,
+    )
+    get_telemetry().track('api_counter_batch_reset', {'location': location})
+
+    return jsonify({
+        'success': True,
+        'data': {
+            'id': location,
+            'batch_completed': True,
+            'counts': counter.get_live_counts(),
+        }
+    })
+
+
 @api_v1_bp.route('/counters/<string:location>/save', methods=['POST'])
 @api_key_required(role='write')
 def save_counter_report(location: str):
@@ -317,7 +380,9 @@ def get_counter_snapshot(location: str):
         }), 503
 
     try:
-        payload = FrameUtils.encode_jpeg(frame, SNAPSHOT_JPEG_QUALITY)
+        quality_arg = request.args.get('quality', type=int)
+        quality = SNAPSHOT_JPEG_QUALITY if quality_arg is None else max(1, min(100, quality_arg))
+        payload = FrameUtils.encode_jpeg(frame, quality)
     except FrameEncodingError:
         return jsonify({
             'success': False,
