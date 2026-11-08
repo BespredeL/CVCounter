@@ -171,7 +171,7 @@
                         <span class="small text-uppercase fw-bold text-body-secondary fs-2xs badge-letter-spacing">{{ trans('Sections') }}</span>
                         <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill fs-2xs">{{ _config|length }}</span>
                     </div>
-                    {% for key, value in _config.items() %}
+                    {% for key, value in _config.items() if key != 'onboarding' %}
                         <button class="list-group-item list-group-item-action border-0 d-flex align-items-center justify-content-between gap-2 py-2 px-3 {% if loop.first %}active{% endif %}"
                                 id="pills-{{ key }}-tab" data-bs-toggle="pill" data-bs-target="#pills-{{ key }}"
                                 role="tab"
@@ -216,7 +216,7 @@
                         </div>
 
                         <div class="tab-content" id="pills-tabContent">
-                            {% for key, value in _config.items() %}
+                            {% for key, value in _config.items() if key != 'onboarding' %}
                                 <div class="tab-pane fade {% if loop.first %}show active{% endif %}"
                                      id="pills-{{ key }}" role="tabpanel"
                                      aria-labelledby="pills-{{ key }}-tab" tabindex="0" data-section-key="{{ key }}">

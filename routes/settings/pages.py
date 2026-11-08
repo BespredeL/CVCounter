@@ -35,9 +35,12 @@ def settings() -> str:
     except Exception:
         available_models = []
 
+    raw_config = config.read_config() or {}
+    clean_config = {k: v for k, v in raw_config.items() if k != 'onboarding'}
+
     return render_template(
         'settings.html',
-        _config=config.read_config(),
+        _config=clean_config,
         available_models=available_models,
         allow_web_control=config.get('server.allow_web_control', True),
         install_id=get_telemetry().install_id,

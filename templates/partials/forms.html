@@ -444,7 +444,7 @@
             </section>
         {% endif %}
     {% else %}
-        {% if key in ('counting_area_color', 'counting_areas', 'counting_area_direction') and prefix.startswith('detections-') %}
+        {% if key in ('counting_area_color', 'counting_areas', 'counting_area_direction', 'inference_intent') and prefix.startswith('detections-') %}
             {# Zones and directions are saved only via the visual zone editor #}
         {% elif key == 'counting_area' and prefix.startswith('detections-') %}
             {% set detection_location = prefix.replace('detections-', '').rstrip('-') %}
