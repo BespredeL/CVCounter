@@ -80,6 +80,11 @@
     background: rgba(var(--bs-primary-rgb), 0.08);
 }
 
+.setup-scenario__icon {
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
 .setup-scenario__title {
     font-weight: 600;
 }
@@ -91,6 +96,27 @@
 
 .setup-source-chip {
     border-radius: 999px;
+}
+
+.setup-model-card {
+    border: 1px solid var(--cv-border);
+    border-radius: var(--cv-radius, 0.75rem);
+    background: var(--cv-surface);
+    transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.setup-model-card:hover {
+    border-color: var(--bs-primary);
+}
+
+.setup-model-card:has(input:checked) {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 1px var(--bs-primary);
+    background: rgba(var(--bs-primary-rgb), 0.05);
+}
+
+.cursor-pointer {
+    cursor: pointer;
 }
 
 .setup-check {

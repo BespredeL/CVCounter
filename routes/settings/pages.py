@@ -31,7 +31,8 @@ def settings() -> str:
     return render_template(
         'settings.html',
         _config=config.read_config(),
-        allow_web_control=config.get('server.allow_web_control', True)
+        allow_web_control=config.get('server.allow_web_control', True),
+        install_id=get_telemetry().install_id,
     )
 
 
@@ -99,6 +100,7 @@ def system_info() -> str:
         'system_info.html',
         sys_info=sys_info,
         app_version=APP_VERSION,
+        install_id=telemetry.install_id,
         telemetry_enabled=telemetry.enabled,
         telemetry_last_send=telemetry_status.get('last_send'),
         telemetry_status=telemetry_status,

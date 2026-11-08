@@ -134,7 +134,7 @@
         "tracker_track_thresh": 0,
         "tracker_low_thresh": 0.1,
         "indicator_mode": "circle",
-        "indicator_size": 10,
+        "indicator_size": 5,
         "indicator_detected_color": [
             255,
             0,

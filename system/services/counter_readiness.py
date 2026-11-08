@@ -93,12 +93,13 @@ def validate_counter_readiness(
     from system.utils.i18n import trans as translate
 
     if not video_path:
+        is_optional = bool(collection or intent in ("explore", "train"))
         checks.append({
             "id": "video_source",
-            "status": "error",
+            "status": "warning" if is_optional else "error",
             "title": translate("Video source"),
-            "details": translate("Video source is not configured"),
-            "critical": True,
+            "details": translate("No video source configured (can be added later in Settings)") if is_optional else translate("Video source is not configured"),
+            "critical": not is_optional,
         })
     else:
         checks.append({
@@ -109,7 +110,20 @@ def validate_counter_readiness(
             "critical": False,
         })
 
-    if collection:
+    if intent == "train" and not weights_path:
+        checks.append({
+            "id": "model",
+            "status": "info",
+            "title": translate("Model"),
+            "details": translate("Training mode — base model and dataset will be selected during training"),
+            "critical": False,
+        })
+        bundles = resolve_bundles_for_inference(
+            inference_intent="train",
+            model_type=cam_cfg.get("model_type"),
+            weights_path="",
+        )
+    elif collection:
         checks.append({
             "id": "model",
             "status": "info",
@@ -124,7 +138,20 @@ def validate_counter_readiness(
         )
     else:
         resolved_w = resolve_project_path(weights_path) or weights_path
-        if not weights_path or not os.path.isfile(resolved_w):
+        if not weights_path:
+            checks.append({
+                "id": "model",
+                "status": "info",
+                "title": translate("Model"),
+                "details": translate("Collection mode — no model required"),
+                "critical": False,
+            })
+            bundles = resolve_bundles_for_inference(
+                inference_intent="collection",
+                model_type=cam_cfg.get("model_type"),
+                weights_path="",
+            )
+        elif not os.path.isfile(resolved_w):
             checks.append({
                 "id": "model",
                 "status": "error",
@@ -132,6 +159,11 @@ def validate_counter_readiness(
                 "details": translate("Weights file missing or not configured"),
                 "critical": True,
             })
+            bundles = resolve_bundles_for_inference(
+                inference_intent="inference",
+                model_type=cam_cfg.get("model_type"),
+                weights_path=weights_path,
+            )
         else:
             checks.append({
                 "id": "model",
@@ -140,29 +172,29 @@ def validate_counter_readiness(
                 "details": os.path.basename(weights_path),
                 "critical": False,
             })
-        bundles = resolve_bundles_for_inference(
-            inference_intent="inference",
-            model_type=cam_cfg.get("model_type"),
-            weights_path=weights_path,
-        )
-        provider_id = resolve_architecture(cam_cfg.get("model_type"), weights_path)
-        provider = get_provider_status(provider_id)
-        if not provider.get("inference_available"):
-            checks.append({
-                "id": "inference_provider",
-                "status": "error",
-                "title": translate("Inference provider"),
-                "details": translate("Provider {name} unavailable", name=provider_id),
-                "critical": True,
-            })
-        else:
-            checks.append({
-                "id": "inference_provider",
-                "status": "ok",
-                "title": translate("Inference provider"),
-                "details": provider_id,
-                "critical": False,
-            })
+            bundles = resolve_bundles_for_inference(
+                inference_intent="inference",
+                model_type=cam_cfg.get("model_type"),
+                weights_path=weights_path,
+            )
+            provider_id = resolve_architecture(cam_cfg.get("model_type"), weights_path)
+            provider = get_provider_status(provider_id)
+            if not provider.get("inference_available"):
+                checks.append({
+                    "id": "inference_provider",
+                    "status": "error",
+                    "title": translate("Inference provider"),
+                    "details": translate("Provider {name} unavailable", name=provider_id),
+                    "critical": True,
+                })
+            else:
+                checks.append({
+                    "id": "inference_provider",
+                    "status": "ok",
+                    "title": translate("Inference provider"),
+                    "details": provider_id,
+                    "critical": False,
+                })
 
     required_items = bundles.get("items") or []
     blocked_items = bundles.get("blocked") or []
@@ -202,6 +234,7 @@ def validate_counter_readiness(
 
     critical_count = sum(1 for c in checks if c.get("critical") and c.get("status") in ("error", "warning"))
     return {
+        "intent": intent,
         "checks": checks,
         "critical_count": critical_count,
         "ready": critical_count == 0,

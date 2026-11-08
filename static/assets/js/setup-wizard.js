@@ -29,8 +29,15 @@
     const btnNext = document.getElementById('setup-wizard-next');
     const btnSkip = document.getElementById('setup-wizard-skip');
     const btnComplete = document.getElementById('setup-wizard-complete');
+    const btnCompleteBottom = document.getElementById('setup-wizard-complete-bottom');
     const bundlesBox = document.getElementById('setup-wizard-bundles');
     const preflightBox = document.getElementById('setup-wizard-preflight');
+    const choiceNone = document.getElementById('setup-model-choice-none');
+    const choiceSelect = document.getElementById('setup-model-choice-select');
+    const choiceCustom = document.getElementById('setup-model-choice-custom');
+    const modelSelect = document.getElementById('setup-model-select');
+    const weightsInput = document.getElementById('setup-weights-path');
+    let lastCriticalCount = 0;
     const panel = document.getElementById('setup-install-panel');
     const btnInstall = document.getElementById('setup-install-start');
     const btnCancel = document.getElementById('setup-install-cancel');
@@ -81,7 +88,7 @@
             container.innerHTML = checkCard('info', t('All checks passed'));
             return;
         }
-        container.innerHTML = checks.map((c) => checkCard(c.status, c.title || c.status, c.details || '')).join('');
+        container.innerHTML = checks.map((c) => checkCard(c.status, t(c.title || c.status), t(c.details || ''))).join('');
     }
 
     function showStep(n) {
@@ -98,10 +105,13 @@
         progress.style.width = `${(step / TOTAL_STEPS) * 100}%`;
         stepLabel.textContent = `${t('Step')} ${step} / ${TOTAL_STEPS} — ${t(STEP_NAMES[step - 1])}`;
         btnNext.classList.toggle('d-none', step >= TOTAL_STEPS);
+        if (btnCompleteBottom) btnCompleteBottom.classList.toggle('d-none', step < TOTAL_STEPS);
         btnPrev.disabled = installing || step <= 1;
         showInstallPanel();
         if (step === 1) refreshReadiness();
+        if (step === 4) updateModelHint();
         if (step === 5 || step === 6) refreshComponents();
+        if (step === 7) updateStep7Summary();
     }
 
     async function postJson(url, body) {
@@ -133,14 +143,42 @@
         const body = { action };
         if (action === 'complete') {
             Object.assign(body, wizardFields());
+            if (btnComplete) {
+                btnComplete.disabled = true;
+                btnComplete.textContent = `${t('Loading')}…`;
+            }
+            if (btnCompleteBottom) {
+                btnCompleteBottom.disabled = true;
+                btnCompleteBottom.textContent = `${t('Loading')}…`;
+            }
         }
-        const data = await postJson('/settings/api/onboarding/complete', body);
-        if (!data.ok) {
-            window.alert(data.error || t('Request failed'));
-            return;
-        }
-        if (action === 'skip' || action === 'complete') {
-            window.location.href = '/';
+        try {
+            const data = await postJson('/settings/api/onboarding/complete', body);
+            if (!data.ok) {
+                window.alert(data.error || t('Request failed'));
+                if (btnComplete) {
+                    btnComplete.disabled = false;
+                    btnComplete.textContent = t('Complete setup and go to Dashboard');
+                }
+                if (btnCompleteBottom) {
+                    btnCompleteBottom.disabled = false;
+                    btnCompleteBottom.textContent = t('Complete setup');
+                }
+                return;
+            }
+            if (action === 'skip' || action === 'complete') {
+                window.location.href = '/';
+            }
+        } catch (err) {
+            window.alert(err.message || t('Request failed'));
+            if (btnComplete) {
+                btnComplete.disabled = false;
+                btnComplete.textContent = t('Complete setup and go to Dashboard');
+            }
+            if (btnCompleteBottom) {
+                btnCompleteBottom.disabled = false;
+                btnCompleteBottom.textContent = t('Complete setup');
+            }
         }
     }
 
@@ -164,10 +202,21 @@
 
     function draftPayload() {
         const fields = wizardFields();
+        let intent = 'collection';
+        if (scenario === 'train') {
+            intent = 'train';
+        } else if (scenario === 'count_objects') {
+            intent = fields.weights_path ? 'inference' : 'collection';
+        } else if (scenario === 'explore') {
+            intent = fields.weights_path ? 'inference' : 'explore';
+        } else {
+            intent = 'collection';
+        }
         return {
             video_path: fields.video_path,
             weights_path: fields.weights_path,
-            inference_intent: fields.weights_path ? 'inference' : 'collection',
+            scenario: scenario,
+            inference_intent: intent,
         };
     }
 
@@ -377,9 +426,147 @@
             if (preflightBox && step === 6) preflightBox.textContent = error.message;
             return;
         }
+        lastCriticalCount = readiness.critical_count || 0;
         renderBundles(readiness.bundles || {});
         if (preflightBox) renderChecks(preflightBox, readiness.checks || []);
+
+        const summaryBox = document.getElementById('setup-preflight-summary');
+        if (summaryBox) {
+            if (lastCriticalCount > 0) {
+                summaryBox.innerHTML = `
+                    <div class="alert alert-danger d-flex align-items-center gap-2 mb-3">
+                        <span class="fs-5">⚠️</span>
+                        <div>
+                            <strong>${escapeHtml(t('Some items need attention'))}</strong>
+                            <div class="small">${escapeHtml(t('Fix the critical errors below before starting the counter.'))}</div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                summaryBox.innerHTML = `
+                    <div class="alert alert-success d-flex align-items-center gap-2 mb-3">
+                        <span class="fs-5">✅</span>
+                        <div>
+                            <strong>${escapeHtml(t('Ready to start!'))}</strong>
+                            <div class="small">${escapeHtml(t('All readiness checks passed. You can proceed to the final step.'))}</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
         await resumeRunningJob();
+    }
+
+    function updateModelHint() {
+        const hintEl = document.getElementById('setup-model-context-hint');
+        if (!hintEl) return;
+        if (scenario === 'train') {
+            hintEl.textContent = t('Setup hint train model');
+        } else if (scenario === 'test_camera' || scenario === 'collect_dataset') {
+            hintEl.textContent = t('Setup hint camera model');
+        } else if (scenario === 'count_objects') {
+            hintEl.textContent = t('Setup hint count model');
+        } else {
+            hintEl.textContent = t('Setup model skip hint');
+        }
+    }
+
+    function updateStep7Summary() {
+        const fields = wizardFields();
+        const scenarioEl = document.getElementById('summary-scenario');
+        const cameraEl = document.getElementById('summary-camera-name');
+        const videoEl = document.getElementById('summary-video-path');
+        const modelEl = document.getElementById('summary-model');
+        const readinessEl = document.getElementById('summary-readiness');
+
+        const scenarioNames = {
+            count_objects: 'Count objects with a model',
+            test_camera: 'Test camera / video',
+            collect_dataset: 'Collect dataset images',
+            train: 'Train a model',
+            explore: 'Explore the app',
+        };
+
+        if (scenarioEl) {
+            scenarioEl.textContent = scenario ? t(scenarioNames[scenario] || scenario) : t('Not specified');
+        }
+        if (cameraEl) {
+            cameraEl.textContent = fields.label || t('Not specified');
+        }
+        if (videoEl) {
+            videoEl.textContent = fields.video_path || t('Not configured (can be configured later)');
+        }
+        if (modelEl) {
+            modelEl.textContent = fields.weights_path || t('Without model (data collection mode)');
+        }
+        if (readinessEl) {
+            if (lastCriticalCount === 0) {
+                readinessEl.innerHTML = `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">${escapeHtml(t('Ready to start!'))}</span>`;
+            } else {
+                readinessEl.innerHTML = `<span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">${escapeHtml(t('Some items need attention'))}</span>`;
+            }
+        }
+    }
+
+    function initModelControls() {
+        if (!weightsInput) return;
+        const currentPath = weightsInput.value.trim();
+        let matchedSelect = false;
+        if (modelSelect && currentPath) {
+            for (let i = 0; i < modelSelect.options.length; i += 1) {
+                if (modelSelect.options[i].value === currentPath) {
+                    modelSelect.selectedIndex = i;
+                    matchedSelect = true;
+                    break;
+                }
+            }
+        }
+        if (matchedSelect && choiceSelect) {
+            choiceSelect.checked = true;
+        } else if (currentPath && choiceCustom) {
+            choiceCustom.checked = true;
+        } else if (choiceNone) {
+            choiceNone.checked = true;
+        }
+
+        choiceNone?.addEventListener('change', () => {
+            if (choiceNone.checked) {
+                weightsInput.value = '';
+                if (modelSelect) modelSelect.value = '';
+            }
+        });
+
+        choiceSelect?.addEventListener('change', () => {
+            if (choiceSelect.checked && modelSelect) {
+                if (!modelSelect.value && modelSelect.options.length > 1) {
+                    modelSelect.selectedIndex = 1;
+                }
+                weightsInput.value = modelSelect.value;
+            }
+        });
+
+        choiceCustom?.addEventListener('change', () => {
+            if (choiceCustom.checked) {
+                weightsInput.focus();
+            }
+        });
+
+        modelSelect?.addEventListener('change', () => {
+            weightsInput.value = modelSelect.value;
+            if (choiceSelect) choiceSelect.checked = true;
+        });
+
+        weightsInput?.addEventListener('input', () => {
+            if (weightsInput.value.trim()) {
+                if (choiceCustom) choiceCustom.checked = true;
+                if (modelSelect && modelSelect.value !== weightsInput.value.trim()) {
+                    modelSelect.value = '';
+                }
+            } else if (choiceNone) {
+                choiceNone.checked = true;
+                if (modelSelect) modelSelect.value = '';
+            }
+        });
     }
 
     root.querySelectorAll('.setup-scenario').forEach((btn) => {
@@ -387,6 +574,7 @@
             scenario = btn.dataset.scenario;
             root.querySelectorAll('.setup-scenario').forEach((b) => b.classList.remove('is-selected'));
             btn.classList.add('is-selected');
+            updateModelHint();
             await postJson('/settings/api/onboarding/scenario', { scenario_id: scenario });
         });
     });
@@ -412,6 +600,7 @@
     });
     btnSkip?.addEventListener('click', () => onboardingAction('skip'));
     btnComplete?.addEventListener('click', () => onboardingAction('complete'));
+    btnCompleteBottom?.addEventListener('click', () => onboardingAction('complete'));
     btnInstall?.addEventListener('click', installMissing);
     btnCancel?.addEventListener('click', async () => {
         btnCancel.disabled = true;
@@ -455,5 +644,6 @@
         return value > 1 && value <= TOTAL_STEPS ? value : 1;
     }
 
+    initModelControls();
     showStep(restoredStep());
 })();

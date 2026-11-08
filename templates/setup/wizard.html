@@ -65,16 +65,19 @@
             <h2 class="h5 mb-1">{{ trans('Choose your goal') }}</h2>
             <p class="text-body-secondary small mb-3">{{ trans('Setup goal help') }}</p>
             <div class="row g-2">
-                {% for sid, title, hint in [
-                    ('count_objects', 'Count objects with a model', 'Setup hint count'),
-                    ('test_camera', 'Test camera / video', 'Setup hint camera'),
-                    ('collect_dataset', 'Collect dataset images', 'Setup hint collect'),
-                    ('train', 'Train a model', 'Setup hint train'),
-                    ('explore', 'Explore the app', 'Setup hint explore')
+                {% for sid, icon, title, hint in [
+                    ('count_objects', '🎯', 'Count objects with a model', 'Setup hint count'),
+                    ('test_camera', '📹', 'Test camera / video', 'Setup hint camera'),
+                    ('collect_dataset', '🖼️', 'Collect dataset images', 'Setup hint collect'),
+                    ('train', '🧠', 'Train a model', 'Setup hint train'),
+                    ('explore', '🧭', 'Explore the app', 'Setup hint explore')
                 ] %}
                 <div class="col-md-6">
                     <button type="button" class="setup-scenario{% if onboarding.scenario == sid %} is-selected{% endif %}" data-scenario="{{ sid }}">
-                        <span class="setup-scenario__title">{{ trans(title) }}</span>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="setup-scenario__icon" aria-hidden="true">{{ icon }}</span>
+                            <span class="setup-scenario__title">{{ trans(title) }}</span>
+                        </div>
                         <span class="setup-scenario__hint">{{ trans(hint) }}</span>
                     </button>
                 </div>
@@ -85,25 +88,86 @@
         <section class="setup-wizard-step d-none" data-step="3">
             <h2 class="h5 mb-1">{{ trans('Video source') }}</h2>
             <p class="text-body-secondary small mb-3">{{ trans('Setup video path hint') }}</p>
-            <div class="d-flex flex-wrap gap-2 mb-3" id="setup-source-chips">
-                <button type="button" class="btn btn-sm btn-outline-secondary setup-source-chip" data-fill="0">USB 0</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary setup-source-chip" data-fill="1">USB 1</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary setup-source-chip" data-fill="rtsp://">RTSP</button>
+            <div class="mb-3">
+                <label class="form-label" for="setup-camera-name">{{ trans('Camera name') }}</label>
+                <input type="text" class="form-control" id="setup-camera-name" autocomplete="off"
+                       value="{{ onboarding.fields.label or trans('Camera') }}" placeholder="{{ trans('Camera') }}">
             </div>
-            <label class="form-label" for="setup-camera-name">{{ trans('Camera name') }}</label>
-            <input type="text" class="form-control mb-3" id="setup-camera-name" autocomplete="off"
-                   value="{{ onboarding.fields.label or trans('Camera') }}">
-            <label class="form-label" for="setup-video-path">{{ trans('Video path') }}</label>
-            <input type="text" class="form-control form-control-lg" id="setup-video-path" autocomplete="off"
-                   placeholder="0" value="{{ onboarding.fields.video_path }}">
+            <div class="mb-2">
+                <label class="form-label" for="setup-video-path">{{ trans('Video path') }}</label>
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-2" id="setup-source-chips">
+                    <span class="small text-body-secondary me-1">{{ trans('Quick presets') }}:</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary setup-source-chip" data-fill="0">USB 0</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary setup-source-chip" data-fill="1">USB 1</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary setup-source-chip" data-fill="rtsp://">RTSP</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary setup-source-chip" data-fill="storage/saved_recordings/">{{ trans('Video file') }}</button>
+                </div>
+                <input type="text" class="form-control form-control-lg font-monospace" id="setup-video-path" autocomplete="off"
+                       placeholder="0" value="{{ onboarding.fields.video_path }}">
+            </div>
+            <div class="setup-source-hints row g-2 mt-2">
+                <div class="col-sm-4">
+                    <div class="small p-2 border rounded bg-body-tertiary">
+                        <strong>0, 1, 2...</strong> — {{ trans('Webcam (USB or built-in)') }}
+                    </div>
+                </div>
+                <div class="col-sm-4">
+                    <div class="small p-2 border rounded bg-body-tertiary">
+                        <strong>rtsp://...</strong> — {{ trans('IP camera stream (RTSP/HTTP)') }}
+                    </div>
+                </div>
+                <div class="col-sm-4">
+                    <div class="small p-2 border rounded bg-body-tertiary">
+                        <strong>path/to/file.mp4</strong> — {{ trans('Pre-recorded video file on disk') }}
+                    </div>
+                </div>
+            </div>
+            <p class="text-body-secondary small mt-2 mb-0">{{ trans('Setup video optional hint') }}</p>
         </section>
 
         <section class="setup-wizard-step d-none" data-step="4">
             <h2 class="h5 mb-1">{{ trans('Model') }}</h2>
-            <p class="text-body-secondary small mb-3">{{ trans('Setup model skip hint') }}</p>
-            <label class="form-label" for="setup-weights-path">{{ trans('Weights path') }}</label>
-            <input type="text" class="form-control" id="setup-weights-path" autocomplete="off"
-                   placeholder="config/ultralytics/models/model.pt" value="{{ onboarding.fields.weights_path }}">
+            <p class="text-body-secondary small mb-3" id="setup-model-context-hint">{{ trans('Setup model skip hint') }}</p>
+
+            <div class="setup-model-options d-grid gap-2 mb-3">
+                <label class="setup-model-card form-check d-flex align-items-start gap-2 p-3 border rounded cursor-pointer">
+                    <input class="form-check-input mt-1 flex-shrink-0" type="radio" name="setup_model_choice" id="setup-model-choice-none" value="none">
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold">{{ trans('No model / Data collection mode') }}</div>
+                        <div class="small text-body-secondary">{{ trans('Streams camera feed without AI detection. Ideal for collecting dataset or testing performance.') }}</div>
+                    </div>
+                </label>
+
+                {% if available_models %}
+                <label class="setup-model-card form-check d-flex align-items-start gap-2 p-3 border rounded cursor-pointer">
+                    <input class="form-check-input mt-1 flex-shrink-0" type="radio" name="setup_model_choice" id="setup-model-choice-select" value="select">
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold">{{ trans('Select installed model') }}</div>
+                        <div class="small text-body-secondary mb-2">{{ trans('Choose a model found in the project directory.') }}</div>
+                        <select class="form-select" id="setup-model-select">
+                            <option value="">{{ trans('Select model...') }}</option>
+                            {% for m in available_models %}
+                                <option value="{{ m.path }}" {% if onboarding.fields.weights_path == m.path %}selected{% endif %}>
+                                    {{ m.name }}{% if m.size_mb %} ({{ m.size_mb }} MB){% endif %}{% if m.format %} [{{ m.format }}]{% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </label>
+                {% endif %}
+
+                <label class="setup-model-card form-check d-flex align-items-start gap-2 p-3 border rounded cursor-pointer">
+                    <input class="form-check-input mt-1 flex-shrink-0" type="radio" name="setup_model_choice" id="setup-model-choice-custom" value="custom">
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold">{{ trans('Enter model path manually') }}</div>
+                        <div class="small text-body-secondary mb-2">{{ trans('Specify path to model weights (.pt, .onnx, .engine, .pth).') }}</div>
+                        <div id="setup-model-custom-box">
+                            <input type="text" class="form-control font-monospace" id="setup-weights-path" autocomplete="off"
+                                   placeholder="config/ultralytics/models/yolov8n.pt" value="{{ onboarding.fields.weights_path }}">
+                        </div>
+                    </div>
+                </label>
+            </div>
         </section>
 
         <section class="setup-wizard-step d-none" data-step="5">
@@ -119,13 +183,48 @@
         <section class="setup-wizard-step d-none" data-step="6">
             <h2 class="h5 mb-1">{{ trans('Readiness') }}</h2>
             <p class="text-body-secondary small mb-3">{{ trans('Setup readiness help') }}</p>
+            <div id="setup-preflight-summary" class="mb-3"></div>
             <div id="setup-wizard-preflight" class="d-grid gap-2" aria-live="polite"></div>
         </section>
 
         <section class="setup-wizard-step d-none" data-step="7">
-            <h2 class="h5 mb-2">{{ trans('Finish') }}</h2>
-            <p class="text-body-secondary">{{ trans('Setup finish creates counter') }}</p>
-            <button type="button" class="btn btn-primary" id="setup-wizard-complete">{{ trans('Complete setup') }}</button>
+            <h2 class="h5 mb-1">{{ trans('Summary & Finish') }}</h2>
+            <p class="text-body-secondary small mb-3">{{ trans('Review your configuration before completing setup.') }}</p>
+            <div class="card bg-body-tertiary border mb-3">
+                <div class="card-body">
+                    <h3 class="h6 mb-3 text-body-secondary text-uppercase fw-bold">{{ trans('Configuration summary') }}</h3>
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <div class="small text-body-secondary">{{ trans('Selected goal') }}</div>
+                            <div class="fw-semibold" id="summary-scenario">—</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="small text-body-secondary">{{ trans('Camera name') }}</div>
+                            <div class="fw-semibold" id="summary-camera-name">—</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="small text-body-secondary">{{ trans('Video source') }}</div>
+                            <div class="fw-semibold font-monospace small" id="summary-video-path">—</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="small text-body-secondary">{{ trans('Model') }}</div>
+                            <div class="fw-semibold font-monospace small" id="summary-model">—</div>
+                        </div>
+                        <div class="col-12">
+                            <div class="small text-body-secondary">{{ trans('Readiness status') }}</div>
+                            <div id="summary-readiness">—</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="alert alert-info small mb-3">
+                {{ trans('Setup finish explanation') }}
+            </div>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-success" id="setup-wizard-complete">
+                    {{ trans('Complete setup and go to Dashboard') }}
+                </button>
+            </div>
         </section>
 
         <div id="setup-install-panel" class="d-none border rounded p-3 mt-3"
@@ -145,7 +244,10 @@
 
         <div class="d-flex justify-content-between mt-4 pt-3 border-top">
             <button type="button" class="btn btn-outline-secondary" id="setup-wizard-prev">{{ trans('Back') }}</button>
-            <button type="button" class="btn btn-primary" id="setup-wizard-next">{{ trans('Next') }}</button>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-primary" id="setup-wizard-next">{{ trans('Next') }}</button>
+                <button type="button" class="btn btn-success d-none" id="setup-wizard-complete-bottom">{{ trans('Complete setup') }}</button>
+            </div>
         </div>
     </div>
 {% endblock %}

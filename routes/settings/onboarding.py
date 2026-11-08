@@ -30,9 +30,17 @@ def setup_wizard_page():
     from system.auth import auth_enabled, get_authenticated_username
 
     context = get_app_context()
+    available_models = []
+    try:
+        from system.utils.model_exporter import model_export_manager
+        available_models = model_export_manager.list_exportable_models() or []
+    except Exception:
+        available_models = []
+
     return render_template(
         'setup/wizard.html',
         onboarding=onboarding_payload(context['config']),
+        available_models=available_models,
         is_admin=is_admin_user(),
         auth_enabled=auth_enabled(),
         auth_user=get_authenticated_username(),
@@ -103,7 +111,11 @@ def api_onboarding_draft():
         'inference_intent': (data.get('inference_intent') or '').strip(),
     }
     if not cam_cfg['inference_intent']:
-        cam_cfg['inference_intent'] = 'collection' if not cam_cfg['weights_path'] else 'inference'
+        scenario = (data.get('scenario') or data.get('scenario_id') or '').strip()
+        if scenario:
+            cam_cfg['inference_intent'] = scenario_to_default_intent(scenario)
+        else:
+            cam_cfg['inference_intent'] = 'collection' if not cam_cfg['weights_path'] else 'inference'
     target_mode = 'collection' if cam_cfg['inference_intent'] in ('collection', 'video_test', 'collect_dataset', 'explore') else 'count'
     readiness = validate_counter_readiness(cam_cfg, target_mode=target_mode, inference_intent=cam_cfg['inference_intent'])
     return jsonify({'ok': True, 'readiness': readiness})
@@ -156,6 +168,12 @@ def _create_counter_from_wizard(config, data: dict) -> dict:
     if weights_path:
         new_cam['weights_path'] = weights_path
         model_type = (data.get('model_type') or '').strip()
+        if not model_type or model_type == 'auto':
+            try:
+                from system.detection.registry import resolve_architecture
+                model_type = resolve_architecture(None, weights_path)
+            except Exception:
+                model_type = 'auto'
         if model_type:
             new_cam['model_type'] = model_type
     aligned = align_camera_dict(
@@ -164,6 +182,7 @@ def _create_counter_from_wizard(config, data: dict) -> dict:
         location_id=location,
     )
     config.set(f'detections.{location}', aligned)
+    config.save_config()
     return {'created': True, 'location': location, 'label': label}
 
 

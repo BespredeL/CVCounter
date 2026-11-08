@@ -237,7 +237,18 @@ class TelemetryManager(
             'next_retry_sec': round(self._send_delay_sec(), 1),
             'delivery_last': self.get_delivery_history(limit=5),
             'last_send': self.get_last_send_status(),
+            'install_id': self._install_id,
         }
+
+    @property
+    def install_id(self) -> str:
+        """
+        Get the unique installation ID.
+        
+        Returns:
+            str: The installation ID.
+        """
+        return self._install_id
 
     @property
     def enabled(self) -> bool:
