@@ -125,7 +125,7 @@
         "inference_intent": "collection",
         "confidence": 0.5,
         "iou": 0.6,
-        "device": 0,
+        "device": "auto",
         "vid_stride": 1,
         "tracker": "sort",
         "tracker_iou": 0.3,
@@ -133,7 +133,7 @@
         "tracker_min_hits": 3,
         "tracker_track_thresh": 0,
         "tracker_low_thresh": 0.1,
-        "indicator_mode": "circle",
+        "indicator_mode": "box",
         "indicator_size": 5,
         "indicator_detected_color": [
             255,
