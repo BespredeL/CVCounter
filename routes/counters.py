@@ -216,12 +216,19 @@ def counter_settings_form(location: str = None) -> str:
     require_detection_location(location)
 
     detection = config.get(f'detections.{location}', {})
+    available_models = []
+    try:
+        from system.utils.model_exporter import model_export_manager
+        available_models = model_export_manager.list_model_artifacts() or []
+    except Exception:
+        available_models = []
 
     return render_template(
         'partials/counter_settings_form.html',
         location=location,
         title=locations_dict.get(location, location),
         detection=detection,
+        available_models=available_models,
     )
 
 

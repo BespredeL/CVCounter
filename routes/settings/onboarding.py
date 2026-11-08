@@ -33,7 +33,7 @@ def setup_wizard_page():
     available_models = []
     try:
         from system.utils.model_exporter import model_export_manager
-        available_models = model_export_manager.list_exportable_models() or []
+        available_models = model_export_manager.list_model_artifacts() or []
     except Exception:
         available_models = []
 

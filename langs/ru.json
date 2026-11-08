@@ -1741,5 +1741,8 @@
   "Setup finish explanation": "После завершения будет создан счётчик с указанными параметрами и откроется главная страница. Любые параметры можно изменить позже в настройках.",
   "All readiness checks passed. You can proceed to the final step.": "Все проверки пройдены успешно. Можно переходить к завершению.",
   "Fix the critical errors below before starting the counter.": "Исправьте критические ошибки ниже перед запуском счётчика.",
-  "Installation ID": "Идентификатор установки"
+  "Installation ID": "Идентификатор установки",
+  "Select from existing models": "Выбрать готовую модель из существующих",
+  "Installed project models": "Обнаруженные модели проекта",
+  "Select model": "Выбрать модель"
 }

@@ -28,9 +28,17 @@ def settings() -> str:
     """
     context = get_app_context()
     config = context['config']
+    available_models = []
+    try:
+        from system.utils.model_exporter import model_export_manager
+        available_models = model_export_manager.list_model_artifacts() or []
+    except Exception:
+        available_models = []
+
     return render_template(
         'settings.html',
         _config=config.read_config(),
+        available_models=available_models,
         allow_web_control=config.get('server.allow_web_control', True),
         install_id=get_telemetry().install_id,
     )

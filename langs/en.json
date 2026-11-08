@@ -1741,5 +1741,8 @@
   "Setup finish explanation": "Clicking complete will create a counter with the selected parameters and open the dashboard. Any setting can be changed later in settings.",
   "All readiness checks passed. You can proceed to the final step.": "All readiness checks passed. You can proceed to the final step.",
   "Fix the critical errors below before starting the counter.": "Fix the critical errors below before starting the counter.",
-  "Installation ID": "Installation ID"
+  "Installation ID": "Installation ID",
+  "Select from existing models": "Select from existing models",
+  "Installed project models": "Installed project models",
+  "Select model": "Select model"
 }

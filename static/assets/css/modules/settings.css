@@ -766,6 +766,25 @@
     border-color: var(--cv-border-strong);
 }
 
+.cv-model-picker-menu {
+    max-height: 300px;
+    overflow-y: auto;
+    min-width: 300px;
+    z-index: 1060;
+}
+
+.cv-model-picker-menu .dropdown-item {
+    white-space: normal;
+    text-align: left;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.cv-model-picker-menu .dropdown-item:active,
+.cv-model-picker-menu .dropdown-item.active {
+    background-color: var(--bs-primary);
+    color: #fff;
+}
+
 .cv-form-field--zone {
     padding: 0.85rem;
     border: 1px dashed var(--cv-border-strong);

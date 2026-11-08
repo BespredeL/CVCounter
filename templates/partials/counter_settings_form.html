@@ -1,6 +1,6 @@
 {# Counter settings form #}
 <!-- START: Counter settings form -->
-{% import 'partials/forms.html' as forms %}
+{% import 'partials/forms.html' as forms with context %}
 <form class="counter-settings-form" id="counterSettingsForm" method="post"
       action="{{ url_for('counters.counter_settings_save', location=location) }}"
       data-location="{{ location }}">
@@ -9,5 +9,12 @@
             {{ forms.generate_form_fields(sub_key, sub_value, 'detections-' ~ location ~ '-') }}
         {% endfor %}
     </div>
+    {% if available_models %}
+        <datalist id="available-models-datalist">
+            {% for m in available_models %}
+                <option value="{{ m.path }}">{{ m.name }}{% if m.size_mb %} ({{ m.size_mb }} MB){% endif %}</option>
+            {% endfor %}
+        </datalist>
+    {% endif %}
 </form>
 <!-- END: Counter settings form -->

@@ -21,7 +21,7 @@
     </nav>
 {% endblock %}
 
-{% import 'partials/forms.html' as forms %}
+{% import 'partials/forms.html' as forms with context %}
 
 {% macro section_icon(key) %}
     {% if key == 'general' %}
@@ -815,8 +815,42 @@ curl -X DELETE -H "X-API-Key: YOUR_KEY" {{ request.host_url }}api/v1/reports/REP
                                 <label for="new_camera_weights_path" class="form-label fw-semibold">
                                     {{ trans('Path to weights') }}
                                 </label>
-                                <input type="text" class="form-control font-monospace" id="new_camera_weights_path" name="weights_path"
-                                       placeholder="config/ultralytics/models/yolov8n.pt">
+                                <div class="input-group">
+                                    {% if available_models %}
+                                        <button class="btn btn-outline-secondary dropdown-toggle d-inline-flex align-items-center gap-1"
+                                                type="button"
+                                                data-bs-toggle="dropdown"
+                                                aria-expanded="false"
+                                                title="{{ trans('Select from existing models') }}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-box-seam flex-shrink-0" viewBox="0 0 16 16">
+                                                <path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5l2.404.961L10.404 2zm3.564 1.426L5.596 5 8 5.961 14.154 3.5zm3.25 1.7-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464z"/>
+                                            </svg>
+                                            <span>{{ trans('Select model') }}</span>
+                                        </button>
+                                        <ul class="dropdown-menu shadow cv-model-picker-menu" style="max-height: 280px; overflow-y: auto; min-width: 280px;">
+                                            <li class="dropdown-header small text-body-secondary py-1 px-3">{{ trans('Installed project models') }}</li>
+                                            <li><hr class="dropdown-divider my-1"></li>
+                                            <li>
+                                                <button class="dropdown-item py-1.5 px-3 text-secondary fst-italic cv-model-option" type="button" data-path="" data-target="new_camera_weights_path">
+                                                    {{ trans('Without model (data collection mode)') }}
+                                                </button>
+                                            </li>
+                                            {% for m in available_models %}
+                                                <li>
+                                                    <button class="dropdown-item py-1.5 px-3 d-flex flex-column cv-model-option" type="button" data-path="{{ m.path }}" data-target="new_camera_weights_path">
+                                                        <span class="fw-semibold text-truncate fs-3xs">{{ m.name }}</span>
+                                                        <span class="font-monospace text-body-secondary small fs-3xs text-truncate">
+                                                            {{ m.path }}{% if m.size_mb %} ({{ m.size_mb }} MB){% endif %}{% if m.format %} [{{ m.format }}]{% endif %}
+                                                        </span>
+                                                    </button>
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% endif %}
+                                    <input type="text" class="form-control font-monospace" id="new_camera_weights_path" name="weights_path"
+                                           list="available-models-datalist"
+                                           placeholder="config/ultralytics/models/yolov8n.pt">
+                                </div>
                                 <div class="form-text">{{ trans('Leave blank to use default weights from detection settings') }}</div>
                             </div>
                             <div class="col-md-6">
@@ -919,6 +953,14 @@ curl -X DELETE -H "X-API-Key: YOUR_KEY" {{ request.host_url }}api/v1/reports/REP
         </div>
     </div>
     <!-- END: Create API Key Modal -->
+
+    {% if available_models %}
+        <datalist id="available-models-datalist">
+            {% for m in available_models %}
+                <option value="{{ m.path }}">{{ m.name }}{% if m.size_mb %} ({{ m.size_mb }} MB){% endif %}</option>
+            {% endfor %}
+        </datalist>
+    {% endif %}
 
     {% include 'partials/add_custom_field_modal.html' %}
 {% endblock %}

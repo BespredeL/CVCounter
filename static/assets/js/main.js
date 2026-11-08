@@ -427,8 +427,26 @@ window.shutdownServer = async function () {
     }
 };
 
-// Global click listener for server restart / shutdown triggers
+// Global click listener for server restart / shutdown triggers and model picker
 document.addEventListener("click", function (e) {
+    const modelOpt = e.target.closest(".cv-model-option");
+    if (modelOpt) {
+        e.preventDefault();
+        const path = modelOpt.dataset.path !== undefined ? modelOpt.dataset.path : "";
+        const targetId = modelOpt.dataset.target;
+        let input = targetId ? document.getElementById(targetId) : null;
+        if (!input) {
+            const group = modelOpt.closest(".input-group, .cv-input-group");
+            input = group ? group.querySelector("input.cv-weights-path-input, input[name$='weights_path'], input[name='weights_path']") : null;
+        }
+        if (input) {
+            input.value = path;
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+            input.focus();
+        }
+        return;
+    }
     const restartBtn = e.target.closest(".btn-restart-server-trigger");
     if (restartBtn) {
         e.preventDefault();
